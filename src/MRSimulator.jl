@@ -1,5 +1,6 @@
 module MRSimulator
 using StaticArrays
+using LinearAlgebra
 
 mutable struct Spin
     time :: Real
@@ -22,11 +23,17 @@ end
 
 (f::ConstantField{T})(position :: SVector{3,Real}) where {T} = f.value
 
+struct GradientField{T} <: Field{T}
+    gradient :: SVector{3,T}
+    offset :: T
+end
+
+(f::GradientField{T})(position :: SVector{3,Real}) where {T} = position ⋅ f.gradient + f.offset
+
 
 struct LocalEnvironment
     off_resonance :: Real
 end
-
 
 struct Microstructure
     off_resonance :: Field
