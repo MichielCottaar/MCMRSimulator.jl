@@ -2,11 +2,15 @@ module MRSimulator
 using StaticArrays
 using LinearAlgebra
 
+const gyromagnetic_ratio = 267.52218744  # (10^6 rad⋅s^−1⋅T^−1)
+
 mutable struct Spin
     time :: Real
     position :: SVector{3,Real}
+    longitudinal :: Real
+    transverse :: Real
     phase :: Real
-    Spin(;time=0., position=zero(SVector{3,Real}), phase=0.) = new(time, position, phase)
+    Spin(;time=0., position=zero(SVector{3,Real}), longitudinal=1., transverse=0., phase=0.) = new(time, position, longitudinal, transverse, phase)
 end
 
 abstract type Field{T} end
@@ -36,7 +40,7 @@ struct LocalEnvironment
 end
 
 struct Microstructure
-    off_resonance :: Field
+    off_resonance :: Field  # in ppm
     Microstructure(;off_resonance=ZeroField{Float64}()) = new(off_resonance)
 end
 
@@ -45,19 +49,19 @@ end
     micro.off_resonance(position)
 )
 
-function relax!(spin :: Spin, micro :: Microstructure, timestep :: Real)
+function relax!(spin :: Spin, micro :: Microstructure, timestep :: Real, B0=3.)
     @assert timestep > 0
     environment = micro(spin.position)
-    spin.phase += environment.off_resonance * timestep
+    spin.phase += environment.off_resonance * timestep * gyromagnetic_ratio * B0
 end
 
-function evolve!(spin :: Spin, micro :: Microstructure, new_time :: Real)
+function evolve!(spin :: Spin, micro :: Microstructure, new_time :: Real, B0=3.)
     if spin.time > new_time
         throw(DomainError("Spins cannot travel backwards in time"))
     end
     if new_time > spin.time
         timestep = new_time - spin.time
-        relax!(spin, micro, timestep)
+        relax!(spin, micro, timestep, B0)
         spin.time = new_time
     end
     spin
