@@ -3,6 +3,9 @@ uuid = "eac06e4d-a854-4bf6-b44f-54c98b0401d1"
 authors = ["Michiel Cottaar <Mmichiel.cottaar@ndcn.ox.ac.uk>"]
 version = "0.1.0"
 
+[deps]
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
 [compat]
 julia = "1"
 
