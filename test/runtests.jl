@@ -3,7 +3,6 @@ import MRSimulator: Spin, ZeroField, Microstructure, evolve!, time, ConstantFiel
 using StaticArrays
 
 @testset "MRSimulator.jl" begin
-    # Write your tests here.
     @testset "Testing one feature at a time" begin
         @testset "Simulate empty environment/sequence" begin
             spin = evolve!(Spin(), Microstructure(), 1.)
