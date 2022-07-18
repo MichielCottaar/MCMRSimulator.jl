@@ -21,6 +21,8 @@ for param in (:longitudinal, :transverse, :phase)
     @eval $param(o :: SpinOrientation) = o.$param
     @eval $param(s :: Spin) = $param(s.orientation)
 end
+time(s :: Spin) = s.time
+position(s :: Spin) = s.position
 
 # Defining the microstructure seen by the spin
 

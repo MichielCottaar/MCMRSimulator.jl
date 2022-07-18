@@ -1,32 +1,32 @@
 using Test
-import MRSimulator: Spin, ZeroField, Microstructure, evolve_to_time, time, ConstantField, GradientField, gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse
+import MRSimulator: Spin, ZeroField, Microstructure, evolve_to_time, time, ConstantField, GradientField, gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position
 using StaticArrays
 
 @testset "MRSimulator.jl" begin
     @testset "Generate and apply microstructural fields" begin
         @testset "Simulate empty environment/sequence" begin
             spin = evolve_to_time(Spin(), Microstructure(), 1.)
-            @test spin.time == 1.
-            @test spin.position == SA_F64[0., 0., 0.]
+            @test time(spin) == 1.
+            @test position(spin) == SA_F64[0., 0., 0.]
             @test phase(spin) == 0.
         end
         @testset "Test constant off-resonance field" begin
             spin = evolve_to_time(Spin(), Microstructure(off_resonance=ConstantField(2.)), 0.3, 3.)
-            @test spin.time == 0.3
-            @test spin.position == SA_F64[0., 0., 0.]
-            @test spin.orientation.phase ≈ 0.6 * 3 * gyromagnetic_ratio
+            @test time(spin) == 0.3
+            @test position(spin) == SA_F64[0., 0., 0.]
+            @test phase(spin) ≈ 0.6 * 3 * gyromagnetic_ratio
         end
         @testset "Test gradient off-resonance field" begin
             micro = Microstructure(off_resonance=GradientField(SA_F64[1.5, 0., 0.], 2.))
             spin = evolve_to_time(Spin(), micro, 0.3, 3.)
-            @test spin.time == 0.3
-            @test spin.position == SA_F64[0., 0., 0.]
-            @test spin.orientation.phase ≈ 0.6 * 3 * gyromagnetic_ratio
+            @test time(spin) == 0.3
+            @test position(spin) == SA_F64[0., 0., 0.]
+            @test phase(spin) ≈ 0.6 * 3 * gyromagnetic_ratio
             # Move spin and evolve a bit further in time
             spin = evolve_to_time(Spin(0.3, SA_F64[3., 0., 0.], spin.orientation), micro, 0.5, 3.)
-            @test spin.time == 0.5
-            @test spin.position == SA_F64[3., 0., 0.]
-            @test spin.orientation.phase ≈ (0.6 + (2. + 1.5 * 3.) * 0.2) * 3 * gyromagnetic_ratio
+            @test time(spin) == 0.5
+            @test position(spin) == SA_F64[3., 0., 0.]
+            @test phase(spin) ≈ (0.6 + (2. + 1.5 * 3.) * 0.2) * 3 * gyromagnetic_ratio
         end
     end
     @testset "Apply RF pulses" begin
@@ -36,9 +36,9 @@ using StaticArrays
                 for spin_phase in (-90, -45, 0., 30., 90., 180, 22.123789)
                     spin = Spin(phase=spin_phase / 180 * π, transverse=1.)
                     spin = apply_pulse(pulse, spin.orientation)
-                    @test spin.phase ≈ (spin_phase % 360) / 180 * π
-                    @test spin.longitudinal ≈ 1.
-                    @test spin.transverse ≈ 1.
+                    @test phase(spin) ≈ (spin_phase % 360) / 180 * π
+                    @test longitudinal(spin) ≈ 1.
+                    @test transverse(spin) ≈ 1.
                 end
             end
         end
@@ -46,74 +46,74 @@ using StaticArrays
             for pulse_phase in (-90, -45, 0., 30., 90., 180, 22.123789)
                 pulse = RFPulse(0., 180., pulse_phase)
                 spin = Spin()
-                @test spin.orientation.longitudinal == 1.
+                @test longitudinal(spin) == 1.
                 spin = apply_pulse(pulse, spin.orientation)
-                @test spin.longitudinal ≈ -1.
+                @test longitudinal(spin) ≈ -1.
             end
         end
         @testset "90 degree pulses should eliminate longitudinal" begin
             for pulse_phase in (-90, -45, 0., 30., 90., 180, 22.123789)
                 pulse = RFPulse(0., 90., pulse_phase)
                 spin = Spin()
-                @test spin.orientation.longitudinal == 1.
+                @test longitudinal(spin) == 1.
                 spin = apply_pulse(pulse, spin.orientation)
-                @test spin.longitudinal ≈ 0. atol=1e-12
+                @test longitudinal(spin) ≈ 0. atol=1e-12
             end
         end
         @testset "Spins with same phase as pulse are unaffected by pulse" begin
-            for phase in (-90, -45, 0., 30., 90., 180, 22.123789)
+            for pulse_phase in (-90, -45, 0., 30., 90., 180, 22.123789)
                 for flip_angle in (10, 90, 120, 180)
-                    pulse = RFPulse(0., flip_angle, phase)
+                    pulse = RFPulse(0., flip_angle, pulse_phase)
 
-                    spin_phase = phase / 180 * π
+                    spin_phase = pulse_phase / 180 * π
                     spin = Spin(longitudinal=0., transverse=1., phase=spin_phase)
                     spin = apply_pulse(pulse, spin.orientation)
-                    @test spin.longitudinal ≈ 0. atol=1e-12
-                    @test spin.transverse ≈ 1.
-                    @test spin.phase ≈ spin_phase
+                    @test longitudinal(spin) ≈ 0. atol=1e-12
+                    @test transverse(spin) ≈ 1.
+                    @test phase(spin) ≈ spin_phase
                 end
             end
         end
         @testset "180 pulses flips phase around axis" begin
-            for phase in (0., 22., 30., 80.)
+            for pulse_phase in (0., 22., 30., 80.)
                 pulse = RFPulse(0., 180, 0.)
 
-                spin_phase = phase / 180 * π
+                spin_phase = pulse_phase / 180 * π
                 spin = Spin(longitudinal=0., transverse=1., phase=spin_phase)
                 spin = apply_pulse(pulse, spin.orientation)
-                @test spin.longitudinal ≈ 0. atol=1e-12
-                @test spin.transverse ≈ 1.
-                @test spin.phase ≈ -spin_phase
+                @test longitudinal(spin) ≈ 0. atol=1e-12
+                @test transverse(spin) ≈ 1.
+                @test phase(spin) ≈ -spin_phase
             end
-            for phase in (0., 22., 30., 80.)
-                pulse = RFPulse(0., 180, phase)
+            for pulse_phase in (0., 22., 30., 80.)
+                pulse = RFPulse(0., 180, pulse_phase)
 
-                spin_phase = phase / 180 * π
+                spin_phase = pulse_phase / 180 * π
                 spin = Spin(longitudinal=0., transverse=1., phase=0.)
                 spin = apply_pulse(pulse, spin.orientation)
-                @test spin.longitudinal ≈ 0. atol=1e-12
-                @test spin.transverse ≈ 1.
-                @test spin.phase ≈ 2 * phase / 180 * π
+                @test longitudinal(spin) ≈ 0. atol=1e-12
+                @test transverse(spin) ≈ 1.
+                @test phase(spin) ≈ 2 * pulse_phase / 180 * π
             end
         end
         @testset "90 pulses flips longitudinal spin into transverse plane" begin
-            for phase in (0., 22., 30., 80.)
-                pulse = RFPulse(0., 90, phase)
+            for pulse_phase in (0., 22., 30., 80.)
+                pulse = RFPulse(0., 90, pulse_phase)
                 spin = Spin()
                 spin = apply_pulse(pulse, spin.orientation)
-                @test spin.longitudinal ≈ 0. atol=1e-12
-                @test spin.transverse ≈ 1.
-                @test spin.phase ≈ (phase + 90) / 180 * π
+                @test longitudinal(spin) ≈ 0. atol=1e-12
+                @test transverse(spin) ≈ 1.
+                @test phase(spin) ≈ (pulse_phase + 90) / 180 * π
             end
         end
         @testset "90 pulses flips transverse spin into longitudinal plane" begin
-            for phase in (0., 22., 30., 80.)
-                pulse = RFPulse(0., 90, phase)
-                spin_phase = (phase + 90) / 180 * π
+            for pulse_phase in (0., 22., 30., 80.)
+                pulse = RFPulse(0., 90, pulse_phase)
+                spin_phase = (pulse_phase + 90) / 180 * π
                 spin = Spin(longitudinal=0, transverse=1., phase=spin_phase)
                 spin = apply_pulse(pulse, spin.orientation)
-                @test spin.longitudinal ≈ -1.
-                @test spin.transverse ≈ 0. atol=1e-12
+                @test longitudinal(spin) ≈ -1.
+                @test transverse(spin) ≈ 0. atol=1e-12
             end
         end
     end
