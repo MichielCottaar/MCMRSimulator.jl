@@ -34,9 +34,9 @@ using StaticArrays
             for pulse_phase in (-90, -45, 0., 30., 90., 180, 22.123789)
                 pulse = RFPulse(0., 0., pulse_phase)
                 for spin_phase in (-90, -45, 0., 30., 90., 180, 22.123789)
-                    spin = Spin(phase=spin_phase / 180 * π, transverse=1.)
+                    spin = Spin(phase=spin_phase, transverse=1.)
                     spin = apply_pulse(pulse, spin.orientation)
-                    @test phase(spin) ≈ (spin_phase % 360) / 180 * π
+                    @test phase(spin) ≈ deg2rad(spin_phase % 360)
                     @test longitudinal(spin) ≈ 1.
                     @test transverse(spin) ≈ 1.
                 end
@@ -65,51 +65,47 @@ using StaticArrays
                 for flip_angle in (10, 90, 120, 180)
                     pulse = RFPulse(0., flip_angle, pulse_phase)
 
-                    spin_phase = pulse_phase / 180 * π
-                    spin = Spin(longitudinal=0., transverse=1., phase=spin_phase)
+                    spin = Spin(longitudinal=0., transverse=1., phase=pulse_phase)
                     spin = apply_pulse(pulse, spin.orientation)
                     @test longitudinal(spin) ≈ 0. atol=1e-12
                     @test transverse(spin) ≈ 1.
-                    @test phase(spin) ≈ spin_phase
+                    @test phase(spin) ≈ deg2rad(pulse_phase)
                 end
             end
         end
         @testset "180 pulses flips phase around axis" begin
-            for pulse_phase in (0., 22., 30., 80.)
+            for spin_phase in (0., 22., 30., 80.)
                 pulse = RFPulse(0., 180, 0.)
 
-                spin_phase = pulse_phase / 180 * π
                 spin = Spin(longitudinal=0., transverse=1., phase=spin_phase)
                 spin = apply_pulse(pulse, spin.orientation)
                 @test longitudinal(spin) ≈ 0. atol=1e-12
                 @test transverse(spin) ≈ 1.
-                @test phase(spin) ≈ -spin_phase
+                @test phase(spin) ≈ -deg2rad(spin_phase)
             end
             for pulse_phase in (0., 22., 30., 80.)
                 pulse = RFPulse(0., 180, pulse_phase)
 
-                spin_phase = pulse_phase / 180 * π
                 spin = Spin(longitudinal=0., transverse=1., phase=0.)
                 spin = apply_pulse(pulse, spin.orientation)
                 @test longitudinal(spin) ≈ 0. atol=1e-12
                 @test transverse(spin) ≈ 1.
-                @test phase(spin) ≈ 2 * pulse_phase / 180 * π
+                @test phase(spin) ≈ deg2rad(2 * pulse_phase)
             end
         end
         @testset "90 pulses flips longitudinal spin into transverse plane" begin
             for pulse_phase in (0., 22., 30., 80.)
                 pulse = RFPulse(0., 90, pulse_phase)
-                spin = Spin()
-                spin = apply_pulse(pulse, spin.orientation)
+                spin = apply_pulse(pulse, Spin().orientation)
                 @test longitudinal(spin) ≈ 0. atol=1e-12
                 @test transverse(spin) ≈ 1.
-                @test phase(spin) ≈ (pulse_phase + 90) / 180 * π
+                @test phase(spin) ≈ deg2rad(pulse_phase + 90)
             end
         end
         @testset "90 pulses flips transverse spin into longitudinal plane" begin
             for pulse_phase in (0., 22., 30., 80.)
                 pulse = RFPulse(0., 90, pulse_phase)
-                spin_phase = (pulse_phase + 90) / 180 * π
+                spin_phase = (pulse_phase + 90)
                 spin = Spin(longitudinal=0, transverse=1., phase=spin_phase)
                 spin = apply_pulse(pulse, spin.orientation)
                 @test longitudinal(spin) ≈ -1.

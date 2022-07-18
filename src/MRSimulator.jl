@@ -15,7 +15,7 @@ struct Spin
     position :: SVector{3,Real}
     orientation :: SpinOrientation
 end
-Spin(;time=0., position=zero(SVector{3,Real}), longitudinal=1., transverse=0., phase=0.) = Spin(time, position, SpinOrientation(longitudinal, transverse, phase))
+Spin(;time=0., position=zero(SVector{3,Real}), longitudinal=1., transverse=0., phase=0.) = Spin(time, position, SpinOrientation(longitudinal, transverse, deg2rad(phase)))
 
 for param in (:longitudinal, :transverse, :phase)
     @eval $param(o :: SpinOrientation) = o.$param
@@ -73,8 +73,8 @@ struct RFPulse <: SequenceComponent
     cp :: Real
     sp :: Real
     RFPulse(time, flip_angle, phase) = begin
-        f = flip_angle / 180. * π
-        p = phase / 180. * π
+        f = deg2rad(flip_angle)
+        p = deg2rad(phase)
         new(time, f, cos(f), sin(f), p, cos(p), sin(p))
     end
 end
