@@ -48,7 +48,11 @@ struct Sequence
     pulses :: Vector{SequenceComponent}
     TR :: Real
     function Sequence(pulses::Vector{SequenceComponent}, TR :: Real)
-        new(sort(pulses, by=x->x.time), TR)
+        result = new(sort(pulses, by=x->x.time), TR)
+        if length(result.pulses) > 0
+            @assert result.pulses[end].time <= TR
+        end
+        result
     end
 end
 
