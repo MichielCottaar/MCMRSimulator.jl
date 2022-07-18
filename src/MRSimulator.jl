@@ -1,6 +1,7 @@
 module MRSimulator
-using StaticArrays
+import StaticArrays: SA_F64, MVector, SVector
 using LinearAlgebra
+import Base
 
 const gyromagnetic_ratio = 267.52218744  # (10^6 rad⋅s^−1⋅T^−1)
 
@@ -75,6 +76,12 @@ end
 # defining the sequence
 abstract type SequenceComponent end
 
+struct EndSequence <: SequenceComponent
+    time :: Real
+end
+
+apply(s :: EndSequence, spin :: Spin) = spin
+
 struct RFPulse <: SequenceComponent
     time :: Real
     flip_angle :: Real
@@ -110,18 +117,22 @@ function apply_pulse(pulse :: RFPulse, spin :: SpinOrientation)
     )
 end
 
+apply(pulse :: RFPulse, spin :: Spin) = Spin(spin.time, spin.position, apply_pulse(pulse, spin.orientation))
+
 struct Sequence
-    pulses :: Vector{RFPulse}
-    function Sequence(pulses::Vector{RFPulse})
-        for c in components
-            append!(result, (c.time, c))
-        end
-        new(sort(pulses, by=x->x.time))
+    pulses :: Vector{SequenceComponent}
+    function Sequence(pulses::Vector{SequenceComponent}, end_sequence :: Real)
+        new(sort([pulses; EndSequence(end_sequence)], by=x->x.time))
     end
 end
 
-function next_time(current_time :: Real, sequence :: Sequence)
-    index = searchsortedfirst(sequence.components, current_time, by=x->x.time)
+Sequence(end_sequence :: Real) = Sequence(SequenceComponent[], end_sequence)
+Base.getindex(s :: Sequence, index :: Integer) = s.pulses[index]
+
+function time(sequence :: Sequence, index :: Integer)
+    if index > length(sequence.pulses)
+        return Inf
+    end
     return sequence[index].time
 end
 
@@ -150,4 +161,29 @@ function evolve_to_time(spin :: Spin, micro :: Microstructure, new_time :: Real,
     spin
 end
 
+function evolve_spin(spin :: Spin, micro :: Microstructure, sequence :: Sequence; store_every=1., B0=3.)
+    sequence_index = 1
+    readout_index = 1
+    spins = typeof(spin)[]
+    times = MVector{2, Float64}([
+        time(sequence, sequence_index),
+        (readout_index - 1) * store_every
+    ])
+    while !isinf(times[1])
+        next = argmin(times)
+        spin = evolve_to_time(spin, micro, times[next], B0)
+        if next == 1
+            spin = apply(sequence[sequence_index], spin)
+            sequence_index += 1
+            times[1] = time(sequence, sequence_index)
+        elseif next == 2
+            push!(spins, spin)
+            readout_index += 1
+            times[2] = (readout_index - 1) * store_every
+        end
+    end
+    spins
 end
+
+end
+
