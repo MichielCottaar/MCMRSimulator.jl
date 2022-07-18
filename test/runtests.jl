@@ -1,5 +1,7 @@
 using Test
-import MRSimulator: Spin, ZeroField, Microstructure, evolve_to_time, time, ConstantField, GradientField, gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position, norm_angle, evolve, Sequence, relax
+import MRSimulator: Spin, ZeroField, Microstructure, evolve_to_time, time, ConstantField, GradientField, 
+    gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position, 
+    norm_angle, evolve, Sequence, relax
 using StaticArrays
 
 @testset "MRSimulator.jl" begin
