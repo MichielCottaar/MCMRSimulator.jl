@@ -79,6 +79,10 @@ struct RFPulse <: SequenceComponent
     end
 end
 
+phase(pulse :: RFPulse) = rad2deg(pulse.phase)
+flip_angle(pulse :: RFPulse) = rad2deg(pulse.flip_angle)
+time(pulse :: RFPulse) = pulse.time
+
 function apply_pulse(pulse :: RFPulse, spin :: SpinOrientation)
     Bx_init = spin.transverse * cos(spin.phase)
     By_init = spin.transverse * sin(spin.phase)
