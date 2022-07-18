@@ -1,5 +1,5 @@
 using Test
-import MRSimulator: Spin, ZeroField, Microstructure, evolve_to_time, time, ConstantField, GradientField, gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position, norm_angle, evolve, Sequence
+import MRSimulator: Spin, ZeroField, Microstructure, evolve_to_time, time, ConstantField, GradientField, gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position, norm_angle, evolve, Sequence, relax
 using StaticArrays
 
 @testset "MRSimulator.jl" begin
@@ -27,6 +27,18 @@ using StaticArrays
             @test time(spin) == 0.5
             @test position(spin) == SA_F64[3., 0., 0.]
             @test phase(spin) ≈ norm_angle(rad2deg((0.6 + (2. + 1.5 * 3.) * 0.2) * 3 * gyromagnetic_ratio) - 360)
+        end
+    end
+    @testset "Simple relaxation" begin
+        orient = Spin(transverse=1., longitudinal=0.).orientation
+        pos = zero(SVector{3, Real})
+        @testset "R2 relaxation" begin
+            env = Microstructure(R2=ConstantField(2.))(pos)
+            @test relax(orient, env, 0.3).transverse ≈ exp(-0.6)
+        end
+        @testset "R1 relaxation" begin
+            env = Microstructure(R1=ConstantField(2.))(pos)
+            @test relax(orient, env, 0.3).longitudinal ≈ 1 - exp(-0.6)
         end
     end
     @testset "Apply RF pulses" begin
