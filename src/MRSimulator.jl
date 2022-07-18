@@ -28,7 +28,7 @@ function evolve(spin :: Spin, micro :: Microstructure, sequence :: Sequence; sto
     readout_index = 1
     spins = typeof(spin)[]
     times = MVector{3, Float64}([
-        nTR * sequence.TR * (1. + 1e-8),
+        nextfloat(nTR * sequence.TR),
         time(sequence, sequence_index),
         (readout_index - 1) * store_every
     ])
