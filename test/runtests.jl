@@ -1,5 +1,5 @@
 using Test
-import MRSimulator: Spin, ZeroField, Microstructure, evolve_to_time, time, ConstantField, GradientField, gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position
+import MRSimulator: Spin, ZeroField, Microstructure, evolve_to_time, time, ConstantField, GradientField, gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position, norm_angle
 using StaticArrays
 
 @testset "MRSimulator.jl" begin
@@ -14,19 +14,19 @@ using StaticArrays
             spin = evolve_to_time(Spin(), Microstructure(off_resonance=ConstantField(2.)), 0.3, 3.)
             @test time(spin) == 0.3
             @test position(spin) == SA_F64[0., 0., 0.]
-            @test phase(spin) ≈ rad2deg(0.6 * 3 * gyromagnetic_ratio)
+            @test phase(spin) ≈ norm_angle(rad2deg(0.6 * 3 * gyromagnetic_ratio))
         end
         @testset "Test gradient off-resonance field" begin
             micro = Microstructure(off_resonance=GradientField(SA_F64[1.5, 0., 0.], 2.))
             spin = evolve_to_time(Spin(), micro, 0.3, 3.)
             @test time(spin) == 0.3
             @test position(spin) == SA_F64[0., 0., 0.]
-            @test phase(spin) ≈ rad2deg(0.6 * 3 * gyromagnetic_ratio)
+            @test phase(spin) ≈ norm_angle(rad2deg(0.6 * 3 * gyromagnetic_ratio))
             # Move spin and evolve a bit further in time
             spin = evolve_to_time(Spin(0.3, SA_F64[3., 0., 0.], spin.orientation), micro, 0.5, 3.)
             @test time(spin) == 0.5
             @test position(spin) == SA_F64[3., 0., 0.]
-            @test phase(spin) ≈ rad2deg((0.6 + (2. + 1.5 * 3.) * 0.2) * 3 * gyromagnetic_ratio) - 360
+            @test phase(spin) ≈ norm_angle(rad2deg((0.6 + (2. + 1.5 * 3.) * 0.2) * 3 * gyromagnetic_ratio) - 360)
         end
     end
     @testset "Apply RF pulses" begin

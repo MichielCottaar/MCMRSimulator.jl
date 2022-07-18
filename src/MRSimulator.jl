@@ -2,7 +2,15 @@ module MRSimulator
 using StaticArrays
 using LinearAlgebra
 
-const gyromagnetic_ratio = 1 # 267.52218744  # (10^6 rad⋅s^−1⋅T^−1)
+const gyromagnetic_ratio = 267.52218744  # (10^6 rad⋅s^−1⋅T^−1)
+
+function norm_angle(angle)
+    angle = mod(angle, 360)
+    if angle > 180
+        angle -= 360
+    end
+    angle
+end
 
 struct SpinOrientation
     longitudinal :: Real
@@ -21,13 +29,7 @@ for param in (:longitudinal, :transverse)
     @eval $param(o :: SpinOrientation) = o.$param
     @eval $param(s :: Spin) = $param(s.orientation)
 end
-function phase(o :: SpinOrientation)
-    angle = mod(rad2deg(o.phase), 360)
-    if angle > 180
-        angle -= 360
-    end
-    angle
-end
+phase(o :: SpinOrientation) = norm_angle(rad2deg(o.phase))
 
 phase(s :: Spin) = phase(s.orientation)
 time(s :: Spin) = s.time
