@@ -17,10 +17,19 @@ struct Spin
 end
 Spin(;time=0., position=zero(SVector{3,Real}), longitudinal=1., transverse=0., phase=0.) = Spin(time, position, SpinOrientation(longitudinal, transverse, deg2rad(phase)))
 
-for param in (:longitudinal, :transverse, :phase)
+for param in (:longitudinal, :transverse)
     @eval $param(o :: SpinOrientation) = o.$param
     @eval $param(s :: Spin) = $param(s.orientation)
 end
+function phase(o :: SpinOrientation)
+    angle = mod(rad2deg(o.phase), 360)
+    if angle > 180
+        angle -= 360
+    end
+    angle
+end
+
+phase(s :: Spin) = phase(s.orientation)
 time(s :: Spin) = s.time
 position(s :: Spin) = s.position
 

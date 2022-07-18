@@ -14,19 +14,19 @@ using StaticArrays
             spin = evolve_to_time(Spin(), Microstructure(off_resonance=ConstantField(2.)), 0.3, 3.)
             @test time(spin) == 0.3
             @test position(spin) == SA_F64[0., 0., 0.]
-            @test phase(spin) ≈ 0.6 * 3 * gyromagnetic_ratio
+            @test phase(spin) ≈ rad2deg(0.6 * 3 * gyromagnetic_ratio)
         end
         @testset "Test gradient off-resonance field" begin
             micro = Microstructure(off_resonance=GradientField(SA_F64[1.5, 0., 0.], 2.))
             spin = evolve_to_time(Spin(), micro, 0.3, 3.)
             @test time(spin) == 0.3
             @test position(spin) == SA_F64[0., 0., 0.]
-            @test phase(spin) ≈ 0.6 * 3 * gyromagnetic_ratio
+            @test phase(spin) ≈ rad2deg(0.6 * 3 * gyromagnetic_ratio)
             # Move spin and evolve a bit further in time
             spin = evolve_to_time(Spin(0.3, SA_F64[3., 0., 0.], spin.orientation), micro, 0.5, 3.)
             @test time(spin) == 0.5
             @test position(spin) == SA_F64[3., 0., 0.]
-            @test phase(spin) ≈ (0.6 + (2. + 1.5 * 3.) * 0.2) * 3 * gyromagnetic_ratio
+            @test phase(spin) ≈ rad2deg((0.6 + (2. + 1.5 * 3.) * 0.2) * 3 * gyromagnetic_ratio) - 360
         end
     end
     @testset "Apply RF pulses" begin
@@ -36,7 +36,7 @@ using StaticArrays
                 for spin_phase in (-90, -45, 0., 30., 90., 180, 22.123789)
                     spin = Spin(phase=spin_phase, transverse=1.)
                     spin = apply_pulse(pulse, spin.orientation)
-                    @test phase(spin) ≈ deg2rad(spin_phase % 360)
+                    @test phase(spin) ≈ spin_phase
                     @test longitudinal(spin) ≈ 1.
                     @test transverse(spin) ≈ 1.
                 end
@@ -69,7 +69,7 @@ using StaticArrays
                     spin = apply_pulse(pulse, spin.orientation)
                     @test longitudinal(spin) ≈ 0. atol=1e-12
                     @test transverse(spin) ≈ 1.
-                    @test phase(spin) ≈ deg2rad(pulse_phase)
+                    @test phase(spin) ≈ pulse_phase
                 end
             end
         end
@@ -81,7 +81,7 @@ using StaticArrays
                 spin = apply_pulse(pulse, spin.orientation)
                 @test longitudinal(spin) ≈ 0. atol=1e-12
                 @test transverse(spin) ≈ 1.
-                @test phase(spin) ≈ -deg2rad(spin_phase)
+                @test phase(spin) ≈ -spin_phase
             end
             for pulse_phase in (0., 22., 30., 80.)
                 pulse = RFPulse(0., 180, pulse_phase)
@@ -90,7 +90,7 @@ using StaticArrays
                 spin = apply_pulse(pulse, spin.orientation)
                 @test longitudinal(spin) ≈ 0. atol=1e-12
                 @test transverse(spin) ≈ 1.
-                @test phase(spin) ≈ deg2rad(2 * pulse_phase)
+                @test phase(spin) ≈ 2 * pulse_phase
             end
         end
         @testset "90 pulses flips longitudinal spin into transverse plane" begin
@@ -99,7 +99,7 @@ using StaticArrays
                 spin = apply_pulse(pulse, Spin().orientation)
                 @test longitudinal(spin) ≈ 0. atol=1e-12
                 @test transverse(spin) ≈ 1.
-                @test phase(spin) ≈ deg2rad(pulse_phase + 90)
+                @test phase(spin) ≈ pulse_phase + 90
             end
         end
         @testset "90 pulses flips transverse spin into longitudinal plane" begin
