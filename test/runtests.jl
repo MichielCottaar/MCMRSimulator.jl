@@ -1,5 +1,5 @@
 using Test
-import MRSimulator: Spin, ZeroField, Microstructure, evolve_to_time, time, ConstantField, GradientField, gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position, norm_angle, evolve_spin, Sequence
+import MRSimulator: Spin, ZeroField, Microstructure, evolve_to_time, time, ConstantField, GradientField, gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position, norm_angle, evolve, Sequence
 using StaticArrays
 
 @testset "MRSimulator.jl" begin
@@ -115,13 +115,15 @@ using StaticArrays
     end
     @testset "Evolve a single spin fully" begin
         @testset "Empty environment and sequence" begin
-            spins = evolve_spin(Spin(), Microstructure(), Sequence(2.8), store_every=0.5)
+            spins = evolve(Spin(), Microstructure(), Sequence(2.8), store_every=0.5)
             time = 0.
             for spin in spins
                 @test spin.time == time
                 time += 0.5
             end
             @test length(spins) == 6
+            spins2 = evolve([Spin()], Microstructure(), Sequence(2.8), store_every=0.5)[:, 1]
+            @test spins == spins2
         end
     end
 end

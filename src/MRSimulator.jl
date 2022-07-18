@@ -161,7 +161,7 @@ function evolve_to_time(spin :: Spin, micro :: Microstructure, new_time :: Real,
     spin
 end
 
-function evolve_spin(spin :: Spin, micro :: Microstructure, sequence :: Sequence; store_every=1., B0=3.)
+function evolve(spin :: Spin, micro :: Microstructure, sequence :: Sequence; store_every=1., B0=3.)
     sequence_index = 1
     readout_index = 1
     spins = typeof(spin)[]
@@ -185,5 +185,13 @@ function evolve_spin(spin :: Spin, micro :: Microstructure, sequence :: Sequence
     spins
 end
 
+function evolve(spins :: Vector{Spin}, micro :: Microstructure, sequence :: Sequence; store_every=1., B0=3.)
+    nspins = length(spins)
+    result = fill(Spin[], nspins)
+    Threads.@threads for i = 1:nspins
+        result[i] = evolve(spins[i], micro, sequence, store_every=store_every, B0=B0)
+    end
+    hcat(result...)
+end
 end
 
