@@ -46,17 +46,19 @@ apply(pulse :: RFPulse, spin :: Spin) = Spin(spin.time, spin.position, apply_pul
 
 struct Sequence
     pulses :: Vector{SequenceComponent}
-    function Sequence(pulses::Vector{SequenceComponent}, end_sequence :: Real)
-        new(sort([pulses; EndSequence(end_sequence)], by=x->x.time))
+    TR :: Real
+    function Sequence(pulses::Vector{SequenceComponent}, TR :: Real)
+        new(sort(pulses, by=x->x.time), TR)
     end
 end
 
-Sequence(end_sequence :: Real) = Sequence(SequenceComponent[], end_sequence)
-Base.getindex(s :: Sequence, index :: Integer) = s.pulses[index]
+Sequence(TR :: Real) = Sequence(SequenceComponent[], TR)
+Base.getindex(s :: Sequence, index :: Integer) = s.pulses[((index - 1) % length(s.pulses)) + 1]
 
 function time(sequence :: Sequence, index :: Integer)
-    if index > length(sequence.pulses)
+    if length(sequence.pulses) == 0
         return Inf
     end
-    return sequence[index].time
+    nTR = (index - 1) ÷ length(sequence.pulses)
+    return nTR * sequence.TR + sequence[index].time
 end

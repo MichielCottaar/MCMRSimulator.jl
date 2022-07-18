@@ -139,5 +139,9 @@ using StaticArrays
             spins2 = evolve([Spin()], Microstructure(), Sequence(2.8), store_every=0.5)[:, 1]
             @test spins == spins2
         end
+        @testset "Ensure data is stored at final TR" begin
+            spins = evolve(Spin(), Microstructure(), Sequence(2.), store_every=0.5)
+            @test length(spins) == 5
+        end
     end
 end
