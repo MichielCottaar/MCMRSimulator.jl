@@ -38,6 +38,5 @@ for param in (:longitudinal, :transverse, :phase, :vector)
     @eval $param(s :: Spin) = $param(s.orientation)
 end
 
-phase(s :: Spin) = phase(s.orientation)
 time(s :: Spin) = s.time
 position(s :: Spin) = s.position
