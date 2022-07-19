@@ -2,11 +2,14 @@ module MRSimulator
 import StaticArrays: SA_F64, MVector, SVector
 using LinearAlgebra
 import Base
+import RecipesBase: RecipesBase, @userplot, @recipe
+
 
 include("constants.jl")
 include("spin.jl")
 include("field.jl")
 include("sequence.jl")
+include("plot.jl")
 
 function evolve_to_time(spin :: Spin, micro :: Microstructure, new_time :: Real, B0=3.)
     if spin.time > new_time
