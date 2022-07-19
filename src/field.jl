@@ -5,28 +5,33 @@ abstract type Field{T} end
 struct ZeroField{T} <: Field{T}
 end
 
-(f::ZeroField{T})(position :: SVector{3,Real}) where {T} = zero(T)
+(f::ZeroField{T})(position :: SVector) where {T} = zero(T)
 
 
 struct ConstantField{T} <: Field{T}
     value :: T
 end
 
-(f::ConstantField{T})(position :: SVector{3,Real}) where {T} = f.value
+(f::ConstantField)(position :: SVector) = f.value
 
 struct GradientField{T} <: Field{T}
     gradient :: SVector{3,T}
     offset :: T
 end
 
-(f::GradientField{T})(position :: SVector{3,Real}) where {T} = position ⋅ f.gradient + f.offset
+(f::GradientField)(position :: SVector) = position ⋅ f.gradient + f.offset
 
 field() = field(typeof(0.))
 field(::Type{T}) where T <: Real = ZeroField{T}()
-field(value :: Real) = real == zero(typeof(value)) ? field(typeof(T)) : ConstantField(value)
+field(value :: Real) = iszero(value) ? field(typeof(value)) : ConstantField(value)
 field(gradient :: AbstractVector, value :: Real) = begin
     @assert size(gradient) == (3,)
-    all(gradient .== 0) ? field(value) : GradientField(gradient, value)
+    if all(gradient .== 0) 
+        return field(value) 
+    else
+        new_type = Base.promote_eltype(gradient, value)
+        return GradientField{new_type}(SVector{3,new_type}(gradient), new_type(value))
+    end
 end
 
 struct LocalEnvironment

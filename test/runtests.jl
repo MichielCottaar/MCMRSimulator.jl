@@ -1,5 +1,5 @@
 using Test
-import MRSimulator: Spin, Microstructure, evolve_to_time, time, field,
+import MRSimulator: MRSimulator, Spin, Microstructure, evolve_to_time, time, field,
     gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position, 
     norm_angle, evolve, Sequence, relax
 using StaticArrays
@@ -29,6 +29,21 @@ using StaticArrays
             @test time(spin) == 0.5
             @test position(spin) == SA_F64[3., 0., 0.]
             @test phase(spin) ≈ norm_angle(rad2deg((0.6 + (2. + 1.5 * 3.) * 0.2) * 3 * gyromagnetic_ratio) - 360)
+        end
+        @testset "Fields with different types" begin
+            pos = SA_F64[1., 0., 0.]
+            @test isa(field()(pos), Float64)
+            @test isa(field(Int)(pos), Int)
+            @test isa(field(0)(pos), Int)
+            @test isa(field(0), MRSimulator.ZeroField{Int})
+            @test isa(field(2)(pos), Int)
+            @test isa(field(2), MRSimulator.ConstantField{Int})
+            @test isa(field([0, 0, 0], 0), MRSimulator.ZeroField{Int})
+            @test isa(field([0, 0, 0], 0)(pos), Int)
+            @test isa(field([0, 0, 0], 2), MRSimulator.ConstantField{Int})
+            @test isa(field([0, 0, 0], 2)(pos), Int)
+            @test isa(field([1, 0, 0], 2), MRSimulator.GradientField{Int})
+            @test isa(field([1, 0, 0], 2)(pos), Float64)
         end
     end
     @testset "Simple relaxation" begin
