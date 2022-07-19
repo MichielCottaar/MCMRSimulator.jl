@@ -1,7 +1,7 @@
 using Test
 import MRSimulator: MRSimulator, Spin, Microstructure, evolve_to_time, time, field,
     gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position, 
-    norm_angle, evolve, Sequence, relax
+    norm_angle, evolve, Sequence, relax, vector2spin, vector
 using StaticArrays
 
 @testset "MRSimulator.jl" begin
@@ -57,6 +57,25 @@ using StaticArrays
             env = Microstructure(R1=field(2.))(pos)
             @test relax(orient, env, 0.3).longitudinal ≈ 1 - exp(-0.6)
         end
+    end
+    @testset "Spin conversions" begin
+        vec = SA_F64[1, 0, 0]
+        @test vector2spin(vec).longitudinal ≈ 0.
+        @test vector2spin(vec).transverse ≈ 1.
+        @test phase(vector2spin(vec)) ≈ 0.
+        @test vector(vector2spin(vec)) ≈ vec
+
+        vec = SA_F64[0, 1, 1]
+        @test vector2spin(vec).longitudinal ≈ 1.
+        @test vector2spin(vec).transverse ≈ 1.
+        @test phase(vector2spin(vec)) ≈ 90.
+        @test vector(vector2spin(vec)) ≈ vec
+
+        vec = SA_F64[1, 1, 2]
+        @test vector2spin(vec).longitudinal ≈ 2.
+        @test vector2spin(vec).transverse ≈ sqrt(2)
+        @test phase(vector2spin(vec)) ≈ 45.
+        @test vector(vector2spin(vec)) ≈ vec
     end
     @testset "Apply RF pulses" begin
         @testset "0 degree pulses should do nothing" begin

@@ -21,9 +21,22 @@ Spin(;time=0., position=zero(SVector{3,Real}), longitudinal=1., transverse=0., p
 
 for param in (:longitudinal, :transverse)
     @eval $param(o :: SpinOrientation) = o.$param
-    @eval $param(s :: Spin) = $param(s.orientation)
 end
 phase(o :: SpinOrientation) = norm_angle(rad2deg(o.phase))
+vector(o :: SpinOrientation) = SA_F64[
+    o.transverse * cos(o.phase),
+    o.transverse * sin(o.phase),
+    o.longitudinal
+]
+vector2spin(vector :: SVector{3, T}) where T <: Real = SpinOrientation(
+    vector[3],
+    sqrt(vector[1] * vector[1] + vector[2] * vector[2]),
+    atan(vector[2], vector[1]),
+)
+
+for param in (:longitudinal, :transverse, :phase, :vector)
+    @eval $param(s :: Spin) = $param(s.orientation)
+end
 
 phase(s :: Spin) = phase(s.orientation)
 time(s :: Spin) = s.time
