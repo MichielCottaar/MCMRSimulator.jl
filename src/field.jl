@@ -41,6 +41,13 @@ end
     micro.R1(position),
 )
 
+field() = ZeroField()
+field(value :: Real) = real == zero(typeof(value)) ? ZeroField() : ConstantField(value)
+field(gradient :: AbstractVector, value :: Real) = begin
+    @assert size(gradient) == (3,)
+    all(gradient .== 0) ? field(value) : GradientField(gradient, value)
+end
+
 function relax(orient :: SpinOrientation, env :: LocalEnvironment, timestep :: Real, B0=3.)
     @assert timestep > 0
     SpinOrientation(
