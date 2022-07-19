@@ -22,6 +22,8 @@ struct RFPulse <: SequenceComponent
     end
 end
 
+RFPulse(; time=0, flip_angle=0, phase=0) = RFPulse(time, flip_angle, phase)
+
 phase(pulse :: RFPulse) = rad2deg(pulse.phase)
 flip_angle(pulse :: RFPulse) = rad2deg(pulse.flip_angle)
 time(pulse :: RFPulse) = pulse.time
@@ -47,7 +49,7 @@ apply(pulse :: RFPulse, spin :: Spin) = Spin(spin.time, spin.position, apply_pul
 struct Sequence
     pulses :: Vector{SequenceComponent}
     TR :: Real
-    function Sequence(pulses::Vector{SequenceComponent}, TR :: Real)
+    function Sequence(pulses::Vector{T}, TR :: Real) where T <: SequenceComponent
         result = new(sort(pulses, by=x->x.time), TR)
         if length(result.pulses) > 0
             @assert result.pulses[end].time <= TR
