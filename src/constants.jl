@@ -1,1 +1,1 @@
-const gyromagnetic_ratio = 267.52218744  # (10^6 rad⋅s^−1⋅T^−1)
+const gyromagnetic_ratio = 0.26752218744  # (10^6 rad⋅ms^−1⋅T^−1)
