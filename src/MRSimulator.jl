@@ -58,5 +58,7 @@ function evolve(spins :: Vector{Spin}, micro :: Microstructure, sequence :: Sequ
     end
     hcat(result...)
 end
+
+export evolve, Microstructure, field, Sequence, RFPulse, Spin, vector
 end
 
