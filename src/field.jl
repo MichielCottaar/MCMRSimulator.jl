@@ -21,6 +21,13 @@ end
 
 (f::GradientField{T})(position :: SVector{3,Real}) where {T} = position ⋅ f.gradient + f.offset
 
+field() = field(typeof(0.))
+field(::Type{T}) where T <: Real = ZeroField{T}()
+field(value :: Real) = real == zero(typeof(value)) ? field(typeof(T)) : ConstantField(value)
+field(gradient :: AbstractVector, value :: Real) = begin
+    @assert size(gradient) == (3,)
+    all(gradient .== 0) ? field(value) : GradientField(gradient, value)
+end
 
 struct LocalEnvironment
     off_resonance :: Real
@@ -32,7 +39,7 @@ struct Microstructure
     off_resonance :: Field  # in ppm
     R2 :: Field
     R1 :: Field
-    Microstructure(;off_resonance=ZeroField{Float64}(), R2=ZeroField{Float64}(), R1=ZeroField{Float64}()) = new(off_resonance, R2, R1)
+    Microstructure(;off_resonance=field(), R2=field(), R1=field()) = new(off_resonance, R2, R1)
 end
 
 (micro::Microstructure)(position :: SVector{3,Real}) = LocalEnvironment(
@@ -40,13 +47,6 @@ end
     micro.R2(position),
     micro.R1(position),
 )
-
-field() = ZeroField()
-field(value :: Real) = real == zero(typeof(value)) ? ZeroField() : ConstantField(value)
-field(gradient :: AbstractVector, value :: Real) = begin
-    @assert size(gradient) == (3,)
-    all(gradient .== 0) ? field(value) : GradientField(gradient, value)
-end
 
 function relax(orient :: SpinOrientation, env :: LocalEnvironment, timestep :: Real, B0=3.)
     @assert timestep > 0
