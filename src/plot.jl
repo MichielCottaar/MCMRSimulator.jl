@@ -18,19 +18,19 @@ end
     @assert isa(sequence, Sequence)
     total_time = sequence.TR
     color --> "black"
-    lw --> 5
     times = map(t -> t.time, sequence.pulses)
     height = map(t -> flip_angle(t), sequence.pulses)
     max_height = maximum(height)
     label := nothing
     @series begin
         seriestype := :sticks
+        lw --> 5
         times, height
     end
     @series begin
         seriestype := :scatter
         shape := :utriangle
-        msize := 10
+        msize --> 10
         times, height
     end
     @series begin
