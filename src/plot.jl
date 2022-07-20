@@ -10,3 +10,35 @@
     aspect_ratio --> :equal
     map(x -> x.position[1], res), map(x -> x.position[2], res)
 end
+
+
+@userplot PlotSequence
+@recipe function f(sq::PlotSequence)
+    sequence = sq.args[1]
+    @assert isa(sequence, Sequence)
+    total_time = sequence.TR
+    color --> "black"
+    lw --> 5
+    times = map(t -> t.time, sequence.pulses)
+    height = map(t -> flip_angle(t), sequence.pulses)
+    max_height = maximum(height)
+    label := nothing
+    @series begin
+        seriestype := :sticks
+        times, height
+    end
+    @series begin
+        seriestype := :scatter
+        shape := :utriangle
+        msize := 10
+        times, height
+    end
+    @series begin
+        seriestype := :scatter
+        alpha := 0
+        times, height .+ max_height / 10
+    end
+    seriestype := :scatter
+    annotations := [(p.time, flip_angle(p) + max_height / 10, string(Int(round(flip_angle(p))))) for p in sequence.pulses]
+    ([], [])
+end

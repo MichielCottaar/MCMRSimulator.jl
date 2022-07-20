@@ -2,7 +2,7 @@ module MRSimulator
 import StaticArrays: SA_F64, MVector, SVector
 using LinearAlgebra
 import Base
-import RecipesBase: RecipesBase, @userplot, @recipe
+import RecipesBase: RecipesBase, @userplot, @recipe, @series
 
 
 include("constants.jl")
