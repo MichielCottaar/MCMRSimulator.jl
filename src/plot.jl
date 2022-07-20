@@ -1,6 +1,6 @@
 
 @userplot SpinQuiver
-@recipe function f(sq::SpinQuiver)
+@recipe function _f(sq::SpinQuiver)
     res = sq.args[1]
     @assert isa(res, AbstractVector{Spin})
     coords = [map(x -> x.position[1:2], res)]
@@ -12,9 +12,7 @@
 end
 
 
-@userplot PlotSequence
-@recipe function f(sq::PlotSequence)
-    sequence = sq.args[1]
+@recipe function _f(sequence::Sequence)
     @assert isa(sequence, Sequence)
     total_time = sequence.TR
     color --> "black"
