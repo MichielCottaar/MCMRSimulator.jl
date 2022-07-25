@@ -229,12 +229,12 @@ using StaticArrays
                     [Wall(:x, 1.)],
                 )
                 @test length(res) == 2
-                @test res[1].origin == SA_F64[0, 0, 0]
-                @test res[1].destination == SA_F64[1, 0, 0]
-                @test res[1].timestep == 1.
-                @test res[2].origin == SA_F64[1, 0, 0]
-                @test res[2].destination == SA_F64[-1, 0, 0]
-                @test res[2].timestep == 2.
+                @test res[1].origin ≈ SA_F64[0, 0, 0]
+                @test res[1].destination ≈ SA_F64[1, 0, 0]
+                @test res[1].timestep ≈ 1.
+                @test res[2].origin ≈ SA_F64[1, 0, 0]
+                @test res[2].destination ≈ SA_F64[-1, 0, 0]
+                @test res[2].timestep ≈ 2.
             end
             @testset "Hitting vertical wall under angle" begin
                 res = correct_collisions(
@@ -242,12 +242,12 @@ using StaticArrays
                     [Wall(:x, 1.)],
                 )
                 @test length(res) == 2
-                @test res[1].origin == SA_F64[0, 0, 0]
-                @test res[1].destination == SA_F64[1, 2, 0]
-                @test res[1].timestep == 1.
-                @test res[2].origin == SA_F64[1, 2, 0]
-                @test res[2].destination == SA_F64[-1, 6, 0]
-                @test res[2].timestep == 2.
+                @test res[1].origin ≈ SA_F64[0, 0, 0]
+                @test res[1].destination ≈ SA_F64[1, 2, 0]
+                @test res[1].timestep ≈ 1.
+                @test res[2].origin ≈ SA_F64[1, 2, 0]
+                @test res[2].destination ≈ SA_F64[-1, 6, 0]
+                @test res[2].timestep ≈ 2.
             end
             @testset "Missing vertical wall" begin
                 res = correct_collisions(
@@ -294,6 +294,22 @@ using StaticArrays
                 @test res[3].destination ≈ SA_F64[0, -1, 3]
                 @test res[3].timestep ≈ 1.
             end
+            @testset "Hitting a corner" begin
+                res = correct_collisions(
+                    Movement(SA_F64[0, 0, 0], SA_F64[3, 3, 3], 3),
+                    [Wall(:x, 1.), Wall(:y, 1.)],
+                )
+                @test length(res) == 3
+                @test res[1].origin ≈ SA_F64[0, 0, 0]
+                @test res[1].destination ≈ SA_F64[1, 1, 1]
+                @test res[1].timestep ≈ 1.
+                @test res[2].origin ≈ SA_F64[1, 1, 1]
+                @test res[2].destination ≈ SA_F64[1, 1, 1]
+                @test res[2].timestep ≈ 0. atol=1e-10
+                @test res[3].origin ≈ SA_F64[1, 1, 1]
+                @test res[3].destination ≈ SA_F64[-1, -1, 3]
+                @test res[3].timestep ≈ 2.
+            end
             @testset "Hitting diagonal wall" begin
                 res = correct_collisions(
                     Movement(SA_F64[1, 0, 0], SA_F64[1, 3, 0], 6.),
@@ -306,6 +322,8 @@ using StaticArrays
                 @test res[2].origin ≈ SA_F64[1, 1, 0]
                 @test res[2].destination ≈ SA_F64[-1, 1, 0]
                 @test res[2].timestep ≈ 4.
+            @testset "Hitting a corner" begin
+            end
             end
         end
     end

@@ -49,6 +49,7 @@ end
 struct Collision
     distance :: Real
     normal :: SVector{3, Real}
+    Collision(distance, normal) = new(distance == 0. ? 0. : prevfloat(distance), normal)
 end
 
 
