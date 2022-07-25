@@ -322,8 +322,6 @@ using StaticArrays
                 @test res[2].origin ≈ SA_F64[1, 1, 0]
                 @test res[2].destination ≈ SA_F64[-1, 1, 0]
                 @test res[2].timestep ≈ 4.
-            @testset "Hitting a corner" begin
-            end
             end
         end
     end
