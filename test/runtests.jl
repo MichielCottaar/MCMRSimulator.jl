@@ -199,21 +199,26 @@ using StaticArrays
             sequence = Sequence([RFPulse(flip_angle=90)], 2.)
             no_diff = evolve(Spin(), Microstructure(R2=field(0.3)), sequence, yield_every=0.5)
             with_diff = evolve(Spin(), Microstructure(diffusivity=field(1.), R2=field(0.3)), sequence, yield_every=0.5)
+            with_diff_grad = evolve(Spin(), Microstructure(diffusivity=field(1.), R2=field(0.3)), sequence, yield_every=0.5)
             spin_no_diff = no_diff[end].spins[1]
             spin_with_diff = with_diff[end].spins[1]
             @test spin_no_diff.position == SA_F64[0, 0, 0]
             @test spin_with_diff.position != SA_F64[0, 0, 0]
             @test spin_with_diff.orientation == spin_no_diff.orientation
         end
-        @testset "Basic diffusion changes result in varying field" begin
+        @testset "Basic diffusion changes spin orientation in spatially varying field" begin
             sequence = Sequence([RFPulse(flip_angle=90)], 2.)
             no_diff = evolve(Spin(), Microstructure(R2=field(SA_F64[1., 0, 0], 0.3)), sequence, yield_every=0.5)
             with_diff = evolve(Spin(), Microstructure(diffusivity=field(1.), R2=field(SA_F64[1., 0., 0.], 0.3)), sequence, yield_every=0.5)
+            with_diff_no_grad = evolve(Spin(), Microstructure(diffusivity=field(1.), R2=field(0.3)), sequence, yield_every=0.5)
             spin_no_diff = no_diff[end].spins[1]
             spin_with_diff = with_diff[end].spins[1]
+            spin_with_diff_no_grad = with_diff_no_grad[end].spins[1]
             @test spin_no_diff.position == SA_F64[0, 0, 0]
             @test spin_with_diff.position != SA_F64[0, 0, 0]
+            @test spin_with_diff_no_grad.position != SA_F64[0, 0, 0]
             @test spin_with_diff.orientation != spin_no_diff.orientation
+            @test spin_with_diff_no_grad.orientation == spin_no_diff.orientation
         end
     end
 end
