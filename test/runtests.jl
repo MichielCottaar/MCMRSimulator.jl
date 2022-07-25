@@ -181,6 +181,16 @@ using StaticArrays
             end
             @test length(snaps) == 6
         end
+        @testset "Gradient echo sequence" begin
+            snaps = evolve(Spin(), Microstructure(), Sequence([RFPulse(flip_angle=90)], 2.8), yield_every=0.5)
+            s1 = snaps[1]
+            @test vector(s1) == SA_F64[0., 0., 1.]
+            time = 0.
+            for snap in snaps[2:end]
+                @test vector(snap) ≈ SA_F64[0., 1., 0.]
+            end
+            @test length(snaps) == 9
+        end
         @testset "Ensure data is stored at final TR" begin
             snaps = evolve(Spin(), Microstructure(), Sequence(2.), yield_every=0.5)
             @test length(snaps) == 5

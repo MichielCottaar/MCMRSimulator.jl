@@ -51,7 +51,7 @@ evolve_iter(snap :: Snapshot, micro :: Microstructure, sequence :: Sequence; yie
         if next == 1
             push!(c, snap)
             snap = Snapshot(
-                apply.(sequence[sequence_index], snap.spins),
+                [apply(sequence[sequence_index], s) for s in snap.spins],
                 snap.time
             )
             push!(c, snap)
