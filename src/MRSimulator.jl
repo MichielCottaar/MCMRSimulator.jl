@@ -92,6 +92,6 @@ end
 
 
 
-export evolve, Microstructure, field, Sequence, RFPulse, Spin, vector
+export evolve, Microstructure, field, Sequence, RFPulse, Spin, vector, time, transverse, longitudinal, phase, Snapshot, evolve_iter
 end
 
