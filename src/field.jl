@@ -6,13 +6,14 @@ struct ZeroField{T} <: Field{T}
 end
 
 (f::ZeroField{T})(position :: SVector) where {T} = zero(T)
-
+(f::ZeroField{T})(m :: Movement) where {T} = zero(T)
 
 struct ConstantField{T} <: Field{T}
     value :: T
 end
 
 (f::ConstantField)(position :: SVector) = f.value
+(f::ConstantField)(m :: Movement) = f.value
 
 struct GradientField{T} <: Field{T}
     gradient :: SVector{3,T}
@@ -20,6 +21,7 @@ struct GradientField{T} <: Field{T}
 end
 
 (f::GradientField)(position :: SVector) = position ⋅ f.gradient + f.offset
+(f::GradientField)(m :: Movement) = f((m.origin + m.destination) / 2.)
 
 field() = field(typeof(0.))
 field(::Type{T}) where T <: Real = ZeroField{T}()
@@ -44,10 +46,11 @@ struct Microstructure
     off_resonance :: Field  # in ppm
     R2 :: Field
     R1 :: Field
-    Microstructure(;off_resonance=field(), R2=field(), R1=field()) = new(off_resonance, R2, R1)
+    diffusivity :: Field
+    Microstructure(;off_resonance=field(), R2=field(), R1=field(), diffusivity=field()) = new(off_resonance, R2, R1, diffusivity)
 end
 
-(micro::Microstructure)(position :: SVector{3,Real}) = LocalEnvironment(
+(micro::Microstructure)(position) = LocalEnvironment(
     micro.off_resonance(position),
     micro.R2(position),
     micro.R1(position),

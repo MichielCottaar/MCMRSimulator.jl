@@ -195,5 +195,25 @@ using StaticArrays
             snaps = evolve(Spin(), Microstructure(), Sequence(2.), yield_every=0.5)
             @test length(snaps) == 5
         end
+        @testset "Basic diffusion has no effect in constant fields" begin
+            sequence = Sequence([RFPulse(flip_angle=90)], 2.)
+            no_diff = evolve(Spin(), Microstructure(R2=field(0.3)), sequence, yield_every=0.5)
+            with_diff = evolve(Spin(), Microstructure(diffusivity=field(1.), R2=field(0.3)), sequence, yield_every=0.5)
+            spin_no_diff = no_diff[end].spins[1]
+            spin_with_diff = with_diff[end].spins[1]
+            @test spin_no_diff.position == SA_F64[0, 0, 0]
+            @test spin_with_diff.position != SA_F64[0, 0, 0]
+            @test spin_with_diff.orientation == spin_no_diff.orientation
+        end
+        @testset "Basic diffusion changes result in varying field" begin
+            sequence = Sequence([RFPulse(flip_angle=90)], 2.)
+            no_diff = evolve(Spin(), Microstructure(R2=field(SA_F64[1., 0, 0], 0.3)), sequence, yield_every=0.5)
+            with_diff = evolve(Spin(), Microstructure(diffusivity=field(1.), R2=field(SA_F64[1., 0., 0.], 0.3)), sequence, yield_every=0.5)
+            spin_no_diff = no_diff[end].spins[1]
+            spin_with_diff = with_diff[end].spins[1]
+            @test spin_no_diff.position == SA_F64[0, 0, 0]
+            @test spin_with_diff.position != SA_F64[0, 0, 0]
+            @test spin_with_diff.orientation != spin_no_diff.orientation
+        end
     end
 end

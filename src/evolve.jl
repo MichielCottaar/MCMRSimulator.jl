@@ -2,14 +2,21 @@ function evolve_to_time(spin :: Spin, micro :: Microstructure, current_time :: R
     if current_time > new_time
         throw(DomainError("Spins cannot travel backwards in time"))
     end
-    if new_time > current_time
-        timestep = new_time - current_time
-        spin = Spin(
-            spin.position,
-            relax(spin.orientation, micro(spin.position), timestep, B0)
-        )
+    if new_time == current_time
+        return spin
     end
-    spin
+    timestep = new_time - current_time
+    if isa(micro.diffusivity, ZeroField)  # no diffusion
+        pos = spin.position
+        new_pos = pos
+    else  # with diffusion
+        pos = draw_step(spin.position, micro.diffusivity(spin.position), timestep)
+        new_pos = pos.destination
+    end
+    Spin(
+        new_pos,
+        relax(spin.orientation, micro(pos), timestep, B0)
+    )
 end
 
 function evolve_to_time(current :: Snapshot, micro :: Microstructure, new_time :: Real, B0=3.)
