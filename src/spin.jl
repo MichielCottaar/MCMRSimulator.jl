@@ -13,11 +13,10 @@ struct SpinOrientation
 end
 
 struct Spin
-    time :: Real
     position :: SVector{3,Real}
     orientation :: SpinOrientation
 end
-Spin(;time=0., position=zero(SVector{3,Real}), longitudinal=1., transverse=0., phase=0.) = Spin(time, position, SpinOrientation(longitudinal, transverse, deg2rad(phase)))
+Spin(;position=zero(SVector{3,Real}), longitudinal=1., transverse=0., phase=0.) = Spin(position, SpinOrientation(longitudinal, transverse, deg2rad(phase)))
 
 for param in (:longitudinal, :transverse)
     @eval $param(o :: SpinOrientation) = o.$param

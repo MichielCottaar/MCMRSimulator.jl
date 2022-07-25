@@ -44,7 +44,7 @@ function apply_pulse(pulse :: RFPulse, spin :: SpinOrientation)
     )
 end
 
-apply(pulse :: RFPulse, spin :: Spin) = Spin(spin.time, spin.position, apply_pulse(pulse, spin.orientation))
+apply(pulse :: RFPulse, spin :: Spin) = Spin(spin.position, apply_pulse(pulse, spin.orientation))
 
 struct Sequence
     pulses :: Vector{SequenceComponent}

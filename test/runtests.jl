@@ -7,28 +7,24 @@ using StaticArrays
 @testset "MRSimulator.jl" begin
     @testset "Generate and apply microstructural fields" begin
         @testset "Simulate empty environment/sequence" begin
-            spin = evolve_to_time(Spin(), Microstructure(), 1.)
-            @test time(spin) == 1.
+            spin = evolve_to_time(Spin(), Microstructure(), 0., 1.)
             @test position(spin) == SA_F64[0., 0., 0.]
             @test phase(spin) == 0.
         end
         @testset "Test constant off-resonance field" begin
-            spin = evolve_to_time(Spin(), Microstructure(off_resonance=field(2.)), 0.3, 3.)
-            @test time(spin) == 0.3
+            spin = evolve_to_time(Spin(), Microstructure(off_resonance=field(2.)), 0., 0.3, 3.)
             @test position(spin) == SA_F64[0., 0., 0.]
             @test phase(spin) ≈ norm_angle(rad2deg(0.6 * 3 * gyromagnetic_ratio))
         end
         @testset "Test gradient off-resonance field" begin
             micro = Microstructure(off_resonance=field(SA_F64[1.5, 0., 0.], 2.))
-            spin = evolve_to_time(Spin(), micro, 0.3, 3.)
-            @test time(spin) == 0.3
+            spin = evolve_to_time(Spin(), micro, 0., 0.3)
             @test position(spin) == SA_F64[0., 0., 0.]
             @test phase(spin) ≈ norm_angle(rad2deg(0.6 * 3 * gyromagnetic_ratio))
             # Move spin and evolve a bit further in time
-            spin = evolve_to_time(Spin(0.3, SA_F64[3., 0., 0.], spin.orientation), micro, 0.5, 3.)
-            @test time(spin) == 0.5
+            spin = evolve_to_time(Spin(SA_F64[3., 0., 0.], spin.orientation), micro, 0.3, 0.5, 3.)
             @test position(spin) == SA_F64[3., 0., 0.]
-            @test phase(spin) ≈ norm_angle(rad2deg((0.6 + (2. + 1.5 * 3.) * 0.2) * 3 * gyromagnetic_ratio) - 360)
+            @test phase(spin) ≈ norm_angle(rad2deg((0.6 + (2. + 1.5 * 3.) * 0.2) * 3 * gyromagnetic_ratio))
         end
         @testset "Fields with different types" begin
             pos = SA_F64[1., 0., 0.]
@@ -163,18 +159,16 @@ using StaticArrays
     end
     @testset "Evolve a single spin fully" begin
         @testset "Empty environment and sequence" begin
-            spins = evolve(Spin(), Microstructure(), Sequence(2.8), store_every=0.5)
+            spins = evolve(Spin(), Microstructure(), Sequence(2.8), yield_every=0.5)
             time = 0.
             for spin in spins
                 @test spin.time == time
                 time += 0.5
             end
             @test length(spins) == 6
-            spins2 = evolve([Spin()], Microstructure(), Sequence(2.8), store_every=0.5)[:, 1]
-            @test spins == spins2
         end
         @testset "Ensure data is stored at final TR" begin
-            spins = evolve(Spin(), Microstructure(), Sequence(2.), store_every=0.5)
+            spins = evolve(Spin(), Microstructure(), Sequence(2.), yield_every=0.5)
             @test length(spins) == 5
         end
     end
