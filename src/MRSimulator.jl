@@ -11,11 +11,6 @@ include("field.jl")
 include("sequence.jl")
 include("plot.jl")
 
-struct Snapshot
-    spins :: Vector{Spin}
-    time :: Real
-end
-
 
 function evolve_to_time(spin :: Spin, micro :: Microstructure, current_time :: Real, new_time :: Real, B0=3.)
     if current_time > new_time

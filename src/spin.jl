@@ -37,5 +37,16 @@ for param in (:longitudinal, :transverse, :phase, :vector)
     @eval $param(s :: Spin) = $param(s.orientation)
 end
 
-time(s :: Spin) = s.time
 position(s :: Spin) = s.position
+
+struct Snapshot
+    spins :: Vector{Spin}
+    time :: Real
+end
+time(s :: Snapshot) = s.time
+function vector(s :: Snapshot)
+    sum(vector.(s.spins))
+end
+for param in (:longitudinal, :transverse, :phase)
+    @eval $param(s :: Snapshot) = $param(vector2spin(vector(s)))
+end

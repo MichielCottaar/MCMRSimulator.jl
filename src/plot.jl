@@ -1,7 +1,6 @@
 
-@userplot SpinQuiver
-@recipe function _f(sq::SpinQuiver)
-    res = sq.args[1]
+@recipe function _f(snap::Snapshot)
+    res = snap.spins
     @assert isa(res, AbstractVector{Spin})
     coords = [map(x -> x.position[1:2], res)]
     seriestype := :quiver

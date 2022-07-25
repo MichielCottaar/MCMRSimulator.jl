@@ -159,17 +159,31 @@ using StaticArrays
     end
     @testset "Evolve a single spin fully" begin
         @testset "Empty environment and sequence" begin
-            spins = evolve(Spin(), Microstructure(), Sequence(2.8), yield_every=0.5)
+            snaps = evolve(Spin(), Microstructure(), Sequence(2.8), yield_every=0.5)
             time = 0.
-            for spin in spins
-                @test spin.time == time
+            for snap in snaps
+                @test snap.time == time
                 time += 0.5
+                @test vector(snap) == SA_F64[0., 0., 1.]
+                @test longitudinal(snap) == 1.
+                @test transverse(snap) == 0.
             end
-            @test length(spins) == 6
+            @test length(snaps) == 6
+
+            snaps = evolve([Spin(), Spin()], Microstructure(), Sequence(2.8), yield_every=0.5)
+            time = 0.
+            for snap in snaps
+                @test snap.time == time
+                time += 0.5
+                @test vector(snap) == SA_F64[0., 0., 2.]
+                @test longitudinal(snap) == 2.
+                @test transverse(snap) == 0.
+            end
+            @test length(snaps) == 6
         end
         @testset "Ensure data is stored at final TR" begin
-            spins = evolve(Spin(), Microstructure(), Sequence(2.), yield_every=0.5)
-            @test length(spins) == 5
+            snaps = evolve(Spin(), Microstructure(), Sequence(2.), yield_every=0.5)
+            @test length(snaps) == 5
         end
     end
 end
