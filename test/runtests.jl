@@ -1,7 +1,7 @@
 using Test
 import MRSimulator: MRSimulator, Spin, Microstructure, evolve_to_time, time, field,
     gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position, 
-    norm_angle, evolve, Sequence, relax, vector2spin, vector
+    norm_angle, evolve, Sequence, relax, vector2spin, vector, Wall, correct_collisions, Movement
 using StaticArrays
 
 @testset "MRSimulator.jl" begin
@@ -219,6 +219,94 @@ using StaticArrays
             @test spin_with_diff_no_grad.position != SA_F64[0, 0, 0]
             @test spin_with_diff.orientation != spin_no_diff.orientation
             @test spin_with_diff_no_grad.orientation == spin_no_diff.orientation
+        end
+    end
+    @testset "Collision tests" begin
+        @testset "Wall reflections" begin
+            @testset "Hitting vertical wall directly" begin
+                res = correct_collisions(
+                    Movement(SA_F64[0, 0, 0], SA_F64[3, 0, 0], 3.),
+                    [Wall(:x, 1.)],
+                )
+                @test length(res) == 2
+                @test res[1].origin == SA_F64[0, 0, 0]
+                @test res[1].destination == SA_F64[1, 0, 0]
+                @test res[1].timestep == 1.
+                @test res[2].origin == SA_F64[1, 0, 0]
+                @test res[2].destination == SA_F64[-1, 0, 0]
+                @test res[2].timestep == 2.
+            end
+            @testset "Hitting vertical wall under angle" begin
+                res = correct_collisions(
+                    Movement(SA_F64[0, 0, 0], SA_F64[3, 6, 0], 3.),
+                    [Wall(:x, 1.)],
+                )
+                @test length(res) == 2
+                @test res[1].origin == SA_F64[0, 0, 0]
+                @test res[1].destination == SA_F64[1, 2, 0]
+                @test res[1].timestep == 1.
+                @test res[2].origin == SA_F64[1, 2, 0]
+                @test res[2].destination == SA_F64[-1, 6, 0]
+                @test res[2].timestep == 2.
+            end
+            @testset "Missing vertical wall" begin
+                res = correct_collisions(
+                    Movement(SA_F64[0, 0, 0], SA_F64[0, 2, 0], 4.),
+                    [Wall(:x, 1.)],
+                )
+                @test length(res) == 1
+                @test res[1].origin == SA_F64[0, 0, 0]
+                @test res[1].destination == SA_F64[0, 2, 0]
+                @test res[1].timestep == 4.
+            end
+            @testset "Hitting two vertical walls" begin
+                res = correct_collisions(
+                    Movement(SA_F64[0, 0, 0], SA_F64[6, 0, 12], 30),
+                    [Wall(:x, 1.), Wall(:x, -1.)],
+                )
+                @test length(res) == 4
+                @test res[1].origin ≈ SA_F64[0, 0, 0]
+                @test res[1].destination ≈ SA_F64[1, 0, 2]
+                @test res[1].timestep ≈ 5.
+                @test res[2].origin ≈ SA_F64[1, 0, 2]
+                @test res[2].destination ≈ SA_F64[-1, 0, 6]
+                @test res[2].timestep ≈ 10.
+                @test res[3].origin ≈ SA_F64[-1, 0, 6]
+                @test res[3].destination ≈ SA_F64[1, 0, 10]
+                @test res[3].timestep ≈ 10.
+                @test res[4].origin ≈ SA_F64[1, 0, 10]
+                @test res[4].destination ≈ SA_F64[0, 0, 12]
+                @test res[4].timestep ≈ 5.
+            end
+            @testset "Hitting vertical and horizontal walls" begin
+                res = correct_collisions(
+                    Movement(SA_F64[-1, 0, 0], SA_F64[2, 3, 3], 3),
+                    [Wall(:x, 1.), Wall(:y, 1.)],
+                )
+                @test length(res) == 3
+                @test res[1].origin ≈ SA_F64[-1, 0, 0]
+                @test res[1].destination ≈ SA_F64[0, 1, 1]
+                @test res[1].timestep ≈ 1.
+                @test res[2].origin ≈ SA_F64[0, 1, 1]
+                @test res[2].destination ≈ SA_F64[1, 0, 2]
+                @test res[2].timestep ≈ 1.
+                @test res[3].origin ≈ SA_F64[1, 0, 2]
+                @test res[3].destination ≈ SA_F64[0, -1, 3]
+                @test res[3].timestep ≈ 1.
+            end
+            @testset "Hitting diagonal wall" begin
+                res = correct_collisions(
+                    Movement(SA_F64[1, 0, 0], SA_F64[1, 3, 0], 6.),
+                    [Wall(SA_F64[1, 1, 0], 1.)],
+                )
+                @test length(res) == 2
+                @test res[1].origin ≈ SA_F64[1, 0, 0]
+                @test res[1].destination ≈ SA_F64[1, 1, 0]
+                @test res[1].timestep ≈ 2.
+                @test res[2].origin ≈ SA_F64[1, 1, 0]
+                @test res[2].destination ≈ SA_F64[-1, 1, 0]
+                @test res[2].timestep ≈ 4.
+            end
         end
     end
 end

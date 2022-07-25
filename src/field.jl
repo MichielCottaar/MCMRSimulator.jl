@@ -1,6 +1,7 @@
 # Defining the microstructure seen by the spin
 
 abstract type Field{T} end
+(f::Field)(ms :: AbstractVector{Movement}) = sum(m -> f(m) * m.timestep, ms) / sum(m -> m.timestep, ms)
 
 struct ZeroField{T} <: Field{T}
 end
@@ -63,5 +64,4 @@ function relax(orient :: SpinOrientation, env :: LocalEnvironment, timestep :: R
         orient.transverse * exp(-env.R2 * timestep),
         env.off_resonance * timestep * gyromagnetic_ratio * B0 + orient.phase
     )
-
 end
