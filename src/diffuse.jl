@@ -64,13 +64,52 @@ function detect_collision(movement :: Movement, obstructions :: Vector{T}) where
     collision
 end
 
-struct Wall <: Obstruction
-    normal :: SVector{3, Real}
-    offset :: Real
-    function Wall(normal, offset)
-        n = norm(normal)
-        new(normal / n, offset * n)
+struct Transformed <: Obstruction
+    obstruction :: Obstruction
+    transform :: CoordinateTransformations.Transformation
+    inverse :: CoordinateTransformations.Transformation
+    function Transformed(obstruction :: Obstruction, transform :: CoordinateTransformations.Transformation)
+        if isa(obstruction, Transformed)
+            return Transformed(obstruction.obstruction, transform ∘ obstruction.transform )
+        else
+            return new(obstruction, transform, inv(transform))
+        end
     end
+end
+
+function detect_collision(movement :: Movement, transform :: Transformed) 
+    c = detect_collision(
+        Movement(
+            transform.inverse(movement.origin),
+            transform.inverse(movement.destination),
+            movement.timestep
+        ),
+        transform.obstruction
+    )
+    if isnothing(c)
+        return c
+    end
+    Collision(
+        c.distance,
+        transform.transform(c.normal) .- transform.transform(zero(SVector{3, Real}))
+    )
+end
+
+struct Wall <: Obstruction
+end
+
+Wall(offset :: Real) = offset == 0 ? Wall() : Transformed(Wall(), CoordinateTransformations.Translation(offset, 0., 0.))
+
+
+function Wall(normal :: SVector, offset :: Real)
+    n = normal ./ norm(normal)
+    shifted = Wall(offset * norm(normal))
+    if isapprox(n, SA_F64[1, 0, 0], atol=1e-10)
+        return shifted
+    end
+    rot_axis = cross(SA_F64[1, 0, 0], n)
+    rot_angle = acos(n[1])
+    Transformed(shifted, CoordinateTransformations.LinearMap(Rotations.AngleAxis(rot_angle, rot_axis...)))
 end
 
 function Wall(sym :: Symbol, offset :: Real)
@@ -83,32 +122,38 @@ function Wall(sym :: Symbol, offset :: Real)
 end
 
 function detect_collision(movement :: Movement, wall :: Wall)
-    origin = movement.origin ⋅ wall.normal - wall.offset
-    destination = movement.destination ⋅ wall.normal - wall.offset
+    origin = movement.origin[1]
+    destination = movement.destination[1]
     if origin * destination >= 0
         return nothing
     end
     total_length = abs(origin - destination)
     Collision(
         abs(origin) / total_length,
-        wall.normal
+        SA_F64[1, 0, 0]
     )
 end
 
 struct Sphere <: Obstruction
     radius :: Real
-    location :: SVector{3, Real}
 end
 
-function detect_collision(movement :: Movement, sphere :: Sphere)
-    origin = movement.origin .- sphere.location
-    destination = movement.destination .- sphere.location
+function Sphere(radius :: Real, location :: SVector)
+    if all(iszero.(location))
+        return Sphere(radius)
+    else
+        return Transformed(Sphere(radius), CoordinateTransformations.Translation(location))
+    end
+end
 
+detect_collision(movement :: Movement, sphere :: Sphere) = sphere_collision(movement.origin, movement.destination, sphere.radius)
+
+function sphere_collision(origin :: AbstractVector, destination :: AbstractVector, radius :: Real)
     # terms for quadratic equation for where distance squared equals radius squared d^2 = a s^2 + b s + c == radius ^ 2
     a = sum((destination .- origin) .^ 2)
     b = sum(2 .* origin .* (destination .- origin))
     c = sum(origin .* origin)
-    determinant = b ^ 2 - 4 * a * (c - sphere.radius ^ 2)
+    determinant = b ^ 2 - 4 * a * (c - radius ^ 2)
     if determinant < 0
         return nothing
     end
@@ -132,13 +177,21 @@ end
 
 struct Cylinder <: Obstruction
     radius :: Real
-    orientation :: SVector{3, Real}
-    location :: SVector{3, Real}
-    function Cylinder(radius :: Real, orientation :: SVector, location :: SVector)
-        n_orientation = orientation / norm(orientation)
-        rel_offset = location - (location ⋅ n_orientation) * n_orientation
-        new(radius, n_orientation, rel_offset)
+end
+
+function Cylinder(radius :: Real, orientation :: SVector)
+    o = orientation / norm(orientation)
+    if isapprox(o, SA_F64[0, 0, 1], atol=1e-10)
+        return Cylinder(radius)
     end
+    rot_axis = cross(SA_F64[0, 0, 1], o)
+    rot_angle = acos(o[end])
+    Transformed(Cylinder(radius), CoordinateTransformations.LinearMap(Rotations.AngleAxis(rot_angle, rot_axis...)))
+end
+
+function Cylinder(radius :: Real, orientation :: SVector, location :: SVector)
+    c = Cylinder(radius, orientation)
+    return all(iszero.(location)) ? c : Transformed(c, CoordinateTransformations.Translation(location...))
 end
 
 function Cylinder(radius :: Real, sym :: Symbol, offset :: SVector)
@@ -150,17 +203,8 @@ function Cylinder(radius :: Real, sym :: Symbol, offset :: SVector)
     Cylinder(radius, orientation[sym], offset)
 end
 
-function normed_offset(position :: SVector, cylinder :: Cylinder)
-    offset = position .- cylinder.location
-    offset .- (offset ⋅ cylinder.orientation) .* cylinder.orientation
-end
-
 function detect_collision(movement :: Movement, cylinder :: Cylinder)
-    sphere = Sphere(cylinder.radius, cylinder.location)
-    rel_movement = Movement(
-        normed_offset(movement.origin, cylinder),
-        normed_offset(movement.destination, cylinder),
-        movement.timestep
-    )
-    detect_collision(rel_movement, sphere)
+    o = SA_F64[movement.origin[1], movement.origin[2], 0.]
+    d = SA_F64[movement.destination[1], movement.destination[2], 0.]
+    sphere_collision(o, d, cylinder.radius)
 end

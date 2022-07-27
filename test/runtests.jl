@@ -399,13 +399,14 @@ using LinearAlgebra
                 ])
             end
             @testset "Remain within angled cylinder" begin
-                cylinder = Cylinder(2.3, SA_F64[1, 2, sqrt(3)], SA_F64[0, 0, 0])
+                orient = SA_F64[1, 2, sqrt(3)]
+                cylinder = Cylinder(2.3, orient, SA_F64[0, 0, 0])
                 res = correct_collisions(
                     Movement(SA_F64[0, 0.5, 0.3], SA_F64[-30, 50, 10], 40),
                     [cylinder]
                 )
                 final = res[end].destination
-                radius = norm(MRSimulator.normed_offset(final, cylinder))
+                radius = norm(final .- (orient ⋅ final) * orient / norm(orient) ^ 2)
                 @test radius <= 2.3
             end
         end
