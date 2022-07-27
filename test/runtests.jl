@@ -4,6 +4,7 @@ import MRSimulator: MRSimulator, Spin, Microstructure, evolve_to_time, time, fie
     norm_angle, evolve, Sequence, relax, vector2spin, vector, Wall, correct_collisions, Movement,
     Cylinder
 using StaticArrays
+using LinearAlgebra
 
 
 @testset "MRSimulator.jl" begin
@@ -385,6 +386,16 @@ using StaticArrays
                     Movement(SA_F64[-2, 1, 0], SA_F64[-1, 1, 0], 1),
                     Movement(SA_F64[-1, 1, 0], SA_F64[-1, 4, 0], 3),
                 ])
+            end
+            @testset "Remain within angled cylinder" begin
+                cylinder = Cylinder(2.3, SA_F64[1, 2, sqrt(3)], SA_F64[0, 0, 0])
+                res = correct_collisions(
+                    Movement(SA_F64[0, 0.5, 0.3], SA_F64[-30, 50, 10], 40),
+                    [cylinder]
+                )
+                final = res[end].destination
+                radius = norm(MRSimulator.normed_offset(final, cylinder))
+                @test radius <= 2.3
             end
         end
     end
