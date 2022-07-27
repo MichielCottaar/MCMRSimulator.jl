@@ -1,8 +1,10 @@
 using Test
 import MRSimulator: MRSimulator, Spin, Microstructure, evolve_to_time, time, field,
     gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position, 
-    norm_angle, evolve, Sequence, relax, vector2spin, vector, Wall, correct_collisions, Movement
+    norm_angle, evolve, Sequence, relax, vector2spin, vector, Wall, correct_collisions, Movement,
+    Cylinder
 using StaticArrays
+
 
 @testset "MRSimulator.jl" begin
     @testset "Generate and apply microstructural fields" begin
@@ -222,6 +224,22 @@ using StaticArrays
         end
     end
     @testset "Collision tests" begin
+        function Base.isapprox(ms1 :: AbstractVector{Movement}, ms2 :: AbstractVector{Movement})
+            length(ms1) == length(ms2) && all([
+                isapprox(m1.origin, m2.origin, atol=1e-12) &&
+                isapprox(m1.destination, m2.destination, atol=1e-12) &&
+                isapprox(m1.timestep, m2.timestep, atol=1e-12)
+                for (m1, m2) in zip(ms1, ms2)
+            ])
+        end
+        function compare(ms1 :: AbstractVector{Movement}, ms2 :: AbstractVector{Movement})
+            @test length(ms1) == length(ms2)
+            for (m1, m2) in zip(ms1, ms2)
+                @test m1.origin ≈ m2.origin atol=1e-12
+                @test m1.destination ≈ m2.destination atol=1e-12
+                @test m1.timestep ≈ m2.timestep atol=1e-12
+            end
+        end
         @testset "Wall reflections" begin
             @testset "Hitting vertical wall directly" begin
                 res = correct_collisions(
@@ -322,6 +340,51 @@ using StaticArrays
                 @test res[2].origin ≈ SA_F64[1, 1, 0]
                 @test res[2].destination ≈ SA_F64[-1, 1, 0]
                 @test res[2].timestep ≈ 4.
+            end
+        end
+        @testset "Cylinder reflections" begin
+            @testset "Within cylinder along radial line" begin
+                res = correct_collisions(
+                    Movement(SA_F64[0, 0, 0], SA_F64[6, 0, 6], 6.),
+                    [Cylinder(1., :z, SA_F64[0, 0, 2])]
+                )
+                @test length(res) == 4
+                @test res[1].origin ≈ SA_F64[0, 0, 0]
+                @test res[1].destination ≈ SA_F64[1, 0, 1]
+                @test res[1].timestep ≈ 1.
+                @test res[2].origin ≈ SA_F64[1, 0, 1]
+                @test res[2].destination ≈ SA_F64[-1, 0, 3]
+                @test res[2].timestep ≈ 2.
+                @test res[3].origin ≈ SA_F64[-1, 0, 3]
+                @test res[3].destination ≈ SA_F64[1, 0, 5]
+                @test res[3].timestep ≈ 2.
+                @test res[4].origin ≈ SA_F64[1, 0, 5]
+                @test res[4].destination ≈ SA_F64[0, 0, 6]
+                @test res[4].timestep ≈ 1.
+            end
+            @testset "90 degree bounces within vertical cylinder" begin
+                res = correct_collisions(
+                    Movement(SA_F64[0, 1, 0], SA_F64[10, 1, 0], 10),
+                    [Cylinder(sqrt(2), :z, SA_F64[0, 0, 2])]
+                )
+                compare(res, [
+                    Movement(SA_F64[0, 1, 0], SA_F64[1, 1, 0], 1),
+                    Movement(SA_F64[1, 1, 0], SA_F64[1, -1, 0], 2),
+                    Movement(SA_F64[1, -1, 0], SA_F64[-1, -1, 0], 2),
+                    Movement(SA_F64[-1, -1, 0], SA_F64[-1, 1, 0], 2),
+                    Movement(SA_F64[-1, 1, 0], SA_F64[1, 1, 0], 2),
+                    Movement(SA_F64[1, 1, 0], SA_F64[1, 0, 0], 1),
+                ])
+            end
+            @testset "90 degree bounces from outside vertical cylinder" begin
+                res = correct_collisions(
+                    Movement(SA_F64[-2, 1, 0], SA_F64[2, 1, 0], 4),
+                    [Cylinder(sqrt(2), :z, SA_F64[0, 0, 2])]
+                )
+                compare(res, [
+                    Movement(SA_F64[-2, 1, 0], SA_F64[-1, 1, 0], 1),
+                    Movement(SA_F64[-1, 1, 0], SA_F64[-1, 4, 0], 3),
+                ])
             end
         end
     end

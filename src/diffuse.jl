@@ -34,7 +34,7 @@ function correct_collisions(to_try :: Movement, geometry :: Vector{T}) where T <
             collision.distance * to_try.timestep
         ))
         direction = to_try.destination .- to_try.origin
-        reflection = - 2 * (collision.normal ⋅ direction) * collision.normal .+ direction
+        reflection = - 2 * (collision.normal ⋅ direction) * collision.normal / norm(collision.normal) ^ 2 .+ direction
         new_dest = new_pos .+ reflection / norm(reflection) * norm(direction) * (1 - collision.distance)
         to_try = Movement(
             new_pos,
@@ -49,7 +49,7 @@ end
 struct Collision
     distance :: Real
     normal :: SVector{3, Real}
-    Collision(distance, normal) = new(distance == 0. ? 0. : prevfloat(distance), normal)
+    Collision(distance, normal) = new(distance == 0. ? 0. : (distance - eps(distance) * 10.), normal)
 end
 
 
@@ -92,5 +92,60 @@ function detect_collision(movement :: Movement, wall :: Wall)
     Collision(
         abs(origin) / total_length,
         wall.normal
+    )
+end
+
+struct Cylinder <: Obstruction
+    radius :: Real
+    orientation :: SVector{3, Real}
+    offset :: SVector{3, Real}
+    function Cylinder(radius :: Real, orientation :: SVector, offset :: SVector)
+        n_orientation = orientation / norm(orientation)
+        rel_offset = offset - (offset ⋅ n_orientation) * n_orientation
+        new(radius, n_orientation, rel_offset)
+    end
+end
+
+function Cylinder(radius :: Real, sym :: Symbol, offset :: SVector)
+    orientation = Dict(
+        :x => SA_F64[1., 0., 0.],
+        :y => SA_F64[0., 1., 0.],
+        :z => SA_F64[0., 0., 1.],
+    )
+    Cylinder(radius, orientation[sym], offset)
+end
+
+function normed_offset(position :: SVector, cylinder :: Cylinder)
+    offset = position .- cylinder.offset
+    offset .- (offset ⋅ cylinder.orientation) .* cylinder.orientation
+end
+
+function detect_collision(movement :: Movement, cylinder :: Cylinder)
+    origin = normed_offset(movement.origin, cylinder) .- cylinder.offset
+    destination = normed_offset(movement.destination, cylinder) .- cylinder.offset
+
+    # terms for quadratic equation for where distance squared equals radius squared d^2 = a s^2 + b s + c == radius ^ 2
+    a = sum((destination .- origin) .^ 2)
+    b = sum(2 .* origin .* (destination .- origin))
+    c = sum(origin .* origin)
+    determinant = b ^ 2 - 4 * a * (c - cylinder.radius ^ 2)
+    if determinant < 0
+        return nothing
+    end
+
+    # first try solution with lower s
+    solution = (-b - sqrt(determinant)) / (2 * a)
+    if solution > 1
+        return nothing
+    elseif solution <= 0
+        solution = (-b + sqrt(determinant)) / (2 * a)
+        if solution > 1 || solution < 0
+            return nothing
+        end
+    end
+    point_hit = solution * destination + (1 - solution) * origin
+    Collision(
+        solution,
+        point_hit
     )
 end
