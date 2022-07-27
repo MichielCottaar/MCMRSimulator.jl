@@ -95,40 +95,20 @@ function detect_collision(movement :: Movement, wall :: Wall)
     )
 end
 
-struct Cylinder <: Obstruction
+struct Sphere <: Obstruction
     radius :: Real
-    orientation :: SVector{3, Real}
-    offset :: SVector{3, Real}
-    function Cylinder(radius :: Real, orientation :: SVector, offset :: SVector)
-        n_orientation = orientation / norm(orientation)
-        rel_offset = offset - (offset ⋅ n_orientation) * n_orientation
-        new(radius, n_orientation, rel_offset)
-    end
+    location :: SVector{3, Real}
 end
 
-function Cylinder(radius :: Real, sym :: Symbol, offset :: SVector)
-    orientation = Dict(
-        :x => SA_F64[1., 0., 0.],
-        :y => SA_F64[0., 1., 0.],
-        :z => SA_F64[0., 0., 1.],
-    )
-    Cylinder(radius, orientation[sym], offset)
-end
-
-function normed_offset(position :: SVector, cylinder :: Cylinder)
-    offset = position .- cylinder.offset
-    offset .- (offset ⋅ cylinder.orientation) .* cylinder.orientation
-end
-
-function detect_collision(movement :: Movement, cylinder :: Cylinder)
-    origin = normed_offset(movement.origin, cylinder) .- cylinder.offset
-    destination = normed_offset(movement.destination, cylinder) .- cylinder.offset
+function detect_collision(movement :: Movement, sphere :: Sphere)
+    origin = movement.origin .- sphere.location
+    destination = movement.destination .- sphere.location
 
     # terms for quadratic equation for where distance squared equals radius squared d^2 = a s^2 + b s + c == radius ^ 2
     a = sum((destination .- origin) .^ 2)
     b = sum(2 .* origin .* (destination .- origin))
     c = sum(origin .* origin)
-    determinant = b ^ 2 - 4 * a * (c - cylinder.radius ^ 2)
+    determinant = b ^ 2 - 4 * a * (c - sphere.radius ^ 2)
     if determinant < 0
         return nothing
     end
@@ -148,4 +128,39 @@ function detect_collision(movement :: Movement, cylinder :: Cylinder)
         solution,
         point_hit
     )
+end
+
+struct Cylinder <: Obstruction
+    radius :: Real
+    orientation :: SVector{3, Real}
+    location :: SVector{3, Real}
+    function Cylinder(radius :: Real, orientation :: SVector, location :: SVector)
+        n_orientation = orientation / norm(orientation)
+        rel_offset = location - (location ⋅ n_orientation) * n_orientation
+        new(radius, n_orientation, rel_offset)
+    end
+end
+
+function Cylinder(radius :: Real, sym :: Symbol, offset :: SVector)
+    orientation = Dict(
+        :x => SA_F64[1., 0., 0.],
+        :y => SA_F64[0., 1., 0.],
+        :z => SA_F64[0., 0., 1.],
+    )
+    Cylinder(radius, orientation[sym], offset)
+end
+
+function normed_offset(position :: SVector, cylinder :: Cylinder)
+    offset = position .- cylinder.location
+    offset .- (offset ⋅ cylinder.orientation) .* cylinder.orientation
+end
+
+function detect_collision(movement :: Movement, cylinder :: Cylinder)
+    sphere = Sphere(cylinder.radius, cylinder.location)
+    rel_movement = Movement(
+        normed_offset(movement.origin, cylinder),
+        normed_offset(movement.destination, cylinder),
+        movement.timestep
+    )
+    detect_collision(rel_movement, sphere)
 end

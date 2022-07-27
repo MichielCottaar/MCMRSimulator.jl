@@ -2,7 +2,7 @@ using Test
 import MRSimulator: MRSimulator, Spin, Microstructure, evolve_to_time, time, field,
     gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position, 
     norm_angle, evolve, Sequence, relax, vector2spin, vector, Wall, correct_collisions, Movement,
-    Cylinder
+    Cylinder, Sphere
 using StaticArrays
 using LinearAlgebra
 
@@ -341,6 +341,17 @@ using LinearAlgebra
                 @test res[2].origin ≈ SA_F64[1, 1, 0]
                 @test res[2].destination ≈ SA_F64[-1, 1, 0]
                 @test res[2].timestep ≈ 4.
+            end
+        end
+        @testset "Sphere reflections" begin
+            @testset "Remain within sphere" begin
+                res = correct_collisions(
+                    Movement(SA_F64[0, 0, 1.5], SA_F64[6, 8, 6], 6.),
+                    [Sphere(1., SA_F64[0, 0, 2])]
+                )
+                final = res[end].destination
+                radius = norm(final .- SA_F64[0, 0, 2])
+                @assert radius <= 1.
             end
         end
         @testset "Cylinder reflections" begin
