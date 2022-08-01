@@ -56,16 +56,15 @@ evolve_iter(snap :: Snapshot, micro :: Microstructure, sequence :: Sequence; yie
             times[2] = (readout_index - 1) * yield_every
         end
     end
-    spins
 end
 
 
 function evolve_iter(spins :: Vector{Spin}, micro :: Microstructure, sequence :: Sequence; yield_every=1., B0=3.)
-    evolve(Snapshot(spins, 0.), micro, sequence, yield_every=yield_every, B0=B0)
+    evolve_iter(Snapshot(spins, 0.), micro, sequence, yield_every=yield_every, B0=B0)
 end
 
 function evolve_iter(spin :: Spin, micro :: Microstructure, sequence :: Sequence; yield_every=1., B0=3.)
-    evolve([spin], micro, sequence, yield_every=yield_every, B0=B0)
+    evolve_iter([spin], micro, sequence, yield_every=yield_every, B0=B0)
 end
 
 function evolve(snap, micro :: Microstructure, sequence :: Sequence; yield_every=1., B0=3., nTR=1)
