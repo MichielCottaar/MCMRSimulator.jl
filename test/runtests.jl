@@ -5,6 +5,7 @@ import MRSimulator: MRSimulator, Spin, Microstructure, evolve_to_time, time, fie
     Cylinder, Sphere, cylinder_plane, ray_grid_intersections
 using StaticArrays
 using LinearAlgebra
+import Random
 
 
 @testset "MRSimulator tests" begin

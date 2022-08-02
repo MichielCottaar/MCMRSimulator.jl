@@ -64,6 +64,7 @@
     @testset "Basic diffusion run within sphere" begin
         sequence = Sequence([RFPulse(flip_angle=90)], 2.)
         sphere = Sphere(1.)
+        Random.seed!(12)
         diff = evolve([Spin(), Spin()], Microstructure(diffusivity=field(2.), geometry=sphere), Sequence(20.), yield_every=0.5)
         for snap in diff
             @test length(snap) == 2
