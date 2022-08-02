@@ -48,7 +48,8 @@ struct Microstructure
     R2 :: Field
     R1 :: Field
     diffusivity :: Field
-    Microstructure(;off_resonance=field(), R2=field(), R1=field(), diffusivity=field()) = new(off_resonance, R2, R1, diffusivity)
+    geometry :: Obstructions
+    Microstructure(;off_resonance=field(), R2=field(), R1=field(), diffusivity=field(), geometry=Obstruction[]) = new(off_resonance, R2, R1, diffusivity, geometry)
 end
 
 (micro::Microstructure)(position) = LocalEnvironment(

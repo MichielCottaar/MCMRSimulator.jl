@@ -50,3 +50,15 @@ end
 for param in (:longitudinal, :transverse, :phase)
     @eval $param(s :: Snapshot) = $param(vector2spin(vector(s)))
 end
+Base.length(s::Snapshot) = length(s.spins)
+Base.iterate(s::Snapshot) = iterate(s.spins)
+Base.iterate(s::Snapshot, state) = iterate(s.spins, state)
+
+abstract type Obstruction end
+const Obstructions = Union{Obstruction, AbstractVector{T}} where T <: Obstruction
+
+struct Movement
+    origin :: SVector{3, Real}
+    destination :: SVector{3, Real}
+    timestep :: Real
+end

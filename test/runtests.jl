@@ -223,6 +223,17 @@ using LinearAlgebra
             @test spin_with_diff.orientation != spin_no_diff.orientation
             @test spin_with_diff_no_grad.orientation == spin_no_diff.orientation
         end
+        @testset "Basic diffusion run within sphere" begin
+            sequence = Sequence([RFPulse(flip_angle=90)], 2.)
+            sphere = Sphere(1.)
+            diff = evolve([Spin(), Spin()], Microstructure(diffusivity=field(2.), geometry=sphere), Sequence(20.), yield_every=0.5)
+            for snap in diff
+                @test length(snap) == 2
+                for spin in snap
+                    @test norm(spin.position) < 1.
+                end
+            end
+        end
     end
     @testset "Collision tests" begin
         function compare(ms1 :: AbstractVector{Movement}, ms2 :: AbstractVector{Movement})

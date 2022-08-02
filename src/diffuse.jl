@@ -1,11 +1,3 @@
-struct Movement
-    origin :: SVector{3, Real}
-    destination :: SVector{3, Real}
-    timestep :: Real
-end
-
-abstract type Obstruction end
-const Obstructions = Union{Obstruction, AbstractVector{T}} where T <: Obstruction
 
 draw_step(diffusivity :: Real, timestep :: Real) = sqrt(timestep * diffusivity) * @SVector randn(3)
 draw_step(current_pos :: SVector, diffusivity :: Real, timestep :: Real) = Movement(

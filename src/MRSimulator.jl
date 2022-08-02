@@ -9,8 +9,8 @@ import Rotations
 
 include("constants.jl")
 include("spin.jl")
-include("diffuse.jl")
 include("field.jl")
+include("diffuse.jl")
 include("sequence.jl")
 include("evolve.jl")
 include("plot.jl")
