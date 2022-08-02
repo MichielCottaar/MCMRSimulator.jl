@@ -64,8 +64,72 @@ function detect_collision(movement :: Movement, obstructions :: Vector{T}) where
     collision
 end
 
+const Obstructions = Union{Obstruction, AbstractVector{Obstruction}}
+
+
+struct Repeated <: Obstruction
+    obstruction :: Obstructions
+    repeats :: SVector{3, Real}
+    function Repeated(obstruction, repeats)
+        rs = SVector([iszero(r) ? Inf : abs(r) for r in repeats])
+        any(isfinite.(rs)) ? new(obstruction, rs) : obstruction
+    end
+end
+
+function detect_collision(movement :: Movement, repeat :: Repeated)
+    origin = movement.origin ./ repeat.repeats .+ 0.5
+    destination = movement.destination ./ repeat.repeats .+ 0.5
+    for (_, t1, p1, t2, p2) in ray_grid_intersections(origin, destination)
+        f(r, p, p_orig) = isfinite(r) ? r * (p - 0.5) : p_orig
+        pos1 = f.(repeat.repeats, p1, (movement.destination .* t1) .+ (movement.origin .* (1 - t1)))
+        pos2 = f.(repeat.repeats, p2, (movement.destination .* t2) .+ (movement.origin .* (1 - t2)))
+        c = detect_collision(
+            Movement(pos1, pos2, 1.),
+            repeat.obstruction
+        )
+        if !isnothing(c)
+            return Collision(
+                c.distance * (t2 - t1) + t1,
+                c.normal
+            )
+        end
+    end
+    return nothing
+end
+
+"Computes all interactions with a 1x1x1 grid"
+ray_grid_intersections(origin :: SVector, destination :: SVector) = Channel() do c
+    direction = destination .- origin
+    within_voxel = mod.(origin, 1)
+    all_next_hits = MVector{3, Float64}([(d > 0 ? 1 - w : w) / abs(d) for (d, w) in zip(direction, within_voxel)])
+    prev_pos = origin
+    prev_time = 0.
+    current_voxel = MVector{3, Int}(Int.(floor.(origin)))
+    while true
+        dimension = argmin(all_next_hits)
+        time_to_hit = all_next_hits[dimension]
+        next_time = prev_time + time_to_hit
+        if next_time > 1.
+            push!(c, (current_voxel, prev_time, prev_pos .- current_voxel, 1., destination .- current_voxel))
+            break
+        end
+        next_pos = origin .+ direction .* next_time
+        for dim in 1:3
+            if dim == dimension
+                push!(c, (SVector(current_voxel), prev_time, prev_pos .- current_voxel, next_time, next_pos .- current_voxel))
+                prev_time = next_time
+                prev_pos = next_pos
+                all_next_hits[dim] = 1 / abs(direction[dim])
+                current_voxel[dim] += sign(direction[dim])
+            else
+                all_next_hits[dim] -= time_to_hit
+            end
+        end
+    end
+end
+
 struct Transformed <: Obstruction
-    obstruction :: Obstruction
+    obstruction :: Obstructions
     transform :: CoordinateTransformations.Transformation
     inverse :: CoordinateTransformations.Transformation
     function Transformed(obstruction :: Obstruction, transform :: CoordinateTransformations.Transformation)
@@ -207,4 +271,18 @@ function detect_collision(movement :: Movement, cylinder :: Cylinder)
     o = SA_F64[movement.origin[1], movement.origin[2], 0.]
     d = SA_F64[movement.destination[1], movement.destination[2], 0.]
     sphere_collision(o, d, cylinder.radius)
+end
+
+
+function cylinder_plane(radius :: Real; rotation=0., repeatx=0., repeaty=0., shiftx=0.)
+    Transformed(
+        Repeated(
+            Cylinder(radius),
+            SA_F64[repeatx, repeaty, 0]
+        ),
+        CoordinateTransformations.AffineMap(
+            Rotations.AngleAxis(deg2rad(rotation), 1, 0, 0),
+            [shiftx, 0, 0]
+        )
+    )
 end

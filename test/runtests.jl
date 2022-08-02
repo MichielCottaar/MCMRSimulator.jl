@@ -2,7 +2,7 @@ using Test
 import MRSimulator: MRSimulator, Spin, Microstructure, evolve_to_time, time, field,
     gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position, 
     norm_angle, evolve, Sequence, relax, vector2spin, vector, Wall, correct_collisions, Movement,
-    Cylinder, Sphere
+    Cylinder, Sphere, cylinder_plane, ray_grid_intersections
 using StaticArrays
 using LinearAlgebra
 
@@ -225,20 +225,12 @@ using LinearAlgebra
         end
     end
     @testset "Collision tests" begin
-        function Base.isapprox(ms1 :: AbstractVector{Movement}, ms2 :: AbstractVector{Movement})
-            length(ms1) == length(ms2) && all([
-                isapprox(m1.origin, m2.origin, atol=1e-12) &&
-                isapprox(m1.destination, m2.destination, atol=1e-12) &&
-                isapprox(m1.timestep, m2.timestep, atol=1e-12)
-                for (m1, m2) in zip(ms1, ms2)
-            ])
-        end
         function compare(ms1 :: AbstractVector{Movement}, ms2 :: AbstractVector{Movement})
             @test length(ms1) == length(ms2)
             for (m1, m2) in zip(ms1, ms2)
-                @test m1.origin ≈ m2.origin atol=1e-12
-                @test m1.destination ≈ m2.destination atol=1e-12
-                @test m1.timestep ≈ m2.timestep atol=1e-12
+                @test m1.origin ≈ m2.origin atol=1e-12 rtol=1e-6
+                @test m1.destination ≈ m2.destination atol=1e-12 rtol=1e-6
+                @test m1.timestep ≈ m2.timestep atol=1e-12 rtol=1e-6
             end
         end
         @testset "Wall reflections" begin
@@ -408,6 +400,53 @@ using LinearAlgebra
                 final = res[end].destination
                 radius = norm(final .- (orient ⋅ final) * orient / norm(orient) ^ 2)
                 @test radius <= 2.3
+            end
+        end
+        @testset "Ray-grid intersections" begin
+            function tcompare(t1, t2)
+                @test length(t1) == length(t2)
+                for (e1, e2) in zip(t1, t2)
+                    @test e1 ≈ e2
+                end
+            end
+            res = collect(MRSimulator.ray_grid_intersections(SA_F64[0.5, 0.5, 0.5], SA_F64[0.5, 0.5, 3.5]))
+            tcompare(res[1], ([0, 0, 0], 0., [0.5, 0.5, 0.5], 1/6, [0.5, 0.5, 1.]))
+            tcompare(res[2], ([0, 0, 1], 1/6, [0.5, 0.5, 0.], 1/2, [0.5, 0.5, 1.]))
+            tcompare(res[3], ([0, 0, 2], 1/2, [0.5, 0.5, 0.], 5/6, [0.5, 0.5, 1.]))
+            tcompare(res[4], ([0, 0, 3], 5/6, [0.5, 0.5, 0.], 1., [0.5, 0.5, 0.5]))
+        end
+        @testset "Reflections on planes of cylinders" begin
+            @testset "Bounce between four cylinders" begin
+                cylinders = cylinder_plane(
+                    sqrt(2), repeatx=3, repeaty=4
+                )
+                res = correct_collisions(
+                    Movement(SA_F64[1, 2, 0], SA_F64[1, 11, 9], 9),
+                    [cylinders]
+                )
+                compare(res, [
+                    Movement(SA_F64[1, 2, 0], SA_F64[1, 3, 1], 1),
+                    Movement(SA_F64[1, 3, 1], SA_F64[2, 3, 2], 1),
+                    Movement(SA_F64[2, 3, 2], SA_F64[2, 1, 4], 2),
+                    Movement(SA_F64[2, 1, 4], SA_F64[1, 1, 5], 1),
+                    Movement(SA_F64[1, 1, 5], SA_F64[1, 3, 7], 2),
+                    Movement(SA_F64[1, 3, 7], SA_F64[2, 3, 8], 1),
+                    Movement(SA_F64[2, 3, 8], SA_F64[2, 2, 9], 1),
+                ])
+            end
+            @testset "Travel through many repeats between bounces" begin
+                cylinders = cylinder_plane(
+                    1, repeatx=2, repeaty=4
+                )
+                res = correct_collisions(
+                    Movement(SA_F64[1, 2, 0], SA_F64[13, 6, 4], 12),
+                    [cylinders]
+                )
+                compare(res, [
+                    Movement(SA_F64[1, 2, 0], SA_F64[4, 3, 1], 3),
+                    Movement(SA_F64[4, 3, 1], SA_F64[10, 1, 3], 6),
+                    Movement(SA_F64[10, 1, 3], SA_F64[13, 2, 4], 3),
+                ])
             end
         end
     end
