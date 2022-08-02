@@ -237,7 +237,7 @@ using LinearAlgebra
             @testset "Hitting vertical wall directly" begin
                 res = correct_collisions(
                     Movement(SA_F64[0, 0, 0], SA_F64[3, 0, 0], 3.),
-                    [Wall(:x, 1.)],
+                    Wall(:x, 1.),
                 )
                 @test length(res) == 2
                 @test res[1].origin ≈ SA_F64[0, 0, 0]
@@ -250,7 +250,7 @@ using LinearAlgebra
             @testset "Hitting vertical wall under angle" begin
                 res = correct_collisions(
                     Movement(SA_F64[0, 0, 0], SA_F64[3, 6, 0], 3.),
-                    [Wall(:x, 1.)],
+                    Wall(:x, 1.),
                 )
                 @test length(res) == 2
                 @test res[1].origin ≈ SA_F64[0, 0, 0]
@@ -263,7 +263,7 @@ using LinearAlgebra
             @testset "Missing vertical wall" begin
                 res = correct_collisions(
                     Movement(SA_F64[0, 0, 0], SA_F64[0, 2, 0], 4.),
-                    [Wall(:x, 1.)],
+                    Wall(:x, 1.),
                 )
                 @test length(res) == 1
                 @test res[1].origin == SA_F64[0, 0, 0]
@@ -324,7 +324,7 @@ using LinearAlgebra
             @testset "Hitting diagonal wall" begin
                 res = correct_collisions(
                     Movement(SA_F64[1, 0, 0], SA_F64[1, 3, 0], 6.),
-                    [Wall(SA_F64[1, 1, 0], 1.)],
+                    Wall(SA_F64[1, 1, 0], 1.),
                 )
                 @test length(res) == 2
                 @test res[1].origin ≈ SA_F64[1, 0, 0]

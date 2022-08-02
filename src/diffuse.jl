@@ -5,6 +5,7 @@ struct Movement
 end
 
 abstract type Obstruction end
+const Obstructions = Union{Obstruction, AbstractVector{T}} where T <: Obstruction
 
 draw_step(diffusivity :: Real, timestep :: Real) = sqrt(timestep * diffusivity) * @SVector randn(3)
 draw_step(current_pos :: SVector, diffusivity :: Real, timestep :: Real) = Movement(
@@ -12,14 +13,14 @@ draw_step(current_pos :: SVector, diffusivity :: Real, timestep :: Real) = Movem
     current_pos + draw_step(diffusivity, timestep),
     timestep
 )
-function draw_step(current_pos :: SVector, diffusivity :: Real, timestep :: Real, geometry :: Vector{T})  where T <: Obstruction
+function draw_step(current_pos :: SVector, diffusivity :: Real, timestep :: Real, geometry :: Obstructions)
     correct_collisions(
         draw_step(current_pos, diffusivity, timestep),
         geometry
     )
 end
 
-function correct_collisions(to_try :: Movement, geometry :: Vector{T}) where T <: Obstruction
+function correct_collisions(to_try :: Movement, geometry :: Obstructions)
     steps = Movement[]
     while true
         collision = detect_collision(to_try, geometry)
@@ -64,7 +65,6 @@ function detect_collision(movement :: Movement, obstructions :: Vector{T}) where
     collision
 end
 
-const Obstructions = Union{Obstruction, AbstractVector{Obstruction}}
 
 
 struct Repeated <: Obstruction
