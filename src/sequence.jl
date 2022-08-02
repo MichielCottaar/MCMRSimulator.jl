@@ -1,12 +1,6 @@
 # defining the sequence
 abstract type SequenceComponent end
 
-struct EndSequence <: SequenceComponent
-    time :: Real
-end
-
-apply(s :: EndSequence, spin :: Spin) = spin
-
 struct RFPulse <: SequenceComponent
     time :: Real
     flip_angle :: Real
