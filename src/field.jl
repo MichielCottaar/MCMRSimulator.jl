@@ -59,7 +59,10 @@ end
 )
 
 function relax(orient :: SpinOrientation, env :: LocalEnvironment, timestep :: Real, B0=3.)
-    @assert timestep > 0
+    @assert timestep >= 0
+    if timestep == 0
+        return orient
+    end
     SpinOrientation(
         (1 - (1 - orient.longitudinal) * exp(-env.R1 * timestep)),
         orient.transverse * exp(-env.R2 * timestep),
