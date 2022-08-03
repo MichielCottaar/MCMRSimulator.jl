@@ -16,13 +16,17 @@ struct RFPulse <: SequenceComponent
     end
 end
 
+struct Readout <: SequenceComponent
+    time :: Real
+end
+
 RFPulse(; time=0, flip_angle=0, phase=0) = RFPulse(time, flip_angle, phase)
 
 phase(pulse :: RFPulse) = rad2deg(pulse.phase)
 flip_angle(pulse :: RFPulse) = rad2deg(pulse.flip_angle)
 time(pulse :: RFPulse) = pulse.time
 
-function apply_pulse(pulse :: RFPulse, spin :: SpinOrientation)
+function apply(pulse :: RFPulse, spin :: SpinOrientation)
     Bx_init = spin.transverse * cos(spin.phase)
     By_init = spin.transverse * sin(spin.phase)
     Bxy_parallel  = pulse.cp * Bx_init + pulse.sp * By_init
@@ -38,13 +42,14 @@ function apply_pulse(pulse :: RFPulse, spin :: SpinOrientation)
     )
 end
 
-apply(pulse :: RFPulse, spin :: Spin) = Spin(spin.position, apply_pulse(pulse, spin.orientation))
+apply(pulse :: RFPulse, spin :: Spin) = Spin(spin.position, apply(pulse, spin.orientation))
 
 struct Sequence
     pulses :: Vector{SequenceComponent}
     TR :: Real
-    function Sequence(pulses::Vector{T}, TR :: Real) where T <: SequenceComponent
-        result = new(sort(pulses, by=x->x.time), TR)
+    B0 :: Real
+    function Sequence(pulses::Vector{T}, TR :: Real, B0 :: Real = 3.) where T <: SequenceComponent
+        result = new(sort(pulses, by=x->x.time), TR, B0)
         if length(result.pulses) > 0
             @assert result.pulses[end].time <= TR
         end
@@ -52,13 +57,12 @@ struct Sequence
     end
 end
 
-Sequence(TR :: Real) = Sequence(SequenceComponent[], TR)
-Base.getindex(s :: Sequence, index :: Integer) = s.pulses[((index - 1) % length(s.pulses)) + 1]
+Sequence(TR :: Real, B0 :: Real = 3.) = Sequence(SequenceComponent[], TR, B0)
+Base.getindex(s :: Sequence, index :: Integer) = s.pulses[index]
 
 function time(sequence :: Sequence, index :: Integer)
-    if length(sequence.pulses) == 0
+    if index > length(sequence.pulses)
         return Inf
     end
-    nTR = (index - 1) ÷ length(sequence.pulses)
-    return nTR * sequence.TR + sequence[index].time
+    return sequence.pulses[index].time
 end

@@ -12,6 +12,7 @@ include("spin.jl")
 include("field.jl")
 include("diffuse.jl")
 include("sequence.jl")
+include("readout.jl")
 include("evolve.jl")
 include("plot.jl")
 

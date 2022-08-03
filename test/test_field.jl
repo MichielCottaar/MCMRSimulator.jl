@@ -1,23 +1,21 @@
 @testset "Generate and apply microstructural fields" begin
+    trajectory = StepTrajectory(SA_F64[0, 0, 0], 0.1, field(0), Obstruction[])
     @testset "Simulate empty environment/sequence" begin
-        spin = evolve_to_time(Spin(), Microstructure(), 0., 1.)
-        @test position(spin) == SA_F64[0., 0., 0.]
-        @test phase(spin) == 0.
+        orient = evolve_to_time(Spin().orientation, trajectory, 0., 1., Microstructure())
+        @test phase(orient) == 0.
     end
     @testset "Test constant off-resonance field" begin
-        spin = evolve_to_time(Spin(), Microstructure(off_resonance=field(2.)), 0., 0.3, 3.)
-        @test position(spin) == SA_F64[0., 0., 0.]
-        @test phase(spin) ≈ norm_angle(rad2deg(0.6 * 3 * gyromagnetic_ratio))
+        orient = evolve_to_time(Spin().orientation, trajectory, 0., 0.3, Microstructure(off_resonance=field(2.)))
+        @test phase(orient) ≈ norm_angle(rad2deg(0.3 * 2. * 3 * gyromagnetic_ratio))
     end
     @testset "Test gradient off-resonance field" begin
         micro = Microstructure(off_resonance=field(SA_F64[1.5, 0., 0.], 2.))
-        spin = evolve_to_time(Spin(), micro, 0., 0.3)
-        @test position(spin) == SA_F64[0., 0., 0.]
-        @test phase(spin) ≈ norm_angle(rad2deg(0.6 * 3 * gyromagnetic_ratio))
+        orient = evolve_to_time(Spin().orientation, trajectory, 0., 0.3, micro)
+        @test phase(orient) ≈ norm_angle(rad2deg(0.6 * 3 * gyromagnetic_ratio))
         # Move spin and evolve a bit further in time
-        spin = evolve_to_time(Spin(SA_F64[3., 0., 0.], spin.orientation), micro, 0.3, 0.5, 3.)
-        @test position(spin) == SA_F64[3., 0., 0.]
-        @test phase(spin) ≈ norm_angle(rad2deg((0.6 + (2. + 1.5 * 3.) * 0.2) * 3 * gyromagnetic_ratio))
+        shifted = StepTrajectory(SA_F64[3, 0, 0], 0.1, field(0), Obstruction[])
+        orient = evolve_to_time(orient, shifted, 0.3, 0.5, micro)
+        @test phase(orient) ≈ norm_angle(rad2deg((0.6 + (2. + 1.5 * 3.) * 0.2) * 3 * gyromagnetic_ratio))
     end
     @testset "Fields with different types" begin
         pos = SA_F64[1., 0., 0.]

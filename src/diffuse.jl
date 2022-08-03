@@ -1,15 +1,76 @@
+"""
+Trajectory of a single spin through space.
+
+The trajectory can be accessed through indexing at a specific time (`trajectory[time]`) 
+or through iterations (`for (time, position) in trajectory`).
+The trajectory will be automatically extended as needed for ever.
+"""
+struct StepTrajectory{T <: AbstractFloat} 
+    positions :: Vector{SVector{3, T}}
+    timestep :: Real
+    diffusivity :: Field
+    geometry :: Obstructions
+    function StepTrajectory(
+        origin::SVector{3, T}, timestep::Real, diffusivity :: Field, geometry :: Obstructions
+        ) where T <: AbstractFloat
+        new{T}([origin], timestep, diffusivity, geometry)
+    end
+end
+
+Base.iterate(iter::StepTrajectory) = ((0., iter.positions[1]), 1)
+Base.iterate(iter::StepTrajectory, state::Int) = ((iter.timestep * state, iter[state + 1]), state + 1)
+Base.eltype(::Type{StepTrajectory{T}}) where {T} = Tuple{Int, SVector{3, T}}
+Base.IteratorSize(::Type{StepTrajectory}) = Base.IsInfinite()
+Base.firstindex(st :: StepTrajectory) = 1
+
+function Base.getindex(st::StepTrajectory, time::Real)
+    if isa(st.diffusivity, ZeroField)
+        return st.positions[1]
+    end
+    index = Int(div(time, st.timestep, RoundNearest)) + 1
+    while index > length(st.positions)
+        push!(st.positions, draw_step(
+            st.positions[end], st.diffusivity(st.positions[end]), 
+            st.timestep, st.geometry
+            ))
+    end
+    st.positions[index]
+end
+
+
+function random_on_sphere()
+    z = rand() * 2. - 1.
+    r = sqrt(1. - z*z)
+    theta = rand() * 2 * π
+    return SA_F64[
+        r * sin(theta),
+        r * cos(theta),
+        z
+    ]
+end
 
 draw_step(diffusivity :: Real, timestep :: Real) = sqrt(timestep * diffusivity) * @SVector randn(3)
-draw_step(current_pos :: SVector, diffusivity :: Real, timestep :: Real) = Movement(
-    current_pos,
-    current_pos + draw_step(diffusivity, timestep),
-    timestep
-)
+draw_step(current_pos :: SVector, diffusivity :: Real, timestep :: Real) = current_pos .+ draw_step(diffusivity, timestep)
 function draw_step(current_pos :: SVector, diffusivity :: Real, timestep :: Real, geometry :: Obstructions)
-    correct_collisions(
-        draw_step(current_pos, diffusivity, timestep),
-        geometry
-    )
+    new_pos = draw_step(current_pos, diffusivity, timestep)
+    if geometry == Obstruction[]
+        return new_pos
+    end
+    displacement = norm(new_pos .- current_pos)
+    while true
+        collision = detect_collision(
+            Movement(current_pos, new_pos, 1.),
+            geometry
+        )
+        if isnothing(collision)
+            return new_pos
+        end
+        flip_normal = (new_pos .- current_pos) ⋅ collision.normal
+        current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
+        direction = random_on_sphere()
+        displacement = (1 - collision.distance) * displacement
+        new_pos = current_pos .+ ((flip_normal * (direction ⋅ collision.normal) > 0 ? -1 : 1) * displacement) .* direction
+    end
 end
 
 function correct_collisions(to_try :: Movement, geometry :: Obstructions)

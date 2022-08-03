@@ -13,10 +13,11 @@ struct SpinOrientation
 end
 
 struct Spin
-    position :: SVector{3,Real}
+    position :: SVector
     orientation :: SpinOrientation
 end
-Spin(;position=zero(SVector{3,Real}), longitudinal=1., transverse=0., phase=0.) = Spin(position, SpinOrientation(longitudinal, transverse, deg2rad(phase)))
+Spin(;position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0.) = Spin(position, SpinOrientation(longitudinal, transverse, deg2rad(phase)))
+Base.zero(::Type{Spin}) = Spin()
 
 for param in (:longitudinal, :transverse)
     @eval $param(o :: SpinOrientation) = o.$param
@@ -43,13 +44,16 @@ struct Snapshot
     spins :: Vector{Spin}
     time :: Real
 end
+Snapshot(nspins :: Int, time :: Real) = Snapshot(zeros(Spin, nspins), time)
 time(s :: Snapshot) = s.time
+
 function vector(s :: Snapshot)
     sum(vector.(s.spins))
 end
 for param in (:longitudinal, :transverse, :phase)
     @eval $param(s :: Snapshot) = $param(vector2spin(vector(s)))
 end
+Base.getindex(s::Snapshot, i::Int) = s.spins[i]
 Base.length(s::Snapshot) = length(s.spins)
 Base.iterate(s::Snapshot) = iterate(s.spins)
 Base.iterate(s::Snapshot, state) = iterate(s.spins, state)

@@ -1,8 +1,8 @@
 using Test
 import MRSimulator: MRSimulator, Spin, Microstructure, evolve_to_time, time, field,
-    gyromagnetic_ratio, RFPulse, apply_pulse, phase, longitudinal, transverse, time, position, 
-    norm_angle, evolve, Sequence, relax, vector2spin, vector, Wall, correct_collisions, Movement,
-    Cylinder, Sphere, cylinder_plane, ray_grid_intersections
+    gyromagnetic_ratio, RFPulse, apply, phase, longitudinal, transverse, time, position, 
+    norm_angle, evolve_TR, Sequence, relax, vector2spin, vector, Wall, correct_collisions, Movement,
+    Cylinder, Sphere, cylinder_plane, ray_grid_intersections, StepTrajectory, Obstruction
 using StaticArrays
 using LinearAlgebra
 import Random
@@ -49,7 +49,7 @@ import Random
                 pulse = RFPulse(0., 0., pulse_phase)
                 for spin_phase in (-90, -45, 0., 30., 90., 180, 22.123789)
                     spin = Spin(phase=spin_phase, transverse=1.)
-                    spin = apply_pulse(pulse, spin.orientation)
+                    spin = apply(pulse, spin.orientation)
                     @test phase(spin) ≈ spin_phase
                     @test longitudinal(spin) ≈ 1.
                     @test transverse(spin) ≈ 1.
@@ -61,7 +61,7 @@ import Random
                 pulse = RFPulse(0., 180., pulse_phase)
                 spin = Spin()
                 @test longitudinal(spin) == 1.
-                spin = apply_pulse(pulse, spin.orientation)
+                spin = apply(pulse, spin.orientation)
                 @test longitudinal(spin) ≈ -1.
             end
         end
@@ -70,7 +70,7 @@ import Random
                 pulse = RFPulse(0., 90., pulse_phase)
                 spin = Spin()
                 @test longitudinal(spin) == 1.
-                spin = apply_pulse(pulse, spin.orientation)
+                spin = apply(pulse, spin.orientation)
                 @test longitudinal(spin) ≈ 0. atol=1e-12
             end
         end
@@ -80,7 +80,7 @@ import Random
                     pulse = RFPulse(0., flip_angle, pulse_phase)
 
                     spin = Spin(longitudinal=0., transverse=1., phase=pulse_phase)
-                    spin = apply_pulse(pulse, spin.orientation)
+                    spin = apply(pulse, spin.orientation)
                     @test longitudinal(spin) ≈ 0. atol=1e-12
                     @test transverse(spin) ≈ 1.
                     @test phase(spin) ≈ pulse_phase
@@ -92,7 +92,7 @@ import Random
                 pulse = RFPulse(0., 180, 0.)
 
                 spin = Spin(longitudinal=0., transverse=1., phase=spin_phase)
-                spin = apply_pulse(pulse, spin.orientation)
+                spin = apply(pulse, spin.orientation)
                 @test longitudinal(spin) ≈ 0. atol=1e-12
                 @test transverse(spin) ≈ 1.
                 @test phase(spin) ≈ -spin_phase
@@ -101,7 +101,7 @@ import Random
                 pulse = RFPulse(0., 180, pulse_phase)
 
                 spin = Spin(longitudinal=0., transverse=1., phase=0.)
-                spin = apply_pulse(pulse, spin.orientation)
+                spin = apply(pulse, spin.orientation)
                 @test longitudinal(spin) ≈ 0. atol=1e-12
                 @test transverse(spin) ≈ 1.
                 @test phase(spin) ≈ 2 * pulse_phase
@@ -110,7 +110,7 @@ import Random
         @testset "90 pulses flips longitudinal spin into transverse plane" begin
             for pulse_phase in (0., 22., 30., 80.)
                 pulse = RFPulse(0., 90, pulse_phase)
-                spin = apply_pulse(pulse, Spin().orientation)
+                spin = apply(pulse, Spin().orientation)
                 @test longitudinal(spin) ≈ 0. atol=1e-12
                 @test transverse(spin) ≈ 1.
                 @test phase(spin) ≈ pulse_phase + 90
@@ -121,7 +121,7 @@ import Random
                 pulse = RFPulse(0., 90, pulse_phase)
                 spin_phase = (pulse_phase + 90)
                 spin = Spin(longitudinal=0, transverse=1., phase=spin_phase)
-                spin = apply_pulse(pulse, spin.orientation)
+                spin = apply(pulse, spin.orientation)
                 @test longitudinal(spin) ≈ -1.
                 @test transverse(spin) ≈ 0. atol=1e-12
             end
