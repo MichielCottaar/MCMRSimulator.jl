@@ -2,7 +2,6 @@ module MRSimulator
 import StaticArrays: SA_F64, MVector, SVector, @SVector
 using LinearAlgebra
 import Base
-import RecipesBase: RecipesBase, @userplot, @recipe, @series
 import CoordinateTransformations
 import Rotations
 import Colors
