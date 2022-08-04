@@ -1,6 +1,6 @@
 import Makie: Makie, @lift
 
-color(orient::Union{Spin, SpinOrientation}; saturation=1., value=1.) = Colors.HSVA(phase(orient) + 180, saturation, value, transverse(orient))
+color(orient::Union{Spin, SpinOrientation}; saturation=1.) = Colors.HSV(phase(orient) + 180, saturation, transverse(orient))
 
 @Makie.recipe(SequencePlot, seq) do scene
     Makie.Theme(
@@ -25,3 +25,19 @@ function Makie.plot!(sp::SequencePlot)
 end
 
 Makie.plottype(::Sequence) = SequencePlot
+
+
+@Makie.recipe(SnapshotPlot, snap) do scene
+    Makie.Theme(
+    )
+end
+
+function Makie.plot!(sp::SnapshotPlot)
+    snap = sp[1]
+    colors = @lift color.($snap.spins)
+    pos = @lift [Makie.Point3f(s.position) for s in $snap.spins]
+    meshscatter!(sp, pos, color=colors)
+    sp
+end
+
+Makie.plottype(::Snapshot) = SnapshotPlot
