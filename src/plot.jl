@@ -1,3 +1,4 @@
+color(orient::Union{Spin, SpinOrientation}; saturation=1., value=1.) = Colors.HSVA(phase(orient) + 180, saturation, value, transverse(orient))
 
 @recipe function _f(snap::Snapshot)
     res = snap.spins

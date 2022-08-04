@@ -5,6 +5,7 @@ import Base
 import RecipesBase: RecipesBase, @userplot, @recipe, @series
 import CoordinateTransformations
 import Rotations
+import Colors
 
 
 include("constants.jl")
