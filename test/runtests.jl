@@ -14,7 +14,7 @@ import Random
     include("test_evolve.jl")
     @testset "Simple relaxation" begin
         orient = Spin(transverse=1., longitudinal=0.).orientation
-        pos = zero(SVector{3, Real})
+        pos = zero(SVector{3, Float64})
         @testset "R2 relaxation" begin
             env = Microstructure(R2=field(2.))(pos)
             @test relax(orient, env, 0.3).transverse ≈ exp(-0.6)

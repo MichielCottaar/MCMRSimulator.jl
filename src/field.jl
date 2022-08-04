@@ -6,14 +6,14 @@ abstract type Field{T} end
 struct ZeroField{T} <: Field{T}
 end
 
-(f::ZeroField{T})(position :: SVector) where {T} = zero(T)
+(f::ZeroField{T})(position :: PosVector) where {T} = zero(T)
 (f::ZeroField{T})(m :: Movement) where {T} = zero(T)
 
 struct ConstantField{T} <: Field{T}
     value :: T
 end
 
-(f::ConstantField)(position :: SVector) = f.value
+(f::ConstantField)(position :: PosVector) = f.value
 (f::ConstantField)(m :: Movement) = f.value
 
 struct GradientField{T} <: Field{T}
@@ -21,7 +21,7 @@ struct GradientField{T} <: Field{T}
     offset :: T
 end
 
-(f::GradientField)(position :: SVector) = position ⋅ f.gradient + f.offset
+(f::GradientField)(position :: PosVector) = position ⋅ f.gradient + f.offset
 (f::GradientField)(m :: Movement) = f((m.origin + m.destination) / 2.)
 
 field() = field(typeof(0.))

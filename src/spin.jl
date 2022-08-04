@@ -13,7 +13,7 @@ struct SpinOrientation
 end
 
 struct Spin
-    position :: SVector
+    position :: PosVector
     orientation :: SpinOrientation
 end
 Spin(;position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0.) = Spin(SVector{3}(position), SpinOrientation(longitudinal, transverse, deg2rad(phase)))
@@ -62,7 +62,7 @@ abstract type Obstruction end
 const Obstructions = Union{Obstruction, AbstractVector{T}} where T <: Obstruction
 
 struct Movement
-    origin :: SVector{3, Real}
-    destination :: SVector{3, Real}
+    origin :: PosVector
+    destination :: PosVector
     timestep :: Real
 end

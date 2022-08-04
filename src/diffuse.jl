@@ -11,9 +11,9 @@ struct StepTrajectory{T <: AbstractFloat}
     diffusivity :: Field
     geometry :: Obstructions
     function StepTrajectory(
-        origin::SVector{3, T}, timestep::Real, diffusivity :: Field, geometry :: Obstructions
-        ) where T <: AbstractFloat
-        new{T}([origin], timestep, diffusivity, geometry)
+        origin::SVector{3, <:AbstractFloat}, timestep::Real, diffusivity :: Field, geometry :: Obstructions
+        )
+        new{eltype(origin)}([origin], timestep, diffusivity, geometry)
     end
 end
 
@@ -50,8 +50,8 @@ function random_on_sphere()
 end
 
 draw_step(diffusivity :: Real, timestep :: Real) = sqrt(timestep * diffusivity) * @SVector randn(3)
-draw_step(current_pos :: SVector, diffusivity :: Real, timestep :: Real) = current_pos .+ draw_step(diffusivity, timestep)
-function draw_step(current_pos :: SVector, diffusivity :: Real, timestep :: Real, geometry :: Obstructions)
+draw_step(current_pos :: PosVector, diffusivity :: Real, timestep :: Real) = current_pos .+ draw_step(diffusivity, timestep)
+function draw_step(current_pos :: PosVector, diffusivity :: Real, timestep :: Real, geometry :: Obstructions)
     new_pos = draw_step(current_pos, diffusivity, timestep)
     if geometry == Obstruction[]
         return new_pos
@@ -102,12 +102,12 @@ end
 
 struct Collision
     distance :: Real
-    normal :: SVector{3, Real}
+    normal :: PosVector
     Collision(distance, normal) = new(distance * (1. - eps(typeof(distance))^0.75), normal)
 end
 
 
-function detect_collision(movement :: Movement, obstructions :: Vector{T}) where T <: Obstruction
+function detect_collision(movement :: Movement, obstructions :: Vector{<:Obstruction})
     collision = nothing
     for o in obstructions
         c_new = detect_collision(movement, o)
@@ -122,7 +122,7 @@ end
 
 struct Repeated <: Obstruction
     obstruction :: Obstructions
-    repeats :: SVector{3, Real}
+    repeats :: PosVector
     function Repeated(obstruction, repeats)
         rs = SVector([iszero(r) ? Inf : abs(r) for r in repeats])
         any(isfinite.(rs)) ? new(obstruction, rs) : obstruction
@@ -151,10 +151,10 @@ function detect_collision(movement :: Movement, repeat :: Repeated)
 end
 
 "Computes all interactions with a 1x1x1 grid"
-ray_grid_intersections(origin :: SVector, destination :: SVector) = Channel() do c
+ray_grid_intersections(origin :: PosVector, destination :: PosVector) = Channel() do c
     direction = destination .- origin
     within_voxel = mod.(origin, 1)
-    all_next_hits = MVector{3, Float64}([(d > 0 ? 1 - w : w) / abs(d) for (d, w) in zip(direction, within_voxel)])
+    all_next_hits = MVector{3, eltype(origin)}([(d > 0 ? 1 - w : w) / abs(d) for (d, w) in zip(direction, within_voxel)])
     prev_pos = origin
     prev_time = 0.
     current_voxel = MVector{3, Int}(Int.(floor.(origin)))
@@ -208,7 +208,7 @@ function detect_collision(movement :: Movement, transform :: Transformed)
     end
     Collision(
         c.distance,
-        transform.transform(c.normal) .- transform.transform(zero(SVector{3, Real}))
+        transform.transform(c.normal) .- transform.transform(zero(SVector{3, eltype(movement.origin)}))
     )
 end
 
@@ -218,7 +218,7 @@ end
 Wall(offset :: Real) = offset == 0 ? Wall() : Transformed(Wall(), CoordinateTransformations.Translation(offset, 0., 0.))
 
 
-function Wall(normal :: SVector, offset :: Real)
+function Wall(normal :: PosVector, offset :: Real)
     n = normal ./ norm(normal)
     shifted = Wall(offset * norm(normal))
     if isapprox(n, SA_F64[1, 0, 0], atol=1e-10)
@@ -265,7 +265,7 @@ end
 
 detect_collision(movement :: Movement, sphere :: Sphere) = sphere_collision(movement.origin, movement.destination, sphere.radius)
 
-function sphere_collision(origin :: AbstractVector, destination :: AbstractVector, radius :: Real)
+function sphere_collision(origin :: PosVector, destination :: PosVector, radius :: Real)
     # terms for quadratic equation for where distance squared equals radius squared d^2 = a s^2 + b s + c == radius ^ 2
     a = sum((destination .- origin) .^ 2)
     b = sum(2 .* origin .* (destination .- origin))
@@ -296,7 +296,7 @@ struct Cylinder <: Obstruction
     radius :: Real
 end
 
-function Cylinder(radius :: Real, orientation :: SVector)
+function Cylinder(radius :: Real, orientation :: PosVector)
     o = orientation / norm(orientation)
     if isapprox(o, SA_F64[0, 0, 1], atol=1e-10)
         return Cylinder(radius)
@@ -306,12 +306,12 @@ function Cylinder(radius :: Real, orientation :: SVector)
     Transformed(Cylinder(radius), CoordinateTransformations.LinearMap(Rotations.AngleAxis(rot_angle, rot_axis...)))
 end
 
-function Cylinder(radius :: Real, orientation :: SVector, location :: SVector)
+function Cylinder(radius :: Real, orientation :: PosVector, location :: PosVector)
     c = Cylinder(radius, orientation)
     return all(iszero.(location)) ? c : Transformed(c, CoordinateTransformations.Translation(location...))
 end
 
-function Cylinder(radius :: Real, sym :: Symbol, offset :: SVector)
+function Cylinder(radius :: Real, sym :: Symbol, offset :: PosVector)
     orientation = Dict(
         :x => SA_F64[1., 0., 0.],
         :y => SA_F64[0., 1., 0.],
