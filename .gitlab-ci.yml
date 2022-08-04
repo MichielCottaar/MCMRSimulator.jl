@@ -1,3 +1,11 @@
+variables:
+  JULIA_DEPOT_PATH: "$CI_PROJECT_DIR/.julia"
+
+
+cache:
+  paths:
+    - .julia
+
 .script:
   script:
     - |
