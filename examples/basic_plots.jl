@@ -34,7 +34,17 @@ begin
 	MRSimulator.sequenceplot(sequence)
 end
 
+# ╔═╡ ee4b67ce-95a1-4a89-968a-210e1d19f3ed
+begin
+	snap = Snapshot([
+		Spin(transverse=0.3), 
+		Spin(position=[0, 1, 2.], transverse=1.),
+		Spin(position=[2., 1, 2.], transverse=0.)], 0.3)
+	plot(snap)
+end
+
 # ╔═╡ Cell order:
 # ╠═d990be32-1343-11ed-0acb-0fdad105c87c
 # ╠═ecac5fd3-313c-407d-a299-6ec1825dd9c8
 # ╠═9512c409-850c-4b7d-ac5a-ecbacf706f9d
+# ╠═ee4b67ce-95a1-4a89-968a-210e1d19f3ed

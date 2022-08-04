@@ -36,7 +36,7 @@ function Makie.plot!(sp::SnapshotPlot)
     snap = sp[1]
     colors = @lift color.($snap.spins)
     pos = @lift [Makie.Point3f(s.position) for s in $snap.spins]
-    meshscatter!(sp, pos, color=colors)
+    Makie.meshscatter!(sp, pos, color=colors)
     sp
 end
 
