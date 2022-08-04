@@ -16,7 +16,7 @@ struct Spin
     position :: SVector
     orientation :: SpinOrientation
 end
-Spin(;position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0.) = Spin(position, SpinOrientation(longitudinal, transverse, deg2rad(phase)))
+Spin(;position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0.) = Spin(SVector{3}(position), SpinOrientation(longitudinal, transverse, deg2rad(phase)))
 Base.zero(::Type{Spin}) = Spin()
 
 for param in (:longitudinal, :transverse)
