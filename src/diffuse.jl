@@ -69,7 +69,7 @@ function draw_step(current_pos :: SVector, diffusivity :: Real, timestep :: Real
         current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
         direction = random_on_sphere()
         displacement = (1 - collision.distance) * displacement
-        new_pos = current_pos .+ ((flip_normal * (direction ⋅ collision.normal) > 0 ? -1 : 1) * displacement) .* direction
+        new_pos = current_pos .+ (((flip_normal * (direction ⋅ collision.normal)) > 0 ? -1 : 1) * displacement) .* direction
     end
 end
 
@@ -103,7 +103,7 @@ end
 struct Collision
     distance :: Real
     normal :: SVector{3, Real}
-    Collision(distance, normal) = new(distance == 0. ? 0. : (distance - eps(distance) * 10.), normal)
+    Collision(distance, normal) = new(distance * (1. - eps(typeof(distance))^0.75), normal)
 end
 
 

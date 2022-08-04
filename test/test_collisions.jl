@@ -90,7 +90,7 @@
             @test res[1].timestep ≈ 1.
             @test res[2].origin ≈ SA_F64[1, 1, 1]
             @test res[2].destination ≈ SA_F64[1, 1, 1]
-            @test res[2].timestep ≈ 0. atol=1e-10
+            @test res[2].timestep ≈ 0. atol=1e-8
             @test res[3].origin ≈ SA_F64[1, 1, 1]
             @test res[3].destination ≈ SA_F64[-1, -1, 3]
             @test res[3].timestep ≈ 2.
