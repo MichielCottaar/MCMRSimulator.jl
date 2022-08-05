@@ -41,3 +41,70 @@ function Makie.plot!(sp::SnapshotPlot)
 end
 
 Makie.plottype(::Snapshot) = SnapshotPlot
+
+
+struct PlotPlane
+    transformation :: CoordinateTransformations.Transformation
+    repeatx :: Real
+    repeaty :: Real
+end
+
+
+function PlotPlane(
+    normal :: PosVector=SA_F64[0, 0, 1], 
+    position :: PosVector=SA_F64[0, 0, 0];
+    repeatx::Real=Inf, repeaty::Real=Inf,
+)
+    if normal ≈ SA_F64[0, 0, 1]
+        transform = CoordinateTransformations.Translation(position)
+    else
+        rot_axis = cross(SA_F64[0, 0, 1], normal)
+        rot_angle = acos(normal[3] / norm(normal))
+        transform = CoordinateTransformations.AffineMap(
+            Rotations.AngleAxis(rot_angle, rot_axis...),
+            position
+        )
+    end
+    PlotPlane(CoordinateTransformations.inv(transform), repeatx, repeaty)
+end
+
+function transform(pp::PlotPlane, pos::PosVector)
+    mod.(pp.transformation(pos), (pp.repeatx, pp.repeaty, Inf))
+end
+
+function transform(pp::PlotPlane, snap::Snapshot)
+    Snapshot(
+        [Spin(transform(pp, s.position), s.orientation) for s in snap.spins],
+        snap.time
+    )
+end
+
+
+@Makie.recipe(SnapshotPlanarPlot, snap, plane) do scene
+    Makie.Attributes(
+        markersize=0.1,
+        marker=:circle,
+        markerspace=:pixel,
+        vector=0.,
+        arrowsize=0.1,
+    )
+end
+
+function Makie.plot!(sp::SnapshotPlanarPlot)
+    snap = sp[1]
+    planar = sp[2]
+    pos = @lift [Makie.Point2f(s.position[1:2]) for s in transform($planar, $snap).spins]
+    vl = sp[:vector]
+    if iszero(vl[])
+        colors = @lift color.($snap.spins)
+        kwargs = Dict([sym => sp[sym] for sym in [:markersize, :marker, :markerspace]] )
+        Makie.scatter!(sp, pos, color=colors; kwargs...)
+    else
+        directions = @lift [Makie.Point2f(vector(s.orientation)[1:2] .* $vl) for s in $snap.spins]
+        kwargs = Dict([sym => sp[sym] for sym in [:arrowsize]] )
+        Makie.arrows!(sp, pos, directions; kwargs...)
+    end
+    sp
+end
+
+Makie.plottype(::Snapshot, ::PlotPlane) = SnapshotPlanarPlot
