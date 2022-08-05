@@ -23,12 +23,12 @@ for param in (:longitudinal, :transverse)
     @eval $param(o :: SpinOrientation) = o.$param
 end
 for param in (:*, :/)
-    @eval $param(o :: SpinOrientation, number :: Real) = SpinOrientation(
+    @eval Base.$param(o :: SpinOrientation, number :: Real) = SpinOrientation(
         $param(o.longitudinal, number),
         $param(o.transverse, number),
         o.phase
     )
-    @eval $param(s :: Spin, number :: Real) = Spin(s.position, $param(s.orientation, number))
+    @eval Base.$param(s :: Spin, number :: Real) = Spin(s.position, $param(s.orientation, number))
 end
 phase(o :: SpinOrientation) = norm_angle(rad2deg(o.phase))
 vector(o :: SpinOrientation) = SA_F64[
