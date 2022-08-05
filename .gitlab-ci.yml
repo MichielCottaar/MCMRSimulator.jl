@@ -39,7 +39,7 @@ pages:
   stage: deploy
   script:
     - apt-get update
-    - apt-get install git-all
+    - apt-get install -y git-all
     - |
       julia --project=docs -e '
         using Pkg
