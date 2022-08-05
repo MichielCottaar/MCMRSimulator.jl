@@ -38,6 +38,7 @@ pages:
   image: julia:1.6
   stage: deploy
   script:
+    - apt-get install git
     - |
       julia --project=docs -e '
         using Pkg
