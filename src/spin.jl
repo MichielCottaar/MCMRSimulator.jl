@@ -22,13 +22,21 @@ Base.zero(::Type{Spin}) = Spin()
 for param in (:longitudinal, :transverse)
     @eval $param(o :: SpinOrientation) = o.$param
 end
+for param in (:*, :/)
+    @eval $param(o :: SpinOrientation, number :: Real) = SpinOrientation(
+        $param(o.longitudinal, number),
+        $param(o.transverse, number),
+        o.phase
+    )
+    @eval $param(s :: Spin, number :: Real) = Spin(s.position, $param(s.orientation, number))
+end
 phase(o :: SpinOrientation) = norm_angle(rad2deg(o.phase))
 vector(o :: SpinOrientation) = SA_F64[
     o.transverse * cos(o.phase),
     o.transverse * sin(o.phase),
     o.longitudinal
 ]
-vector2spin(vector :: SVector{3, T}) where T <: Real = SpinOrientation(
+vector2spin(vector :: AbstractVector) = SpinOrientation(
     vector[3],
     sqrt(vector[1] * vector[1] + vector[2] * vector[2]),
     atan(vector[2], vector[1]),

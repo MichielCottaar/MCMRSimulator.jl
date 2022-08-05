@@ -47,6 +47,7 @@ struct PlotPlane
     transformation :: CoordinateTransformations.Transformation
     repeatx :: Real
     repeaty :: Real
+    ngrid :: Int
 end
 
 
@@ -54,6 +55,7 @@ function PlotPlane(
     normal :: PosVector=SA_F64[0, 0, 1], 
     position :: PosVector=SA_F64[0, 0, 0];
     repeatx::Real=Inf, repeaty::Real=Inf,
+    ngrid=100,
 )
     if normal ≈ SA_F64[0, 0, 1]
         transform = CoordinateTransformations.Translation(position)
@@ -65,11 +67,14 @@ function PlotPlane(
             position
         )
     end
-    PlotPlane(CoordinateTransformations.inv(transform), repeatx, repeaty)
+    PlotPlane(CoordinateTransformations.inv(transform), repeatx, repeaty, ngrid)
 end
 
 function transform(pp::PlotPlane, pos::PosVector)
-    mod.(pp.transformation(pos), (pp.repeatx, pp.repeaty, Inf))
+    base = pp.transformation(pos)
+    repeatx, repeaty = pp.repeatx, pp.repeaty
+    correct = [isfinite(repeatx) ? repeatx : 0., isfinite(repeaty) ? repeaty : 0., 0.] / 2.
+    mod.(base .+ correct, (repeatx, repeaty, Inf)) .- correct
 end
 
 function transform(pp::PlotPlane, snap::Snapshot)
@@ -79,13 +84,40 @@ function transform(pp::PlotPlane, snap::Snapshot)
     )
 end
 
+function project_on_grid(pp::PlotPlane, snap::Snapshot)
+    on_plane = transform(pp, snap)
+    positions = [s.position[1:2] for s in on_plane]
+    xrange = extrema(v->v[1], positions)
+    yrange = extrema(v->v[2], positions)
+
+    res = zeros(MVector{3}, pp.ngrid, pp.ngrid)
+    hits = zeros(Int, pp.ngrid, pp.ngrid)
+    for spin in on_plane
+        relx = (spin.position[1] - xrange[1])/(xrange[2] - xrange[1])
+        rely = (spin.position[2] - yrange[1])/(yrange[2] - yrange[1])
+        x_index = min.(Int(floor(relx * (pp.ngrid - 1))), pp.ngrid - 2) + 1
+        y_index = min.(Int(floor(rely * (pp.ngrid - 1))), pp.ngrid - 2) + 1
+        vs = vector(spin.orientation)
+        for (xi, yi) in [
+            (x_index, y_index),
+            (x_index+1, y_index),
+            (x_index, y_index+1),
+            (x_index+1, y_index+1),
+        ]
+            res[xi, yi] += vs
+            hits[xi, yi] += 1
+        end
+    end
+    (range(xrange..., pp.ngrid), range(yrange..., pp.ngrid), vector2spin.(res ./ hits))
+end
+
 
 @Makie.recipe(SnapshotPlanarPlot, snap, plane) do scene
     Makie.Attributes(
         markersize=0.1,
         marker=:circle,
         markerspace=:pixel,
-        vector=0.,
+        vector=0.1,
         arrowsize=0.1,
     )
 end
@@ -93,17 +125,18 @@ end
 function Makie.plot!(sp::SnapshotPlanarPlot)
     snap = sp[1]
     planar = sp[2]
+
+    projection = @lift project_on_grid($planar, $snap)
+    xs = @lift $projection[1]
+    ys = @lift $projection[2]
+    c = @lift color.($projection[3])
+    Makie.image!(sp, xs, ys, c)
+
     pos = @lift [Makie.Point2f(s.position[1:2]) for s in transform($planar, $snap).spins]
     vl = sp[:vector]
-    if iszero(vl[])
-        colors = @lift color.($snap.spins)
-        kwargs = Dict([sym => sp[sym] for sym in [:markersize, :marker, :markerspace]] )
-        Makie.scatter!(sp, pos, color=colors; kwargs...)
-    else
-        directions = @lift [Makie.Point2f(vector(s.orientation)[1:2] .* $vl) for s in $snap.spins]
-        kwargs = Dict([sym => sp[sym] for sym in [:arrowsize]] )
-        Makie.arrows!(sp, pos, directions; kwargs...)
-    end
+    directions = @lift [Makie.Point2f(vector(s.orientation)[1:2] .* $vl) for s in $snap.spins]
+    kwargs = Dict([sym => sp[sym] for sym in [:arrowsize]] )
+    Makie.arrows!(sp, pos, directions; color=:black, kwargs...)
     sp
 end
 
