@@ -1,13 +1,13 @@
-import Makie: Makie, @lift
+import MakieCore: MakieCore, @lift
 
 color(orient::Union{Spin, SpinOrientation}; saturation=1.) = Colors.HSV(phase(orient) + 180, saturation, transverse(orient))
 
-@Makie.recipe(SequencePlot, seq) do scene
-    Makie.Theme(
+@MakieCore.recipe(SequencePlot, seq) do scene
+    MakieCore.Theme(
     )
 end
 
-function Makie.plot!(sp::SequencePlot)
+function MakieCore.plot!(sp::SequencePlot)
     seq = sp[1]
     times = @lift [p.time for p in $seq.pulses]
     flip_angle = @lift [rad2deg(p.flip_angle) for p in $seq.pulses]
@@ -15,32 +15,32 @@ function Makie.plot!(sp::SequencePlot)
     max_angle = @lift maximum($flip_angle)
 
     yval = @lift $flip_angle ./ $max_angle
-    Makie.arrows!(sp, times, as_zero, as_zero, yval)
+    MakieCore.arrows!(sp, times, as_zero, as_zero, yval)
 
     text = @lift [string(Int(round(a))) for a in $flip_angle]
     text_positions = @lift [(t, 0.05 + y) for (t, y) in zip($times, $yval)]
-    Makie.text!(sp, text, position=text_positions, align=(:center, :center))
+    MakieCore.text!(sp, text, position=text_positions, align=(:center, :center))
     #vlines!(sp, TR, color="black")
     sp
 end
 
-Makie.plottype(::Sequence) = SequencePlot
+MakieCore.plottype(::Sequence) = SequencePlot
 
 
-@Makie.recipe(SnapshotPlot, snap) do scene
-    Makie.Theme(
+@MakieCore.recipe(SnapshotPlot, snap) do scene
+    MakieCore.Theme(
     )
 end
 
-function Makie.plot!(sp::SnapshotPlot)
+function MakieCore.plot!(sp::SnapshotPlot)
     snap = sp[1]
     colors = @lift color.($snap.spins)
-    pos = @lift [Makie.Point3f(s.position) for s in $snap.spins]
-    Makie.meshscatter!(sp, pos, color=colors)
+    pos = @lift [MakieCore.Point3f(s.position) for s in $snap.spins]
+    MakieCore.meshscatter!(sp, pos, color=colors)
     sp
 end
 
-Makie.plottype(::Snapshot) = SnapshotPlot
+MakieCore.plottype(::Snapshot) = SnapshotPlot
 
 
 struct PlotPlane
@@ -112,8 +112,8 @@ function project_on_grid(pp::PlotPlane, snap::Snapshot)
 end
 
 
-@Makie.recipe(SnapshotPlanarPlot, snap, plane) do scene
-    Makie.Attributes(
+@MakieCore.recipe(SnapshotPlanarPlot, snap, plane) do scene
+    MakieCore.Attributes(
         markersize=0.1,
         marker=:circle,
         markerspace=:pixel,
@@ -122,7 +122,7 @@ end
     )
 end
 
-function Makie.plot!(sp::SnapshotPlanarPlot)
+function MakieCore.plot!(sp::SnapshotPlanarPlot)
     snap = sp[1]
     planar = sp[2]
 
@@ -130,14 +130,14 @@ function Makie.plot!(sp::SnapshotPlanarPlot)
     xs = @lift $projection[1]
     ys = @lift $projection[2]
     c = @lift color.($projection[3])
-    Makie.image!(sp, xs, ys, c)
+    MakieCore.image!(sp, xs, ys, c)
 
-    pos = @lift [Makie.Point2f(s.position[1:2]) for s in transform($planar, $snap).spins]
+    pos = @lift [MakieCore.Point2f(s.position[1:2]) for s in transform($planar, $snap).spins]
     vl = sp[:vector]
-    directions = @lift [Makie.Point2f(vector(s.orientation)[1:2] .* $vl) for s in $snap.spins]
+    directions = @lift [MakieCore.Point2f(vector(s.orientation)[1:2] .* $vl) for s in $snap.spins]
     kwargs = Dict([sym => sp[sym] for sym in [:arrowsize]] )
-    Makie.arrows!(sp, pos, directions; color=:black, kwargs...)
+    MakieCore.arrows!(sp, pos, directions; color=:black, kwargs...)
     sp
 end
 
-Makie.plottype(::Snapshot, ::PlotPlane) = SnapshotPlanarPlot
+MakieCore.plottype(::Snapshot, ::PlotPlane) = SnapshotPlanarPlot
