@@ -124,7 +124,7 @@ struct Repeated <: Obstruction
     obstruction :: Obstructions
     repeats :: PosVector
     function Repeated(obstruction, repeats)
-        rs = SVector([iszero(r) ? Inf : abs(r) for r in repeats])
+        rs = SVector{3}([iszero(r) ? Inf : abs(r) for r in repeats])
         any(isfinite.(rs)) ? new(obstruction, rs) : obstruction
     end
 end
