@@ -16,10 +16,6 @@ struct RFPulse <: SequenceComponent
     end
 end
 
-struct Readout <: SequenceComponent
-    time :: Real
-end
-
 RFPulse(; time=0, flip_angle=0, phase=0) = RFPulse(time, flip_angle, phase)
 
 phase(pulse :: RFPulse) = rad2deg(pulse.phase)
@@ -42,27 +38,26 @@ function apply(pulse :: RFPulse, spin :: SpinOrientation)
     )
 end
 
-apply(pulse :: RFPulse, spin :: Spin) = Spin(spin.position, apply(pulse, spin.orientation))
+struct Readout <: SequenceComponent
+    time :: Real
+end
+Readout(;time=0.) = Readout(time)
 
-struct Sequence
-    pulses :: Vector{SequenceComponent}
-    TR :: Real
-    B0 :: Real
-    function Sequence(pulses::Vector{T}, TR :: Real, B0 :: Real = 3.) where T <: SequenceComponent
-        result = new(sort(pulses, by=x->x.time), TR, B0)
-        if length(result.pulses) > 0
-            @assert result.pulses[end].time <= TR
-        end
-        result
-    end
+apply(pulse :: Readout, orient :: SpinOrientation) = orient
+
+
+struct InstantGradient <: SequenceComponent
+    qvec :: PosVector
+    q_origin :: Real
+    time :: Real
 end
 
-Sequence(TR :: Real, B0 :: Real = 3.) = Sequence(SequenceComponent[], TR, B0)
-Base.getindex(s :: Sequence, index :: Integer) = s.pulses[index]
+InstantGradient(; qvec::AbstractVector=[0., 0., 0.], q_origin=0., time :: Real=0.) = InstantGradient(SVector{3}(qvec), q_origin, time)
 
-function time(sequence :: Sequence, index :: Integer)
-    if index > length(sequence.pulses)
-        return Inf
-    end
-    return sequence.pulses[index].time
+function apply(pulse :: InstantGradient, orient :: SpinOrientation, pos::PosVector)
+    adjustment = (pos ⋅ pulse.qvec) + pulse.q_origin
+    SpinOrientation(longitudinal(orient), transverse(orient), phase(orient) + adjustment)
 end
+
+apply(pulse :: SequenceComponent, orient :: SpinOrientation, pos::PosVector) = apply(pulse, orient)
+apply(pulse :: SequenceComponent, spin :: Spin) = Spin(spin.position, apply(pulse, spin.orientation, spin.position))

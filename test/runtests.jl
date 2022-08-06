@@ -3,15 +3,17 @@ import MRSimulator: MRSimulator, Spin, Microstructure, evolve_to_time, time, fie
     gyromagnetic_ratio, RFPulse, apply, phase, longitudinal, transverse, time, position, 
     norm_angle, evolve_TR, Sequence, relax, vector2spin, vector, Wall, correct_collisions, Movement,
     Cylinder, Sphere, cylinder_plane, ray_grid_intersections, StepTrajectory, Obstruction
+import MRSimulator as mr
 using StaticArrays
 using LinearAlgebra
 import Random
 
 
 @testset "MRSimulator tests" begin
-    include("test_field.jl")
-    include("test_collisions.jl")
-    include("test_evolve.jl")
+    #include("test_field.jl")
+    #include("test_collisions.jl")
+    #include("test_evolve.jl")
+    include("test_known_sequences.jl")
     @testset "Simple relaxation" begin
         orient = Spin(transverse=1., longitudinal=0.).orientation
         pos = zero(SVector{3, Float64})

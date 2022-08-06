@@ -42,7 +42,7 @@ function evolve_TR(spin::Spin, readout::SpinReadout, micro::Microstructure, traj
         orient = evolve_to_time(orient, trajectory, current_time, times[next], micro, sequence.B0)
         current_time = times[next]
         if next == 1
-            orient = apply(sequence[sequence_index], orient)
+            orient = apply(sequence[sequence_index], orient, trajectory[current_time])
             sequence_index += 1
             times[1] = time(sequence, sequence_index)
         elseif next == 2
