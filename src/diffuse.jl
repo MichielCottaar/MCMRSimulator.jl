@@ -5,15 +5,16 @@ The trajectory can be accessed through indexing at a specific time (`trajectory[
 or through iterations (`for (time, position) in trajectory`).
 The trajectory will be automatically extended as needed for ever.
 """
-struct StepTrajectory{T <: AbstractFloat} 
+struct StepTrajectory{T <: AbstractFloat, F <: Field{T}, G <: Obstructions} 
     positions :: Vector{SVector{3, T}}
     timestep :: Real
-    diffusivity :: Field
-    geometry :: Obstructions
+    diffusivity :: F
+    geometry :: G
     function StepTrajectory(
-        origin::SVector{3, <:AbstractFloat}, timestep::Real, diffusivity :: Field, geometry :: Obstructions
+        origin::SVector{3, <:AbstractFloat}, timestep::Real, diffusivity :: Field, geometry
         )
-        new{eltype(origin)}([origin], timestep, diffusivity, geometry)
+        geometry = isa(geometry, Obstruction) ? SVector{1}([geometry]) : SVector{length(geometry)}(geometry)
+        new{eltype(origin), typeof(diffusivity), typeof(geometry)}([origin], timestep, diffusivity, geometry)
     end
 end
 
@@ -51,11 +52,9 @@ end
 
 draw_step(diffusivity :: Real, timestep :: Real) = sqrt(timestep * diffusivity) * @SVector randn(3)
 draw_step(current_pos :: PosVector, diffusivity :: Real, timestep :: Real) = current_pos .+ draw_step(diffusivity, timestep)
+draw_step(current_pos :: PosVector, diffusivity :: Real, timestep :: Real, geometry :: Obstructions{0}) = draw_step(current_pos, diffusivity, timestep)
 function draw_step(current_pos :: PosVector, diffusivity :: Real, timestep :: Real, geometry :: Obstructions)
     new_pos = draw_step(current_pos, diffusivity, timestep)
-    if geometry == Obstruction[]
-        return new_pos
-    end
     displacement = norm(new_pos .- current_pos)
     while true
         collision = detect_collision(
@@ -73,8 +72,12 @@ function draw_step(current_pos :: PosVector, diffusivity :: Real, timestep :: Re
     end
 end
 
+correct_collisions(to_try :: Movement, geometry :: Obstruction) = correct_collisions(to_try, SVector{1}(geometry))
+correct_collisions(to_try :: Movement, geometry :: Obstructions{0}) = [to_try]
+correct_collisions(to_try :: Movement, geometry :: AbstractVector{<:Obstruction}) = correct_collisions(to_try, SVector{length(geometry)}(geometry))
+
 function correct_collisions(to_try :: Movement, geometry :: Obstructions)
-    steps = Movement[]
+    steps = typeof(to_try)[]
     while true
         collision = detect_collision(to_try, geometry)
         if isnothing(collision) || collision.distance > 1
@@ -107,7 +110,9 @@ struct Collision
 end
 
 
-function detect_collision(movement :: Movement, obstructions :: Vector{<:Obstruction})
+detect_collision(movement :: Movement, obstructions :: Obstructions{0}) = nothing
+
+function detect_collision(movement :: Movement, obstructions :: Obstructions)
     collision = nothing
     for o in obstructions
         c_new = detect_collision(movement, o)
@@ -120,12 +125,13 @@ end
 
 
 
-struct Repeated <: Obstruction
-    obstruction :: Obstructions
-    repeats :: PosVector
+struct Repeated{T<:AbstractFloat, O <: Obstructions} <: Obstruction
+    obstruction :: O
+    repeats :: PosVector{T}
     function Repeated(obstruction, repeats)
+        o = isa(obstruction, Obstruction) ? SVector{1}([obstruction]) : SVector{length(obstruction)}(obstruction)
         rs = SVector{3}([iszero(r) ? Inf : abs(r) for r in repeats])
-        any(isfinite.(rs)) ? new(obstruction, rs) : obstruction
+        any(isfinite.(rs)) ? new{eltype(rs), typeof(o)}(o, rs) : obstruction
     end
 end
 
@@ -181,15 +187,16 @@ ray_grid_intersections(origin :: PosVector, destination :: PosVector) = Channel(
     end
 end
 
-struct Transformed <: Obstruction
-    obstruction :: Obstructions
-    transform :: CoordinateTransformations.Transformation
-    inverse :: CoordinateTransformations.Transformation
-    function Transformed(obstruction :: Obstruction, transform :: CoordinateTransformations.Transformation)
+struct Transformed{O <: Obstructions, T <: CoordinateTransformations.Transformation} <: Obstruction
+    obstruction :: O
+    transform :: T
+    inverse :: T
+    function Transformed(obstruction, transform :: CoordinateTransformations.Transformation)
         if isa(obstruction, Transformed)
             return Transformed(obstruction.obstruction, transform ∘ obstruction.transform )
         else
-            return new(obstruction, transform, inv(transform))
+            o = isa(obstruction, Obstruction) ? SVector{1}([obstruction]) : SVector{length(obstruction)}(obstruction)
+            return new{typeof(o), typeof(transform)}(o, transform, inv(transform))
         end
     end
 end
@@ -251,8 +258,8 @@ function detect_collision(movement :: Movement, wall :: Wall)
     )
 end
 
-struct Sphere <: Obstruction
-    radius :: Real
+struct Sphere{T <: Real} <: Obstruction
+    radius :: T
 end
 
 function Sphere(radius :: Real, location :: SVector)
@@ -292,8 +299,8 @@ function sphere_collision(origin :: PosVector, destination :: PosVector, radius 
     )
 end
 
-struct Cylinder <: Obstruction
-    radius :: Real
+struct Cylinder{T <: Real} <: Obstruction
+    radius :: T
 end
 
 function Cylinder(radius :: Real, orientation :: PosVector)
@@ -335,7 +342,7 @@ function cylinder_plane(radius :: Real; rotation=0., repeatx=0., repeaty=0., shi
         ),
         CoordinateTransformations.AffineMap(
             Rotations.AngleAxis(deg2rad(rotation), 1, 0, 0),
-            [shiftx, 0, 0]
+            SA_F64[shiftx, 0., 0.]
         )
     )
 end

@@ -67,10 +67,10 @@ Base.iterate(s::Snapshot) = iterate(s.spins)
 Base.iterate(s::Snapshot, state) = iterate(s.spins, state)
 
 abstract type Obstruction end
-const Obstructions = Union{Obstruction, AbstractVector{T}} where T <: Obstruction
+const Obstructions{N, T} = SVector{N, T} where T <: Obstruction
 
-struct Movement
-    origin :: PosVector
-    destination :: PosVector
-    timestep :: Real
+struct Movement{T<:AbstractFloat}
+    origin :: PosVector{T}
+    destination :: PosVector{T}
+    timestep :: T
 end

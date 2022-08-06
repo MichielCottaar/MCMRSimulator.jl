@@ -24,7 +24,7 @@ end
 (f::GradientField)(position :: PosVector) = position ⋅ f.gradient + f.offset
 (f::GradientField)(m :: Movement) = f((m.origin + m.destination) / 2.)
 
-field() = field(typeof(0.))
+field() = field(Float64)
 field(::Type{T}) where T <: Real = ZeroField{T}()
 field(value :: Real) = iszero(value) ? field(typeof(value)) : ConstantField(value)
 field(gradient :: AbstractVector, value :: Real) = begin
@@ -43,14 +43,19 @@ struct LocalEnvironment{T <: Real}
     R1 :: T
 end
 
-struct Microstructure{F1 <: Field, F2 <: Field, F3 <: Field, F4 <: Field}
+struct Microstructure{F1 <: Field, F2 <: Field, F3 <: Field, F4 <: Field, G <: Obstructions}
     off_resonance :: F1  # in ppm
     R2 :: F2
     R1 :: F3
     diffusivity :: F4
-    geometry :: Obstructions
+    geometry :: G
     function Microstructure(;off_resonance=field(), R2=field(), R1=field(), diffusivity=field(), geometry=Obstruction[]) 
-        new{typeof(off_resonance), typeof(R2), typeof(R1), typeof(diffusivity)}(off_resonance, R2, R1, diffusivity, geometry)
+        if isa(geometry, Obstruction)
+            geometry = [geometry]
+        end
+        geometry = SVector{length(geometry)}(geometry)
+        new{typeof(off_resonance), typeof(R2), typeof(R1), typeof(diffusivity), typeof(geometry)}(
+            off_resonance, R2, R1, diffusivity, geometry)
     end
 end
 

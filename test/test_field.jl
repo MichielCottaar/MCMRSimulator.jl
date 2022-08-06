@@ -1,5 +1,5 @@
 @testset "Generate and apply microstructural fields" begin
-    trajectory = StepTrajectory(SA_F64[0, 0, 0], 0.1, field(0), Obstruction[])
+    trajectory = StepTrajectory(SA_F64[0, 0, 0], 0.1, field(0.), Obstruction[])
     @testset "Simulate empty environment/sequence" begin
         orient = evolve_to_time(Spin().orientation, trajectory, 0., 1., Microstructure())
         @test phase(orient) == 0.
@@ -13,7 +13,7 @@
         orient = evolve_to_time(Spin().orientation, trajectory, 0., 0.3, micro)
         @test phase(orient) ≈ norm_angle(rad2deg(0.6 * 3 * gyromagnetic_ratio))
         # Move spin and evolve a bit further in time
-        shifted = StepTrajectory(SA_F64[3, 0, 0], 0.1, field(0), Obstruction[])
+        shifted = StepTrajectory(SA_F64[3, 0, 0], 0.1, field(0.), Obstruction[])
         orient = evolve_to_time(orient, shifted, 0.3, 0.5, micro)
         @test phase(orient) ≈ norm_angle(rad2deg((0.6 + (2. + 1.5 * 3.) * 0.2) * 3 * gyromagnetic_ratio))
     end
