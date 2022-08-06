@@ -7,7 +7,7 @@ The trajectory will be automatically extended as needed for ever.
 """
 struct StepTrajectory{T <: AbstractFloat, F <: Field{T}, G <: Obstructions} 
     positions :: Vector{SVector{3, T}}
-    timestep :: Real
+    timestep :: T
     diffusivity :: F
     geometry :: G
     function StepTrajectory(
@@ -24,10 +24,9 @@ Base.eltype(::Type{StepTrajectory{T}}) where {T} = Tuple{Int, SVector{3, T}}
 Base.IteratorSize(::Type{StepTrajectory}) = Base.IsInfinite()
 Base.firstindex(st :: StepTrajectory) = 1
 
+Base.getindex(st::StepTrajectory{T, <:ZeroField{T}} where {T<:AbstractFloat}, time::Real) = st.positions[1]
+
 function Base.getindex(st::StepTrajectory, time::Real)
-    if isa(st.diffusivity, ZeroField)
-        return st.positions[1]
-    end
     index = Int(div(time, st.timestep, RoundNearest)) + 1
     while index > length(st.positions)
         push!(st.positions, draw_step(
