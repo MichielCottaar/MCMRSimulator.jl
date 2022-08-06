@@ -6,15 +6,15 @@ function norm_angle(angle)
     angle
 end
 
-struct SpinOrientation
-    longitudinal :: Real
-    transverse :: Real
-    phase :: Real
+struct SpinOrientation{T <: AbstractFloat}
+    longitudinal :: T
+    transverse :: T
+    phase :: T
 end
 
-struct Spin
-    position :: PosVector
-    orientation :: SpinOrientation
+struct Spin{T <: AbstractFloat}
+    position :: PosVector{T}
+    orientation :: SpinOrientation{T}
 end
 Spin(;position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0.) = Spin(SVector{3}(position), SpinOrientation(longitudinal, transverse, deg2rad(phase)))
 Base.zero(::Type{Spin}) = Spin()

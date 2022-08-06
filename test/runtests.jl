@@ -122,7 +122,7 @@ import Random
             for pulse_phase in (0., 22., 30., 80.)
                 pulse = RFPulse(0., 90, pulse_phase)
                 spin_phase = (pulse_phase + 90)
-                spin = Spin(longitudinal=0, transverse=1., phase=spin_phase)
+                spin = Spin(longitudinal=0., transverse=1., phase=spin_phase)
                 spin = apply(pulse, spin.orientation)
                 @test longitudinal(spin) ≈ -1.
                 @test transverse(spin) ≈ 0. atol=1e-12
