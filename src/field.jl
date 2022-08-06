@@ -43,13 +43,15 @@ struct LocalEnvironment{T <: Real}
     R1 :: T
 end
 
-struct Microstructure{T, F1 <: Field{T}, F2 <: Field{T}, F3 <: Field{T}, F4 <: Field{T}}
+struct Microstructure{F1 <: Field, F2 <: Field, F3 <: Field, F4 <: Field}
     off_resonance :: F1  # in ppm
     R2 :: F2
     R1 :: F3
     diffusivity :: F4
     geometry :: Obstructions
-    Microstructure(;off_resonance=field(), R2=field(), R1=field(), diffusivity=field(), geometry=Obstruction[]) = new(off_resonance, R2, R1, diffusivity, geometry)
+    function Microstructure(;off_resonance=field(), R2=field(), R1=field(), diffusivity=field(), geometry=Obstruction[]) 
+        new{typeof(off_resonance), typeof(R2), typeof(R1), typeof(diffusivity)}(off_resonance, R2, R1, diffusivity, geometry)
+    end
 end
 
 (micro::Microstructure)(position) = LocalEnvironment(
