@@ -10,9 +10,9 @@ import Random
 
 
 @testset "MRSimulator tests" begin
-    #include("test_field.jl")
-    #include("test_collisions.jl")
-    #include("test_evolve.jl")
+    include("test_field.jl")
+    include("test_collisions.jl")
+    include("test_evolve.jl")
     include("test_known_sequences.jl")
     @testset "Simple relaxation" begin
         orient = Spin(transverse=1., longitudinal=0.).orientation
