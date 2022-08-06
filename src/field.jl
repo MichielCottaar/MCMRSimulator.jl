@@ -37,17 +37,17 @@ field(gradient :: AbstractVector, value :: Real) = begin
     end
 end
 
-struct LocalEnvironment
-    off_resonance :: Real
-    R2 :: Real
-    R1 :: Real
+struct LocalEnvironment{T <: Real}
+    off_resonance :: T
+    R2 :: T
+    R1 :: T
 end
 
-struct Microstructure
-    off_resonance :: Field  # in ppm
-    R2 :: Field
-    R1 :: Field
-    diffusivity :: Field
+struct Microstructure{T, F1 <: Field{T}, F2 <: Field{T}, F3 <: Field{T}, F4 <: Field{T}}
+    off_resonance :: F1  # in ppm
+    R2 :: F2
+    R1 :: F3
+    diffusivity :: F4
     geometry :: Obstructions
     Microstructure(;off_resonance=field(), R2=field(), R1=field(), diffusivity=field(), geometry=Obstruction[]) = new(off_resonance, R2, R1, diffusivity, geometry)
 end
