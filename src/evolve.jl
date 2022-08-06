@@ -81,7 +81,7 @@ function evolve_TR(snap :: Snapshot, sequence::Sequence, micro::Microstructure; 
     evolve_TR(snap, [sequence], micro; kwargs...)[1]
 end
 
-function evolve_TR(spins :: AbstractVector{Spin}, sequences, micro::Microstructure; kwargs...)
+function evolve_TR(spins :: AbstractVector{<:Spin}, sequences, micro::Microstructure; kwargs...)
     evolve_TR(Snapshot(spins, 0.), sequences, micro; kwargs...)
 end
 
