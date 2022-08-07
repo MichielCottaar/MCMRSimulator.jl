@@ -64,13 +64,13 @@ apply(pulse :: SequenceComponent, spin :: Spin) = Spin(spin.position, apply(puls
 apply(pulse :: Nothing, orient :: SpinOrientation) = orient
 apply(pulse :: SequenceComponent, snap :: Snapshot) = Snapshot(apply.(pulse, snap.spins), span.time)
 
-apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spin :: MultiSpin{N}) where {N} = MultiSpin(
+apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spin :: MultiSpin{N, T}) where {N, T<:AbstractFloat} = MultiSpin{N, T}(
     spin.position,
-    SVector{N}(apply.(pulses, spin.orientations)),
+    SVector{N, SpinOrientation{T}}(SpinOrientation{T}[apply(p, o, spin.position) for (p, o) in zip(pulses, spin.orientations)]),
     spin.rng
 )
 
-apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, snap :: MultiSnapshot{N, M}) where {N,M} = MultiSnapshot(
-    SVector{M}([apply(pulses, s) for s in snap.spins]),
+apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, snap :: MultiSnapshot{N, T}) where {N, T} = MultiSnapshot{N, T}(
+    MultiSpin{N, T}[apply(pulses, s) for s in snap.spins],
     snap.time
 )

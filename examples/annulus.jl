@@ -15,6 +15,7 @@ micro = mr.Microstructure(diffusivity=mr.field(3.))
 
 spins = [mr.Spin(position=SA_F64[0., 0., z]) for z in 1:30000];
 
+simulation = mr.Simulation(spins, [sequence], micro);
 
-res = mr.evolve_TR(spins, sequence, micro);
-@time mr.evolve_TR(spins, sequence, micro);
+append!(simulation, TR);
+@time append!(simulation, TR);

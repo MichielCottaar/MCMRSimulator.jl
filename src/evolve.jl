@@ -6,13 +6,13 @@ function evolve_to_time(
 end
 
 function evolve_to_time(
-    spin::MultiSpin{N}, current_time::Real, new_time::Real,
+    spin::MultiSpin{N, T}, current_time::Real, new_time::Real,
     micro::Microstructure, timestep::Real, B0::SVector{N, <:Real}
-) where {N}
+) where {N, T}
     if current_time > new_time
         throw(DomainError("Spins cannot travel backwards in time"))
     end
-    proc(orient, pos, dt) = SVector{N}([relax(o, micro(pos), dt, b) for (o, b) in zip(orient, B0)])
+    proc(orient, pos, dt, micro=micro, B0=B0) = SVector{N, SpinOrientation{T}}(SpinOrientation{T}[relax(o, micro(pos), dt, b) for (o, b) in zip(orient, B0)])
     if new_time == current_time
         return spin
     end
@@ -51,7 +51,7 @@ function evolve_to_time(
     MultiSpin(position, orient, final_rng_state)
 end
 
-function Base.append!(simulation::Simulation{N, M}, delta_time::Real) where {N, M}
+function Base.append!(simulation::Simulation{N, T}, delta_time::T) where {N, T}
     snap = simulation.latest
     new_time = snap.time + delta_time
     sequence_index = MVector{N, Int}(
@@ -63,8 +63,8 @@ function Base.append!(simulation::Simulation{N, M}, delta_time::Real) where {N, 
     spins = snap.spins
     while snap.time < new_time
         next = argmin(times)
-        snap = MultiSnapshot(
-            SVector{M}([evolve_to_time(s, snap.time, times[next], simulation.micro, simulation.timestep, B0_field) for s in snap.spins]),
+        snap = MultiSnapshot{N, T}(
+            MultiSpin{N, T}[evolve_to_time(s, snap.time, times[next], simulation.micro, simulation.timestep, B0_field) for s in snap.spins],
             times[next]
         )
         simulation.latest = snap

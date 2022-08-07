@@ -1,12 +1,12 @@
-mutable struct Simulation{N, M, T<:AbstractFloat}
-    # N sequences, M spins, datatype T
+mutable struct Simulation{N, T<:AbstractFloat, M<:Microstructure}
+    # N sequences, datatype T
     sequences :: SVector{N, <:Sequence}
-    micro::Microstructure
+    micro::M
     timestep::T
-    regular :: AbstractVector{MultiSnapshot{N, M, T}}
+    regular :: AbstractVector{MultiSnapshot{N, T}}
     store_every :: T
-    readout :: SVector{N, AbstractVector{Snapshot{M, T}}}
-    latest :: MultiSnapshot
+    readout :: SVector{N, AbstractVector{Snapshot{T}}}
+    latest :: MultiSnapshot{N, T}
     function Simulation(spins, sequences :: AbstractVector{<:Sequence}, micro::Microstructure; store_every :: Real=5., timestep :: Real=0.5)
         if isa(spins, Spin)
             spins = [spins]
@@ -18,15 +18,14 @@ mutable struct Simulation{N, M, T<:AbstractFloat}
             snap = MultiSnapshot(snap, nseq)
         end
         nseq = length(sequences)
-        nspins = length(snap.spins)
         snap = MultiSnapshot(Snapshot(spins, 0.), nseq)
-        new{nseq, nspins, typeof(timestep)}(
+        new{nseq, typeof(timestep), typeof(micro)}(
             SVector{nseq}(sequences),
             micro,
             timestep,
-            MultiSnapshot{nseq, nspins, Float64}[],
+            MultiSnapshot{nseq, Float64}[],
             store_every,
-            [Snapshot{nspins, Float64}[] for _ in 1:nseq],
+            [Snapshot{Float64}[] for _ in 1:nseq],
             snap
         )
     end
