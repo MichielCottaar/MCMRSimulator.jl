@@ -75,7 +75,7 @@ function perfect_dwi(;
     (qval, diffusion_time) = derive_qval_time(bval, diffusion_time, qval, TE)
     @assert diffusion_time < TE
     base_components = SequenceComponent[
-        RFPulse(time=0., flip_angle=90.),
+        RFPulse(time=0., flip_angle=90., phase=-90.),
         RFPulse(time=TE/2., flip_angle=180.),
         Readout(time=TE),
     ]
