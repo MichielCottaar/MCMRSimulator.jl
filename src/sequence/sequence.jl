@@ -1,10 +1,10 @@
 include("components.jl")
 
-struct Sequence
-    pulses :: Vector{SequenceComponent}
-    TR :: Real
-    B0 :: Real
-    function Sequence(pulses::Vector{T}, TR :: Real, B0 :: Real = 3.) where T <: SequenceComponent
+struct Sequence{N, P<:SequenceComponent, T<:AbstractFloat}
+    pulses :: SVector{N, P}
+    TR :: T
+    B0 :: T
+    function Sequence(pulses::AbstractVector{<:SequenceComponent}, TR :: Real, B0 :: Real = 3.)
         result = new(sort(pulses, by=x->x.time), TR, B0)
         if length(result.pulses) > 0
             @assert result.pulses[end].time <= TR

@@ -1,14 +1,14 @@
 # defining the sequence
 abstract type SequenceComponent end
 
-struct RFPulse <: SequenceComponent
-    time :: Real
-    flip_angle :: Real
-    cf :: Real
-    sf :: Real
-    phase :: Real
-    cp :: Real
-    sp :: Real
+struct RFPulse{T<:AbstractFloat} <: SequenceComponent
+    time :: T
+    flip_angle :: T
+    cf :: T
+    sf :: T
+    phase :: T
+    cp :: T
+    sp :: T
     RFPulse(time, flip_angle, phase) = begin
         f = deg2rad(flip_angle)
         p = deg2rad(phase)
@@ -38,18 +38,18 @@ function apply(pulse :: RFPulse, spin :: SpinOrientation)
     )
 end
 
-struct Readout <: SequenceComponent
-    time :: Real
+struct Readout{T} <: SequenceComponent
+    time :: T
 end
 Readout(;time=0.) = Readout(time)
 
 apply(pulse :: Readout, orient :: SpinOrientation) = orient
 
 
-struct InstantGradient <: SequenceComponent
-    qvec :: PosVector
-    q_origin :: Real
-    time :: Real
+struct InstantGradient{T} <: SequenceComponent
+    qvec :: PosVector{T}
+    q_origin :: T
+    time :: T
 end
 
 InstantGradient(; qvec::AbstractVector=[0., 0., 0.], q_origin=0., time :: Real=0.) = InstantGradient(SVector{3}(qvec), q_origin, time)
