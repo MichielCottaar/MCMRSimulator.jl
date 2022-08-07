@@ -9,7 +9,7 @@ function random_on_sphere()
     ]
 end
 
-draw_step(diffusivity :: Real, timestep :: Real) = 2. * sqrt(timestep * diffusivity) * @SVector randn(3)
+draw_step(diffusivity :: Real, timestep :: Real) = sqrt(2. * timestep * diffusivity) * @SVector randn(3)
 draw_step(current_pos :: PosVector, diffusivity :: Real, timestep :: Real) = current_pos .+ draw_step(diffusivity, timestep)
 draw_step(current_pos :: PosVector, diffusivity :: Real, timestep :: Real, geometry :: Obstructions{0}) = draw_step(current_pos, diffusivity, timestep)
 function draw_step(current_pos :: PosVector, diffusivity :: Real, timestep :: Real, geometry :: Obstructions)

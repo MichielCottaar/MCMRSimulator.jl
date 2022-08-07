@@ -23,15 +23,13 @@
             @test snap.time == 80.
             @test transverse(snap) ≈ 100. rtol=1e-2
         end
-        if false
-            @testset "Perfect PGSE with free diffusion" begin
-                spins = [mr.Spin(position=randn(mr.PosVector) * 100.) for _ in 1:100]
-                sequence = mr.perfect_dwi(bval=2.)
-                micro = mr.Microstructure(diffusivity=mr.field(3.))
-                readout = mr.evolve_TR(spins, sequence, micro)
-                println(log(transverse(readout.data[1])))
-                @test transverse(readout.data[1]) ≈ 100. * exp(-6.) rtol=0.1
-            end
+        @testset "Perfect PGSE with free diffusion" begin
+            spins = [mr.Spin(position=randn(mr.PosVector) * 100.) for _ in 1:1000]
+            sequence = mr.perfect_dwi(bval=2.)
+            micro = mr.Microstructure(diffusivity=mr.field(3.))
+            readout = mr.evolve_TR(spins, sequence, micro)
+            println(log(transverse(readout.data[1])))
+            @test transverse(readout.data[1]) ≈ 1000. * exp(-6.) rtol=0.05
         end
     end
 end
