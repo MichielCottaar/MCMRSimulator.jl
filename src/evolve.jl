@@ -55,19 +55,22 @@ function evolve_to_time(
 end
 
 function Base.append!(simulation::Simulation{N, T}, delta_time::T) where {N, T}
-    spins = copy(simulation.latest[end].spins)
-    current_time = simulation.latest[end].time
+    if delta_time < 0
+        return simulation
+    end
+    spins::Vector{MultiSpin{N, T}} = copy(simulation.latest[end].spins)
+    current_time::T = simulation.latest[end].time
     new_time = current_time + delta_time
     sequence_index = MVector{N, Int}(
         [next_pulse(seq, current_time) for seq in simulation.sequences]
     )
     next_readout = div(current_time, simulation.store_every, RoundUp) * simulation.store_every
     times = [new_time, next_readout, time.(simulation.sequences, sequence_index)...]
-    B0_field = SVector{N}([s.B0 for s in simulation.sequences])
+    B0_field = SVector{N, T}(T[s.B0 for s in simulation.sequences])
     nspins = length(spins)
-    while current_time < new_time
+    while true
         next = argmin(times)
-        next_time = times[next]
+        next_time::T = times[next]
         for idx in 1:nspins
             spins[idx] = evolve_to_time(spins[idx], current_time, next_time, simulation.micro, simulation.timestep, B0_field)
         end
