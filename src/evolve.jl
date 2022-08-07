@@ -12,22 +12,25 @@ function evolve_to_time(
     if current_time > new_time
         throw(DomainError("Spins cannot travel backwards in time"))
     end
-    proc(orient, pos, dt, micro=micro, B0=B0) = SVector{N, SpinOrientation{T}}(SpinOrientation{T}[relax(o, micro(pos), dt, b) for (o, b) in zip(orient, B0)])
     if new_time == current_time
         return spin
     end
     index = div(current_time, timestep, RoundNearest)
     time_left = ((0.5 + index) * timestep) - current_time
+    orient = MVector{N, SpinOrientation{T}}(spin.orientations)
+
+    function proc!(orient, pos, dt, micro=micro, B0=B0) 
+        for idx in 1:N
+            orient[idx] = relax(orient[idx], micro(pos), dt, B0[idx])
+        end
+    end
+
     if time_left > (new_time - current_time)
         # spin does not get to move at all
-        orient = proc(spin.orientations, spin.position, new_time-current_time)
-        return MultiSpin(
-            spin.position,
-            orient,
-            spin.rng
-        )
+        proc!(orient, spin.position, new_time-current_time)
+        return MultiSpin(spin.position, SVector{N, SpinOrientation{T}}(orient), spin.rng)
     end
-    orient = proc(spin.orientations, spin.position, time_left)
+    proc!(orient, spin.position, time_left)
     current_time = (index + 0.5) * timestep
     position = spin.position
 
@@ -38,17 +41,17 @@ function evolve_to_time(
     while new_time > (current_time + timestep)
         # Take full timesteps for a while
         position = draw_step(position, micro.diffusivity(position), timestep, micro.geometry)
-        orient = proc(orient, position, timestep)
+        proc!(orient, position, timestep)
         current_time += timestep
     end
 
     position = draw_step(position, micro.diffusivity(position), timestep, micro.geometry)
-    orient = proc(orient, position, new_time - current_time)
+    proc!(orient, position, new_time - current_time)
 
     # Restore random number state
     final_rng_state = FixedXoshiro(copy(Random.TaskLocalRNG()))
     copy!(Random.TaskLocalRNG(), old_rng_state)
-    MultiSpin(position, orient, final_rng_state)
+    MultiSpin(position, SVector{N, SpinOrientation{T}}(orient), final_rng_state)
 end
 
 function Base.append!(simulation::Simulation{N, T}, delta_time::T) where {N, T}
