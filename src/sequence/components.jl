@@ -56,7 +56,7 @@ InstantGradient(; qvec::AbstractVector=[0., 0., 0.], q_origin=0., time :: Real=0
 
 function apply(pulse :: InstantGradient, orient :: SpinOrientation, pos::PosVector)
     adjustment = (pos ⋅ pulse.qvec) + pulse.q_origin
-    SpinOrientation(longitudinal(orient), transverse(orient), phase(orient) + adjustment)
+    SpinOrientation(orient.longitudinal, orient.transverse, orient.phase + adjustment)
 end
 
 apply(pulse :: SequenceComponent, orient :: SpinOrientation, pos::PosVector) = apply(pulse, orient)
