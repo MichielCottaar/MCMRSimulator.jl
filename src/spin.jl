@@ -9,7 +9,7 @@ end
 """Immutable version of the Xoshiro random number generator state
 
 Used to store the current state in the Spin object.
-To evolve the spin in a predictable manner set the seed using `copy!(fixed_xoshiro/spin, Random.TaskLocalRNG)`.
+To evolve the spin in a predictable manner set the seed using `copy!(spin.rng, Random.TaskLocalRNG)`.
 """
 struct FixedXoshiro
     s0::UInt64
@@ -39,18 +39,17 @@ struct Spin{T <: AbstractFloat}
     position :: PosVector{T}
     orientation :: SpinOrientation{T}
     rng :: FixedXoshiro
-    function Spin(position :: AbstractVector, orientation :: SpinOrientation, rng=FixedXoshiro())
-        new{eltype(position)}(SVector{3}(position), orientation, FixedXoshiro(rng))
-    end
+end
+
+struct MultiSpin{N, T <: AbstractFloat}
+    position :: PosVector{T}
+    orientations :: SVector{N, SpinOrientation{T}}
+    rng :: FixedXoshiro
 end
 
 Spin(;position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin(position, SpinOrientation(longitudinal, transverse, deg2rad(phase)), rng)
+MultiSpin(spin::Spin, n_sequences) = MultiSpin(spin.position, SVector{n_sequences}(repeat([spin.orientation], n_sequences)), spin.rng)
 Base.zero(::Type{Spin}) = Spin()
-
-function Base.copy!(dst::Random.TaskLocalRNG, src::Spin)
-    Base.copy!(dst, src.rng)
-    dst
-end
 
 for param in (:longitudinal, :transverse)
     @eval $param(o :: SpinOrientation) = o.$param
