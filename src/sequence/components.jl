@@ -62,6 +62,7 @@ end
 apply(pulse :: SequenceComponent, orient :: SpinOrientation, pos::PosVector) = apply(pulse, orient)
 apply(pulse :: SequenceComponent, spin :: Spin) = Spin(spin.position, apply(pulse, spin.orientation, spin.position), spin.rng)
 apply(pulse :: Nothing, orient :: SpinOrientation) = orient
+apply(pulse :: Nothing, orient :: SpinOrientation, pos :: PosVector) = orient
 apply(pulse :: SequenceComponent, snap :: Snapshot) = Snapshot(apply.(pulse, snap.spins), span.time)
 
 apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spin :: MultiSpin{N, T}) where {N, T<:AbstractFloat} = MultiSpin{N, T}(
