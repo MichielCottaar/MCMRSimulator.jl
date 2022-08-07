@@ -13,7 +13,7 @@
             @test_throws AssertionError mr.derive_qval_time(80., qval=1., diffusion_time=2., bval=0.)
         end
         @testset "Perfect PGSE with no diffusion" begin
-            spins = [mr.Spin(position=rand(mr.PosVector)) for _ in 1:100]
+            spins = [mr.Spin(position=randn(mr.PosVector) * 100.) for _ in 1:100]
             sequence = mr.perfect_dwi(bval=2.)
             micro = mr.Microstructure()
             readout = mr.evolve_TR(spins, sequence, micro)
