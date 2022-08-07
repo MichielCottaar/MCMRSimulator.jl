@@ -1,9 +1,9 @@
 import MRSimulator as mr
 using StaticArrays
 # Set up infinitely repeating aligned cylinders
-outer = mr.Cylinder(0.9)
-inner = mr.Cylinder(0.8)
-geometry = mr.Repeated([inner, outer], [2., 2., Inf])
+#outer = mr.Cylinder(0.9)
+#inner = mr.Cylinder(0.8)
+#geometry = mr.Repeated([inner, outer], [2., 2., Inf])
 
 # Build spin echo diffusion-weighted sequence with perfect pulses and instantaneous gradients
 TR = 200.

@@ -55,40 +55,42 @@ function evolve_to_time(
 end
 
 function Base.append!(simulation::Simulation{N, T}, delta_time::T) where {N, T}
-    snap = simulation.latest
-    new_time = snap.time + delta_time
+    spins = copy(simulation.latest[end].spins)
+    current_time = simulation.latest[end].time
+    new_time = current_time + delta_time
     sequence_index = MVector{N, Int}(
-        [next_pulse(seq, snap.time) for seq in simulation.sequences]
+        [next_pulse(seq, current_time) for seq in simulation.sequences]
     )
-    next_readout = div(snap.time, simulation.store_every, RoundUp) * simulation.store_every
+    next_readout = div(current_time, simulation.store_every, RoundUp) * simulation.store_every
     times = [new_time, next_readout, time.(simulation.sequences, sequence_index)...]
     B0_field = SVector{N}([s.B0 for s in simulation.sequences])
-    spins = snap.spins
-    while snap.time < new_time
+    nspins = length(spins)
+    while current_time < new_time
         next = argmin(times)
-        snap = MultiSnapshot{N, T}(
-            MultiSpin{N, T}[evolve_to_time(s, snap.time, times[next], simulation.micro, simulation.timestep, B0_field) for s in snap.spins],
-            times[next]
-        )
-        simulation.latest = snap
-        if times[1] == snap.time
+        next_time = times[next]
+        for idx in 1:nspins
+            spins[idx] = evolve_to_time(spins[idx], current_time, next_time, simulation.micro, simulation.timestep, B0_field)
+        end
+        current_time = next_time
+        if times[1] == current_time
+            push!(simulation.latest, MultiSnapshot(spins, current_time))
             break
         end
-        if times[2] == snap.time
-            push!(simulation.regular, snap)
+        if times[2] == current_time
+            push!(simulation.regular, MultiSnapshot(copy(spins), current_time))
             times[2] += simulation.store_every
         end
-        if any(t -> t == snap.time, times[3:end])
+        if any(t -> t == current_time, times[3:end])
             components = SVector{N, Union{Nothing, SequenceComponent}}([
-                time == snap.time ? seq[index] : nothing 
+                time == current_time ? seq[index] : nothing 
                 for (seq, index, time) in zip(simulation.sequences, sequence_index, times[3:end])
             ])
-            snap = apply(components, snap)
+            spins = apply(components, spins)
             for (idx, ctime) in enumerate(times[3:end])
-                if ctime == snap.time
+                if ctime == current_time
                     sequence = simulation.sequences[idx]
                     if isa(sequence[sequence_index[idx]], Readout)
-                        push!(simulation.readout[idx], get_sequence(snap, idx))
+                        push!(simulation.readout[idx], Snapshot(get_sequence.(spins, idx), current_time))
                     end
                     sequence_index[idx] += 1
                     times[idx + 2] = time(sequence, sequence_index[idx])

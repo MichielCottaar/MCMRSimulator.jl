@@ -40,7 +40,7 @@
         simulation = mr.Simulation(mr.Spin(), [mr.Sequence(2.8)], mr.Microstructure(), store_every=0.5)
         append!(simulation, 2.8)
         @test length(simulation.regular) == 6
-        @test simulation.latest.time == 2.8
+        @test simulation.latest[end].time == 2.8
     end
     @testset "Basic diffusion has no effect in constant fields" begin
         sequence = mr.Sequence([mr.RFPulse(flip_angle=90)], 2.)
@@ -48,8 +48,8 @@
         with_diff = mr.Simulation(mr.Spin(), [sequence], mr.Microstructure(diffusivity=mr.field(1.), R2=mr.field(0.3)), store_every=0.5)
         append!(no_diff, sequence.TR)
         append!(with_diff, sequence.TR)
-        spin_no_diff = mr.get_sequence(no_diff.latest.spins[1], 1)
-        spin_with_diff = mr.get_sequence(with_diff.latest.spins[1], 1)
+        spin_no_diff = mr.get_sequence(no_diff.latest[end].spins[1], 1)
+        spin_with_diff = mr.get_sequence(with_diff.latest[end].spins[1], 1)
         @test spin_no_diff.position == SA_F64[0, 0, 0]
         @test spin_with_diff.position != SA_F64[0, 0, 0]
         @test spin_with_diff.orientation == spin_no_diff.orientation
@@ -64,9 +64,9 @@
         for res in (no_diff, with_diff, with_diff_no_grad)
             append!(res, sequence.TR)
         end
-        spin_no_diff = mr.get_sequence(no_diff.latest.spins[1], 1)
-        spin_with_diff = mr.get_sequence(with_diff.latest.spins[1], 1)
-        spin_with_diff_no_grad = mr.get_sequence(with_diff_no_grad.latest.spins[1], 1)
+        spin_no_diff = mr.get_sequence(no_diff.latest[end].spins[1], 1)
+        spin_with_diff = mr.get_sequence(with_diff.latest[end].spins[1], 1)
+        spin_with_diff_no_grad = mr.get_sequence(with_diff_no_grad.latest[end].spins[1], 1)
         @test spin_no_diff.position == SA_F64[0, 0, 0]
         @test spin_with_diff.position != SA_F64[0, 0, 0]
         @test spin_with_diff_no_grad.position != SA_F64[0, 0, 0]
@@ -98,7 +98,7 @@
         append!(all_snaps, 3.)
 
         # check final time
-        @test all_snaps.latest.time == 3.
+        @test all_snaps.latest[end].time == 3.
 
         readouts = [r[1] for r in all_snaps.readout]
 

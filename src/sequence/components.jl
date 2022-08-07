@@ -71,7 +71,11 @@ apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spin :: MultiSp
     spin.rng
 )
 
+function apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spins :: AbstractVector{MultiSpin{N, T}}) where {N, T}
+    MultiSpin{N, T}[apply(pulses, s) for s in spins]
+end
+
 apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, snap :: MultiSnapshot{N, T}) where {N, T} = MultiSnapshot{N, T}(
-    MultiSpin{N, T}[apply(pulses, s) for s in snap.spins],
+    apply(pulses, snap.spins),
     snap.time
 )
