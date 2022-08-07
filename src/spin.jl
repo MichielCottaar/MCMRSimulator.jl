@@ -6,6 +6,29 @@ function norm_angle(angle)
     angle
 end
 
+"""Immutable version of the Xoshiro random number generator state
+
+Used to store the current state in the Spin object.
+To evolve the spin in a predictable manner set the seed using `copy!(fixed_xoshiro/spin, Random.TaskLocalRNG)`.
+"""
+struct FixedXoshiro
+    s0::UInt64
+    s1::UInt64
+    s2::UInt64
+    s3::UInt64
+    function FixedXoshiro(state::Random.Xoshiro)
+        FixedXoshiro(state.s0, state.s1, state.s2, state.s3)
+    end
+    FixedXoshiro(s0::Integer, s1::Integer, s2::Integer, s3::Integer) = new(s0, s1, s2, s3)
+end
+
+FixedXoshiro(seed=nothing) = FixedXoshiro(Random.Xoshiro(seed))
+Random.Xoshiro(rng::FixedXoshiro) = Random.Xoshiro(rng.s0, rng.s2, rng.s2, rng.s3)
+function Base.copy!(dst::Random.TaskLocalRNG, src::FixedXoshiro)
+    copy!(dst, Random.Xoshiro(src))
+    dst
+end
+
 struct SpinOrientation{T <: AbstractFloat}
     longitudinal :: T
     transverse :: T
@@ -15,9 +38,19 @@ end
 struct Spin{T <: AbstractFloat}
     position :: PosVector{T}
     orientation :: SpinOrientation{T}
+    rng :: FixedXoshiro
+    function Spin(position :: AbstractVector, orientation :: SpinOrientation, rng=FixedXoshiro())
+        new{eltype(position)}(SVector{3}(position), orientation, FixedXoshiro(rng))
+    end
 end
-Spin(;position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0.) = Spin(SVector{3}(position), SpinOrientation(longitudinal, transverse, deg2rad(phase)))
+
+Spin(;position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin(position, SpinOrientation(longitudinal, transverse, deg2rad(phase)), rng)
 Base.zero(::Type{Spin}) = Spin()
+
+function Base.copy!(dst::Random.TaskLocalRNG, src::Spin)
+    Base.copy!(dst, src.rng)
+    dst
+end
 
 for param in (:longitudinal, :transverse)
     @eval $param(o :: SpinOrientation) = o.$param

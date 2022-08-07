@@ -5,6 +5,7 @@ import Base
 import CoordinateTransformations
 import Rotations
 import Colors
+import Random
 
 
 include("constants.jl")

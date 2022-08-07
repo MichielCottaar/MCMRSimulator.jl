@@ -141,4 +141,13 @@ import Random
             @test phase(spin2) == 90. + rad2deg(0.5)
         end
     end
+    @testset "Random generator number control" begin
+        @testset "FixedXoshiro interface" begin
+            rng = mr.FixedXoshiro()
+            copy!(Random.TaskLocalRNG(), rng)
+            a = randn(2)
+            copy!(Random.TaskLocalRNG(), rng)
+            @test randn(2) == a
+        end
+    end
 end
