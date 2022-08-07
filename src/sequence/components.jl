@@ -12,7 +12,7 @@ struct RFPulse{T<:AbstractFloat} <: SequenceComponent
     RFPulse(time, flip_angle, phase) = begin
         f = deg2rad(flip_angle)
         p = deg2rad(phase)
-        new(time, f, cos(f), sin(f), p, cos(p), sin(p))
+        new{typeof(f)}(time, f, cos(f), sin(f), p, cos(p), sin(p))
     end
 end
 
@@ -61,3 +61,16 @@ end
 
 apply(pulse :: SequenceComponent, orient :: SpinOrientation, pos::PosVector) = apply(pulse, orient)
 apply(pulse :: SequenceComponent, spin :: Spin) = Spin(spin.position, apply(pulse, spin.orientation, spin.position), spin.rng)
+apply(pulse :: Nothing, orient :: SpinOrientation) = orient
+apply(pulse :: SequenceComponent, snap :: Snapshot) = Snapshot(apply.(pulse, snap.spins), span.time)
+
+apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spin :: MultiSpin{N}) where {N} = MultiSpin(
+    spin.position,
+    SVector{N}(apply.(pulses, spin.orientations)),
+    spin.rng
+)
+
+apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, snap :: MultiSnapshot{N, M}) where {N,M} = MultiSnapshot(
+    SVector{M}([apply(pulses, s) for s in snap.spins]),
+    snap.time
+)

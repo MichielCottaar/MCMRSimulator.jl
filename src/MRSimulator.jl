@@ -1,5 +1,5 @@
 module MRSimulator
-import StaticArrays: SA_F64, MVector, SVector, @SVector
+import StaticArrays: SA_F64, MVector, SVector, @SVector, MMatrix
 using LinearAlgebra
 import Base
 import CoordinateTransformations

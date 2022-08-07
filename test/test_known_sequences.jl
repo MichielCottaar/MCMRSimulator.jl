@@ -14,10 +14,14 @@
         end
         @testset "Perfect PGSE with no diffusion" begin
             spins = [mr.Spin(position=randn(mr.PosVector) * 100.) for _ in 1:100]
-            sequence = mr.perfect_dwi(bval=2.)
+            sequence = mr.perfect_dwi(bval=2., TE=80.)
             micro = mr.Microstructure()
-            readout = mr.evolve_TR(spins, sequence, micro)
-            @test transverse(readout.data[1]) ≈ 100. rtol=1e-2
+            readout = mr.Simulation(spins, [sequence], micro)
+            push!(readout, 90.)
+            @test length(readout.readout[sequence][1]) == 1
+            snap = readaout.readaout[sequence][1]
+            @test snap.time == 80.
+            @test transverse(snap) ≈ 100. rtol=1e-2
         end
         if false
             @testset "Perfect PGSE with free diffusion" begin

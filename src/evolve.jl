@@ -1,90 +1,97 @@
 function evolve_to_time(
-    orient::SpinOrientation, trajectory::StepTrajectory,
-    current_time::Real, new_time::Real,
-    micro::Microstructure, B0::Real=3.
-)
+    spin::MultiSpin{N}, current_time::Real, new_time::Real,
+    micro::Microstructure, timestep::Real=1., B0::Real=3.
+) where {N}
+    evolve_to_time(spin, current_time, new_time, micro, timestep, SVector{N}(repeat([B0], N)))
+end
+
+function evolve_to_time(
+    spin::MultiSpin{N}, current_time::Real, new_time::Real,
+    micro::Microstructure, timestep::Real, B0::SVector{N, <:Real}
+) where {N}
     if current_time > new_time
         throw(DomainError("Spins cannot travel backwards in time"))
     end
+    proc(orient, pos, dt) = SVector{N}([relax(o, micro(pos), dt, b) for (o, b) in zip(orient, B0)])
     if new_time == current_time
-        return orient
+        return spin
     end
-    index = Int(div(current_time, trajectory.timestep, RoundNearest)) + 1
-    time = (index - 1) * trajectory.timestep
-    next = minimum((time + 0.5 * trajectory.timestep, new_time))
-    dt = next - current_time
-    orient = relax(orient, micro(trajectory[index]), dt, B0)
-    current_time = next
+    index = div(current_time, timestep, RoundNearest)
+    time_left = ((0.5 + index) * timestep) - current_time
+    if time_left > (new_time - current_time)
+        # spin does not get to move at all
+        orient = proc(spin.orientations, spin.position, new_time-current_time)
+        return MultiSpin(
+            spin.position,
+            orient,
+            spin.rng
+        )
+    end
+    orient = proc(spin.orientations, spin.position, time_left)
+    current_time = (index + 0.5) * timestep
+    position = spin.position
 
-    while new_time > current_time
-        index += 1
-        next = minimum((current_time + trajectory.timestep, new_time))
-        dt = next - current_time
-        orient = relax(orient, micro(trajectory[index]), dt, B0)
-        current_time = next
+    # We need to move, so get random number generator from spin object
+    old_rng_state = copy(Random.TaskLocalRNG())
+    copy!(Random.TaskLocalRNG(), spin.rng)
+
+    while new_time > (current_time + timestep)
+        # Take full timesteps for a while
+        position = draw_step(position, micro.diffusivity(position), timestep, micro.geometry)
+        orient = proc(orient, position, timestep)
+        current_time += timestep
     end
-    orient
+
+    position = draw_step(position, micro.diffusivity(position), timestep, micro.geometry)
+    orient = proc(orient, position, new_time - current_time)
+
+    # Restore random number state
+    final_rng_state = FixedXoshiro(copy(Random.TaskLocalRNG()))
+    copy!(Random.TaskLocalRNG(), old_rng_state)
+    MultiSpin(position, orient, final_rng_state)
 end
 
-
-function evolve_TR(spin::Spin, readout::SpinReadout, micro::Microstructure, trajectory::StepTrajectory)
-    sequence = readout.parent.sequence
-    sequence_index = 1
-    readout_index = 1
-    times = MVector{2,Float64}([
-        time(sequence, sequence_index),
-        time(readout.parent.all[readout_index])
-    ])
-    orient = spin.orientation
-    current_time = 0.
-    while readout_index <= length(readout.parent.all)
+function Base.append!(simulation::Simulation{N, M}, delta_time::Real) where {N, M}
+    snap = simulation.latest
+    new_time = snap.time + delta_time
+    sequence_index = MVector{N, Int}(
+        [next_pulse(seq, snap.time) for seq in simulation.sequences]
+    )
+    next_readout = div(snap.time, simulation.store_every, RoundUp) * simulation.store_every
+    times = [new_time, next_readout, time.(simulation.sequences, sequence_index)...]
+    B0_field = SVector{N}([s.B0 for s in simulation.sequences])
+    spins = snap.spins
+    while snap.time < new_time
         next = argmin(times)
-        orient = evolve_to_time(orient, trajectory, current_time, times[next], micro, sequence.B0)
-        current_time = times[next]
-        if next == 1
-            orient = apply(sequence[sequence_index], orient, trajectory[current_time])
-            sequence_index += 1
-            times[1] = time(sequence, sequence_index)
-        elseif next == 2
-            readout[readout_index] = Spin(trajectory[current_time], orient)
-            readout_index += 1
-            if readout_index <= length(readout.parent.all)
-                times[2] = readout.parent.all[readout_index].time
+        snap = MultiSnapshot(
+            SVector{M}([evolve_to_time(s, snap.time, times[next], simulation.micro, simulation.timestep, B0_field) for s in snap.spins]),
+            times[next]
+        )
+        simulation.latest = snap
+        if times[1] == snap.time
+            break
+        end
+        if times[2] == snap.time
+            push!(simulation.regular, snap)
+            times[2] += simulation.store_every
+        end
+        if any(t -> t == snap.time, times[3:end])
+            components = SVector{N, Union{Nothing, SequenceComponent}}([
+                time == snap.time ? seq[index] : nothing 
+                for (seq, index, time) in zip(simulation.sequences, sequence_index, times[3:end])
+            ])
+            snap = apply(components, snap)
+            for (idx, ctime) in enumerate(times[3:end])
+                if ctime == snap.time
+                    sequence = simulation.sequences[idx]
+                    if isa(sequence[sequence_index[idx]], Readout)
+                        push!(simulation.readout[idx], get_sequence(snap, idx))
+                    end
+                    sequence_index[idx] += 1
+                    times[idx + 2] = time(sequence, sequence_index[idx])
+                end
             end
         end
     end
-end
-
-function evolve_TR(
-    spin::Spin, 
-    readouts::AbstractVector{SpinReadout},
-    micro::Microstructure,
-    timestep=0.1,
-)
-    trajectory = StepTrajectory(spin.position, timestep, micro.diffusivity, micro.geometry)
-    [evolve_TR(spin, readout, micro, trajectory) for readout in readouts]
-end
-
-
-function evolve_TR(snap :: Snapshot, sequences::AbstractVector{Sequence}, micro::Microstructure; store_every=1.0)
-    readouts = [
-        TR_Readout(s, length(snap), store_every)
-        for s in sequences
-    ]
-    for (index, spin) in enumerate(snap.spins)
-        evolve_TR(spin, [SpinReadout(r, index) for r in readouts], micro)
-    end
-    readouts
-end
-
-function evolve_TR(snap :: Snapshot, sequence::Sequence, micro::Microstructure; kwargs...)
-    evolve_TR(snap, [sequence], micro; kwargs...)[1]
-end
-
-function evolve_TR(spins :: AbstractVector{<:Spin}, sequences, micro::Microstructure; kwargs...)
-    evolve_TR(Snapshot(spins, 0.), sequences, micro; kwargs...)
-end
-
-function evolve_TR(spin :: Spin, sequences, micro::Microstructure; kwargs...)
-    evolve_TR([spin], sequences, micro; kwargs...)
+    simulation
 end

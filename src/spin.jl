@@ -48,8 +48,10 @@ struct MultiSpin{N, T <: AbstractFloat}
 end
 
 Spin(;position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin(position, SpinOrientation(longitudinal, transverse, deg2rad(phase)), rng)
-MultiSpin(spin::Spin, n_sequences) = MultiSpin(spin.position, SVector{n_sequences}(repeat([spin.orientation], n_sequences)), spin.rng)
+MultiSpin(spin::Spin, n_sequences::Integer) = MultiSpin(spin.position, SVector{n_sequences}(repeat([spin.orientation], n_sequences)), spin.rng)
+MultiSpin(n_sequences::Integer; kwargs...) = MultiSpin(Spin(;kwargs...), n_sequences)
 Base.zero(::Type{Spin}) = Spin()
+get_sequence(spin::MultiSpin, index) = Spin(spin.position, spin.orientations[index], spin.rng)
 
 for param in (:longitudinal, :transverse)
     @eval $param(o :: SpinOrientation) = o.$param
@@ -80,10 +82,11 @@ end
 
 position(s :: Spin) = s.position
 
-struct Snapshot
-    spins :: Vector{Spin}
-    time :: Real
+struct Snapshot{N, T<:AbstractFloat}
+    spins :: SVector{N, Spin{T}}
+    time :: T
 end
+Snapshot(spins :: AbstractVector{<:Spin}, time :: Real) = Snapshot(SVector{length(spins)}(spins), time)
 Snapshot(nspins :: Int, time :: Real) = Snapshot(zeros(Spin, nspins), time)
 time(s :: Snapshot) = s.time
 
@@ -97,6 +100,16 @@ Base.getindex(s::Snapshot, i::Int) = s.spins[i]
 Base.length(s::Snapshot) = length(s.spins)
 Base.iterate(s::Snapshot) = iterate(s.spins)
 Base.iterate(s::Snapshot, state) = iterate(s.spins, state)
+
+struct MultiSnapshot{N, M, T<:AbstractFloat}
+    # datatype T, N sequences, M spins
+    spins :: SVector{M, MultiSpin{N, T}}
+    time :: T
+end
+MultiSnapshot(nspins :: Integer, nsequences::Integer, time :: Real) = MultiSnapshot([MultiSpin(Spin(), nsequences) for _ in 1:nspins], time)
+MultiSnapshot(snap :: Snapshot{N}, nsequences::Integer) where {N} = MultiSnapshot(SVector{N}([MultiSpin(spin, nsequences) for spin in snap.spins]), snap.time)
+time(s :: MultiSnapshot) = s.time
+get_sequence(snap::MultiSnapshot, index) = Snapshot(get_sequence.(snap.spins, index), snap.time)
 
 abstract type Obstruction end
 const Obstructions{N, T} = SVector{N, T} where T <: Obstruction

@@ -1,41 +1,33 @@
-struct TR_Readout
-    sequence :: Sequence
-    regular :: AbstractVector{Snapshot}
-    store_every :: Real
-    data :: AbstractVector{Snapshot}
-    final :: Snapshot
-    all :: AbstractVector{Snapshot}
-    function TR_Readout(sequence :: Sequence, nspins :: Int, store_every :: Real)
-        nregular = iszero(store_every) ? 0 : Int(div(sequence.TR, store_every, RoundDown))
-        regular = [Snapshot(nspins, (index - 1) * store_every) for index in 1:nregular]
-        data = [Snapshot(nspins, p.time) for p in sequence.pulses if isa(p, Readout)]
-        final = Snapshot(nspins, sequence.TR)
-        new(
-            sequence,
-            regular,
+mutable struct Simulation{N, M, T<:AbstractFloat}
+    # N sequences, M spins, datatype T
+    sequences :: SVector{N, <:Sequence}
+    micro::Microstructure
+    timestep::T
+    regular :: AbstractVector{MultiSnapshot{N, M, T}}
+    store_every :: T
+    readout :: SVector{N, AbstractVector{Snapshot{M, T}}}
+    latest :: MultiSnapshot
+    function Simulation(spins, sequences :: AbstractVector{<:Sequence}, micro::Microstructure; store_every :: Real=5., timestep :: Real=0.5)
+        if isa(spins, Spin)
+            spins = [spins]
+        end
+        if isa(spins, AbstractVector{<:Spin})
+            snap = Snapshot(spins, 0.)
+        end
+        if isa(spins, Snapshot)
+            snap = MultiSnapshot(snap, nseq)
+        end
+        nseq = length(sequences)
+        nspins = length(snap.spins)
+        snap = MultiSnapshot(Snapshot(spins, 0.), nseq)
+        new{nseq, nspins, typeof(timestep)}(
+            SVector{nseq}(sequences),
+            micro,
+            timestep,
+            MultiSnapshot{nseq, nspins, Float64}[],
             store_every,
-            data,
-            final, 
-            sort!([data..., regular..., final], by=s->time(s))
+            [Snapshot{nspins, Float64}[] for _ in 1:nseq],
+            snap
         )
     end
-end
-
-struct SpinReadout
-    parent :: TR_Readout
-    index :: Integer
-end
-
-
-Base.getindex(ro::TR_Readout, i) = ro.all[i]
-Base.iterate(ro::TR_Readout, state :: Int) = state > length(ro) ? nothing : (ro.all[state], state + 1)
-Base.iterate(ro::TR_Readout) = iterate(ro, 1)
-Base.eltype(::Type{TR_Readout}) = Snapshot
-for param in (:length, :lastindex)
-    @eval Base.$param(ro::TR_Readout) = $param(ro.all)
-end
-
-Base.getindex(ro::SpinReadout, i::Int) = TR_Readout.all[i][ro.index]
-function Base.setindex!(ro::SpinReadout, value::Spin, i::Int) 
-    ro.parent.all[i].spins[ro.index] = value
 end
