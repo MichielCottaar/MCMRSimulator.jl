@@ -2,7 +2,7 @@ using Test
 import MRSimulator: MRSimulator, Spin, Microstructure, evolve_to_time, time, field,
     gyromagnetic_ratio, RFPulse, apply, phase, longitudinal, transverse, time, position, 
     norm_angle, evolve_TR, Sequence, relax, vector2spin, vector, Wall, correct_collisions, Movement,
-    Cylinder, Sphere, cylinder_plane, ray_grid_intersections, StepTrajectory, Obstruction
+    Cylinder, Sphere, cylinder_plane, ray_grid_intersections, StepTrajectory, Obstruction, InstantGradient
 import MRSimulator as mr
 using StaticArrays
 using LinearAlgebra
@@ -45,7 +45,7 @@ import Random
         @test phase(vector2spin(vec)) ≈ 45.
         @test vector(vector2spin(vec)) ≈ vec
     end
-    @testset "Apply RF pulses" begin
+    @testset "Apply Sequence components" begin
         @testset "0 degree pulses should do nothing" begin
             for pulse_phase in (-90, -45, 0., 30., 90., 180, 22.123789)
                 pulse = RFPulse(0., 0., pulse_phase)
@@ -127,6 +127,18 @@ import Random
                 @test longitudinal(spin) ≈ -1.
                 @test transverse(spin) ≈ 0. atol=1e-12
             end
+        end
+        @testset "Gradient should do nothing at origin" begin
+            spin = Spin(position=SA_F64[0, 2, 2], transverse=1., phase=90.)
+            @test phase(spin) == 90.
+            spin2 = apply(InstantGradient(qvec=SA_F64[4, 0, 0]), spin)
+            @test phase(spin2) == 90.
+        end
+        @testset "Test instant gradient effect away from origin" begin
+            spin = Spin(position=SA_F64[2, 2, 2], transverse=1., phase=90.)
+            @test phase(spin) == 90.
+            spin2 = apply(InstantGradient(qvec=SA_F64[0.25, 0, 0]), spin)
+            @test phase(spin2) == 90. + rad2deg(0.5)
         end
     end
 end
