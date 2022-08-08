@@ -5,6 +5,14 @@ function evolve_to_time(
     evolve_to_time(spin, current_time, new_time, micro, timestep, SVector{N}(repeat([B0], N)))
 end
 
+"""
+    evolve_to_time(spin, current_time, new_time, micro, timestep, B0)
+
+Evolve a single spin to the next time of interest.
+This takes into account both random diffusion of the spin's position
+and relaxation of the MR spin orientation.
+It is used internally when evolving [`Simulation`](@ref) objects.
+"""
 function evolve_to_time(
     spin::MultiSpin{N, T}, current_time::Real, new_time::Real,
     micro::Microstructure, timestep::Real, B0::SVector{N, <:Real}
@@ -54,6 +62,11 @@ function evolve_to_time(
     MultiSpin(position, SVector{N, SpinOrientation{T}}(orient), final_rng_state)
 end
 
+"""
+    append!(simulation, delta_time)
+
+Continue the MR simulation with given timespan
+"""
 function Base.append!(simulation::Simulation{N, T}, delta_time::T) where {N, T}
     if delta_time < 0
         return simulation

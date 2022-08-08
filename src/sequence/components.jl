@@ -1,6 +1,13 @@
 # defining the sequence
+"A single component of a longer MR [`Sequence`](@ref)."
 abstract type SequenceComponent end
 
+"""
+    RFPulse(;time=0., flip_angle=0., phase=0.)
+
+Instantaneous radio-frequency pulse that flips the spins by `flip_angle` degrees in a plane perpendicular to an axis in the x-y plane with an angle of `phase` degrees with respect to the x-axis at given `time`.
+Angles are in degrees (stored internally as radians) and the `time` is in milliseconds.
+"""
 struct RFPulse{T<:AbstractFloat} <: SequenceComponent
     time :: T
     flip_angle :: T
@@ -18,10 +25,19 @@ end
 
 RFPulse(; time=0, flip_angle=0, phase=0) = RFPulse(time, flip_angle, phase)
 
+"Returns the angle in the x-y plane of the axis around with the RF pulse rotates in degrees"
 phase(pulse :: RFPulse) = rad2deg(pulse.phase)
+"Returns the flip angle of the RF pulse in degrees"
 flip_angle(pulse :: RFPulse) = rad2deg(pulse.flip_angle)
 time(pulse :: RFPulse) = pulse.time
 
+"""
+    apply(sequence_component, spin_orientation[, position])
+
+Applies given sequence component to the spin orientation.
+Returns a new [`SpinOrientation`](@ref).
+Some pulses (e.g., [`InstantGradient`](@ref)) require positional information as well.
+"""
 function apply(pulse :: RFPulse, spin :: SpinOrientation)
     Bx_init = spin.transverse * cos(spin.phase)
     By_init = spin.transverse * sin(spin.phase)
@@ -38,6 +54,7 @@ function apply(pulse :: RFPulse, spin :: SpinOrientation)
     )
 end
 
+"Readout the spins at the given `time` (in milliseconds) each TR"
 struct Readout{T} <: SequenceComponent
     time :: T
 end
@@ -46,6 +63,13 @@ Readout(;time=0.) = Readout(time)
 apply(pulse :: Readout, orient :: SpinOrientation) = orient
 
 
+"""
+Infinitely short gradient pulse that encodes phase information given by `qvec` and `q_origin`.
+
+The phase offset at every `position` is given by `qvec ⋅ position + q_origin`.
+
+The pulse is applied at given `time` (in milliseconds). every TR.
+"""
 struct InstantGradient{T} <: SequenceComponent
     qvec :: PosVector{T}
     q_origin :: T

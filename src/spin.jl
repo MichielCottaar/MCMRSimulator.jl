@@ -29,29 +29,80 @@ function Base.copy!(dst::Random.TaskLocalRNG, src::FixedXoshiro)
     dst
 end
 
+"""
+The spin orientation.
+
+This information can be extracted using:
+- [`longitudinal`](@ref) to get the spin in the z-direction (equilibrium of 1)
+- [`transverse`](@ref) to get the spin in the x-y-plane
+- [`phase`](@ref) to get the spin angle in x-y plane (in degrees)
+- [`vector`](@ref) to get the length-3 vector
+"""
 struct SpinOrientation{T <: AbstractFloat}
     longitudinal :: T
     transverse :: T
     phase :: T
 end
 
+"""
+    Spin(;position=[0, 0, 0], longitudinal=1., transverse=0., phase=0.)
+
+Spin particle with a position and spin orientation (stored as [`SpinOrientation`](@ref)).
+
+A random number generator is stored in the `Spin` object as well, which will be used for evolving the spin into the future in a reproducible manner.
+
+Orientational information can be extracted using:
+- [`longitudinal`](@ref) to get the spin in the z-direction (equilibrium of 1)
+- [`transverse`](@ref) to get the spin in the x-y-plane
+- [`phase`](@ref) to get the spin angle in x-y plane (in degrees)
+- [`vector`](@ref) to get a length-3 vector with the spin orientation
+- [`position`](@ref) to get a length-3 vector with spin location
+"""
 struct Spin{T <: AbstractFloat}
     position :: PosVector{T}
     orientation :: SpinOrientation{T}
     rng :: FixedXoshiro
 end
 
-struct MultiSpin{N, T <: AbstractFloat}
-    position :: PosVector{T}
-    orientations :: SVector{N, SpinOrientation{T}}
-    rng :: FixedXoshiro
-end
-
-Spin(;position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin(position, SpinOrientation(longitudinal, transverse, deg2rad(phase)), rng)
-MultiSpin(spin::Spin, n_sequences::Integer) = MultiSpin(spin.position, SVector{n_sequences}(repeat([spin.orientation], n_sequences)), spin.rng)
-MultiSpin(n_sequences::Integer; kwargs...) = MultiSpin(Spin(;kwargs...), n_sequences)
+Spin(;position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin(SVector{3}(position), SpinOrientation(longitudinal, transverse, deg2rad(phase)), rng)
+Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{Spin}) = Spin(position=SVector{3}(rand(rng, 3)))
 Base.zero(::Type{Spin}) = Spin()
-get_sequence(spin::MultiSpin, index) = Spin(spin.position, spin.orientations[index], spin.rng)
+
+"""
+    longitudinal(spin)
+    longitudinal(snapshot)
+
+Returns the longitudinal spin (i.e., magnitude aligned with the mangetic field) for a single particle ([`Spin`](@ref)) or averaged across a group of particles in a [`Snapshot`].
+When orientations for multiple sequences are available (i.e., [`MultiSpin`](@ref) or [`MultiSnapshot`](@ref)) an array of longitudinal values is returned with a value for each sequence.
+"""
+function longitudinal end
+
+"""
+    transverse(spin)
+    transverse(snapshot)
+
+Returns the transverse spin (i.e., magnitude in the plane perpendicular to the magnetic field) for a single particle ([`Spin`](@ref)) or averaged across a group of particles in a [`Snapshot`].
+When orientations for multiple sequences are available (i.e., [`MultiSpin`](@ref) or [`MultiSnapshot`](@ref)) an array of transverse values is returned with a value for each sequence.
+"""
+function transverse end
+
+"""
+    phase(spin)
+    phase(snapshot)
+
+Returns the phase in the x-y plane of the spin for a single particle ([`Spin`](@ref)) or averaged across a group of particles in a [`Snapshot`].
+When orientations for multiple sequences are available (i.e., [`MultiSpin`](@ref) or [`MultiSnapshot`](@ref)) an array of phase values is returned with a value for each sequence.
+"""
+function phase end
+
+"""
+    vector(spin)
+    vector(snapshot)
+
+Returns the spin orientation as a length-3 vector for a single particle ([`Spin`](@ref)) or averaged across a group of particles in a [`Snapshot`].
+When orientations for multiple sequences are available (i.e., [`MultiSpin`](@ref) or [`MultiSnapshot`](@ref)) an array of vectors is returned with a value for each sequence.
+"""
+function vector end
 
 for param in (:longitudinal, :transverse)
     @eval $param(o :: SpinOrientation) = o.$param
@@ -75,18 +126,87 @@ vector2spin(vector :: AbstractVector) = SpinOrientation(
     sqrt(vector[1] * vector[1] + vector[2] * vector[2]),
     atan(vector[2], vector[1]),
 )
-
 for param in (:longitudinal, :transverse, :phase, :vector)
     @eval $param(s :: Spin) = $param(s.orientation)
 end
 
-position(s :: Spin) = s.position
+"""
+Spin particle with a position and a spin orientation stored for every sequence.
 
+This is the equivalent of a [`Spin`](@ref) object used when multiple spins are available.
+
+Orientational information can be extracted using:
+- [`longitudinal`](@ref) to get the spin sizes in the z-direction (equilibrium of 1)
+- [`transverse`](@ref) to get the spin sizes in the x-y-plane
+- [`phase`](@ref) to get the spin angles in x-y plane (in degrees)
+- [`vector`](@ref) to get length-3 vectors with the spin orientation
+- [`position`](@ref) to get a length-3 vector with spin location
+"""
+struct MultiSpin{N, T <: AbstractFloat}
+    position :: PosVector{T}
+    orientations :: SVector{N, SpinOrientation{T}}
+    rng :: FixedXoshiro
+end
+
+MultiSpin(spin::Spin, n_sequences::Integer) = MultiSpin(spin.position, SVector{n_sequences}(repeat([spin.orientation], n_sequences)), spin.rng)
+MultiSpin(n_sequences::Integer; kwargs...) = MultiSpin(Spin(;kwargs...), n_sequences)
+"""
+    get_sequence(spin, sequence_index)
+    get_sequence(snapshot, sequence_index)
+
+Extracts the spin orientation corresponding to a specific sequence, where the sequence index uses the order in which the sequences where provided in the [`Simulation`](@ref).
+This converts [`MultiSpin`](@ref) objects into [`Spin`](@ref) objects or [`MultiSnapshot`](@ref) objects into [`Snapshot`](@ref) objects.
+"""
+get_sequence(spin::MultiSpin, index) = Spin(spin.position, spin.orientations[index], spin.rng)
+
+for param in (:longitudinal, :transverse, :phase, :vector)
+    @eval $param(s :: MultiSpin) = $param.(s.orientation)
+end
+
+
+"Returns the position of the spin particle as a vector of length 3."
+position(s :: Spin) = s.position
+position(s :: MultiSpin) = s.position
+
+"""
+Represents the positions and orientations of multiple [`Spin`](@ref) objects at a specific `time`.
+
+This object only keeps track of a single orientation per spin. 
+When simulating multiple sequences at once, the [`MultiSnapshot`](@ref) object can be used to keep track of the orientation for each sequene.
+
+Note that times are in milliseconds and positions in micrometer. 
+The equilibrium longitudinal spin (after T1 relaxation) is always 1.
+
+# Useful constructors
+    Snapshot(positions; time=0., longitudinal=1., transverse=0., phase=0.)
+    Snapshot(nspins::Integer; time=0., longitudinal=1., transverse=0., phase=0.)
+
+Creates a new Snapshot at the given `time` with perfectly aligned spins.
+This initial spin locations are given by `positions` (Nx3 matrix or sequence of vectors of size 3).
+Alternatively the number of spins can be given in which case the spins are randomly distributed in a 1x1x1 mm box centered on the origin.
+"""
 struct Snapshot{T<:AbstractFloat}
     spins :: AbstractVector{Spin{T}}
     time :: T
+    Snapshot(spins :: AbstractVector{Spin{T}}, time=0.) where {T} = new{T}(spins, time)
 end
-Snapshot(nspins :: Int, time :: Real) = Snapshot(zeros(Spin, nspins), time)
+
+function Snapshot(positions :: AbstractMatrix{<:Real}; time :: Real=0., kwargs...) 
+    @assert size(positions, 2) == 3
+    Snapshot(map(p -> Spin(position=p; kwargs...), eachrow(positions)), time)
+end
+function Snapshot(positions :: AbstractVector{<:AbstractVector{<:Real}}; time :: Real=0., kwargs...) 
+    Snapshot(map(p -> Spin(position=p; kwargs...), positions), time)
+end
+Snapshot(nspins :: Int; kwargs...) = Snapshot(rand(nspins, 3) * 1000 - 500; kwargs...)
+
+"""
+    time(snapshot)
+    time(sequence_component)
+    time(sequence, sequence_index)
+
+Returns the time in milliseconds that a snapshot was taken or that a sequence component will have effect.
+"""
 time(s :: Snapshot) = s.time
 
 function vector(s :: Snapshot)
@@ -100,21 +220,33 @@ Base.length(s::Snapshot) = length(s.spins)
 Base.iterate(s::Snapshot) = iterate(s.spins)
 Base.iterate(s::Snapshot, state) = iterate(s.spins, state)
 
+"""
+Represents the positions and multiple orientations of multiple [`Spin`](@ref) objects at a specific `time`.
+
+This object keeps track of a different spin orientation for each sequence.
+The orientation for a single sequence can be extracted using [`get_sequence`](@ref), which will return a [`Snapshot`](@ref).
+
+# Useful constructors
+    MultiSnapshot(snap::Snapshot, nsequences::Integer)
+
+This replicates the orientation defined in `snap` to be the starting point for all `n_sequences` sequences.
+
+    MultiSnapshot(positions, nsequences::Integer; time=0., longitudinal=1., transverse=0., phase=0.)
+    MultiSnapshot(nspins :: Integer, nsequences::Integer; time=0., longitudinal=1., transverse=0., phase=0.)
+
+These create a new `MultiSnapshot` from scratch in the way described in [`Snapshot`](@ref).
+"""
 struct MultiSnapshot{N, T<:AbstractFloat}
     # datatype T, N sequences, M spins
     spins :: AbstractVector{MultiSpin{N, T}}
     time :: T
+    MultiSnapshot(spins::AbstractVector{MultiSpin{N,T}}, time::Real=0.) where {N,T} = new{N,T}(spins, time)
 end
-MultiSnapshot(nspins :: Integer, nsequences::Integer, time :: Real) = MultiSnapshot([MultiSpin(Spin(), nsequences) for _ in 1:nspins], time)
 MultiSnapshot(snap :: Snapshot, nsequences::Integer) = MultiSnapshot([MultiSpin(spin, nsequences) for spin in snap.spins], snap.time)
+MultiSnapshot(snap, nsequences::Integer; kwargs...) = MultiSnapshot(Snapshot(snap; kwargs...), nsequences)
 time(s :: MultiSnapshot) = s.time
 get_sequence(snap::MultiSnapshot, index) = Snapshot(get_sequence.(snap.spins, index), snap.time)
 
-abstract type Obstruction end
-const Obstructions{N, T} = SVector{N, T} where T <: Obstruction
-
-struct Movement{T<:AbstractFloat}
-    origin :: PosVector{T}
-    destination :: PosVector{T}
-    timestep :: T
+for param in (:longitudinal, :transverse, :phase, :vector)
+    @eval $param(snap :: MultiSnapshot{N}) where {N} = SVector[N]([get_sequence($param(snap), idx) for idx in 1:N])
 end

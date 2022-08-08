@@ -1,3 +1,9 @@
+"""Draws a random orientation on the unit sphere as a length-3 vector
+
+The z-orientation is drawn a random number between -1 and 1.
+The angle in the x-y plane is drawn as a random number between 0 and 2π.
+This results in an unbiased random distribution across the sphere.
+"""
 function random_on_sphere()
     z = rand() * 2. - 1.
     r = sqrt(1. - z*z)
@@ -9,6 +15,13 @@ function random_on_sphere()
     ]
 end
 
+"""
+    draw_step([current_pos::PosVector], diffusivity::Real, timestep::Real[, geometry::Obstructions])
+
+Draws the next location of the particle after `timestep` with given `diffusivity`.
+If provided, this displacement will take into account the obstructions in `geometry`.
+If the `current_pos` is not provided only the displacement is returned (will only work for empty `geometry`).
+"""
 draw_step(diffusivity :: Real, timestep :: Real) = sqrt(2. * timestep * diffusivity) * @SVector randn(3)
 draw_step(current_pos :: PosVector, diffusivity :: Real, timestep :: Real) = current_pos .+ draw_step(diffusivity, timestep)
 draw_step(current_pos :: PosVector, diffusivity :: Real, timestep :: Real, geometry :: Obstructions{0}) = draw_step(current_pos, diffusivity, timestep)
@@ -31,6 +44,13 @@ function draw_step(current_pos :: PosVector, diffusivity :: Real, timestep :: Re
     end
 end
 
+"""
+    correct_collision(movement, geometry)
+
+Splits the given movement from point A to point B into multiple steps that bounce off the given obstructions.
+This function assumes perfect reflection rather than the diffuse reflection used in [`draw_step`](@ref).
+It is used to test the collision detection and resolution, but not actually used in the simulations.
+"""
 correct_collisions(to_try :: Movement, geometry :: Obstruction) = correct_collisions(to_try, SVector{1}(geometry))
 correct_collisions(to_try :: Movement, geometry :: Obstructions{0}) = [to_try]
 correct_collisions(to_try :: Movement, geometry :: AbstractVector{<:Obstruction}) = correct_collisions(to_try, SVector{length(geometry)}(geometry))
@@ -62,6 +82,13 @@ function correct_collisions(to_try :: Movement, geometry :: Obstructions)
 end
 
 
+"""
+A detected collision along the movement.
+
+# Parameters
+- `distance`: number between 0 and 1 indicating the distance of the collision from the origin (0) to the destination point (1)
+- `normal`: normal of the obstruction at the collision site.
+"""
 struct Collision
     distance :: Real
     normal :: PosVector
@@ -69,6 +96,13 @@ struct Collision
 end
 
 
+"""
+    detect_collision(movement, obstructions)
+
+Returns a [`Collision`](@ref) object if the given `movement` crosses any obstructions.
+The first collision is always returned.
+If no collision is detected, `nothing` will be returned
+"""
 detect_collision(movement :: Movement, obstructions :: Obstructions{0}) = nothing
 
 function detect_collision(movement :: Movement, obstructions :: Obstructions)
@@ -83,16 +117,21 @@ function detect_collision(movement :: Movement, obstructions :: Obstructions)
 end
 
 
+"""
+Underlying `obstructions` are repeated ad infinitum as described in `repeats`.
 
+If the obstructions are larger than the repeat size they will be cut off!
+"""
 struct Repeated{T<:AbstractFloat, O <: Obstructions} <: Obstruction
-    obstruction :: O
+    obstructions :: O
     repeats :: PosVector{T}
-    function Repeated(obstruction, repeats)
-        o = isa(obstruction, Obstruction) ? SVector{1}([obstruction]) : SVector{length(obstruction)}(obstruction)
+    function Repeated(obstructions, repeats)
+        o = isa(obstructions, Obstruction) ? SVector{1}([obstructions]) : SVector{length(obstructions)}(obstructions)
         rs = SVector{3}([iszero(r) ? Inf : abs(r) for r in repeats])
-        any(isfinite.(rs)) ? new{eltype(rs), typeof(o)}(o, rs) : obstruction
+        any(isfinite.(rs)) ? new{eltype(rs), typeof(o)}(o, rs) : obstructions
     end
 end
+
 
 function detect_collision(movement :: Movement, repeat :: Repeated)
     origin = movement.origin ./ repeat.repeats .+ 0.5
@@ -103,7 +142,7 @@ function detect_collision(movement :: Movement, repeat :: Repeated)
         pos2 = f.(repeat.repeats, p2, (movement.destination .* t2) .+ (movement.origin .* (1 - t2)))
         c = detect_collision(
             Movement(pos1, pos2, 1.),
-            repeat.obstruction
+            repeat.obstructions
         )
         if !isnothing(c)
             return Collision(
@@ -115,7 +154,7 @@ function detect_collision(movement :: Movement, repeat :: Repeated)
     return nothing
 end
 
-"Computes all interactions with a 1x1x1 grid"
+"Computes all voxels crossed by a ray between `origin` and `destination` with a 1x1x1 grid"
 ray_grid_intersections(origin :: PosVector, destination :: PosVector) = Channel() do c
     direction = destination .- origin
     within_voxel = mod.(origin, 1)
@@ -146,6 +185,8 @@ ray_grid_intersections(origin :: PosVector, destination :: PosVector) = Channel(
     end
 end
 
+
+"Underlying `obstructions` are linearly transformed (e.g., rotated or shifted) using the given `transform`."
 struct Transformed{O <: Obstructions, T <: CoordinateTransformations.Transformation} <: Obstruction
     obstruction :: O
     transform :: T
@@ -178,6 +219,13 @@ function detect_collision(movement :: Movement, transform :: Transformed)
     )
 end
 
+"""
+    Wall([[normal,] offset])
+
+Infinitely large wall with an orientation given by `normal` (default in the x-direction).
+The normal can also be defined using :x, :y, or :z, to point in that cardinal direction.
+The offset of the wall from the origin along this `normal` is given by `offset` (so that `offset .* normal` is on the wall).
+"""
 struct Wall <: Obstruction
 end
 
@@ -217,11 +265,17 @@ function detect_collision(movement :: Movement, wall :: Wall)
     )
 end
 
+"""
+    Sphere([radius[, location]])
+
+Creates a hollow sphere with a radius of `radius` micrometer (default 1 micrometer) at the given `location` (default: origin).
+"""
 struct Sphere{T <: Real} <: Obstruction
     radius :: T
 end
 
-function Sphere(radius :: Real, location :: SVector)
+function Sphere(radius :: Real, location :: AbstractVector)
+    location = convert(SVector{3}, location)
     if all(iszero.(location))
         return Sphere(radius)
     else
@@ -258,12 +312,18 @@ function sphere_collision(origin :: PosVector, destination :: PosVector, radius 
     )
 end
 
+"""
+    Cylinder([radius[, orientation[, location]]])
+
+Creates a hollow cylinder with a radius of `radius` micrometer (default 1 micrometer) at the given `location` (default: origin).
+The orientation of the cylinder (default: z-direction) can be given as a symbol of the cardinal orientation (:x, :y, or :z) or as a length-3 vector.
+"""
 struct Cylinder{T <: Real} <: Obstruction
     radius :: T
 end
 
 function Cylinder(radius :: Real, orientation :: PosVector)
-    o = orientation / norm(orientation)
+    o = SVector{3}(orientation) / norm(orientation)
     if isapprox(o, SA_F64[0, 0, 1], atol=1e-10)
         return Cylinder(radius)
     end
@@ -293,6 +353,16 @@ function detect_collision(movement :: Movement, cylinder :: Cylinder)
 end
 
 
+"""
+Creates a plane of infinitely repeating cylinders in the y-z plane.
+
+# Arguments
+- radius: cylinder radius in micrometer
+- rotation: angle of cylinders with respect to the z-axis
+- repeatx: distance between repeating cylinders along x-axis
+- repeaty: distance between repeating cylinders in y-z plane
+- shiftx: distance to shift first cylinder from origin along x-axis
+"""
 function cylinder_plane(radius :: Real; rotation=0., repeatx=0., repeaty=0., shiftx=0.)
     Transformed(
         Repeated(

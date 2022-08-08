@@ -1,5 +1,17 @@
 include("components.jl")
 
+"""
+An MR sequence represented by a series of pulses repeated with a given repetition time (`TR`).
+
+Possible sequence components are:
+- [`RFPulse`](@ref): instantaneous radio-frequency pulse flipping the spin orientations.
+- [`InstantGradient`](@ref): instantaneous gradients encoding spatial patterns in the spin phase distribution.
+- [`Readout`](@ref): Store the spins at this timepoint.
+
+The index of the next pulse is given by [`next_pulse`](@ref)(sequence, current_time).
+The time of this pulse can then be extracted using [`time`](@ref)(sequence, index).
+Note that these indices go on till infinite reflecting the repetitive nature of RF pulses over the `TR` time.
+"""
 struct Sequence{N, P<:SequenceComponent, T<:AbstractFloat}
     pulses :: SVector{N, P}
     TR :: T
@@ -24,6 +36,12 @@ function time(sequence :: Sequence, index :: Integer)
     sequence[index].time + nTR * sequence.TR
 end
 
+"""
+    next_pulse(sequence, current_time)
+
+Find the index of the next pulse that will be applied.
+For an empty sequence 0 will be returned.
+"""
 next_pulse(sequence :: Sequence{0}, time :: AbstractFloat) = 0
 function next_pulse(sequence :: Sequence, time :: AbstractFloat)
     nTR = Int(div(time, sequence.TR, RoundDown))

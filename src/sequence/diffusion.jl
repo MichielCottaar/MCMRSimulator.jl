@@ -61,7 +61,7 @@ Creates a standard diffusion-weighted MRI sequence
 This produces a pulsed gradient spin echo (PGSE) sequence with perfect RF pulses 
 and infinitely short diffusion-weighted gradients.
 
-The procedure for defining the diffusion-weighted gradient strength is defined by `derive_qval_time`[@ref].
+The procedure for defining the diffusion-weighted gradient strength is defined by [`derive_qval_time`](@ref).
 The `orientation` parameter only sets the gradient orientation, not the strength.
 """
 function perfect_dwi(;
