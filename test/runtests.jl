@@ -1,5 +1,6 @@
 using Test
 import MRSimulator as mr
+import MRSimulator: Float, SA
 using StaticArrays
 using LinearAlgebra
 import Random

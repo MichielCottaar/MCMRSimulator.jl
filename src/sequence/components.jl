@@ -8,18 +8,18 @@ abstract type SequenceComponent end
 Instantaneous radio-frequency pulse that flips the spins by `flip_angle` degrees in a plane perpendicular to an axis in the x-y plane with an angle of `phase` degrees with respect to the x-axis at given `time`.
 Angles are in degrees (stored internally as radians) and the `time` is in milliseconds.
 """
-struct RFPulse{T<:AbstractFloat} <: SequenceComponent
-    time :: T
-    flip_angle :: T
-    cf :: T
-    sf :: T
-    phase :: T
-    cp :: T
-    sp :: T
+struct RFPulse <: SequenceComponent
+    time :: Float
+    flip_angle :: Float
+    cf :: Float
+    sf :: Float
+    phase :: Float
+    cp :: Float
+    sp :: Float
     RFPulse(time, flip_angle, phase) = begin
-        f = deg2rad(flip_angle)
-        p = deg2rad(phase)
-        new{typeof(f)}(time, f, cos(f), sin(f), p, cos(p), sin(p))
+        f = Float(deg2rad(flip_angle))
+        p = Float(deg2rad(phase))
+        new(Float(time), f, cos(f), sin(f), p, cos(p), sin(p))
     end
 end
 
@@ -67,8 +67,9 @@ end
 
 Readout the spins at the given `time` (in milliseconds) each TR
 """
-struct Readout{T} <: SequenceComponent
-    time :: T
+struct Readout <: SequenceComponent
+    time :: Float
+    Readout(time) = new(Float(time))
 end
 Readout(;time=0.) = Readout(time)
 
@@ -84,10 +85,11 @@ The phase offset at every `position` is given by `qvec ⋅ position + q_origin`.
 
 The pulse is applied at given `time` (in milliseconds). every TR.
 """
-struct InstantGradient{T} <: SequenceComponent
-    qvec :: PosVector{T}
-    q_origin :: T
-    time :: T
+struct InstantGradient <: SequenceComponent
+    qvec :: PosVector
+    q_origin :: Float
+    time :: Float
+    InstantGradient(qvec, q_origin, time) = new(PosVector(qvec), Float(q_origin), Float(time))
 end
 
 InstantGradient(; qvec::AbstractVector=[0., 0., 0.], q_origin=0., time :: Real=0.) = InstantGradient(SVector{3}(qvec), q_origin, time)
@@ -103,17 +105,17 @@ apply(pulse :: Nothing, orient :: SpinOrientation) = orient
 apply(pulse :: Nothing, orient :: SpinOrientation, pos :: PosVector) = orient
 apply(pulse :: SequenceComponent, snap :: Snapshot) = Snapshot(apply.(pulse, snap.spins), span.time)
 
-apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spin :: MultiSpin{N, T}) where {N, T<:AbstractFloat} = MultiSpin{N, T}(
+apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spin :: MultiSpin{N}) where {N} = MultiSpin{N}(
     spin.position,
-    SVector{N, SpinOrientation{T}}(SpinOrientation{T}[apply(p, o, spin.position) for (p, o) in zip(pulses, spin.orientations)]),
+    SVector{N, SpinOrientation}(SpinOrientation[apply(p, o, spin.position) for (p, o) in zip(pulses, spin.orientations)]),
     spin.rng
 )
 
-function apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spins :: AbstractVector{MultiSpin{N, T}}) where {N, T}
-    MultiSpin{N, T}[apply(pulses, s) for s in spins]
+function apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spins :: AbstractVector{MultiSpin{N}}) where {N}
+    MultiSpin{N}[apply(pulses, s) for s in spins]
 end
 
-apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, snap :: MultiSnapshot{N, T}) where {N, T} = MultiSnapshot{N, T}(
+apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, snap :: MultiSnapshot{N}) where {N} = MultiSnapshot{N}(
     apply(pulses, snap.spins),
     snap.time
 )

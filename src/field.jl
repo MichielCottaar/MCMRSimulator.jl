@@ -5,25 +5,25 @@ Describes the spatial distribution of the R1, R2, diffusivity, and off-resonance
 
 Construct using [`field`](@ref).
 """
-abstract type Field{T} end
+abstract type Field end
 (f::Field)(ms :: AbstractVector{Movement}) = sum(m -> f(m) * m.timestep, ms) / sum(m -> m.timestep, ms)
 
-struct ZeroField{T} <: Field{T}
+struct ZeroField <: Field
 end
 
-(f::ZeroField{T})(position :: PosVector) where {T} = zero(T)
-(f::ZeroField{T})(m :: Movement) where {T} = zero(T)
+(f::ZeroField)(position :: PosVector) = zero(Float)
+(f::ZeroField)(m :: Movement) = zero(Float)
 
-struct ConstantField{T} <: Field{T}
-    value :: T
+struct ConstantField <: Field
+    value :: Float
 end
 
 (f::ConstantField)(position :: PosVector) = f.value
 (f::ConstantField)(m :: Movement) = f.value
 
-struct GradientField{T} <: Field{T}
-    gradient :: SVector{3,T}
-    offset :: T
+struct GradientField <: Field
+    gradient :: PosVector
+    offset :: Float
 end
 
 (f::GradientField)(position :: PosVector) = position ⋅ f.gradient + f.offset
@@ -45,26 +45,25 @@ Sets the parameter to a constant value everywhere.
 
 Parameter is described by a spatial gradient.
 """
-field() = field(Float64)
-field(::Type{T}) where T <: Real = ZeroField{T}()
-field(value :: Real) = iszero(value) ? field(typeof(value)) : ConstantField(value)
-field(gradient :: AbstractVector, value :: Real) = begin
-    @assert size(gradient) == (3,)
+field() = ZeroField()
+field(value :: Real) = iszero(value) ? field() : ConstantField(Float(value))
+field(gradient :: AbstractVector{<:Real}, value :: Real) = begin
     if all(gradient .== 0) 
         return field(value) 
     else
-        new_type = Base.promote_eltype(gradient, value)
-        return GradientField{new_type}(SVector{3,new_type}(gradient), new_type(value))
+        gradient = PosVector(gradient)
+        value = Float(value)
+        return GradientField(gradient, value)
     end
 end
 field(field :: Field) = field
 field(t::Tuple) = field(t...)
 
 "The off-resonance, R2, and R1 values at a single point in space"
-struct LocalEnvironment{T <: Real}
-    off_resonance :: T
-    R2 :: T
-    R1 :: T
+struct LocalEnvironment
+    off_resonance :: Float
+    R2 :: Float
+    R1 :: Float
 end
 
 """
@@ -113,9 +112,11 @@ Relaxes the spin `orientation` within the R1, R2, and off-resonance given by the
 """
 function relax(orientation :: SpinOrientation, environment :: LocalEnvironment, timestep :: Real, B0=3.)
     @assert timestep >= 0
-    if timestep == 0
+    if iszero(timestep)
         return orientation
     end
+    timestep = Float(timestep)
+    B0 = Float(B0)
     SpinOrientation(
         (1 - (1 - orientation.longitudinal) * exp(-environment.R1 * timestep)),
         orientation.transverse * exp(-environment.R2 * timestep),

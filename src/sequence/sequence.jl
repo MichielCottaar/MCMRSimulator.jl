@@ -12,12 +12,12 @@ The index of the next pulse is given by [`next_pulse`](@ref)(sequence, current_t
 The time of this pulse can then be extracted using [`time`](@ref)(sequence, index).
 Note that these indices go on till infinite reflecting the repetitive nature of RF pulses over the `TR` time.
 """
-struct Sequence{N, P<:SequenceComponent, T<:AbstractFloat}
+struct Sequence{N, P<:SequenceComponent}
     pulses :: SVector{N, P}
-    TR :: T
-    B0 :: T
+    TR :: Float
+    B0 :: Float
     function Sequence(pulses::AbstractVector{<:SequenceComponent}, TR :: Real, B0 :: Real = 3.)
-        result = new{length(pulses), eltype(pulses), typeof(TR)}(sort(pulses, by=x->x.time), TR, B0)
+        result = new{length(pulses), eltype(pulses)}(sort(pulses, by=x->x.time), Float(TR), Float(B0))
         if length(result.pulses) > 0
             @assert result.pulses[end].time <= TR
         end

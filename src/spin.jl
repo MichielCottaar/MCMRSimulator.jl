@@ -40,10 +40,11 @@ This information can be extracted using:
 - [`phase`](@ref) to get the spin angle in x-y plane (in degrees)
 - [`vector`](@ref) to get the length-3 vector
 """
-struct SpinOrientation{T <: AbstractFloat}
-    longitudinal :: T
-    transverse :: T
-    phase :: T
+struct SpinOrientation
+    longitudinal :: Float
+    transverse :: Float
+    phase :: Float
+    SpinOrientation(longitudinal, transverse, phase) = new(Float(longitudinal), Float(transverse), Float(phase))
 end
 
 """
@@ -60,14 +61,14 @@ Orientational information can be extracted using:
 - [`vector`](@ref) to get a length-3 vector with the spin orientation
 - [`position`](@ref) to get a length-3 vector with spin location
 """
-struct Spin{T <: AbstractFloat}
-    position :: PosVector{T}
-    orientation :: SpinOrientation{T}
+struct Spin
+    position :: PosVector
+    orientation :: SpinOrientation
     rng :: FixedXoshiro
 end
 
-Spin(;position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin(SVector{3}(position), SpinOrientation(longitudinal, transverse, deg2rad(phase)), rng)
-Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{Spin}) = Spin(position=SVector{3}(rand(rng, 3)))
+Spin(;position=zero(SVector{3,Float}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin(SVector{3, Float}(position), SpinOrientation(longitudinal, transverse, deg2rad(phase)), rng)
+Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{Spin}) = Spin(position=SVector{3, Float}(rand(rng, 3)))
 Base.zero(::Type{Spin}) = Spin()
 
 """
@@ -118,7 +119,7 @@ for param in (:*, :/)
     @eval Base.$param(s :: Spin, number :: Real) = Spin(s.position, $param(s.orientation, number))
 end
 phase(o :: SpinOrientation) = norm_angle(rad2deg(o.phase))
-vector(o :: SpinOrientation) = SA_F64[
+vector(o :: SpinOrientation) = SA[
     o.transverse * cos(o.phase),
     o.transverse * sin(o.phase),
     o.longitudinal
@@ -144,9 +145,9 @@ Orientational information can be extracted using:
 - [`vector`](@ref) to get length-3 vectors with the spin orientation
 - [`position`](@ref) to get a length-3 vector with spin location
 """
-struct MultiSpin{N, T <: AbstractFloat}
-    position :: PosVector{T}
-    orientations :: SVector{N, SpinOrientation{T}}
+struct MultiSpin{N}
+    position :: PosVector
+    orientations :: SVector{N, SpinOrientation}
     rng :: FixedXoshiro
 end
 
@@ -187,10 +188,10 @@ Creates a new Snapshot at the given `time` with perfectly aligned spins.
 This initial spin locations are given by `positions` (Nx3 matrix or sequence of vectors of size 3).
 Alternatively the number of spins can be given in which case the spins are randomly distributed in a 1x1x1 mm box centered on the origin.
 """
-struct Snapshot{T<:AbstractFloat}
-    spins :: AbstractVector{Spin{T}}
-    time :: T
-    Snapshot(spins :: AbstractVector{Spin{T}}, time=0.) where {T} = new{T}(spins, time)
+struct Snapshot
+    spins :: AbstractVector{Spin}
+    time :: Float
+    Snapshot(spins :: AbstractVector{Spin}, time=0.) = new(spins, Float(time))
 end
 
 function Snapshot(positions :: AbstractMatrix{<:Real}; time :: Real=0., kwargs...) 
@@ -238,11 +239,11 @@ This replicates the orientation defined in `snap` to be the starting point for a
 
 These create a new `MultiSnapshot` from scratch in the way described in [`Snapshot`](@ref).
 """
-struct MultiSnapshot{N, T<:AbstractFloat}
+struct MultiSnapshot{N}
     # datatype T, N sequences, M spins
-    spins :: AbstractVector{MultiSpin{N, T}}
-    time :: T
-    MultiSnapshot(spins::AbstractVector{MultiSpin{N,T}}, time::Real=0.) where {N,T} = new{N,T}(spins, time)
+    spins :: AbstractVector{MultiSpin{N}}
+    time :: Float
+    MultiSnapshot(spins::AbstractVector{MultiSpin{N}}, time::Real=0.) where {N} = new{N}(spins, time)
 end
 MultiSnapshot(snap :: Snapshot, nsequences::Integer) = MultiSnapshot([MultiSpin(spin, nsequences) for spin in snap.spins], snap.time)
 MultiSnapshot(snap, nsequences::Integer; kwargs...) = MultiSnapshot(Snapshot(snap; kwargs...), nsequences)

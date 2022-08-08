@@ -20,17 +20,16 @@
     end
     @testset "Fields with different types" begin
         pos = SA_F64[1., 0., 0.]
-        @test isa(mr.field()(pos), Float64)
-        @test isa(mr.field(Int)(pos), Int)
-        @test isa(mr.field(0)(pos), Int)
-        @test isa(mr.field(0), mr.ZeroField{Int})
-        @test isa(mr.field(2)(pos), Int)
-        @test isa(mr.field(2), mr.ConstantField{Int})
-        @test isa(mr.field([0, 0, 0], 0), mr.ZeroField{Int})
-        @test isa(mr.field([0, 0, 0], 0)(pos), Int)
-        @test isa(mr.field([0, 0, 0], 2), mr.ConstantField{Int})
-        @test isa(mr.field([0, 0, 0], 2)(pos), Int)
-        @test isa(mr.field([1, 0, 0], 2), mr.GradientField{Int})
-        @test isa(mr.field([1, 0, 0], 2)(pos), Float64)
+        @test isa(mr.field()(pos), Float)
+        @test isa(mr.field(0)(pos), Float)
+        @test isa(mr.field(0), mr.ZeroField)
+        @test isa(mr.field(2)(pos), Float)
+        @test isa(mr.field(2), mr.ConstantField)
+        @test isa(mr.field([0, 0, 0], 0), mr.ZeroField)
+        @test isa(mr.field([0, 0, 0], 0)(pos), Float)
+        @test isa(mr.field([0, 0, 0], 2), mr.ConstantField)
+        @test isa(mr.field([0, 0, 0], 2)(pos), Float)
+        @test isa(mr.field([1, 0, 0], 2), mr.GradientField)
+        @test isa(mr.field([1, 0, 0], 2)(pos), Float)
     end
 end

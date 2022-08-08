@@ -33,15 +33,15 @@ During this time various intermediate states will be stored:
 
 `append!` can be called multiple times to continue the simulation further.
 """
-struct Simulation{N, T<:AbstractFloat, M<:Microstructure}
+struct Simulation{N, M<:Microstructure}
     # N sequences, datatype T
     sequences :: SVector{N, <:Sequence}
     micro::M
-    timestep::T
-    regular :: AbstractVector{MultiSnapshot{N, T}}
-    store_every :: T
-    readout :: SVector{N, AbstractVector{Snapshot{T}}}
-    latest :: Vector{MultiSnapshot{N, T}}
+    timestep::Float
+    regular :: AbstractVector{MultiSnapshot{N}}
+    store_every :: Float
+    readout :: SVector{N, AbstractVector{Snapshot}}
+    latest :: Vector{MultiSnapshot{N}}
     function Simulation(
         spins, 
         sequences :: AbstractVector{<:Sequence}, 
@@ -50,6 +50,8 @@ struct Simulation{N, T<:AbstractFloat, M<:Microstructure}
         timestep :: Real=0.5
     )
         nseq = length(sequences)
+        store_every = Float(store_every)
+        timestep = Float(timestep)
         if isa(spins, Spin)
             spins = [spins]
         end
@@ -61,13 +63,13 @@ struct Simulation{N, T<:AbstractFloat, M<:Microstructure}
         if isa(spins, Snapshot)
             spins = MultiSnapshot(spins, nseq)
         end
-        new{nseq, typeof(timestep), typeof(micro)}(
+        new{nseq, typeof(micro)}(
             SVector{nseq}(sequences),
             micro,
             timestep,
-            MultiSnapshot{nseq, Float64}[],
+            MultiSnapshot{nseq}[],
             store_every,
-            [Snapshot{Float64}[] for _ in 1:nseq],
+            [Snapshot[] for _ in 1:nseq],
             [spins]
         )
     end

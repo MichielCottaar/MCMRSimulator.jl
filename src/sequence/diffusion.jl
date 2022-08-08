@@ -74,7 +74,7 @@ function perfect_dwi(;
     bval=nothing,
     diffusion_time=nothing,
     qval=nothing,
-    orientation=SVector{3, Float64}([0., 0., 1.]),
+    orientation=SVector{3, Float}([0., 0., 1.]),
 )
     (qval, diffusion_time) = derive_qval_time(bval, diffusion_time, qval, TE)
     @assert diffusion_time < TE
@@ -84,7 +84,7 @@ function perfect_dwi(;
         Readout(time=TE),
     ]
     if !iszero(qval)
-        qvec = SVector{3}(orientation .* (qval / norm(orientation)))
+        qvec = PosVector(orientation .* (qval / norm(orientation)))
         append!(base_components, [
             InstantGradient(time=(TE - diffusion_time) / 2., qvec=qvec),
             InstantGradient(time=(TE + diffusion_time) / 2., qvec=qvec),

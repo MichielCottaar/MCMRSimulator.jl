@@ -1,8 +1,8 @@
 function evolve_to_time(
-    spin::MultiSpin{N}, current_time::Real, new_time::Real,
-    micro::Microstructure, timestep::Real=1., B0::Real=3.
+    spin::MultiSpin{N}, current_time::Float, new_time::Float,
+    micro::Microstructure, timestep::Float=1., B0::Float=3.
 ) where {N}
-    evolve_to_time(spin, current_time, new_time, micro, timestep, SVector{N}(repeat([B0], N)))
+    evolve_to_time(spin, current_time, new_time, micro, timestep, SVector{N, Float}(repeat([B0], N)))
 end
 
 """
@@ -14,9 +14,9 @@ and relaxation of the MR spin orientation.
 It is used internally when evolving [`Simulation`](@ref) objects.
 """
 function evolve_to_time(
-    spin::MultiSpin{N, T}, current_time::Real, new_time::Real,
+    spin::MultiSpin{N}, current_time::Real, new_time::Real,
     micro::Microstructure, timestep::Real, B0::SVector{N, <:Real}
-) where {N, T}
+) where {N}
     if current_time > new_time
         throw(DomainError("Spins cannot travel backwards in time"))
     end
@@ -25,7 +25,7 @@ function evolve_to_time(
     end
     index = div(current_time, timestep, RoundNearest)
     time_left = ((0.5 + index) * timestep) - current_time
-    orient = MVector{N, SpinOrientation{T}}(spin.orientations)
+    orient = MVector{N, SpinOrientation}(spin.orientations)
 
     function proc!(orient, pos, dt, micro=micro, B0=B0) 
         for idx in 1:N
@@ -36,7 +36,7 @@ function evolve_to_time(
     if time_left > (new_time - current_time)
         # spin does not get to move at all
         proc!(orient, spin.position, new_time-current_time)
-        return MultiSpin(spin.position, SVector{N, SpinOrientation{T}}(orient), spin.rng)
+        return MultiSpin(spin.position, SVector{N, SpinOrientation}(orient), spin.rng)
     end
     proc!(orient, spin.position, time_left)
     current_time = (index + 0.5) * timestep
@@ -59,7 +59,7 @@ function evolve_to_time(
     # Restore random number state
     final_rng_state = FixedXoshiro(copy(Random.TaskLocalRNG()))
     copy!(Random.TaskLocalRNG(), old_rng_state)
-    MultiSpin(position, SVector{N, SpinOrientation{T}}(orient), final_rng_state)
+    MultiSpin(position, SVector{N, SpinOrientation}(orient), final_rng_state)
 end
 
 """
@@ -67,23 +67,24 @@ end
 
 Continue the MR simulation with given timespan
 """
-function Base.append!(simulation::Simulation{N, T}, delta_time::T) where {N, T}
+function Base.append!(simulation::Simulation{N}, delta_time::Real) where {N}
+    delta_time = Float(delta_time)
     if delta_time < 0
         return simulation
     end
-    spins::Vector{MultiSpin{N, T}} = copy(simulation.latest[end].spins)
-    current_time::T = simulation.latest[end].time
+    spins::Vector{MultiSpin{N}} = copy(simulation.latest[end].spins)
+    current_time::Float = simulation.latest[end].time
     new_time = current_time + delta_time
     sequence_index = MVector{N, Int}(
         [next_pulse(seq, current_time) for seq in simulation.sequences]
     )
     next_readout = div(current_time, simulation.store_every, RoundUp) * simulation.store_every
     times = [new_time, next_readout, time.(simulation.sequences, sequence_index)...]
-    B0_field = SVector{N, T}(T[s.B0 for s in simulation.sequences])
+    B0_field = SVector{N, Float}(Float[s.B0 for s in simulation.sequences])
     nspins = length(spins)
     while true
         next = argmin(times)
-        next_time::T = times[next]
+        next_time::Float = times[next]
         for idx in 1:nspins
             spins[idx] = evolve_to_time(spins[idx], current_time, next_time, simulation.micro, simulation.timestep, B0_field)
         end
