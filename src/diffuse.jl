@@ -161,41 +161,67 @@ function detect_collision(movement :: Movement, repeat :: Repeated)
     return nothing
 end
 
+struct RayGridIntersections{T<:AbstractFloat}
+    origin :: PosVector{T}
+    destination :: PosVector{T}
+    direction :: PosVector{T}
+    all_next_hits :: MVector{3, T}
+    current_voxel :: MVector{3, Int}
+end
+
 """
     ray_grid_intersections(origin, destination)
 
 Computes all voxels crossed by a ray between `origin` and `destination` with a 1x1x1 grid.
 Both origin and destination are length-3 vectors.
+The returned object is an iterator returning a tuple with:
+- 3-length vector with the voxel that we are crossing through
+- Float with the time the ray entered voxel (0=`origin`, 1=`destination`)
+- 3-length vector with position within voxel that the ray entered (i.e., numbers between 0 and 1)
+- Float with the time the ray left the voxel (0=`origin`, 1=`destination`)
+- 3-length vector with position within voxel that the ray left (i.e., numbers between 0 and 1)
 """
-ray_grid_intersections(origin :: PosVector, destination :: PosVector) = Channel() do c
+function ray_grid_intersections(origin :: PosVector, destination :: PosVector)
     direction = destination .- origin
     within_voxel = mod.(origin, 1)
     all_next_hits = MVector{3, eltype(origin)}([(d > 0 ? 1 - w : w) / abs(d) for (d, w) in zip(direction, within_voxel)])
-    prev_pos = origin
-    prev_time = 0.
     current_voxel = MVector{3, Int}(Int.(floor.(origin)))
-    while true
-        dimension = argmin(all_next_hits)
-        time_to_hit = all_next_hits[dimension]
-        next_time = prev_time + time_to_hit
-        if next_time > 1.
-            push!(c, (current_voxel, prev_time, prev_pos .- current_voxel, 1., destination .- current_voxel))
-            break
-        end
-        next_pos = origin .+ direction .* next_time
-        for dim in 1:3
-            if dim == dimension
-                push!(c, (SVector(current_voxel), prev_time, prev_pos .- current_voxel, next_time, next_pos .- current_voxel))
-                prev_time = next_time
-                prev_pos = next_pos
-                all_next_hits[dim] = 1 / abs(direction[dim])
-                current_voxel[dim] += sign(direction[dim])
-            else
-                all_next_hits[dim] -= time_to_hit
-            end
+    return RayGridIntersections(origin, destination, direction, all_next_hits, current_voxel)
+end
+
+Base.iterate(rgi::RayGridIntersections{T}) where {T<:AbstractFloat} = Base.iterate(rgi, (rgi.origin, T(0.)))
+function Base.iterate(rgi::RayGridIntersections{T}, state::Tuple{SVector{3, T}, T}) where {T<:AbstractFloat}
+    (prev_pos::SVector{3, T}, prev_time::T) = state
+    if prev_time >= 1.
+        return nothing
+    end
+    dimension = argmin(rgi.all_next_hits)
+    time_to_hit = rgi.all_next_hits[dimension]
+    next_time = prev_time + time_to_hit
+    if next_time > 1.
+        return (
+            (SVector{3,T}(rgi.current_voxel), prev_time, prev_pos .- rgi.current_voxel, T(1.), rgi.destination .- rgi.current_voxel), 
+            (rgi.destination, next_time)
+        )
+    end
+    next_pos = rgi.origin .+ (rgi.direction .* next_time)
+    res = (
+        (SVector{3, T}(rgi.current_voxel), prev_time, prev_pos .- rgi.current_voxel, next_time, next_pos .- rgi.current_voxel),
+        (next_pos, next_time)
+    )
+    for dim in 1:3
+        if dim == dimension
+            rgi.all_next_hits[dim] = 1 / abs(rgi.direction[dim])
+            rgi.current_voxel[dim] += sign(rgi.direction[dim])
+        else
+            rgi.all_next_hits[dim] -= time_to_hit
         end
     end
+    return res
 end
+
+Base.length(rgi::RayGridIntersections) = sum(abs.(Int.(floor.(rgi.destination)) .- Int.(floor.(rgi.origin)))) + 1
+Base.eltype(::RayGridIntersections{T}) where {T} = Tuple{SVector{3, T}, T, SVector{3, T}, T, SVector{3, T}}
 
 
 """
