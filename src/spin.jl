@@ -207,7 +207,7 @@ Snapshot(nspins :: Int; kwargs...) = Snapshot(rand(nspins, 3) * 1000 - 500; kwar
 
 Returns the time in milliseconds that a snapshot was taken or that a sequence component will have effect.
 """
-time(s :: Snapshot) = s.time
+Base.time(s :: Snapshot) = s.time
 
 function vector(s :: Snapshot)
     sum(vector.(s.spins))
@@ -244,7 +244,7 @@ struct MultiSnapshot{N, T<:AbstractFloat}
 end
 MultiSnapshot(snap :: Snapshot, nsequences::Integer) = MultiSnapshot([MultiSpin(spin, nsequences) for spin in snap.spins], snap.time)
 MultiSnapshot(snap, nsequences::Integer; kwargs...) = MultiSnapshot(Snapshot(snap; kwargs...), nsequences)
-time(s :: MultiSnapshot) = s.time
+Base.time(s :: MultiSnapshot) = s.time
 get_sequence(snap::MultiSnapshot, index) = Snapshot(get_sequence.(snap.spins, index), snap.time)
 
 for param in (:longitudinal, :transverse, :phase, :vector)

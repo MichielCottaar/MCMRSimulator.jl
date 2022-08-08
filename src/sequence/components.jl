@@ -29,7 +29,7 @@ RFPulse(; time=0, flip_angle=0, phase=0) = RFPulse(time, flip_angle, phase)
 phase(pulse :: RFPulse) = rad2deg(pulse.phase)
 "Returns the flip angle of the RF pulse in degrees"
 flip_angle(pulse :: RFPulse) = rad2deg(pulse.flip_angle)
-time(pulse :: RFPulse) = pulse.time
+Base.time(pulse :: RFPulse) = pulse.time
 
 """
     apply(sequence_component, spin_orientation[, position])
