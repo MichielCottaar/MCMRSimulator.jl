@@ -165,8 +165,8 @@ struct RayGridIntersections
     origin :: PosVector
     destination :: PosVector
     direction :: PosVector
-    all_next_hits :: MVector{3, Float}
-    current_voxel :: MVector{3, Int}
+    all_next_hits :: Vector{Float}
+    current_voxel :: Vector{Int}
 end
 
 """
@@ -184,8 +184,8 @@ The returned object is an iterator returning a tuple with:
 function ray_grid_intersections(origin :: PosVector, destination :: PosVector)
     direction = destination .- origin
     within_voxel = mod.(origin, 1)
-    all_next_hits = MVector{3, Float}([(d > 0 ? 1 - w : w) / abs(d) for (d, w) in zip(direction, within_voxel)])
-    current_voxel = MVector{3, Int}(Int.(floor.(origin)))
+    all_next_hits = [(d > 0 ? 1 - w : w) / abs(d) for (d, w) in zip(direction, within_voxel)]
+    current_voxel = [Int(floor(o)) for o in origin]
     return RayGridIntersections(origin, destination, direction, all_next_hits, current_voxel)
 end
 
