@@ -6,7 +6,7 @@ constrained by a series of [`Obstruction`](@ref) objects.
 The spins of these particles will be evolved by the effect of one or more [`Sequence`](@ref) objects as well as
 spatially varying [`Field`](@ref) objecs describing the R1, R2, diffusivity, and off-resonance fields.
 All of these variables are combined into a single [`Simulation`](@ref) object, which can then be evolved using [`append!`](@ref)(simulation).
-Plotting support for the output is also available based on [Makie.jl](https://makie.juliaplots.org/stable/).
+Plotting support for the output is also available based on [Makie.jl](https://makie.juliaplots.org/stable/) (see [`plot!`](@ref)).
 """
 module MRSimulator
 import StaticArrays: SA_F64, MVector, SVector, @SVector, MMatrix

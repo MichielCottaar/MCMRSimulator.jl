@@ -1,5 +1,12 @@
 import Makie: Makie, @lift
 
+"""
+    color(orient::SpinOrientation; saturation=1.)
+
+Returns a color representing the spin orientation in the transverse (x-y) plane.
+Brighter colors have a larger transverse component, so that spins with no transverse component are black.
+The actual color encodes the spin orientation.
+"""
 color(orient::Union{Spin, SpinOrientation}; saturation=1.) = Colors.HSV(phase(orient) + 180, saturation, transverse(orient))
 
 @Makie.recipe(SequencePlot, seq) do scene
@@ -7,6 +14,12 @@ color(orient::Union{Spin, SpinOrientation}; saturation=1.) = Colors.HSV(phase(or
     )
 end
 
+"""
+    plot(sequence)
+    plot!(sequence)
+
+Creates a visual representation of a [`Sequence`](@ref) diagram.
+"""
 function Makie.plot!(sp::SequencePlot)
     seq = sp[1]
     times = @lift [p.time for p in $seq.pulses]
@@ -32,6 +45,13 @@ Makie.plottype(::Sequence) = SequencePlot
     )
 end
 
+
+"""
+    plot(snapshot)
+    plot!(snapshot)
+
+Plots the spin positions in the [`Snapshot`](@ref) in 3D color coded by the spin's orientation (see [`color`](@ref)).
+"""
 function Makie.plot!(sp::SnapshotPlot)
     snap = sp[1]
     colors = @lift color.($snap.spins)
@@ -43,20 +63,38 @@ end
 Makie.plottype(::Snapshot) = SnapshotPlot
 
 
+"""
+Defines a finite plane in the 3D space used for plotting.
+
+# Constructor
+    PlotPlane(normal::PosVector, position::PosVector; sizex=Inf, sizey=Inf, ngrid=100)
+
+Arguments:
+- `normal`: length-3 vector with the orientation perpendicular to the plane (default to z-direction).
+- `position`: position of plane as a length-3 vector (defaults to origin).
+- `sizex`: size of the plane in the x-direction (before rotating to `normal`).
+- `sizey`: size of the plane in the y-direction (before rotating to `normal`).
+- `ngrid`: number of grid elements to split the plane up into for plotting.
+
+# Spin projection onto plane
+See [`project_on_grid`](@ref) for details on how spins are projected onto the `PlotPlane`.
+"""
 struct PlotPlane
     transformation :: CoordinateTransformations.Transformation
-    repeatx :: Real
-    repeaty :: Real
+    sizex :: Real
+    sizey :: Real
     ngrid :: Int
 end
 
 
 function PlotPlane(
-    normal :: PosVector=SA_F64[0, 0, 1], 
-    position :: PosVector=SA_F64[0, 0, 0];
-    repeatx::Real=Inf, repeaty::Real=Inf,
+    normal :: AbstractVector{<:Real}=SA_F64[0, 0, 1], 
+    position :: AbstractVector{<:Real}=SA_F64[0, 0, 0];
+    sizex::Real=Inf, sizey::Real=Inf,
     ngrid=100,
 )
+    normal = SVector{3}(normal)
+    position = SVector{3}(position)
     if normal ≈ SA_F64[0, 0, 1]
         transform = CoordinateTransformations.Translation(position)
     else
@@ -67,14 +105,20 @@ function PlotPlane(
             position
         )
     end
-    PlotPlane(CoordinateTransformations.inv(transform), repeatx, repeaty, ngrid)
+    PlotPlane(CoordinateTransformations.inv(transform), sizex, sizey, ngrid)
 end
 
+"""
+    transform(plot_plane, position)
+    transform(plot_plane, snapshot)
+
+Transforms the `position` (length-3 vector) or [`Snapshot`](@ref) to a space, where the [`PlotPlane`](@ref) lies in the x-y-plane centered on origin.
+"""
 function transform(pp::PlotPlane, pos::PosVector)
     base = pp.transformation(pos)
-    repeatx, repeaty = pp.repeatx, pp.repeaty
-    correct = [isfinite(repeatx) ? repeatx : 0., isfinite(repeaty) ? repeaty : 0., 0.] / 2.
-    mod.(base .+ correct, (repeatx, repeaty, Inf)) .- correct
+    sizex, sizey = pp.sizex, pp.sizey
+    correct = [isfinite(sizex) ? sizex : 0., isfinite(sizey) ? sizey : 0., 0.] / 2.
+    mod.(base .+ correct, (sizex, sizey, Inf)) .- correct
 end
 
 function transform(pp::PlotPlane, snap::Snapshot)
@@ -84,6 +128,16 @@ function transform(pp::PlotPlane, snap::Snapshot)
     )
 end
 
+
+"""
+    project_on_grid(plot_plane, snap)
+
+Spins from the [`Snapshot`](@ref) are projected onto the [`PlotPlane`](@ref) in two ways:
+- along the normal spins are projected onto the plane from infinitely far (TODO: give finite extent)
+- in the other directions any spins are projected onto the plane using mod(position[1], `sizex`) and mod(position[2], `sizey`).
+    This assumes that the geometry and field repeats itself ad infinitum beyond the `PlotPlane` (TODO: allow this assumption to be turned off).
+In effect, this means that all spins are projected onto the `PlotPlane`.
+"""
 function project_on_grid(pp::PlotPlane, snap::Snapshot)
     on_plane = transform(pp, snap)
     positions = [s.position[1:2] for s in on_plane]
@@ -122,6 +176,14 @@ end
     )
 end
 
+"""
+    plot(snapshot, plot_plane)
+    plot!(snapshot, plot_plane)
+
+Plots the spins in the [`Snapshot`](@ref) projected onto given [`PlotPlane`](@ref).
+Each spin is represented by an arrow showing the transverse component of the spin.
+The background color shows the average spin in the neighbourhood color coded as described in [`color`](@ref).
+"""
 function Makie.plot!(sp::SnapshotPlanarPlot)
     snap = sp[1]
     planar = sp[2]
