@@ -25,9 +25,17 @@ end
 
 RFPulse(; time=0, flip_angle=0, phase=0) = RFPulse(time, flip_angle, phase)
 
-"Returns the angle in the x-y plane of the axis around with the RF pulse rotates in degrees"
+"""
+    phase(pulse)
+
+Returns the angle in the x-y plane of the axis around with the RF pulse rotates in degrees
+"""
 phase(pulse :: RFPulse) = rad2deg(pulse.phase)
-"Returns the flip angle of the RF pulse in degrees"
+"""
+    flip_angle(pulse)
+
+Returns the flip angle of the RF pulse in degrees
+"""
 flip_angle(pulse :: RFPulse) = rad2deg(pulse.flip_angle)
 Base.time(pulse :: RFPulse) = pulse.time
 
@@ -54,7 +62,11 @@ function apply(pulse :: RFPulse, spin :: SpinOrientation)
     )
 end
 
-"Readout the spins at the given `time` (in milliseconds) each TR"
+"""
+    Readout(;time=0)
+
+Readout the spins at the given `time` (in milliseconds) each TR
+"""
 struct Readout{T} <: SequenceComponent
     time :: T
 end
@@ -64,6 +76,8 @@ apply(pulse :: Readout, orient :: SpinOrientation) = orient
 
 
 """
+    InstantGradient(; qvec=[0, 0, 0], q_origin=0, time=0.)
+
 Infinitely short gradient pulse that encodes phase information given by `qvec` and `q_origin`.
 
 The phase offset at every `position` is given by `qvec ⋅ position + q_origin`.

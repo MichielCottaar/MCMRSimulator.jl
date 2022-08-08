@@ -1,4 +1,7 @@
-"""Draws a random orientation on the unit sphere as a length-3 vector
+"""
+    random_on_sphere()
+
+Draws a random orientation on the unit sphere as a length-3 vector
 
 The z-orientation is drawn a random number between -1 and 1.
 The angle in the x-y plane is drawn as a random number between 0 and 2π.
@@ -118,7 +121,11 @@ end
 
 
 """
-Underlying `obstructions` are repeated ad infinitum as described in `repeats`.
+    Repeated(obstructions, repeats)
+
+Underlying `obstructions` are repeated ad infinitum as described in `repeats` (a length-3 vector).
+Zeros or infinity in `repeats` indicate that no repeating should be applied in this direction.
+To repeat in a different direction that the cardinal directions first apply `Repeated` and then [`Transformed`](@ref).
 
 If the obstructions are larger than the repeat size they will be cut off!
 """
@@ -154,7 +161,12 @@ function detect_collision(movement :: Movement, repeat :: Repeated)
     return nothing
 end
 
-"Computes all voxels crossed by a ray between `origin` and `destination` with a 1x1x1 grid"
+"""
+    ray_grid_intersections(origin, destination)
+
+Computes all voxels crossed by a ray between `origin` and `destination` with a 1x1x1 grid.
+Both origin and destination are length-3 vectors.
+"""
 ray_grid_intersections(origin :: PosVector, destination :: PosVector) = Channel() do c
     direction = destination .- origin
     within_voxel = mod.(origin, 1)
@@ -186,16 +198,21 @@ ray_grid_intersections(origin :: PosVector, destination :: PosVector) = Channel(
 end
 
 
-"Underlying `obstructions` are linearly transformed (e.g., rotated or shifted) using the given `transform`."
+"""
+    Transformed(obstructions::Obstructions, transform::CoordinateTransformations.Transformation)
+
+Underlying `obstructions` are linearly transformed (e.g., rotated or shifted) using the given `transform`.
+
+"""
 struct Transformed{O <: Obstructions, T <: CoordinateTransformations.Transformation} <: Obstruction
-    obstruction :: O
+    obstrucations :: O
     transform :: T
     inverse :: T
-    function Transformed(obstruction, transform :: CoordinateTransformations.Transformation)
-        if isa(obstruction, Transformed)
-            return Transformed(obstruction.obstruction, transform ∘ obstruction.transform )
+    function Transformed(obstrucations, transform :: CoordinateTransformations.Transformation)
+        if isa(obstrucations, Transformed)
+            return Transformed(obstrucations.obstrucations, transform ∘ obstrucations.transform )
         else
-            o = isa(obstruction, Obstruction) ? SVector{1}([obstruction]) : SVector{length(obstruction)}(obstruction)
+            o = isa(obstrucations, Obstruction) ? SVector{1}([obstrucations]) : SVector{length(obstrucations)}(obstrucations)
             return new{typeof(o), typeof(transform)}(o, transform, inv(transform))
         end
     end
@@ -208,7 +225,7 @@ function detect_collision(movement :: Movement, transform :: Transformed)
             transform.inverse(movement.destination),
             movement.timestep
         ),
-        transform.obstruction
+        transform.obstrucations
     )
     if isnothing(c)
         return c
@@ -354,6 +371,8 @@ end
 
 
 """
+    cylinder_plane(radius; rotation=0., repeatx=0., repeaty=0., shiftx=0.)
+
 Creates a plane of infinitely repeating cylinders in the y-z plane.
 
 # Arguments

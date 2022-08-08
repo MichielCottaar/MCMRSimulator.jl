@@ -30,7 +30,9 @@ function Base.copy!(dst::Random.TaskLocalRNG, src::FixedXoshiro)
 end
 
 """
-The spin orientation.
+    SpinOrientation(longitudinal, transverse, phase)
+
+The spin orientation. Usually created as part of a [`Spin`](@ref) or [`Multispin`](@ref) object.
 
 This information can be extracted using:
 - [`longitudinal`](@ref) to get the spin in the z-direction (equilibrium of 1)

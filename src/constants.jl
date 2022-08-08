@@ -5,11 +5,11 @@ const gyromagnetic_ratio = 0.26752218744  # (10^6 rad⋅ms^−1⋅T^−1)
 const PosVector = SVector{3, <:AbstractFloat}
 
 """
-A single obstruction to the free diffusion of water (e.g., [`Wall`](@ref), mesh, [`Cylinder`](@ref), [`Sphere`](@ref)).
+Supertype of any obstruction to the free diffusion of water (e.g., [`Wall`](@ref), mesh, [`Cylinder`](@ref), [`Sphere`](@ref)).
 """
 abstract type Obstruction end
 
-"List of [`Obstruction`](@ref) objects that the particles have to navigate."
+"Sequence of [`Obstruction`](@ref) objects that the particles have to navigate."
 const Obstructions{N, T} = SVector{N, T} where {T <: Obstruction}
 
 "Intermediate object used internally to represent a movement from one position to another"

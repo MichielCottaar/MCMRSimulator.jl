@@ -68,6 +68,8 @@ struct LocalEnvironment{T <: Real}
 end
 
 """
+    Microstructure(; off_resonance=0., R2=0., R1=0., diffusivity=0., geometry=Obstruction[])
+
 Describes the microstructure of the tissue.
 
 This describes both the spatial distribution of the `R1`, `R2`, `off-resonance`, and `diffusivity` parameters (as [`Field`](@ref) objects)
@@ -104,7 +106,11 @@ end
     micro.R1(position),
 )
 
-"Relaxes the spin `orientation` within the R1, R2, and off-resonance given by the local `environment` over time `timestep`"
+"""
+    relax(orientation::SpinOrientation, environment::LocalEnvironment, timestep::Real, B0=3.)
+
+Relaxes the spin `orientation` within the R1, R2, and off-resonance given by the local `environment` over time `timestep`
+"""
 function relax(orientation :: SpinOrientation, environment :: LocalEnvironment, timestep :: Real, B0=3.)
     @assert timestep >= 0
     if timestep == 0
