@@ -17,6 +17,8 @@ include("readout.jl")
 include("evolve.jl")
 include("plot.jl")
 
-export evolve, Microstructure, field, Sequence, RFPulse, Spin, vector, time, transverse, longitudinal, phase, Snapshot, evolve_iter
+export Simulation, Microstructure, field, Sequence, RFPulse, Readout, InstantGradient, 
+    longitudinal, transverse, phase, vector, Repeated, Transformed, Sphere, Cylinder, Wall,
+    perfect_dwi
 end
 
