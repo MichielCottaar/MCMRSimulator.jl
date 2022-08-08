@@ -1,6 +1,8 @@
 const Optional{T} = Union{Nothing, T}
 
 """
+    derive_qval_time(max_diffusion_time; bval=nothing, diffusion_time=nothing, qval=nothing)
+
 Derives b-value, diffusion time, and q-value from each other assuming short pulses
 
 Returns a tuple with the q-value and diffusion time.
@@ -56,6 +58,8 @@ derive_qval_time(
 
 
 """
+    perfect_dwi(; TE=80., TR=2000., bval=nothing, diffusion_time=nothing, qval=nothing, orientation = [0, 0, 1.])
+
 Creates a standard diffusion-weighted MRI sequence
 
 This produces a pulsed gradient spin echo (PGSE) sequence with perfect RF pulses 
@@ -80,7 +84,7 @@ function perfect_dwi(;
         Readout(time=TE),
     ]
     if !iszero(qval)
-        qvec = orientation .* (qval / norm(orientation))
+        qvec = SVector{3}(orientation .* (qval / norm(orientation)))
         append!(base_components, [
             InstantGradient(time=(TE - diffusion_time) / 2., qvec=qvec),
             InstantGradient(time=(TE + diffusion_time) / 2., qvec=qvec),
