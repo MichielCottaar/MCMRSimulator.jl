@@ -30,7 +30,7 @@ Julia 1.7:
     - .script
     - .coverage
 pages:
-  image: julia:1.6
+  image: julia:1.7
   stage: deploy
   script:
     - apt-get update
