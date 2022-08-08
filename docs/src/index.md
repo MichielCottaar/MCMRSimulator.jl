@@ -9,6 +9,14 @@ Documentation for [MRSimulator](https://git.fmrib.ox.ac.uk/ndcn0236/MRSimulator.
 ```@index
 ```
 
+## Public API
 ```@autodocs
 Modules = [MRSimulator]
+Private = False
+```
+
+## Private API
+```@autodocs
+Modules = [MRSimulator]
+Public = False
 ```
