@@ -13,10 +13,15 @@ sequence = mr.perfect_dwi(TR=TR, TE=TE, bval=bval)
 
 micro = mr.Microstructure(diffusivity=mr.field(3.), geometry=geometry)
 
-spins = [mr.Spin(position=SA_F64[0., 0., z]) for z in 1:30000];
+snap = mr.Snapshot(30000)
 
-simulation = mr.Simulation(spins, [sequence], micro);
+simulation = mr.Simulation(snap, [sequence], micro);
 
 append!(simulation, 2.);
 @time append!(simulation, 200.);
-@profview append!(simulation, 200.);
+
+before = mr.isinside(simulation.latest[1], geometry)
+after = mr.isinside(simulation.latest[end], geometry)
+t = simulation.latest[end].time
+frac = sum(xor.(before, after)) / length(snap.spins)
+println("Fraction of spins crossing boundary in $t ms: $frac")
