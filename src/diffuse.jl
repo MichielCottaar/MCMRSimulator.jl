@@ -43,7 +43,8 @@ function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: F
         current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
         direction = random_on_sphere()
         displacement = (1 - collision.distance) * displacement
-        new_pos = current_pos .+ (sign(direction ⋅ collision.normal) * displacement) .* direction
+        flip = collision.flip ? -1 : 1
+        new_pos = current_pos .+ (flip * sign(direction ⋅ collision.normal) * displacement) .* direction
     end
 end
 
@@ -86,16 +87,21 @@ end
 
 
 """
+    Collision(distance::Float, normal::PosVector, hit::UUID, flip::Bool)
 A detected collision along the movement.
 
 # Parameters
 - `distance`: number between 0 and 1 indicating the distance of the collision from the origin (0) to the destination point (1)
 - `normal`: normal of the obstruction at the collision site. To get correct reflection the normal should point in the direction of the incoming particle.
+- `hit`: the ID of the low-level obstruction object that was hit
+- `flip`: whether the normal should be flipped
 """
 struct Collision
     distance :: Float
     normal :: PosVector
-    Collision(distance, normal) = new(distance * (1. - eps(Float)^0.75), normal)
+    hit :: UUID
+    flip :: Bool
+    Collision(distance, normal, hit, flip) = new(distance * (1. - eps(Float)^0.75), normal, hit, flip)
 end
 
 
@@ -157,7 +163,6 @@ end
 
 
 function detect_collision(movement :: Movement, repeat :: Repeated)
-    println(movement)
     origin = movement.origin ./ repeat.repeats .+ 0.5
     destination = movement.destination ./ repeat.repeats .+ 0.5
     for (_, t1, p1, t2, p2) in ray_grid_intersections(origin, destination)
@@ -169,13 +174,11 @@ function detect_collision(movement :: Movement, repeat :: Repeated)
             repeat.obstructions
         )
         if !isnothing(c)
-            println(Collision(
-                c.distance * (t2 - t1) + t1,
-                c.normal
-            ))
             return Collision(
                 c.distance * (t2 - t1) + t1,
-                c.normal
+                c.normal,
+                c.hit,
+                c.flip
             )
         end
     end
@@ -270,7 +273,9 @@ function detect_collision(movement :: Movement, transform :: Transformed)
     end
     Collision(
         c.distance,
-        transform.transform(c.normal) .- transform.transform(zero(PosVector))
+        transform.transform(c.normal) .- transform.transform(zero(PosVector)),
+        c.hit,
+        c.flip
     )
 end
 
@@ -284,6 +289,8 @@ The normal can also be defined using :x, :y, or :z, to point in that cardinal di
 The offset of the wall from the origin along this `normal` is given by `offset` (so that `offset .* normal` is on the wall).
 """
 struct Wall <: Obstruction
+    id :: UUID
+    Wall() = new(uuid1())
 end
 
 Wall(offset :: Float) = offset == 0 ? Wall() : Transformed(Wall(), CoordinateTransformations.Translation(offset, 0., 0.))
@@ -318,10 +325,11 @@ function detect_collision(movement :: Movement, wall :: Wall)
         return nothing
     end
     total_length = abs(origin - destination)
-    normal = movement.origin[1] > 0 ? SA[1, 0, 0] : SA[-1, 0, 0]
     Collision(
         abs(origin) / total_length,
-        normal
+        SA[1, 0, 0],
+        wall.id,
+        movement.origin[1] < 0
     )
 end
 
@@ -332,6 +340,8 @@ Creates a hollow sphere with a radius of `radius` micrometer (default 1 micromet
 """
 struct Sphere <: Obstruction
     radius :: Float
+    id :: UUID
+    Sphere(radius) = new(Float(radius), uuid1())
 end
 
 function Sphere(radius :: Real, location :: AbstractVector)
@@ -346,7 +356,10 @@ end
 
 isinside(pos::PosVector, sphere::Sphere) = norm(pos) <= sphere.radius
 
-detect_collision(movement :: Movement, sphere :: Sphere) = sphere_collision(movement.origin, movement.destination, sphere.radius)
+function detect_collision(movement :: Movement, sphere :: Sphere)
+    s = sphere_collision(movement.origin, movement.destination, sphere.radius)
+    isnothing(s) ? s : Collision(s[1], s[2], sphere.id, s[3])
+end
 
 function sphere_collision(origin :: PosVector, destination :: PosVector, radius :: Float)
     # terms for quadratic equation for where distance squared equals radius squared d^2 = a s^2 + b s + c == radius ^ 2
@@ -382,10 +395,10 @@ function sphere_collision(origin :: PosVector, destination :: PosVector, radius 
         end
     end
     point_hit = solution * destination + (1 - solution) * origin
-    normal = norm(origin) < radius ? -point_hit : point_hit
-    Collision(
+    return (
         solution,
-        normal
+        point_hit,
+        norm(origin) < radius
     )
 end
 
@@ -397,6 +410,8 @@ The orientation of the cylinder (default: z-direction) can be given as a symbol 
 """
 struct Cylinder <: Obstruction
     radius :: Float
+    id :: UUID
+    Cylinder(radius) = new(Float(radius), uuid1())
 end
 
 isinside(pos::PosVector, cyl::Cylinder) = (pos[1] * pos[1] + pos[2] * pos[2]) <= (cyl.radius * cyl.radius)
@@ -430,7 +445,8 @@ end
 function detect_collision(movement :: Movement, cylinder :: Cylinder)
     o = SA[movement.origin[1], movement.origin[2], 0.]
     d = SA[movement.destination[1], movement.destination[2], 0.]
-    sphere_collision(o, d, cylinder.radius)
+    s = sphere_collision(o, d, cylinder.radius)
+    isnothing(s) ? s : Collision(s[1], s[2], cylinder.id, s[3])
 end
 
 
