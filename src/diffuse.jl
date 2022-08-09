@@ -32,6 +32,7 @@ draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geo
 function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: Obstructions)
     new_pos = draw_step(current_pos, diffusivity, timestep)
     displacement = norm(new_pos .- current_pos)
+    c_prev = nothing
     while true
         collision = detect_collision(
             Movement(current_pos, new_pos, 1.),
@@ -44,6 +45,11 @@ function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: F
         direction = random_on_sphere()
         displacement = (1 - collision.distance) * displacement
         flip = collision.flip ? -1 : 1
+        if !isnothing(c_prev) && (c_prev.hit  == collision.hit)
+            flip = c_prev.flip ? -1 : 1
+        else
+            c_prev = collision
+        end
         new_pos = current_pos .+ (flip * sign(direction ⋅ collision.normal) * displacement) .* direction
     end
 end

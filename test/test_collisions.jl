@@ -174,6 +174,19 @@
             final = res[end].destination
             radius = norm(final .- (orient ⋅ final) * orient / norm(orient) ^ 2)
             @test radius <= 2.3
+            @test mr.isinside(final, cylinder)
+        end
+        @testset "Remain within distant cylinder" begin
+            Random.seed!(1234)
+            cylinder = mr.Cylinder(0.9)
+            c2 = mr.Cylinder(0.8)
+            geometry = SVector{1}(mr.Repeated([cylinder, c2], [2., 2., Inf]))
+            position = SA_F64[200., 200., 0.]
+            @test mr.isinside(position, geometry)
+            for _ in 1:100
+                position = mr.draw_step(position, 3., 0.5, geometry)
+                @test mr.isinside(position, geometry)
+            end
         end
     end
     @testset "Ray-grid intersections" begin
