@@ -16,7 +16,6 @@ import CoordinateTransformations
 import Rotations
 import Colors
 import Random
-using UUIDs
 
 
 include("constants.jl")
