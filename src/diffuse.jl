@@ -167,8 +167,6 @@ struct RayGridIntersections
     origin :: PosVector
     destination :: PosVector
     direction :: PosVector
-    all_next_hits :: MVector{3, Float}
-    current_voxel :: MVector{3, Int}
 end
 
 """
@@ -183,47 +181,32 @@ The returned object is an iterator returning a tuple with:
 - Float with the time the ray left the voxel (0=`origin`, 1=`destination`)
 - 3-length vector with position within voxel that the ray left (i.e., numbers between 0 and 1)
 """
-function ray_grid_intersections(origin :: PosVector, destination :: PosVector)
-    all_next_hits = zero(MVector{3, Float})
-    current_voxel = zero(MVector{3, Int})
-    direction = destination - origin
-    for dim in 1:3
-        current_voxel[dim] = Int(floor(origin[dim]))
-        within_voxel = origin[dim] - current_voxel[dim]
-        d = direction[dim]
-        all_next_hits[dim] = (d > 0 ? 1. - within_voxel : within_voxel) / abs(d)
-    end
-    return RayGridIntersections(origin, destination, direction, all_next_hits, current_voxel)
-end
+ray_grid_intersections(origin :: PosVector, destination :: PosVector) = RayGridIntersections(origin, destination, destination - origin)
 
-Base.iterate(rgi::RayGridIntersections) = Base.iterate(rgi, (rgi.origin, zero(Float)))
-function Base.iterate(rgi::RayGridIntersections, state::Tuple{PosVector, Float})
-    (prev_pos::PosVector, prev_time::Float) = state
+Base.iterate(rgi::RayGridIntersections) = Base.iterate(rgi, (rgi.origin, zero(Float), map(o -> Int(floor(o)), rgi.origin)))
+function Base.iterate(rgi::RayGridIntersections, state::Tuple{PosVector, Float, SVector{3, Int}})
+    (prev_pos::PosVector, prev_time::Float, current_voxel::SVector{3, Int}) = state
     if prev_time >= 1.
         return nothing
     end
-    dimension = argmin(rgi.all_next_hits)
-    time_to_hit = rgi.all_next_hits[dimension]
+    within_voxel = prev_pos - current_voxel
+    all_next_hits = map((d, w) -> (d > 0 ? 1. - w : w) / abs(d), rgi.direction, within_voxel)
+    dimension = argmin(all_next_hits)
+    time_to_hit = all_next_hits[dimension]
     next_time = prev_time + time_to_hit
     if next_time > 1.
         return (
-            (PosVector(rgi.current_voxel), prev_time, prev_pos - rgi.current_voxel, one(Float), rgi.destination - rgi.current_voxel), 
-            (rgi.destination, next_time)
+            (current_voxel, prev_time, prev_pos - current_voxel, one(Float), rgi.destination - current_voxel), 
+            (rgi.destination, next_time, current_voxel)
         )
     end
+    ddim = Int(sign(rgi.direction[dimension]))
+    next_voxel = map((i, v) -> i == dimension ? v + ddim : v, 1:3, current_voxel)
     next_pos = rgi.origin .+ (rgi.direction .* next_time)
     res = (
-        (PosVector(rgi.current_voxel), prev_time, prev_pos - rgi.current_voxel, next_time, next_pos - rgi.current_voxel),
-        (next_pos, next_time)
+        (current_voxel, prev_time, prev_pos - current_voxel, next_time, next_pos - current_voxel),
+        (next_pos, next_time, next_voxel)
     )
-    for dim in 1:3
-        if dim == dimension
-            rgi.all_next_hits[dim] = 1 / abs(rgi.direction[dim])
-            rgi.current_voxel[dim] += sign(rgi.direction[dim])
-        else
-            rgi.all_next_hits[dim] -= time_to_hit
-        end
-    end
     return res
 end
 
