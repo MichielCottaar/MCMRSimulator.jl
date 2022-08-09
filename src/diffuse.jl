@@ -165,8 +165,8 @@ struct RayGridIntersections
     origin :: PosVector
     destination :: PosVector
     direction :: PosVector
-    all_next_hits :: Vector{Float}
-    current_voxel :: Vector{Int}
+    all_next_hits :: MVector{3, Float}
+    current_voxel :: MVector{3, Int}
 end
 
 """
@@ -184,8 +184,8 @@ The returned object is an iterator returning a tuple with:
 function ray_grid_intersections(origin :: PosVector, destination :: PosVector)
     direction = destination .- origin
     within_voxel = mod.(origin, 1)
-    all_next_hits = [(d > 0 ? 1 - w : w) / abs(d) for (d, w) in zip(direction, within_voxel)]
-    current_voxel = [Int(floor(o)) for o in origin]
+    all_next_hits = MVector{3, Float}(map((d, w) -> (d > 0 ? 1 - w : w) / abs(d), direction, within_voxel))
+    current_voxel = MVector{3, Int}(map(o->Int(floor(o)), origin))
     return RayGridIntersections(origin, destination, direction, all_next_hits, current_voxel)
 end
 
@@ -200,13 +200,13 @@ function Base.iterate(rgi::RayGridIntersections, state::Tuple{PosVector, Float})
     next_time = prev_time + time_to_hit
     if next_time > 1.
         return (
-            (PosVector(rgi.current_voxel), prev_time, prev_pos .- rgi.current_voxel, Float(1.), rgi.destination .- rgi.current_voxel), 
+            (PosVector(rgi.current_voxel), prev_time, prev_pos - rgi.current_voxel, Float(1.), rgi.destination - rgi.current_voxel), 
             (rgi.destination, next_time)
         )
     end
     next_pos = rgi.origin .+ (rgi.direction .* next_time)
     res = (
-        (PosVector(rgi.current_voxel), prev_time, prev_pos .- rgi.current_voxel, next_time, next_pos .- rgi.current_voxel),
+        (PosVector(rgi.current_voxel), prev_time, prev_pos - rgi.current_voxel, next_time, next_pos - rgi.current_voxel),
         (next_pos, next_time)
     )
     for dim in 1:3
@@ -331,20 +331,33 @@ detect_collision(movement :: Movement, sphere :: Sphere) = sphere_collision(move
 
 function sphere_collision(origin :: PosVector, destination :: PosVector, radius :: Float)
     # terms for quadratic equation for where distance squared equals radius squared d^2 = a s^2 + b s + c == radius ^ 2
-    a = sum((destination .- origin) .^ 2)
-    b = sum(2 .* origin .* (destination .- origin))
+    if (
+        (origin[1] > radius && destination[1] > radius) ||
+        (origin[1] < -radius && destination[1] < -radius) ||
+        (origin[2] > radius && destination[2] > radius) ||
+        (origin[2] < -radius && destination[2] < -radius) ||
+        (origin[3] > radius && destination[3] > radius) ||
+        (origin[3] < -radius && destination[3] < -radius)
+    )
+        return nothing
+    end
+    diff = destination - origin
+    a = sum(diff .* diff)
+    b = sum(2 .* origin .* diff)
     c = sum(origin .* origin)
     determinant = b ^ 2 - 4 * a * (c - radius ^ 2)
     if determinant < 0
         return nothing
     end
+    sd = sqrt(determinant)
+    ai = inv(a)
 
     # first try solution with lower s
-    solution = (-b - sqrt(determinant)) / (2 * a)
+    solution = -(b + sd) * 0.5 * ai
     if solution > 1
         return nothing
     elseif solution <= 0
-        solution = (-b + sqrt(determinant)) / (2 * a)
+        solution = (-b + sd) * 0.5 * ai
         if solution > 1 || solution < 0
             return nothing
         end
