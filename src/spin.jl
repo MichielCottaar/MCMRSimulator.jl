@@ -201,7 +201,7 @@ end
 function Snapshot(positions :: AbstractVector{<:AbstractVector{<:Real}}; time :: Real=0., kwargs...) 
     Snapshot(map(p -> Spin(position=p; kwargs...), positions), time)
 end
-Snapshot(nspins :: Int; kwargs...) = Snapshot(rand(nspins, 3) * 1000 - 500; kwargs...)
+Snapshot(nspins :: Int; kwargs...) = Snapshot(rand(nspins, 3) .* 1000 .- 500; kwargs...)
 
 """
     time(snapshot)
