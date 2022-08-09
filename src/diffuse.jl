@@ -30,13 +30,15 @@ draw_step(diffusivity :: Float, timestep :: Float) = sqrt(2. * timestep * diffus
 draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float) = current_pos .+ draw_step(diffusivity, timestep)
 draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: Obstructions{0}) = draw_step(current_pos, diffusivity, timestep)
 function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: Obstructions)
+    original_position = current_pos
     new_pos = draw_step(current_pos, diffusivity, timestep)
     displacement = norm(new_pos .- current_pos)
     c_prev = nothing
     for _ in 1:1000
         collision = detect_collision(
             Movement(current_pos, new_pos, 1.),
-            geometry
+            geometry,
+            original_position
         )
         if isnothing(collision)
             return new_pos
@@ -68,8 +70,9 @@ correct_collisions(to_try :: Movement, geometry :: AbstractVector{<:Obstruction}
 
 function correct_collisions(to_try :: Movement, geometry :: Obstructions)
     steps = Movement[]
+    start = to_try.origin
     while true
-        collision = detect_collision(to_try, geometry)
+        collision = detect_collision(to_try, geometry, start)
         if isnothing(collision) || collision.distance > 1
             push!(steps, to_try)
             break
@@ -119,13 +122,13 @@ Returns a [`Collision`](@ref) object if the given `movement` crosses any obstruc
 The first collision is always returned.
 If no collision is detected, `nothing` will be returned
 """
-detect_collision(movement :: Movement, obstructions :: Obstructions{0}) = nothing
-detect_collision(movement :: Movement, obstructions :: Obstructions{1}) = detect_collision(movement, obstructions[1])
+detect_collision(movement :: Movement, obstructions :: Obstructions{0}, origin::PosVector) = nothing
+detect_collision(movement :: Movement, obstructions :: Obstructions{1}, origin::PosVector) = detect_collision(movement, obstructions[1], origin)
 
-function detect_collision(movement :: Movement, obstructions :: Obstructions)
+function detect_collision(movement :: Movement, obstructions :: Obstructions, origin::PosVector)
     collision = nothing
     for o in obstructions
-        c_new = detect_collision(movement, o)
+        c_new = detect_collision(movement, o, origin)
         if !isnothing(c_new) && (isnothing(collision) || c_new.distance < collision.distance)
             collision = c_new
         end
@@ -168,8 +171,9 @@ struct Repeated{N, T} <: ObstructionWrapper
     end
 end
 
+project(pos::PosVector, repeat::Repeated) = map((p, r) -> isfinite(r) ? p - div(p, r, RoundNearest) * r : p, pos, repeat.repeats)
 
-function detect_collision(movement :: Movement, repeat :: Repeated)
+function detect_collision(movement :: Movement, repeat :: Repeated, start::PosVector)
     origin = movement.origin ./ repeat.repeats .+ 0.5
     destination = movement.destination ./ repeat.repeats .+ 0.5
     for (_, t1, p1, t2, p2) in ray_grid_intersections(origin, destination)
@@ -178,7 +182,8 @@ function detect_collision(movement :: Movement, repeat :: Repeated)
         pos2 = f.(repeat.repeats, p2, (movement.destination .* t2) .+ (movement.origin .* (1 - t2)))
         c = detect_collision(
             Movement(pos1, pos2, 1.),
-            repeat.obstructions
+            repeat.obstructions,
+            project(start, repeat)
         )
         if !isnothing(c)
             return Collision(
@@ -193,7 +198,7 @@ function detect_collision(movement :: Movement, repeat :: Repeated)
 end
 
 
-isinside(pos::PosVector, repeat::Repeated) = isinside(map((p, r) -> isfinite(r) ? mod(p + r/2, r) - r/2 : p, pos, repeat.repeats), repeat.obstructions)
+isinside(pos::PosVector, repeat::Repeated) = isinside(project(pos, repeat), repeat.obstructions)
 
 struct RayGridIntersections
     origin :: PosVector
@@ -266,14 +271,15 @@ struct Transformed{N, O, T <: CoordinateTransformations.Transformation} <: Obstr
     end
 end
 
-function detect_collision(movement :: Movement, transform :: Transformed) 
+function detect_collision(movement :: Movement, transform :: Transformed, origin::PosVector) 
     c = detect_collision(
         Movement(
             transform.inverse(movement.origin),
             transform.inverse(movement.destination),
-            movement.timestep
+            movement.timestep,
         ),
-        transform.obstrucations
+        transform.obstrucations,
+        project(origin, transform)
     )
     if isnothing(c)
         return c
@@ -286,7 +292,8 @@ function detect_collision(movement :: Movement, transform :: Transformed)
     )
 end
 
-isinside(pos::PosVector, trans::Transformed) = isinside(trans.inverse(pos), trans.obstrucations)
+project(pos::PosVector, trans::Transformed) = trans.inverse(pos)
+isinside(pos::PosVector, trans::Transformed) = isinside(project(pos, trans), trans.obstrucations)
 
 """
     Wall([[normal,] offset])
@@ -325,7 +332,7 @@ function Wall(sym :: Symbol, offset :: Float)
     Wall(direction[sym], offset)
 end
 
-function detect_collision(movement :: Movement, wall :: Wall)
+function detect_collision(movement :: Movement, wall :: Wall, origin::PosVector)
     origin = movement.origin[1]
     destination = movement.destination[1]
     if origin * destination >= 0
@@ -363,12 +370,12 @@ end
 
 isinside(pos::PosVector, sphere::Sphere) = norm(pos) <= sphere.radius
 
-function detect_collision(movement :: Movement, sphere :: Sphere)
-    s = sphere_collision(movement.origin, movement.destination, sphere.radius)
+function detect_collision(movement :: Movement, sphere :: Sphere, origin::PosVector)
+    s = sphere_collision(movement.origin, movement.destination, sphere.radius, origin)
     isnothing(s) ? s : Collision(s[1], s[2], sphere.id, s[3])
 end
 
-function sphere_collision(origin :: PosVector, destination :: PosVector, radius :: Float)
+function sphere_collision(origin :: PosVector, destination :: PosVector, radius :: Float, start::PosVector)
     # terms for quadratic equation for where distance squared equals radius squared d^2 = a s^2 + b s + c == radius ^ 2
     if (
         (origin[1] > radius && destination[1] > radius) ||
@@ -380,6 +387,7 @@ function sphere_collision(origin :: PosVector, destination :: PosVector, radius 
     )
         return nothing
     end
+    inside = norm(start) < radius
     diff = destination - origin
     a = sum(diff .* diff)
     b = sum(2 .* origin .* diff)
@@ -392,20 +400,15 @@ function sphere_collision(origin :: PosVector, destination :: PosVector, radius 
     ai = inv(a)
 
     # first try solution with lower s
-    solution = -(b + sd) * 0.5 * ai
-    if solution > 1
+    solution = (inside ? (-b + sd) : (-b - sd)) * 0.5 * ai
+    if solution > 1 || solution <= 0
         return nothing
-    elseif solution <= 0
-        solution = (-b + sd) * 0.5 * ai
-        if solution > 1 || solution < 0
-            return nothing
-        end
     end
     point_hit = solution * destination + (1 - solution) * origin
     return (
         solution,
         point_hit,
-        norm(origin) < radius
+        inside,
     )
 end
 
@@ -449,10 +452,10 @@ function Cylinder(radius :: Real, sym :: Symbol, offset :: AbstractVector{<:Real
     Cylinder(radius, orientation[sym], offset)
 end
 
-function detect_collision(movement :: Movement, cylinder :: Cylinder)
+function detect_collision(movement :: Movement, cylinder :: Cylinder, origin::PosVector)
     o = SA[movement.origin[1], movement.origin[2], 0.]
     d = SA[movement.destination[1], movement.destination[2], 0.]
-    s = sphere_collision(o, d, cylinder.radius)
+    s = sphere_collision(o, d, cylinder.radius, SA[origin[1], origin[2], 0.])
     isnothing(s) ? s : Collision(s[1], s[2], cylinder.id, s[3])
 end
 

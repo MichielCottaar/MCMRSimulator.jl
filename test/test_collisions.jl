@@ -235,5 +235,28 @@
                 mr.Movement(SA_F64[10, 1, 3], SA_F64[13, 2, 4], 3.),
             ])
         end
+        @testset "Test lots of particles still don't cross compartments" begin
+            for o in (mr.Cylinder, mr.Sphere)
+                Random.seed!(1234)
+                outer = o(0.9)
+                inner = o(0.8)
+                geometry = mr.Repeated([inner, outer], [2., 2., 2.])
+
+                sequence = mr.perfect_dwi(bval=2.)
+
+                micro = mr.Microstructure(diffusivity=mr.field(3.), geometry=geometry)
+
+                snap = mr.Snapshot(300);
+
+                simulation = mr.Simulation(snap, [sequence], micro);
+
+                append!(simulation, 200.);
+
+                before = mr.isinside(simulation.latest[1], geometry);
+                after = mr.isinside(simulation.latest[end], geometry);
+                switched = sum(xor.(before, after))
+                @test switched == 0
+            end
+        end
     end
 end
