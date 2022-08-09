@@ -123,6 +123,21 @@ end
 
 
 """
+    isinside(position, obstructions)
+    isinside(spin, obstructions)
+    isinside(snapshot, obstructions)
+
+Test whether the particles are inside any of the obstructions.
+"""
+isinside(pos::Vector, o) = isinside(PosVector(pos), o)
+isinside(spin::Union{Spin, MultiSpin}, o) = isinside(position(spin), o)
+isinside(snapshot::Union{Snapshot, MultiSnapshot}, o) = map(s -> isinside(s, o), snapshot.spins)
+isinside(pos::PosVector, obstructions::Obstructions) = any(o -> isinside(pos, o), obstructions)
+
+
+abstract type ObstructionWrapper <: Obstruction end
+
+"""
     Repeated(obstructions, repeats)
 
 Underlying `obstructions` are repeated ad infinitum as described in `repeats` (a length-3 vector).
@@ -131,13 +146,13 @@ To repeat in a different direction that the cardinal directions first apply `Rep
 
 If the obstructions are larger than the repeat size they will be cut off!
 """
-struct Repeated{O <: Obstructions} <: Obstruction
-    obstructions :: O
+struct Repeated{N, T} <: ObstructionWrapper
+    obstructions :: Obstructions{N, T}
     repeats :: PosVector
     function Repeated(obstructions, repeats)
         o = isa(obstructions, Obstruction) ? SVector{1}([obstructions]) : SVector{length(obstructions)}(obstructions)
         rs = SVector{3, Float}([iszero(r) ? Inf : abs(r) for r in repeats])
-        any(isfinite.(rs)) ? new{typeof(o)}(o, rs) : obstructions
+        any(isfinite.(rs)) ? new{length(o), eltype(o)}(o, rs) : obstructions
     end
 end
 
@@ -162,6 +177,9 @@ function detect_collision(movement :: Movement, repeat :: Repeated)
     end
     return nothing
 end
+
+
+isinside(pos::PosVector, repeat::Repeated) = isinside(map((p, r) -> isfinite(r) ? mod(p + r/2, r) - r/2 : p, pos, repeat.repeats), repeat.obstructions)
 
 struct RayGridIntersections
     origin :: PosVector
@@ -220,8 +238,8 @@ Base.eltype(::RayGridIntersections) = Tuple{PosVector, Float, PosVector, Float, 
 Underlying `obstructions` are linearly transformed (e.g., rotated or shifted) using the given `transform`.
 
 """
-struct Transformed{O <: Obstructions, T <: CoordinateTransformations.Transformation} <: Obstruction
-    obstrucations :: O
+struct Transformed{N, O, T <: CoordinateTransformations.Transformation} <: ObstructionWrapper
+    obstrucations :: Obstructions{N, O}
     transform :: T
     inverse :: T
     function Transformed(obstrucations, transform :: CoordinateTransformations.Transformation)
@@ -229,7 +247,7 @@ struct Transformed{O <: Obstructions, T <: CoordinateTransformations.Transformat
             return Transformed(obstrucations.obstrucations, transform ∘ obstrucations.transform )
         else
             o = isa(obstrucations, Obstruction) ? SVector{1}([obstrucations]) : SVector{length(obstrucations)}(obstrucations)
-            return new{typeof(o), typeof(transform)}(o, transform, inv(transform))
+            return new{length(o), eltype(o), typeof(transform)}(o, transform, inv(transform))
         end
     end
 end
@@ -252,6 +270,8 @@ function detect_collision(movement :: Movement, transform :: Transformed)
     )
 end
 
+isinside(pos::PosVector, trans::Transformed) = isinside(trans.inverse(pos), trans.obstrucations)
+
 """
     Wall([[normal,] offset])
 
@@ -263,6 +283,8 @@ struct Wall <: Obstruction
 end
 
 Wall(offset :: Float) = offset == 0 ? Wall() : Transformed(Wall(), CoordinateTransformations.Translation(offset, 0., 0.))
+
+isinside(pos::PosVector, wall::Wall) = false
 
 
 function Wall(normal :: PosVector, offset :: Float)
@@ -317,6 +339,8 @@ function Sphere(radius :: Real, location :: AbstractVector)
     end
 end
 
+isinside(pos::PosVector, sphere::Sphere) = norm(pos) <= sphere.radius
+
 detect_collision(movement :: Movement, sphere :: Sphere) = sphere_collision(movement.origin, movement.destination, sphere.radius)
 
 function sphere_collision(origin :: PosVector, destination :: PosVector, radius :: Float)
@@ -368,6 +392,8 @@ The orientation of the cylinder (default: z-direction) can be given as a symbol 
 struct Cylinder <: Obstruction
     radius :: Float
 end
+
+isinside(pos::PosVector, cyl::Cylinder) = (pos[1] * pos[1] + pos[2] * pos[2]) <= (cyl.radius * cyl.radius)
 
 function Cylinder(radius :: Real, orientation :: AbstractVector{<:Real})
     radius = Float(radius)
