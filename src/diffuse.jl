@@ -184,15 +184,14 @@ The returned object is an iterator returning a tuple with:
 - 3-length vector with position within voxel that the ray left (i.e., numbers between 0 and 1)
 """
 function ray_grid_intersections(origin :: PosVector, destination :: PosVector)
-    current_voxel_static = map(o->Int(floor(o)), origin)
     all_next_hits = zero(MVector{3, Float})
     current_voxel = zero(MVector{3, Int})
     direction = destination - origin
     for dim in 1:3
-        within_voxel = origin[dim] - current_voxel_static[dim]
+        current_voxel[dim] = Int(floor(origin[dim]))
+        within_voxel = origin[dim] - current_voxel[dim]
         d = direction[dim]
         all_next_hits[dim] = (d > 0 ? 1. - within_voxel : within_voxel) / abs(d)
-        current_voxel[dim] = current_voxel_static[dim]
     end
     return RayGridIntersections(origin, destination, direction, all_next_hits, current_voxel)
 end
