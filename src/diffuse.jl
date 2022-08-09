@@ -33,7 +33,7 @@ function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: F
     new_pos = draw_step(current_pos, diffusivity, timestep)
     displacement = norm(new_pos .- current_pos)
     c_prev = nothing
-    while true
+    for _ in 1:1000
         collision = detect_collision(
             Movement(current_pos, new_pos, 1.),
             geometry
@@ -52,6 +52,7 @@ function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: F
         end
         new_pos = current_pos .+ (flip * sign(direction ⋅ collision.normal) * displacement) .* direction
     end
+    error("Bounced single particle for 1000 times in single step; terminating!")
 end
 
 """
