@@ -40,11 +40,10 @@ function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: F
         if isnothing(collision)
             return new_pos
         end
-        flip_normal = (new_pos .- current_pos) ⋅ collision.normal
         current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
         direction = random_on_sphere()
         displacement = (1 - collision.distance) * displacement
-        new_pos = current_pos .+ (((flip_normal * (direction ⋅ collision.normal)) > 0 ? -1 : 1) * displacement) .* direction
+        new_pos = current_pos .+ (sign(direction ⋅ collision.normal) * displacement) .* direction
     end
 end
 
@@ -91,7 +90,7 @@ A detected collision along the movement.
 
 # Parameters
 - `distance`: number between 0 and 1 indicating the distance of the collision from the origin (0) to the destination point (1)
-- `normal`: normal of the obstruction at the collision site.
+- `normal`: normal of the obstruction at the collision site. To get correct reflection the normal should point in the direction of the incoming particle.
 """
 struct Collision
     distance :: Float
@@ -158,6 +157,7 @@ end
 
 
 function detect_collision(movement :: Movement, repeat :: Repeated)
+    println(movement)
     origin = movement.origin ./ repeat.repeats .+ 0.5
     destination = movement.destination ./ repeat.repeats .+ 0.5
     for (_, t1, p1, t2, p2) in ray_grid_intersections(origin, destination)
@@ -169,6 +169,10 @@ function detect_collision(movement :: Movement, repeat :: Repeated)
             repeat.obstructions
         )
         if !isnothing(c)
+            println(Collision(
+                c.distance * (t2 - t1) + t1,
+                c.normal
+            ))
             return Collision(
                 c.distance * (t2 - t1) + t1,
                 c.normal
@@ -314,9 +318,10 @@ function detect_collision(movement :: Movement, wall :: Wall)
         return nothing
     end
     total_length = abs(origin - destination)
+    normal = movement.origin[1] > 0 ? SA[1, 0, 0] : SA[-1, 0, 0]
     Collision(
         abs(origin) / total_length,
-        SA[1, 0, 0]
+        normal
     )
 end
 
@@ -377,9 +382,10 @@ function sphere_collision(origin :: PosVector, destination :: PosVector, radius 
         end
     end
     point_hit = solution * destination + (1 - solution) * origin
+    normal = norm(origin) < radius ? -point_hit : point_hit
     Collision(
         solution,
-        point_hit
+        normal
     )
 end
 
