@@ -18,5 +18,5 @@ spins = [mr.Spin(position=SA_F64[0., 0., z]) for z in 1:30000];
 simulation = mr.Simulation(spins, [sequence], micro);
 
 append!(simulation, 2.);
-@time append!(simulation, 20.);
+@time append!(simulation, 200.);
 @profview append!(simulation, 200.);
