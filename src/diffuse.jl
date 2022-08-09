@@ -11,9 +11,10 @@ function random_on_sphere()
     z = rand() * 2. - 1.
     r = sqrt(1. - z*z)
     theta = rand() * 2 * π
+    (s, c) = sincos(theta)
     return SA[
-        r * sin(theta),
-        r * cos(theta),
+        r * s,
+        r * c,
         z
     ]
 end
@@ -107,6 +108,7 @@ The first collision is always returned.
 If no collision is detected, `nothing` will be returned
 """
 detect_collision(movement :: Movement, obstructions :: Obstructions{0}) = nothing
+detect_collision(movement :: Movement, obstructions :: Obstructions{1}) = detect_collision(movement, obstructions[1])
 
 function detect_collision(movement :: Movement, obstructions :: Obstructions)
     collision = nothing
@@ -182,10 +184,16 @@ The returned object is an iterator returning a tuple with:
 - 3-length vector with position within voxel that the ray left (i.e., numbers between 0 and 1)
 """
 function ray_grid_intersections(origin :: PosVector, destination :: PosVector)
-    direction = destination .- origin
-    within_voxel = mod.(origin, 1)
-    all_next_hits = MVector{3, Float}(map((d, w) -> (d > 0 ? 1 - w : w) / abs(d), direction, within_voxel))
-    current_voxel = MVector{3, Int}(map(o->Int(floor(o)), origin))
+    current_voxel_static = map(o->Int(floor(o)), origin)
+    all_next_hits = zero(MVector{3, Float})
+    current_voxel = zero(MVector{3, Int})
+    direction = destination - origin
+    for dim in 1:3
+        within_voxel = origin[dim] - current_voxel_static[dim]
+        d = direction[dim]
+        all_next_hits[dim] = (d > 0 ? 1. - within_voxel : within_voxel) / abs(d)
+        current_voxel[dim] = current_voxel_static[dim]
+    end
     return RayGridIntersections(origin, destination, direction, all_next_hits, current_voxel)
 end
 
@@ -200,7 +208,7 @@ function Base.iterate(rgi::RayGridIntersections, state::Tuple{PosVector, Float})
     next_time = prev_time + time_to_hit
     if next_time > 1.
         return (
-            (PosVector(rgi.current_voxel), prev_time, prev_pos - rgi.current_voxel, Float(1.), rgi.destination - rgi.current_voxel), 
+            (PosVector(rgi.current_voxel), prev_time, prev_pos - rgi.current_voxel, one(Float), rgi.destination - rgi.current_voxel), 
             (rgi.destination, next_time)
         )
     end
