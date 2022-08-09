@@ -10,7 +10,7 @@ import Random
     include("test_field.jl")
     include("test_collisions.jl")
     include("test_evolve.jl")
-    #include("test_known_sequences.jl")
+    include("test_known_sequences.jl")
     @testset "Simple relaxation" begin
         orient = mr.Spin(transverse=1., longitudinal=0.).orientation
         pos = zero(SVector{3, Float64})

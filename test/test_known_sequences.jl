@@ -13,23 +13,28 @@
             @test_throws AssertionError mr.derive_qval_time(80., qval=1., diffusion_time=2., bval=0.)
         end
         @testset "Perfect PGSE with no diffusion" begin
-            spins = [mr.Spin(position=randn(mr.PosVector) * 100.) for _ in 1:100]
-            sequence = mr.perfect_dwi(bval=2., TE=80.)
-            micro = mr.Microstructure()
-            readout = mr.Simulation(spins, [sequence], micro)
-            push!(readout, 90.)
-            @test length(readout.readout[sequence][1]) == 1
-            snap = readaout.readaout[sequence][1]
-            @test snap.time == 80.
-            @test transverse(snap) ≈ 100. rtol=1e-2
+            nspins = 300
+            spins = mr.Snapshot(nspins)
+            TE = 80.
+            sequence = mr.perfect_dwi(bval=2., TE=TE)
+            readout = mr.Simulation(spins, [sequence])
+            append!(readout, TE * 1.01)
+            @test length(readout.readout[1]) == 1
+            snap = readout.readout[1][1]
+            @test snap.time == TE
+            @test mr.transverse(snap) ≈ nspins rtol=1e-2
         end
         @testset "Perfect PGSE with free diffusion" begin
-            spins = [mr.Spin(position=randn(mr.PosVector) * 100.) for _ in 1:1000]
-            sequence = mr.perfect_dwi(bval=2.)
-            micro = mr.Microstructure(diffusivity=mr.field(3.))
-            readout = mr.evolve_TR(spins, sequence, micro)
-            println(log(transverse(readout.data[1])))
-            @test transverse(readout.data[1]) ≈ 1000. * exp(-6.) rtol=0.05
+            nspins = 1000
+            spins = mr.Snapshot(nspins)
+            TE = 80.
+            sequence = mr.perfect_dwi(bval=0.3, TE=TE)
+            readout = mr.Simulation(spins, [sequence], diffusivity=0.5)
+            append!(readout, TE * 1.01)
+            snap = readout.readout[1][1]
+            @test snap.time == TE
+            println(log(mr.transverse(snap)/1000.))
+            @test mr.transverse(snap) ≈ nspins * exp(-0.15) rtol=0.05
         end
     end
 end
