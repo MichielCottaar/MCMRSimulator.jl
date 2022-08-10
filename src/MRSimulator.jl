@@ -21,7 +21,7 @@ import Random
 include("constants.jl")
 include("spin.jl")
 include("field.jl")
-include("diffuse.jl")
+include("geometry/geometry.jl")
 include("sequence/sequence.jl")
 include("readout.jl")
 include("evolve.jl")
