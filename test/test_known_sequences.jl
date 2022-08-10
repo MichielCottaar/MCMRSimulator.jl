@@ -33,7 +33,6 @@
             append!(readout, TE * 1.01)
             snap = readout.readout[1][1]
             @test snap.time == TE
-            println(log(mr.transverse(snap)/1000.))
             @test mr.transverse(snap) ≈ nspins * exp(-0.15) rtol=0.05
         end
     end
