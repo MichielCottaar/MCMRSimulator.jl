@@ -1,5 +1,5 @@
 """
-Supertype of any obstruction to the free diffusion of water (e.g., [`Wall`](@ref), mesh, [`Cylinder`](@ref), [`Sphere`](@ref)).
+Supertype of any obstruction to the free diffusion of water (e.g., [`Wall`](@ref), [`Mesh`](@ref), [`Cylinder`](@ref), [`Sphere`](@ref)).
 """
 abstract type Obstruction end
 
@@ -24,6 +24,11 @@ isinside(pos::PosVector, obstructions::Obstructions) = any(o -> isinside(pos, o)
     project(position, transform::Transformed)
 
 Computes the position in the space of the obstructions wrapped by the [`Repeated`](@ref) or [`Transformed`](@ref).
+
+    project(position, grid::GridShape)
+
+Computes the voxel index for the position on the [`GridShape`](@ref). 
+This will return a result even if the point is outside of the grid. Use [`isinside`](@ref)(position, grid) to check that.
 """
 function project end
 
@@ -36,3 +41,4 @@ include("transform.jl")
 include("wall.jl")
 include("sphere.jl")
 include("cylinder.jl")
+include("mesh.jl")

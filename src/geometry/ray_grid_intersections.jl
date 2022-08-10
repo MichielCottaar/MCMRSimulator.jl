@@ -5,9 +5,9 @@ struct RayGridIntersections
 end
 
 """
-    ray_grid_intersections(origin, destination)
+    ray_grid_intersections([grid, ]origin, destination)
 
-Computes all voxels crossed by a ray between `origin` and `destination` with a 1x1x1 grid.
+Computes all voxels crossed by a ray between `origin` and `destination` with a [`GridShape`](@ref) (default infinitely extending 1x1x1 grid).
 Both origin and destination are length-3 vectors.
 The returned object is an iterator returning a tuple with:
 - 3-length vector with the voxel that we are crossing through
@@ -48,3 +48,30 @@ end
 Base.length(rgi::RayGridIntersections) = sum(abs.(Int.(floor.(rgi.destination)) .- Int.(floor.(rgi.origin)))) + 1
 Base.eltype(::RayGridIntersections) = Tuple{PosVector, Float, PosVector, Float, PosVector}
 
+
+struct GridShape
+    bounding_box :: BoundingBox
+    size :: SVector{3, Int}
+    voxel_size :: PosVector
+    inverse_voxel_size :: PosVector
+    function GridShape(bounding_box::BoundingBox, size)
+        size = SVector{3, Int}(size)
+        voxel_size = (bounding_box.upper .- bounding_box.lower) ./ size
+        @assert all(isfinite.(voxel_size) .|| isone.(size))
+        inverse_voxel_size = 1. ./ voxel_size
+        new(bounding_box, size, voxel_size, inverse_voxel_size)
+    end
+end
+
+BoundingBox(g::GridShape) = g.bounding_box
+Base.size(g::GridShape) = tuple(g.size)
+isinside(pos::PosVector, g::GridShape) = isinside(pos, BoundingBox(g))
+function project(pos::PosVector, g::GridShape)
+    bb = BoundingBox(g)
+    map((p, l, is) -> iszero(is) ? 1.5 : is * (p - l) + 1, pos, bb.lower, g.inverse_voxel_size)
+end
+
+
+function ray_grid_intersections(grid :: GridShape, origin :: PosVector, destination :: PosVector) 
+    ray_grid_intersections(project(origin, grid), project(destination, grid))
+end

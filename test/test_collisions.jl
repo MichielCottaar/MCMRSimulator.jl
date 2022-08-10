@@ -189,7 +189,7 @@
             end
         end
     end
-    @testset "Ray-grid intersections" begin
+    @testset "Ray-grid intersections with undefined grid" begin
         function tcompare(t1, t2)
             @test length(t1) == length(t2)
             for (e1, e2) in zip(t1, t2)
@@ -201,6 +201,22 @@
         tcompare(res[2], ([0, 0, 1], 1/6, [0.5, 0.5, 0.], 1/2, [0.5, 0.5, 1.]))
         tcompare(res[3], ([0, 0, 2], 1/2, [0.5, 0.5, 0.], 5/6, [0.5, 0.5, 1.]))
         tcompare(res[4], ([0, 0, 3], 5/6, [0.5, 0.5, 0.], 1., [0.5, 0.5, 0.5]))
+    end
+    @testset "Ray-grid intersections with defined grid" begin
+        function tcompare(t1, t2)
+            @test length(t1) == length(t2)
+            for (e1, e2) in zip(t1, t2)
+                @test e1 ≈ e2
+            end
+        end
+        grid = mr.GridShape(mr.BoundingBox([0, 2, -Inf], [2, 12, Inf]), [4, 10, 1])
+        @test mr.project(SA_F64[0.25, 3.5, 0.5], grid) == SA_F64[1.5, 2.5, 1.5]
+        @test mr.project(SA_F64[0.75, 5.5, 192.5], grid) == SA_F64[2.5, 4.5, 1.5]
+        res = collect(mr.ray_grid_intersections(grid, SA_F64[0.25, 3.5, 0.5], SA_F64[0.75, 5.5, 192.5]))
+        tcompare(res[1], ([1, 2, 1], 0., [0.5, 0.5, 0.5], 1/4, [3/4, 1, 0.5]))
+        tcompare(res[2], ([1, 3, 1], 1/4, [3/4, 0, 0.5], 1/2, [1, 0.5, 0.5]))
+        tcompare(res[3], ([2, 3, 1], 1/2, [0, 0.5, 0.5], 3/4, [1/4, 1, 0.5]))
+        tcompare(res[4], ([2, 4, 1], 3/4, [1/4, 0, 0.5], 1, [0.5, 0.5, 0.5]))
     end
     @testset "Reflections on planes of cylinders" begin
         @testset "Bounce between four cylinders" begin

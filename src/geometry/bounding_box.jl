@@ -11,6 +11,12 @@ Check whether particles are inside using [`isinside`](@ref).
 struct BoundingBox
     lower :: PosVector
     upper :: PosVector
+    inverse_size :: PosVector
+    function BoundingBox(lower::PosVector, upper::PosVector)
+        inverse_size = map((l, u) -> isfinite(l) && isfinite(u) ? 1. / (u-l) : 0., lower, upper)
+        @assert all(upper .>= lower)
+        new(lower, upper, inverse_size)
+    end
 end
 
 BoundingBox(lower::AbstractVector, upper::AbstractVector) = BoundingBox(PosVector(lower), PosVector(upper))
@@ -37,5 +43,5 @@ corners(bb::BoundingBox) = [
     bb.upper,
 ]
 
-isinside(pos::PosVector, bb::BoundingBox) = all(pos .> bb.lower) && all(pos .< bb.upper)
+isinside(pos::PosVector, bb::BoundingBox) = all(pos .>= bb.lower) && all(pos .<= bb.upper)
 
