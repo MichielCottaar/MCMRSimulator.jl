@@ -7,10 +7,3 @@ const SA = SA_F64
 
 "General definition used for length-3 vectors. Mostly used for positions."
 const PosVector = SVector{3, Float}
-
-"Intermediate object used internally to represent a movement from one position to another"
-struct Movement
-    origin :: PosVector
-    destination :: PosVector
-    timestep :: Float
-end

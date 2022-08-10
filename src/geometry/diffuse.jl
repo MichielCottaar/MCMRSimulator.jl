@@ -1,3 +1,10 @@
+"Intermediate object used internally to represent a movement from one position to another"
+struct Movement
+    origin :: PosVector
+    destination :: PosVector
+    timestep :: Float
+end
+
 """
     random_on_sphere()
 
