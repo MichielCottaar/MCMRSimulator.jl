@@ -147,4 +147,17 @@ import Random
             @test randn(2) == a
         end
     end
+    @testset "Bounding boxes" begin
+        # single obstruction
+        @test mr.BoundingBox(mr.Cylinder(1)) == mr.BoundingBox([-1, -1, -Inf], [1, 1, Inf])
+
+        # multiple obstructions
+        @test mr.BoundingBox(SVector{2}([mr.Sphere(2), mr.Cylinder(1)])) == mr.BoundingBox([-2, -2, -Inf], [2, 2, Inf])
+
+        # shifted obstructions
+        @test mr.BoundingBox(mr.Cylinder(radius=1., position=[2, 2, 2])) == mr.BoundingBox([1., 1., -Inf], [3, 3, Inf])
+
+        # repeated obstructions
+        @test mr.BoundingBox(mr.Repeated(mr.Cylinder(radius=1.), [1., 3., 3.])) == mr.BoundingBox([-0.5, -1., -1.5], [0.5, 1, 1.5])
+    end
 end

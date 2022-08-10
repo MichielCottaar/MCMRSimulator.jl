@@ -11,7 +11,7 @@ const Obstructions{N, T} = SVector{N, T} where {T <: Obstruction}
     isinside(spin, obstructions)
     isinside(snapshot, obstructions)
 
-Test whether the particles are inside any of the obstructions.
+Test whether the particles are inside any of the [`Obstrunctions`](@ref) (or in the [`BoundingBox`](@ref)).
 """
 isinside(pos::Vector, o) = isinside(PosVector(pos), o)
 isinside(spin::Union{Spin, MultiSpin}, o) = isinside(position(spin), o)
@@ -28,6 +28,7 @@ Computes the position in the space of the obstructions wrapped by the [`Repeated
 function project end
 
 
+include("bounding_box.jl")
 include("diffuse.jl")
 include("ray_grid_intersections.jl")
 include("repeat.jl")

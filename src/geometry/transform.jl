@@ -39,3 +39,8 @@ end
 
 project(pos::PosVector, trans::Transformed) = trans.inverse(pos)
 isinside(pos::PosVector, trans::Transformed) = isinside(project(pos, trans), trans.obstrucations)
+function BoundingBox(trans::Transformed)
+    input_corners = corners(BoundingBox(trans.obstrucations))
+    transformed_corners = map(trans.transform, input_corners)
+    BoundingBox(min.(transformed_corners...), max.(transformed_corners...))
+end

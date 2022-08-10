@@ -18,6 +18,13 @@ struct Repeated{N, T} <: Obstruction
 end
 
 project(pos::PosVector, repeat::Repeated) = map((p, r) -> isfinite(r) ? p - div(p, r, RoundNearest) * r : p, pos, repeat.repeats)
+function BoundingBox(repeat::Repeated)
+    bb = BoundingBox(repeat.obstructions)
+    BoundingBox(
+        map((l, r) -> isfinite(r) ? max(l, -r/2) : l, bb.lower, repeat.repeats),
+        map((u, r) -> isfinite(r) ? min(u, r/2) : u, bb.upper, repeat.repeats),
+    )
+end
 
 function detect_collision(movement :: Movement, repeat :: Repeated, start::PosVector)
     origin = movement.origin ./ repeat.repeats .+ 0.5

@@ -17,8 +17,10 @@ function Sphere(radius :: Real, location :: AbstractVector)
         return Transformed(Sphere(radius), CoordinateTransformations.Translation(location))
     end
 end
+Sphere(;radius=1., position=[0, 0, 0]) = Sphere(radius, position)
 
 isinside(pos::PosVector, sphere::Sphere) = norm(pos) <= sphere.radius
+BoundingBox(s::Sphere) = BoundingBox([-s.radius, -s.radius, -s.radius], [s.radius, s.radius, s.radius])
 
 detect_collision(movement :: Movement, sphere :: Sphere, origin::PosVector) = sphere_collision(movement.origin, movement.destination, sphere.radius, origin)
 

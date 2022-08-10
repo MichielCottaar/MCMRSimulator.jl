@@ -10,6 +10,7 @@ struct Cylinder <: Obstruction
 end
 
 isinside(pos::PosVector, cyl::Cylinder) = (pos[1] * pos[1] + pos[2] * pos[2]) <= (cyl.radius * cyl.radius)
+BoundingBox(c::Cylinder) = BoundingBox([-c.radius, -c.radius, -Inf], [c.radius, c.radius, Inf])
 
 function Cylinder(radius :: Real, orientation :: AbstractVector{<:Real})
     radius = Float(radius)
@@ -36,6 +37,8 @@ function Cylinder(radius :: Real, sym :: Symbol, offset :: AbstractVector{<:Real
     )
     Cylinder(radius, orientation[sym], offset)
 end
+
+Cylinder(;radius=1., orientation=[0., 0, 1], position=[0., 0, 0]) = Cylinder(radius, orientation, position)
 
 function detect_collision(movement :: Movement, cylinder :: Cylinder, origin::PosVector)
     select(a) = SA[a[1], a[2]]

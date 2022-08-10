@@ -11,6 +11,7 @@ end
 Wall(offset :: Float) = offset == 0 ? Wall() : Transformed(Wall(), CoordinateTransformations.Translation(offset, 0., 0.))
 
 isinside(pos::PosVector, wall::Wall) = false
+BoundingBox(wall::Wall) = BoundingBox([0, -Inf, -Inf], [0, Inf, Inf])
 
 
 function Wall(normal :: PosVector, offset :: Float)
