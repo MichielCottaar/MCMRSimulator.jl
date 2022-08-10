@@ -38,9 +38,8 @@ function Cylinder(radius :: Real, sym :: Symbol, offset :: AbstractVector{<:Real
 end
 
 function detect_collision(movement :: Movement, cylinder :: Cylinder, origin::PosVector)
-    o = SA[movement.origin[1], movement.origin[2], 0.]
-    d = SA[movement.destination[1], movement.destination[2], 0.]
-    sphere_collision(o, d, cylinder.radius, SA[origin[1], origin[2], 0.])
+    select(a) = SA[a[1], a[2]]
+    sphere_collision(select(movement.origin), select(movement.destination), cylinder.radius, select(origin))
 end
 
 

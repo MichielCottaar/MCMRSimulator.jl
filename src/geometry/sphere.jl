@@ -22,17 +22,15 @@ isinside(pos::PosVector, sphere::Sphere) = norm(pos) <= sphere.radius
 
 detect_collision(movement :: Movement, sphere :: Sphere, origin::PosVector) = sphere_collision(movement.origin, movement.destination, sphere.radius, origin)
 
-function sphere_collision(origin :: PosVector, destination :: PosVector, radius :: Float, start::PosVector)
+function sphere_collision(origin :: SVector{N, Float}, destination :: SVector{N, Float}, radius :: Float, start::SVector{N, Float}) where {N}
     # terms for quadratic equation for where distance squared equals radius squared d^2 = a s^2 + b s + c == radius ^ 2
-    if (
-        (origin[1] > radius && destination[1] > radius) ||
-        (origin[1] < -radius && destination[1] < -radius) ||
-        (origin[2] > radius && destination[2] > radius) ||
-        (origin[2] < -radius && destination[2] < -radius) ||
-        (origin[3] > radius && destination[3] > radius) ||
-        (origin[3] < -radius && destination[3] < -radius)
-    )
-        return nothing
+    for dim in 1:N
+        if (
+            (origin[dim] > radius && destination[dim] > radius) ||
+            (origin[dim] < -radius && destination[dim] < -radius)
+        )
+            return nothing
+        end
     end
     inside = norm(start) < radius
     diff = destination - origin
@@ -52,6 +50,9 @@ function sphere_collision(origin :: PosVector, destination :: PosVector, radius 
         return nothing
     end
     point_hit = solution * destination + (1 - solution) * origin
+    if N == 2
+        point_hit = SA[point_hit[1], point_hit[2], 0.]
+    end
     return Collision(
         solution,
         inside ? -point_hit : point_hit
