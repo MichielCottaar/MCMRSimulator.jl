@@ -162,7 +162,7 @@ function mesh_grid_intersection(shape::GridShape, vertices::Vector{PosVector}, t
     grid
 end
 
-function detect_collision(movement::Movement, mesh::Mesh, original_pos::PosVector)
+function detect_collision(movement::Movement, mesh::Mesh, previous::Union{Nothing, Collision}=nothing)
     collision = nothing
     checked = Set()
     within_bounds = false
@@ -180,14 +180,12 @@ function detect_collision(movement::Movement, mesh::Mesh, original_pos::PosVecto
             end
             push!(checked, to_check)
 
-            indices = mesh.triangles[to_check]
-            triangle = (
-                mesh.vertices[indices[1]],
-                mesh.vertices[indices[2]],
-                mesh.vertices[indices[3]],
+            tri_solution = detect_collision(movement, mesh, to_check)
+            if (
+                !isnothing(tri_solution) && 
+                (isnothing(previous) || (previous.obstruction !== mesh) || (previous.index != tri_solution.index)) &&
+                (isnothing(collision) || tri_solution.distance < collision.distance)
             )
-            tri_solution = detect_collision(movement, triangle, mesh.normals[to_check], mesh.dist_planes[to_check])
-            if !isnothing(tri_solution) && (isnothing(collision) || tri_solution.distance < collision.distance)
                 collision = tri_solution
             end
         end
@@ -198,7 +196,16 @@ function detect_collision(movement::Movement, mesh::Mesh, original_pos::PosVecto
     return nothing
 end
 
-function detect_collision(movement::Movement, triangle::NTuple{3, PosVector}, normal::PosVector, dist_plane::Float)
+function detect_collision(movement::Movement, mesh::Mesh, to_check::Int)
+    indices = mesh.triangles[to_check]
+    triangle = (
+        mesh.vertices[indices[1]],
+        mesh.vertices[indices[2]],
+        mesh.vertices[indices[3]],
+    )
+    normal = mesh.normals[to_check]
+    dist_plane = mesh.dist_planes[to_check]
+
     dist_orig = normal ⋅ movement.origin
     dist_dest = normal ⋅ movement.destination
     if dist_orig ≈ dist_dest
@@ -224,5 +231,5 @@ function detect_collision(movement::Movement, triangle::NTuple{3, PosVector}, no
             return nothing  # intersect point is on the wrong side of this edge and hence not in the triangle
         end
     end
-    return Collision(time, dist_dest > dist_orig ? -normal : normal)
+    return Collision(time, dist_dest > dist_orig ? -normal : normal, mesh, to_check)
 end
