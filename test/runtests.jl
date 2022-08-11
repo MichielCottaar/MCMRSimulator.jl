@@ -7,6 +7,7 @@ import Random
 
 
 @testset "MRSimulator tests" begin
+    include("test_meshes.jl")
     include("test_field.jl")
     include("test_collisions.jl")
     include("test_evolve.jl")

@@ -35,7 +35,7 @@ function project end
 
 include("bounding_box.jl")
 include("diffuse.jl")
-include("ray_grid_intersections.jl")
+include("grid.jl")
 include("repeat.jl")
 include("transform.jl")
 include("wall.jl")
