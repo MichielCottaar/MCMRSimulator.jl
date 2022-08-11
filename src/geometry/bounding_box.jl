@@ -45,3 +45,13 @@ corners(bb::BoundingBox) = [
 
 isinside(pos::PosVector, bb::BoundingBox) = all(pos .>= bb.lower) && all(pos .<= bb.upper)
 
+"""
+    expand(bb::BoundingBox, ratio=1.)
+
+Expand or shrink the [`BoundingBox`](@ref) so that it grows/shrinks by `ratio` along each dimension.
+"""
+function expand(bb::BoundingBox, ratio=1.)
+    sz = bb.upper - bb.lower
+    shift = (sz .* ratio .- 1.) .* 0.5
+    BoundingBox(bb.lower - shift, bb.upper + shift)
+end
