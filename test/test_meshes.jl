@@ -58,12 +58,12 @@
         @testset "Bounce on outside of box" begin
             mesh = mr.box_mesh()
             res = mr.correct_collisions(
-                mr.Movement(SA_F64[0, 0, 1], SA_F64[0, 0, -1], 2),
+                mr.Movement(SA_F64[0.1, 0.1, 1], SA_F64[0.1, 0.1, -1], 2),
                 mesh
             )
             compare(res, [
-                mr.Movement(SA_F64[0, 0, 1], SA_F64[0, 0, 0.5], 0.5)
-                mr.Movement(SA_F64[0, 0, 0.5], SA_F64[0, 0, 2], 1.5)
+                mr.Movement(SA_F64[0.1, 0.1, 1], SA_F64[0.1, 0.1, 0.5], 0.5)
+                mr.Movement(SA_F64[0.1, 0.1, 0.5], SA_F64[0.1, 0.1, 2], 1.5)
             ])
         end
         @testset "Miss the box" begin

@@ -40,9 +40,10 @@ end
 
 Cylinder(;radius=1., orientation=[0., 0, 1], position=[0., 0, 0]) = Cylinder(radius, orientation, position)
 
-function detect_collision(movement :: Movement, cylinder :: Cylinder, origin::PosVector)
+function detect_collision(movement :: Movement, cylinder :: Cylinder, previous)
     select(a) = SA[a[1], a[2]]
-    sphere_collision(select(movement.origin), select(movement.destination), cylinder.radius, select(origin))
+    inside = isnothing(previous) || previous.obstruction != cylinder ? -1 : previous.index
+    sphere_collision(select(movement.origin), select(movement.destination), cylinder, inside)
 end
 
 

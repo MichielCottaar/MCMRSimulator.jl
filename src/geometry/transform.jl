@@ -18,7 +18,7 @@ struct Transformed{N, O, T <: CoordinateTransformations.Transformation} <: Obstr
     end
 end
 
-function detect_collision(movement :: Movement, transform :: Transformed, origin::PosVector) 
+function detect_collision(movement :: Movement, transform :: Transformed, previous) 
     c = detect_collision(
         Movement(
             transform.inverse(movement.origin),
@@ -26,7 +26,7 @@ function detect_collision(movement :: Movement, transform :: Transformed, origin
             movement.timestep,
         ),
         transform.obstrucations,
-        project(origin, transform)
+        previous
     )
     if isnothing(c)
         return c
@@ -34,6 +34,8 @@ function detect_collision(movement :: Movement, transform :: Transformed, origin
     Collision(
         c.distance,
         transform.transform(c.normal) .- transform.transform(zero(PosVector)),
+        c.obstruction,
+        c.index
     )
 end
 

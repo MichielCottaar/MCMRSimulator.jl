@@ -26,7 +26,7 @@ function BoundingBox(repeat::Repeated)
     )
 end
 
-function detect_collision(movement :: Movement, repeat :: Repeated, start::PosVector)
+function detect_collision(movement :: Movement, repeat :: Repeated, previous)
     origin = movement.origin ./ repeat.repeats .+ 0.5
     destination = movement.destination ./ repeat.repeats .+ 0.5
     for (_, t1, p1, t2, p2) in ray_grid_intersections(origin, destination)
@@ -36,12 +36,14 @@ function detect_collision(movement :: Movement, repeat :: Repeated, start::PosVe
         c = detect_collision(
             Movement(pos1, pos2, 1.),
             repeat.obstructions,
-            project(start, repeat)
+            previous
         )
         if !isnothing(c)
             return Collision(
                 c.distance * (t2 - t1) + t1,
                 c.normal,
+                c.obstruction,
+                c.index
             )
         end
     end

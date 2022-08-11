@@ -37,15 +37,13 @@ draw_step(diffusivity :: Float, timestep :: Float) = sqrt(2. * timestep * diffus
 draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float) = current_pos .+ draw_step(diffusivity, timestep)
 draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: Obstructions{0}) = draw_step(current_pos, diffusivity, timestep)
 function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: Obstructions)
-    original_position = current_pos
     new_pos = draw_step(current_pos, diffusivity, timestep)
     displacement = norm(new_pos .- current_pos)
+    collision = detect_collision(
+        Movement(current_pos, new_pos, 1.),
+        geometry
+    )
     for _ in 1:1000
-        collision = detect_collision(
-            Movement(current_pos, new_pos, 1.),
-            geometry,
-            original_position
-        )
         if isnothing(collision)
             return new_pos
         end
@@ -53,6 +51,11 @@ function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: F
         direction = random_on_sphere()
         displacement = (1 - collision.distance) * displacement
         new_pos = current_pos .+ (sign(direction ⋅ collision.normal) * displacement) .* direction
+        collision = detect_collision(
+            Movement(current_pos, new_pos, 1.),
+            geometry,
+            collision
+        )
     end
     error("Bounced single particle for 1000 times in single step; terminating!")
 end
@@ -70,9 +73,8 @@ correct_collisions(to_try :: Movement, geometry :: AbstractVector{<:Obstruction}
 
 function correct_collisions(to_try :: Movement, geometry :: Obstructions)
     steps = Movement[]
-    start = to_try.origin
+    collision = detect_collision(to_try, geometry)
     while true
-        collision = detect_collision(to_try, geometry, start)
         if isnothing(collision) || collision.distance > 1
             push!(steps, to_try)
             break
@@ -94,6 +96,7 @@ function correct_collisions(to_try :: Movement, geometry :: Obstructions)
             new_dest,
             (1 - collision.distance) * to_try.timestep
         )
+        collision = detect_collision(to_try, geometry, collision)
     end
     steps
 end
@@ -111,7 +114,9 @@ A detected collision along the movement.
 struct Collision
     distance :: Float
     normal :: PosVector
-    Collision(distance, normal) = new(distance * (1. - eps(Float)^0.75), normal)
+    obstruction :: Obstruction
+    index :: Int
+    Collision(distance, normal, obstruction, index=0) = new(prevfloat(distance), normal, obstruction, index)
 end
 
 
@@ -122,13 +127,13 @@ Returns a [`Collision`](@ref) object if the given `movement` crosses any obstruc
 The first collision is always returned.
 If no collision is detected, `nothing` will be returned
 """
-detect_collision(movement :: Movement, obstructions :: Obstructions{0}, origin::PosVector) = nothing
-detect_collision(movement :: Movement, obstructions :: Obstructions{1}, origin::PosVector) = detect_collision(movement, obstructions[1], origin)
+detect_collision(movement :: Movement, obstructions :: Obstructions{0}, previous=nothing) = nothing
+detect_collision(movement :: Movement, obstructions :: Obstructions{1}, previous=nothing) = detect_collision(movement, obstructions[1], previous)
 
-function detect_collision(movement :: Movement, obstructions :: Obstructions, origin::PosVector)
+function detect_collision(movement :: Movement, obstructions :: Obstructions, previous=nothing)
     collision = nothing
     for o in obstructions
-        c_new = detect_collision(movement, o, origin)
+        c_new = detect_collision(movement, o, previous)
         if !isnothing(c_new) && (isnothing(collision) || c_new.distance < collision.distance)
             collision = c_new
         end

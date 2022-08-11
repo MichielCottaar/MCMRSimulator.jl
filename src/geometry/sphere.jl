@@ -22,10 +22,13 @@ Sphere(;radius=1., position=[0, 0, 0]) = Sphere(radius, position)
 isinside(pos::PosVector, sphere::Sphere) = norm(pos) <= sphere.radius
 BoundingBox(s::Sphere) = BoundingBox([-s.radius, -s.radius, -s.radius], [s.radius, s.radius, s.radius])
 
-detect_collision(movement :: Movement, sphere :: Sphere, origin::PosVector) = sphere_collision(movement.origin, movement.destination, sphere.radius, origin)
+function detect_collision(movement :: Movement, sphere :: Sphere, previous) 
+    inside = isnothing(previous) || previous.obstruction != sphere ? -1 : previous.index
+    sphere_collision(movement.origin, movement.destination, sphere, inside)
+end
 
-function sphere_collision(origin :: SVector{N, Float}, destination :: SVector{N, Float}, radius :: Float, start::SVector{N, Float}) where {N}
-    # terms for quadratic equation for where distance squared equals radius squared d^2 = a s^2 + b s + c == radius ^ 2
+function sphere_collision(origin :: SVector{N, Float}, destination :: SVector{N, Float}, obstruction::Obstruction, inside_index::Int) where {N}
+    radius = obstruction.radius
     for dim in 1:N
         if (
             (origin[dim] > radius && destination[dim] > radius) ||
@@ -34,8 +37,10 @@ function sphere_collision(origin :: SVector{N, Float}, destination :: SVector{N,
             return nothing
         end
     end
-    inside = norm(start) < radius
+    inside = inside_index == -1 ? norm(origin) < radius : Bool(inside_index)
     diff = destination - origin
+
+    # terms for quadratic equation for where distance squared equals radius squared d^2 = a s^2 + b s + c == radius ^ 2
     a = sum(diff .* diff)
     b = sum(2 .* origin .* diff)
     c = sum(origin .* origin)
@@ -57,6 +62,8 @@ function sphere_collision(origin :: SVector{N, Float}, destination :: SVector{N,
     end
     return Collision(
         solution,
-        inside ? -point_hit : point_hit
+        inside ? -point_hit : point_hit,
+        obstruction,
+        Int(inside)
     )
 end

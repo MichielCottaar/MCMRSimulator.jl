@@ -34,7 +34,7 @@ function Wall(sym :: Symbol, offset :: Float)
     Wall(direction[sym], offset)
 end
 
-function detect_collision(movement :: Movement, wall :: Wall, origin::PosVector)
+function detect_collision(movement :: Movement, wall :: Wall, previous)
     origin = movement.origin[1]
     destination = movement.destination[1]
     if origin * destination >= 0
@@ -44,6 +44,7 @@ function detect_collision(movement :: Movement, wall :: Wall, origin::PosVector)
     Collision(
         abs(origin) / total_length,
         origin < 0 ? SA[-1, 0, 0] : SA[1, 0, 0],
+        wall
     )
 end
 
