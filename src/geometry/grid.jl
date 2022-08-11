@@ -25,7 +25,7 @@ function Base.iterate(rgi::RayGridIntersections, state::Tuple{PosVector, Float, 
         return nothing
     end
     within_voxel = prev_pos - current_voxel
-    all_next_hits = map((d, w) -> (d > 0 ? 1. - w : w) / abs(d), rgi.direction, within_voxel)
+    all_next_hits = map((d, w) -> iszero(d) ? Inf : (d > 0 ? 1. - w : w) / abs(d), rgi.direction, within_voxel)
     dimension = argmin(all_next_hits)
     time_to_hit = all_next_hits[dimension]
     next_time = prev_time + time_to_hit

@@ -3,20 +3,22 @@
 
 An [`Obstruction`](@ref) formed from a triangular mesh.
 """
-struct Mesh
+struct Mesh <: Obstruction
     vertices :: Vector{PosVector}
     triangles :: Vector{SVector{3, Int}}
     normals :: Vector{PosVector}
+    dist_planes :: Vector{Float}
     shape :: GridShape
     grid :: Array{Vector{Int}, 3}
-    function Mesh(vertices, triangles, grid_size=100)
+    function Mesh(vertices, triangles, grid_size=20)
         vertices = map(PosVector, vertices)
         triangles = map(SVector{3, Int}, triangles)
         normals = map(t -> normal(vertices[t[1]], vertices[t[2]], vertices[t[3]]), triangles)
+        dist_planes = map((n, t) -> n ⋅ vertices[t[1]], normals, triangles)
         bounding_box = expand(BoundingBox(min.(vertices...), max.(vertices...)), 1.001)
         shape = GridShape(bounding_box, grid_size)
         grid = mesh_grid_intersection(shape, vertices, triangles)
-        new(vertices, triangles, normals, shape, grid)
+        new(vertices, triangles, normals, dist_planes, shape, grid)
     end
 end
 
@@ -39,7 +41,7 @@ function box_mesh(;center=SA[0, 0, 0], size=[1, 1, 1], grid_size=100)
         [2, 3, 4],
         # +z layer
         [5, 6, 7],
-        [5, 7, 8],
+        [6, 7, 8],
         # -x layer
         [1, 7, 5],
         [1, 3, 7],
@@ -47,10 +49,10 @@ function box_mesh(;center=SA[0, 0, 0], size=[1, 1, 1], grid_size=100)
         [2, 8, 6],
         [2, 4, 8],
         # -y layer
-        [1, 2, 5],
+        [1, 2, 6],
         [1, 5, 6],
         # +y layer
-        [3, 4, 7],
+        [3, 4, 8],
         [3, 7, 8],
     ]
     c2 = center .- (size .* 0.5)
@@ -116,7 +118,7 @@ function mesh_grid_intersection(shape::GridShape, vertices::Vector{PosVector}, t
         dims = (
             (1, 2, 3),
             (2, 3, 1),
-            (3, 2, 1),
+            (3, 1, 2),
         )
 
         # check overlap along the other lines
@@ -145,6 +147,12 @@ function mesh_grid_intersection(shape::GridShape, vertices::Vector{PosVector}, t
                 if cube_upper < lower || cube_lower > upper
                     hit[index] = false
                 end
+                if (index == CartesianIndex(69, 37, 100)) && (store_index == 3) && false
+                    println(project_onto)
+                    println(lower, ", ", upper)
+                    println(cube_lower, ", ", cube_upper)
+                    println(hit[index])
+                end
             end
         end
         for index in findall(hit)
@@ -152,4 +160,69 @@ function mesh_grid_intersection(shape::GridShape, vertices::Vector{PosVector}, t
         end
     end
     grid
+end
+
+function detect_collision(movement::Movement, mesh::Mesh, original_pos::PosVector)
+    collision = nothing
+    checked = Set()
+    within_bounds = false
+    for (voxel, _, _, grid_time, _) in ray_grid_intersections(GridShape(mesh), movement.origin, movement.destination)
+        if any(voxel .< 1) || any(voxel .> size(mesh.grid))
+            if within_bounds
+                return nothing  # was within bounds, but left it, so we will never return
+            end
+            continue
+        end
+        within_bounds = true
+        for to_check in mesh.grid[voxel...]
+            if to_check in checked
+                continue
+            end
+            push!(checked, to_check)
+
+            indices = mesh.triangles[to_check]
+            triangle = (
+                mesh.vertices[indices[1]],
+                mesh.vertices[indices[2]],
+                mesh.vertices[indices[3]],
+            )
+            tri_solution = detect_collision(movement, triangle, mesh.normals[to_check], mesh.dist_planes[to_check])
+            if !isnothing(tri_solution) && (isnothing(collision) || tri_solution.distance < collision.distance)
+                collision = tri_solution
+            end
+        end
+        if !isnothing(collision) && collision.distance <= grid_time
+            return collision
+        end
+    end
+    return nothing
+end
+
+function detect_collision(movement::Movement, triangle::NTuple{3, PosVector}, normal::PosVector, dist_plane::Float)
+    dist_orig = normal ⋅ movement.origin
+    dist_dest = normal ⋅ movement.destination
+    if dist_orig ≈ dist_dest
+        return nothing
+    end
+    time = (dist_plane - dist_orig) / (dist_dest - dist_orig)
+    if time < 0 || time > 1
+        return nothing
+    end
+
+    intersect_point = time .* movement.destination .+ (1 .- time) .* movement.origin
+
+    dist_plane = normal ⋅ triangle[1]  # distance from origin along normal
+    for (dim, d1) in (
+            (1, 2),
+            (2, 3),
+            (3, 1),
+        )
+        edge = triangle[d1] - triangle[dim]
+        to_point = intersect_point - triangle[dim]
+        along_normal = cross(edge, to_point)
+        if (along_normal ⋅ normal) < 0
+            return nothing  # intersect point is on the wrong side of this edge and hence not in the triangle
+        end
+    end
+    return Collision(time, dist_dest > dist_orig ? -normal : normal)
 end

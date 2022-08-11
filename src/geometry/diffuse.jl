@@ -83,6 +83,9 @@ function correct_collisions(to_try :: Movement, geometry :: Obstructions)
             new_pos,
             collision.distance * to_try.timestep
         ))
+        if length(steps) >= 100
+            error()
+        end
         direction = to_try.destination .- to_try.origin
         reflection = - 2 * (collision.normal ⋅ direction) * collision.normal / norm(collision.normal) ^ 2 .+ direction
         new_dest = new_pos .+ reflection / norm(reflection) * norm(direction) * (1 - collision.distance)
