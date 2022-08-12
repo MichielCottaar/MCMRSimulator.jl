@@ -190,7 +190,7 @@ function detect_collision(movement::Movement, mesh::Mesh{N}, previous::Union{Not
             end
         end
         if !isnothing(collision) && collision.distance <= grid_time
-            return collision
+            return collision::Collision{Mesh{N}}
         end
     end
     return nothing
