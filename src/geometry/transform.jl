@@ -5,14 +5,14 @@ Underlying `obstructions` are linearly transformed (e.g., rotated or shifted) us
 
 """
 struct Transformed{N, O, T <: CoordinateTransformations.Transformation} <: Obstruction
-    obstrucations :: Obstructions{N, O}
+    obstructions :: Obstructions{N, O}
     transform :: T
     inverse :: T
-    function Transformed(obstrucations, transform :: CoordinateTransformations.Transformation)
-        if isa(obstrucations, Transformed)
-            return Transformed(obstrucations.obstrucations, transform ∘ obstrucations.transform )
+    function Transformed(obstructions, transform :: CoordinateTransformations.Transformation)
+        if isa(obstructions, Transformed)
+            return Transformed(obstructions.obstructions, transform ∘ obstructions.transform )
         else
-            o = isa(obstrucations, Obstruction) ? SVector{1}([obstrucations]) : SVector{length(obstrucations)}(obstrucations)
+            o = isa(obstructions, Obstruction) ? SVector{1}([obstructions]) : SVector{length(obstructions)}(obstructions)
             return new{length(o), eltype(o), typeof(transform)}(o, transform, inv(transform))
         end
     end
@@ -25,7 +25,7 @@ function detect_collision(movement :: Movement, transform :: Transformed, previo
             transform.inverse(movement.destination),
             movement.timestep,
         ),
-        transform.obstrucations,
+        transform.obstructions,
         previous
     )
     if c === empty_collision
@@ -40,9 +40,9 @@ function detect_collision(movement :: Movement, transform :: Transformed, previo
 end
 
 project(pos::PosVector, trans::Transformed) = trans.inverse(pos)
-isinside(pos::PosVector, trans::Transformed) = isinside(project(pos, trans), trans.obstrucations)
+isinside(pos::PosVector, trans::Transformed) = isinside(project(pos, trans), trans.obstructions)
 function BoundingBox(trans::Transformed)
-    input_corners = corners(BoundingBox(trans.obstrucations))
+    input_corners = corners(BoundingBox(trans.obstructions))
     transformed_corners = map(trans.transform, input_corners)
     BoundingBox(min.(transformed_corners...), max.(transformed_corners...))
 end
