@@ -5,7 +5,7 @@ outer = mr.Cylinder(0.9)
 inner = mr.Cylinder(0.8)
 geometry = mr.Repeated([inner, outer], [2., 2., Inf])
 
-mb = mr.Repeated(mr.box_mesh(grid_size=3), [1.5, 1.5, 1.5])
+mb = mr.Repeated(mr.box_mesh(grid_size=10), [1.5, 1.5, 1.5])
 
 # Build spin echo diffusion-weighted sequence with perfect pulses and instantaneous gradients
 TR = 200.
