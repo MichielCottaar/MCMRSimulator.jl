@@ -164,7 +164,7 @@ end
 
 function detect_collision(movement::Movement, mesh::Mesh, previous::Union{Nothing, Collision}=nothing)
     collision = nothing
-    checked = Set()
+    checked = fill(false, size(mesh.triangles)...)
     within_bounds = false
     for (voxel, _, _, grid_time, _) in ray_grid_intersections(GridShape(mesh), movement.origin, movement.destination)
         if any(voxel .< 1) || any(voxel .> size(mesh.grid))
@@ -175,10 +175,10 @@ function detect_collision(movement::Movement, mesh::Mesh, previous::Union{Nothin
         end
         within_bounds = true
         for to_check in mesh.grid[voxel...]
-            if to_check in checked
+            if checked[to_check]
                 continue
             end
-            push!(checked, to_check)
+            checked[to_check] = true
 
             tri_solution = detect_collision(movement, mesh, to_check)
             if (
