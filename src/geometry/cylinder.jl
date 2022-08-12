@@ -6,7 +6,8 @@ The orientation of the cylinder (default: z-direction) can be given as a symbol 
 """
 struct Cylinder <: Obstruction
     radius :: Float
-    Cylinder(radius) = new(Float(radius))
+    id :: UUID
+    Cylinder(radius) = new(Float(radius), uuid1())
 end
 
 isinside(pos::PosVector, cyl::Cylinder) = (pos[1] * pos[1] + pos[2] * pos[2]) <= (cyl.radius * cyl.radius)
@@ -40,9 +41,9 @@ end
 
 Cylinder(;radius=1., orientation=[0., 0, 1], position=[0., 0, 0]) = Cylinder(radius, orientation, position)
 
-function detect_collision(movement :: Movement, cylinder :: Cylinder, previous)
+function detect_collision(movement :: Movement, cylinder :: Cylinder, previous=empty_collision)
     select(a) = SA[a[1], a[2]]
-    inside = isnothing(previous) || previous.obstruction != cylinder ? -1 : previous.index
+    inside = previous.id != cylinder.id ? -1 : previous.index
     sphere_collision(select(movement.origin), select(movement.destination), cylinder, inside)
 end
 

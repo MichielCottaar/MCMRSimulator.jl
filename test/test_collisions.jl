@@ -183,10 +183,12 @@
             geometry = SVector{1}(mr.Repeated([cylinder, c2], [2., 2., Inf]))
             position = SA_F64[200., 200., 0.]
             @test mr.isinside(position, geometry)
+            inside = true
             for _ in 1:100
                 position = mr.draw_step(position, 3., 0.5, geometry)
-                @test mr.isinside(position, geometry)
+                inside &= mr.isinside(position, geometry)
             end
+            @test inside
         end
     end
     @testset "Ray-grid intersections with undefined grid" begin

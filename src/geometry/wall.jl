@@ -6,6 +6,8 @@ The normal can also be defined using :x, :y, or :z, to point in that cardinal di
 The offset of the wall from the origin along this `normal` is given by `offset` (so that `offset .* normal` is on the wall).
 """
 struct Wall <: Obstruction
+    id :: UUID
+    Wall() = new(uuid1())
 end
 
 Wall(offset :: Float) = offset == 0 ? Wall() : Transformed(Wall(), CoordinateTransformations.Translation(offset, 0., 0.))
@@ -34,17 +36,17 @@ function Wall(sym :: Symbol, offset :: Float)
     Wall(direction[sym], offset)
 end
 
-function detect_collision(movement :: Movement, wall :: Wall, previous)
+function detect_collision(movement :: Movement, wall :: Wall, previous=empty_collision)
     origin = movement.origin[1]
     destination = movement.destination[1]
     if origin * destination >= 0
-        return nothing
+        return empty_collision
     end
     total_length = abs(origin - destination)
     Collision(
         abs(origin) / total_length,
         origin < 0 ? SA[-1, 0, 0] : SA[1, 0, 0],
-        wall
+        wall.id
     )
 end
 

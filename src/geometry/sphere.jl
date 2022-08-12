@@ -5,7 +5,8 @@ Creates a hollow sphere with a radius of `radius` micrometer (default 1 micromet
 """
 struct Sphere <: Obstruction
     radius :: Float
-    Sphere(radius) = new(Float(radius))
+    id :: UUID
+    Sphere(radius) = new(Float(radius), uuid1())
 end
 
 function Sphere(radius :: Real, location :: AbstractVector)
@@ -22,8 +23,8 @@ Sphere(;radius=1., position=[0, 0, 0]) = Sphere(radius, position)
 isinside(pos::PosVector, sphere::Sphere) = norm(pos) <= sphere.radius
 BoundingBox(s::Sphere) = BoundingBox([-s.radius, -s.radius, -s.radius], [s.radius, s.radius, s.radius])
 
-function detect_collision(movement :: Movement, sphere :: Sphere, previous) 
-    inside = isnothing(previous) || previous.obstruction != sphere ? -1 : previous.index
+function detect_collision(movement :: Movement, sphere :: Sphere, previous=empty_collision) 
+    inside = previous.id != sphere.id ? -1 : previous.index
     sphere_collision(movement.origin, movement.destination, sphere, inside)
 end
 
@@ -34,7 +35,7 @@ function sphere_collision(origin :: SVector{N, Float}, destination :: SVector{N,
             (origin[dim] > radius && destination[dim] > radius) ||
             (origin[dim] < -radius && destination[dim] < -radius)
         )
-            return nothing
+            return empty_collision
         end
     end
     inside = inside_index == -1 ? norm(origin) < radius : Bool(inside_index)
@@ -46,7 +47,7 @@ function sphere_collision(origin :: SVector{N, Float}, destination :: SVector{N,
     c = sum(origin .* origin)
     determinant = b ^ 2 - 4 * a * (c - radius ^ 2)
     if determinant < 0
-        return nothing
+        return empty_collision
     end
     sd = sqrt(determinant)
     ai = inv(a)
@@ -54,7 +55,7 @@ function sphere_collision(origin :: SVector{N, Float}, destination :: SVector{N,
     # first try solution with lower s
     solution = (inside ? (-b + sd) : (-b - sd)) * 0.5 * ai
     if solution > 1 || solution <= 0
-        return nothing
+        return empty_collision
     end
     point_hit = solution * destination + (1 - solution) * origin
     if N == 2
@@ -63,7 +64,7 @@ function sphere_collision(origin :: SVector{N, Float}, destination :: SVector{N,
     return Collision(
         solution,
         inside ? -point_hit : point_hit,
-        obstruction,
-        Int(inside)
+        obstruction.id,
+        index=Int(inside)
     )
 end
