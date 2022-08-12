@@ -24,20 +24,7 @@ function Base.iterate(rgi::RayGridIntersections, state::Tuple{PosVector, Float, 
     if prev_time >= 1.
         return nothing
     end
-    time_to_hit = Float(Inf)
-    dimension = 0
-    for dim in 1:3
-        within_voxel = prev_pos[dim] - current_voxel[dim]
-        d = rgi.direction[dim]
-        if iszero(d)
-            continue
-        end
-        next_hit = (d > 0. ? 1. - within_voxel : within_voxel) / abs(d)
-        if next_hit > time_to_hit
-            time_to_hit = next_hit
-            global dimension = dim
-        end
-    end
+    time_to_hit::Float, dimension::Int = next_hit(prev_pos, current_voxel, rgi.direction)
     next_time = prev_time + time_to_hit
     if next_time > 1.
         return (
@@ -53,6 +40,24 @@ function Base.iterate(rgi::RayGridIntersections, state::Tuple{PosVector, Float, 
         (next_pos, next_time, next_voxel)
     )
     return res
+end
+
+function next_hit(prev_pos::PosVector, current_voxel::SVector{3, Int}, direction::PosVector)
+    time_to_hit = Float(Inf)
+    dimension = 0
+    for dim in 1:3
+        within_voxel = prev_pos[dim] - current_voxel[dim]
+        d = direction[dim]
+        if iszero(d)
+            continue
+        end
+        next_hit = (d > 0. ? 1. - within_voxel : within_voxel) / abs(d)
+        if next_hit < time_to_hit
+            time_to_hit = next_hit
+            dimension = dim
+        end
+    end
+    return time_to_hit, dimension
 end
 
 Base.length(rgi::RayGridIntersections) = sum(abs.(Int.(floor.(rgi.destination)) .- Int.(floor.(rgi.origin)))) + 1
