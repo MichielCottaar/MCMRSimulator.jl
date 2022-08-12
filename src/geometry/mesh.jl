@@ -217,7 +217,7 @@ function detect_collision(movement::Movement, mesh::Mesh, to_check::Int)
         return empty_collision
     end
 
-    intersect_point = time .* movement.destination .+ (1 .- time) .* movement.origin
+    intersect_point = @. time * movement.destination + (1 - time) * movement.origin
 
     dist_plane = normal ⋅ triangle[1]  # distance from origin along normal
     for (dim, d1) in (
