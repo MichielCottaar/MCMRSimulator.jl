@@ -111,12 +111,12 @@ A detected collision along the movement.
 - `distance`: number between 0 and 1 indicating the distance of the collision from the origin (0) to the destination point (1)
 - `normal`: normal of the obstruction at the collision site. To get correct reflection the normal should point in the direction of the incoming particle.
 """
-struct Collision
+struct Collision{T<:Obstruction}
     distance :: Float
     normal :: PosVector
-    obstruction :: Obstruction
+    obstruction :: T
     index :: Int
-    Collision(distance, normal, obstruction, index=0) = new(prevfloat(distance), normal, obstruction, index)
+    Collision(distance, normal, obstruction, index=0) = new{typeof(obstruction)}(prevfloat(distance), normal, obstruction, index)
 end
 
 
