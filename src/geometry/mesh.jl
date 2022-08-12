@@ -11,6 +11,7 @@ struct Mesh{N} <: Obstruction
     shape :: GridShape
     grid :: Array{Vector{Int}, 3}
     id :: UUID
+    empty_vector :: Vector{Int}
     function Mesh(vertices, triangles, grid_size=20)
         vertices = map(PosVector, vertices)
         triangles = map(SVector{3, Int}, triangles)
@@ -19,7 +20,7 @@ struct Mesh{N} <: Obstruction
         bounding_box = expand(BoundingBox(min.(vertices...), max.(vertices...)), 1.001)
         shape = GridShape(bounding_box, grid_size)
         grid = mesh_grid_intersection(shape, vertices, triangles)
-        new{length(triangles)}(vertices, triangles, normals, dist_planes, shape, grid, uuid1())
+        new{length(triangles)}(vertices, triangles, normals, dist_planes, shape, grid, uuid1(), Int[])
     end
 end
 
@@ -165,8 +166,8 @@ end
 
 function detect_collision(movement::Movement, mesh::Mesh{N}, previous=empty_collision) where {N}
     collision = empty_collision
-    checked = fill(false, N)
     within_bounds = false
+    prev_check = mesh.empty_vector
     for (voxel, _, _, grid_time, _) in ray_grid_intersections(GridShape(mesh), movement.origin, movement.destination)
         if any(voxel .< 1) || any(voxel .> size(mesh.grid))
             if within_bounds
@@ -175,12 +176,11 @@ function detect_collision(movement::Movement, mesh::Mesh{N}, previous=empty_coll
             continue
         end
         within_bounds = true
-        for to_check in mesh.grid[voxel...]
-            if checked[to_check]
+        will_check = mesh.grid[voxel...]
+        for to_check in will_check
+            if to_check in prev_check
                 continue
             end
-            checked[to_check] = true
-
             tri_solution = detect_collision(movement, mesh, to_check)
             if (
                 (tri_solution.distance < collision.distance) &&
@@ -192,6 +192,7 @@ function detect_collision(movement::Movement, mesh::Mesh{N}, previous=empty_coll
         if collision.distance <= grid_time
             return collision
         end
+        prev_check = will_check
     end
     return empty_collision
 end
