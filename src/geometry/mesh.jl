@@ -22,7 +22,7 @@ struct Mesh <: Obstruction
     end
 end
 
-function box_mesh(;center=SA[0, 0, 0], size=[1, 1, 1], grid_size=100)
+function box_mesh(;center=SA[0, 0, 0], size=[1, 1, 1], grid_size=10)
     center = PosVector(center)
     size = PosVector(size)
     vertices = [
