@@ -209,7 +209,7 @@ function detect_collision(movement::Movement, mesh::Mesh, to_check::Int)
 
     dist_orig = normal ⋅ movement.origin
     dist_dest = normal ⋅ movement.destination
-    if dist_orig ≈ dist_dest
+    if abs(dist_orig - dist_dest) < 1e-8
         return empty_collision
     end
     time = (dist_plane - dist_orig) / (dist_dest - dist_orig)
