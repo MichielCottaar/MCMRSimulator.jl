@@ -3,7 +3,7 @@
 
 An [`Obstruction`](@ref) formed from a triangular mesh.
 """
-struct Mesh <: Obstruction
+struct Mesh{N} <: Obstruction
     vertices :: Vector{PosVector}
     triangles :: Vector{SVector{3, Int}}
     normals :: Vector{PosVector}
@@ -18,7 +18,7 @@ struct Mesh <: Obstruction
         bounding_box = expand(BoundingBox(min.(vertices...), max.(vertices...)), 1.001)
         shape = GridShape(bounding_box, grid_size)
         grid = mesh_grid_intersection(shape, vertices, triangles)
-        new(vertices, triangles, normals, dist_planes, shape, grid)
+        new{length(triangles)}(vertices, triangles, normals, dist_planes, shape, grid)
     end
 end
 
@@ -162,9 +162,9 @@ function mesh_grid_intersection(shape::GridShape, vertices::Vector{PosVector}, t
     grid
 end
 
-function detect_collision(movement::Movement, mesh::Mesh, previous::Union{Nothing, Collision}=nothing)
+function detect_collision(movement::Movement, mesh::Mesh{N}, previous::Union{Nothing, Collision}=nothing) where {N}
     collision = nothing
-    checked = fill(false, size(mesh.triangles)...)
+    checked = fill(false, N)
     within_bounds = false
     for (voxel, _, _, grid_time, _) in ray_grid_intersections(GridShape(mesh), movement.origin, movement.destination)
         if any(voxel .< 1) || any(voxel .> size(mesh.grid))
