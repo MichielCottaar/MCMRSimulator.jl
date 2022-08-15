@@ -2,6 +2,7 @@ struct RayGridIntersections
     origin :: PosVector
     destination :: PosVector
     direction :: PosVector
+    abs_inv_direction :: PosVector
 end
 
 """
@@ -16,7 +17,10 @@ The returned object is an iterator returning a tuple with:
 - Float with the time the ray left the voxel (0=`origin`, 1=`destination`)
 - 3-length vector with position within voxel that the ray left (i.e., numbers between 0 and 1)
 """
-ray_grid_intersections(origin :: PosVector, destination :: PosVector) = RayGridIntersections(origin, destination, destination - origin)
+function ray_grid_intersections(origin :: PosVector, destination :: PosVector) 
+    direction = destination - origin
+    RayGridIntersections(origin, destination, direction, map(d -> 1/abs(d), direction))
+end
 
 Base.iterate(rgi::RayGridIntersections) = Base.iterate(rgi, (rgi.origin, zero(Float), map(o -> Int(floor(o)), rgi.origin)))
 function Base.iterate(rgi::RayGridIntersections, state::Tuple{PosVector, Float, SVector{3, Int}})
@@ -24,7 +28,7 @@ function Base.iterate(rgi::RayGridIntersections, state::Tuple{PosVector, Float, 
     if prev_time >= 1.
         return nothing
     end
-    time_to_hit::Float, dimension::Int = next_hit(prev_pos, current_voxel, rgi.direction)
+    time_to_hit::Float, dimension::Int = next_hit(prev_pos, current_voxel, rgi.direction, rgi.abs_inv_direction)
     next_time = prev_time + time_to_hit
     if next_time > 1.
         return (
@@ -32,7 +36,7 @@ function Base.iterate(rgi::RayGridIntersections, state::Tuple{PosVector, Float, 
             (rgi.destination, next_time, current_voxel)
         )
     end
-    ddim = Int(sign(rgi.direction[dimension]))
+    ddim = rgi.direction[dimension] > 0 ? 1 : -1
     next_voxel = map((i, v) -> i == dimension ? v + ddim : v, 1:3, current_voxel)
     next_pos = rgi.origin .+ (rgi.direction .* next_time)
     res = (
@@ -42,7 +46,7 @@ function Base.iterate(rgi::RayGridIntersections, state::Tuple{PosVector, Float, 
     return res
 end
 
-function next_hit(prev_pos::PosVector, current_voxel::SVector{3, Int}, direction::PosVector)
+function next_hit(prev_pos::PosVector, current_voxel::SVector{3, Int}, direction::PosVector, abs_inv_direction::PosVector)
     time_to_hit = Float(Inf)
     dimension = 0
     for dim in 1:3
@@ -51,7 +55,7 @@ function next_hit(prev_pos::PosVector, current_voxel::SVector{3, Int}, direction
         if iszero(d)
             continue
         end
-        next_hit = (d > 0. ? 1. - within_voxel : within_voxel) / abs(d)
+        next_hit = (d > 0. ? 1. - within_voxel : within_voxel) * abs_inv_direction[dim]
         if next_hit < time_to_hit
             time_to_hit = next_hit
             dimension = dim
