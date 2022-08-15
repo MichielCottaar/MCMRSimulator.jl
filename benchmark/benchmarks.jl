@@ -12,9 +12,9 @@ geometries = (
 )
 
 
-suite = BenchmarkGroup()
-suite["no diffusion"] = @benchmarkable append!(mr.Simulation(span, [sequence], diffusivity=0.), sequence.TR)
-suite["Repeating spheres"] = @benchmarkable append!(mr.Simulation(span, [sequence], diffusivity=3., geometry=$geometries[1]), sequence.TR)
-suite["Repeating cylinders"] = @benchmarkable append!(mr.Simulation(span, [sequence], diffusivity=3., geometry=$geometries[2]), sequence.TR)
-suite["Repeating walls"] = @benchmarkable append!(mr.Simulation(span, [sequence], diffusivity=3., geometry=$geometries[3]), sequence.TR)
-suite["Repeating mesh boxes"] = @benchmarkable append!(mr.Simulation(span, [sequence], diffusivity=3., geometry=$geometries[4]), sequence.TR)
+SUITE = BenchmarkGroup()
+SUITE["no diffusion"] = @benchmarkable append!(mr.Simulation(span, [sequence], diffusivity=0.), sequence.TR)
+SUITE["Repeating spheres"] = @benchmarkable append!(mr.Simulation(span, [sequence], diffusivity=3., geometry=$geometries[1]), sequence.TR)
+SUITE["Repeating cylinders"] = @benchmarkable append!(mr.Simulation(span, [sequence], diffusivity=3., geometry=$geometries[2]), sequence.TR)
+SUITE["Repeating walls"] = @benchmarkable append!(mr.Simulation(span, [sequence], diffusivity=3., geometry=$geometries[3]), sequence.TR)
+SUITE["Repeating mesh boxes"] = @benchmarkable append!(mr.Simulation(span, [sequence], diffusivity=3., geometry=$geometries[4]), sequence.TR)
