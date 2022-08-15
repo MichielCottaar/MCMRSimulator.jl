@@ -85,7 +85,7 @@ function Base.append!(simulation::Simulation{N}, delta_time::Real) where {N}
     while true
         next = argmin(times)
         next_time::Float = times[next]
-        for idx in 1:nspins
+        Threads.@threads for idx in 1:nspins
             spins[idx] = evolve_to_time(spins[idx], current_time, next_time, simulation.micro, simulation.timestep, B0_field)
         end
         current_time = next_time
