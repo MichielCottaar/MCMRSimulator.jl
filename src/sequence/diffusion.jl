@@ -74,7 +74,7 @@ function perfect_dwi(;
     bval=nothing,
     diffusion_time=nothing,
     qval=nothing,
-    orientation=SVector{3, Float}([0., 0., 1.]),
+    orientation=SVector{3, Float}([1., 0., 0.]),
 )
     (qval, diffusion_time) = derive_qval_time(bval, diffusion_time, qval, TE)
     @assert diffusion_time < TE
