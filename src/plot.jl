@@ -22,8 +22,8 @@ Creates a visual representation of a [`Sequence`](@ref) diagram.
 """
 function Makie.plot!(sp::SequencePlot)
     seq = sp[1]
-    times = @lift [p.time for p in $seq.pulses]
-    flip_angle = @lift [rad2deg(p.flip_angle) for p in $seq.pulses]
+    times = @lift [p.time for p in $seq.pulses if isa(p, RFPulse)]
+    flip_angle = @lift [rad2deg(p.flip_angle) for p in $seq.pulses if isa(p, RFPulse)]
     as_zero = @lift $flip_angle * 0
     max_angle = @lift maximum($flip_angle)
 
