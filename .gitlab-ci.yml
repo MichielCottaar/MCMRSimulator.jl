@@ -9,6 +9,8 @@ cache:
 
 .script:
   script:
+    - apt-get update
+    - apt-get install xvfb-run
     - |
       xvfb-run julia --project=@. -e '
         using Pkg
