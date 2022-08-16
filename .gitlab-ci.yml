@@ -1,5 +1,6 @@
 variables:
   JULIA_DEPOT_PATH: "$CI_PROJECT_DIR/.julia"
+  CI: "true"
 
 
 cache:

@@ -10,6 +10,6 @@ function plot_perfect_dwi(fname)
     CairoMakie.save(fname, f)
 end
 
-@visualtest plot_perfect_dwi "$dir/perfect_dwi.png"
+@visualtest plot_perfect_dwi "$dir/perfect_dwi.png" !isCI
 
 end
