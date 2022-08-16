@@ -33,6 +33,9 @@ struct Microstructure{F1 <: Field, F2 <: Field, F3 <: Field, F4 <: Field, G <: O
         diffusivity = field(diffusivity)
         off_resonance = field(off_resonance)
         geometry = SVector{length(geometry)}(geometry)
+        if isa(diffusivity, ZeroField) && length(geometry) > 0
+            @warn "Restrictive geometry will have no effect, because the diffusivity is set at zero"
+        end
         new{typeof(off_resonance), typeof(R2), typeof(R1), typeof(diffusivity), typeof(geometry)}(
             off_resonance, R2, R1, diffusivity, geometry)
     end
