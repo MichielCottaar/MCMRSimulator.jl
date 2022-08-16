@@ -48,12 +48,16 @@ function evolve_to_time(
 
     while new_time > (current_time + timestep)
         # Take full timesteps for a while
-        position = draw_step(position, micro.diffusivity(position), timestep, micro.geometry)
+        if !isa(micro.diffusivity, ZeroField)
+            position = draw_step(position, micro.diffusivity(position), timestep, micro.geometry)
+        end
         proc!(orient, position, timestep)
         current_time += timestep
     end
 
-    position = draw_step(position, micro.diffusivity(position), timestep, micro.geometry)
+    if !isa(micro.diffusivity, ZeroField)
+        position = draw_step(position, micro.diffusivity(position), timestep, micro.geometry)
+    end
     proc!(orient, position, new_time - current_time)
 
     # Restore random number state
