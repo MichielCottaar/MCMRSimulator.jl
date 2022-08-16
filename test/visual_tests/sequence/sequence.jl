@@ -1,6 +1,7 @@
 @testset "Sequence plots" begin
 
 dir = @__DIR__
+isCI = get(ENV, "CI", "false") == "true"
 
 function plot_perfect_dwi(fname)
     sequence = mr.perfect_dwi(bval=2.)
