@@ -276,5 +276,21 @@
                 @test switched == 0
             end
         end
+        @testset "Test that we remain between two walls" begin
+            Random.seed!(1234)
+            walls = [
+                mr.Wall(),
+                mr.Wall(1.)
+            ]
+            snap = mr.Snapshot([mr.Spin(position=rand(3)) for _ in 1:3000])
+            sequence = mr.perfect_dwi(bval=2.)
+            simulation = mr.Simulation(snap, [sequence]; geometry=walls, diffusivity=3.);
+
+            append!(simulation, 200.);
+            final = simulation.latest[end]
+            xfinal = [s.position[1] for s in final.spins]
+            @test all(xfinal .>= 0.)
+            @test all(xfinal .<= 1.)
+        end
     end
 end

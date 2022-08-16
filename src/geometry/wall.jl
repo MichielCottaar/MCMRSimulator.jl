@@ -37,6 +37,9 @@ function Wall(sym :: Symbol, offset :: Float)
 end
 
 function detect_collision(movement :: Movement, wall :: Wall, previous=empty_collision)
+    if previous.id == wall.id
+        return empty_collision
+    end
     origin = movement.origin[1]
     destination = movement.destination[1]
     if origin * destination >= 0
