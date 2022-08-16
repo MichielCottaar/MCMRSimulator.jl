@@ -69,7 +69,7 @@ benchmark-version:
     - apt-get install -y git
     - VERSION=`julia -e "using TOML; println(TOML.parsefile(\"Project.toml\")[\"version\"])"`
     - git fetch origin v${VERSION}
-    - julia benchmark/run_benchmarks.jl origin/v${VERSION}
+    - julia benchmark/run_benchmarks.jl v${VERSION}
   only:
     - main
 
