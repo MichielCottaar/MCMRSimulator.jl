@@ -1,5 +1,7 @@
 using Pkg
 Pkg.activate(@__DIR__)
+Pkg.develop(PackageSpec(path=pwd()))
+Pkg.instantiate()
 
 using PkgBenchmark
 branch_or_commit = nothing
@@ -22,12 +24,3 @@ else
 end
 
 export_markdown(stdout, result)
-
-
-out = isnothing(branch_or_commit) ? "master" : string(branch_or_commit)
-
-config = BenchmarkConfig(id = out,
-                         juliacmd = `julia -O3 --project=.`,
-                         env = Dict("JULIA_NUM_THREADS" => 1,
-                                    "OMP_NUM_THREADS" => Sys.CPU_THREADS,
-                                    "MKL_NUM_THREADS" => Sys.CPU_THREADS))
