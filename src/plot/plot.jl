@@ -1,4 +1,4 @@
-import Makie: Makie, @lift
+import Makie: Makie, @lift, on
 
 """
     color(orient::SpinOrientation; saturation=1.)

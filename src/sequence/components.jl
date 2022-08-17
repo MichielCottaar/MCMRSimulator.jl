@@ -1,6 +1,7 @@
 # defining the sequence
 "A single component of a longer MR [`Sequence`](@ref)."
 abstract type SequenceComponent end
+Base.time(pulse::SequenceComponent) = pulse.time
 
 """
     RFPulse(;time=0., flip_angle=0., phase=0.)
@@ -37,7 +38,6 @@ phase(pulse :: RFPulse) = rad2deg(pulse.phase)
 Returns the flip angle of the RF pulse in degrees
 """
 flip_angle(pulse :: RFPulse) = rad2deg(pulse.flip_angle)
-Base.time(pulse :: RFPulse) = pulse.time
 
 """
     apply(sequence_component, spin_orientation[, position])
@@ -93,6 +93,7 @@ struct InstantGradient <: SequenceComponent
 end
 
 InstantGradient(; qvec::AbstractVector=[0., 0., 0.], q_origin=0., time :: Real=0.) = InstantGradient(SVector{3}(qvec), q_origin, time)
+qval(pulse::InstantGradient) = norm(pulse.qvec)
 
 function apply(pulse :: InstantGradient, orient :: SpinOrientation, pos::PosVector)
     adjustment = (pos ⋅ pulse.qvec) + pulse.q_origin
