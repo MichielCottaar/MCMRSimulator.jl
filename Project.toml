@@ -18,7 +18,10 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 julia = "1.7"
 
 [extras]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+Gtk = "4c0ca9eb-093a-5379-98c5-f87ac0bbbf44"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+VisualRegressionTests = "34922c18-7c2a-561c-bac1-01e79b2c4c92"
 
 [targets]
-test = ["Test"]
+test = ["CairoMakie", "Gtk", "Test", "VisualRegressionTests"]
