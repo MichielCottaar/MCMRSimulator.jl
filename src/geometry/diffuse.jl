@@ -5,6 +5,8 @@ struct Movement
     timestep :: Float
 end
 
+Movement(origin::AbstractArray, destination::AbstractArray, timestep::Real) = Movement(PosVector(origin), PosVector(destination), Float(timestep))
+
 """
     random_on_sphere()
 
@@ -15,9 +17,9 @@ The angle in the x-y plane is drawn as a random number between 0 and 2π.
 This results in an unbiased random distribution across the sphere.
 """
 function random_on_sphere()
-    z = rand() * 2. - 1.
-    r = sqrt(1. - z*z)
-    theta = rand() * 2 * π
+    z = rand(Float) * Float(2.) - one(Float)
+    r = sqrt(1 - z*z)
+    theta = rand(Float) * Float(2 * π)
     (s, c) = sincos(theta)
     return SA[
         r * s,
@@ -33,7 +35,7 @@ Draws the next location of the particle after `timestep` with given `diffusivity
 If provided, this displacement will take into account the obstructions in `geometry`.
 If the `current_pos` is not provided only the displacement is returned (will only work for empty `geometry`).
 """
-draw_step(diffusivity :: Float, timestep :: Float) = sqrt(2. * timestep * diffusivity) * @SVector randn(3)
+draw_step(diffusivity :: Float, timestep :: Float) = sqrt(Float(2.) * timestep * diffusivity) * @SVector randn(Float, 3)
 draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float) = current_pos .+ draw_step(diffusivity, timestep)
 draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: Obstructions{0}) = draw_step(current_pos, diffusivity, timestep)
 function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: Obstructions)
@@ -42,7 +44,7 @@ function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: F
     collision = empty_collision
     for _ in 1:1000
         collision = detect_collision(
-            Movement(current_pos, new_pos, 1.),
+            Movement(current_pos, new_pos, one(Float)),
             geometry,
             collision
         )

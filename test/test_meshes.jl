@@ -50,44 +50,44 @@
         function compare(ms1 :: AbstractVector{<:mr.Movement}, ms2 :: AbstractVector{<:mr.Movement})
             @test length(ms1) == length(ms2)
             for (m1, m2) in zip(ms1, ms2)
-                @test m1.origin ≈ m2.origin atol=1e-9 rtol=1e-6
-                @test m1.destination ≈ m2.destination atol=1e-9 rtol=1e-6
-                @test m1.timestep ≈ m2.timestep atol=1e-9 rtol=1e-6
+                @test m1.origin ≈ m2.origin atol=1e-4 rtol=1e-3
+                @test m1.destination ≈ m2.destination atol=1e-4 rtol=1e-3
+                @test m1.timestep ≈ m2.timestep atol=1e-4 rtol=1e-3
             end
         end
         @testset "Bounce on outside of box" begin
             mesh = mr.box_mesh()
             res = mr.correct_collisions(
-                mr.Movement(SA_F64[0.1, 0.1, 1], SA_F64[0.1, 0.1, -1], 2),
+                mr.Movement(SA[0.1, 0.1, 1], SA[0.1, 0.1, -1], 2),
                 mesh
             )
             compare(res, [
-                mr.Movement(SA_F64[0.1, 0.1, 1], SA_F64[0.1, 0.1, 0.5], 0.5)
-                mr.Movement(SA_F64[0.1, 0.1, 0.5], SA_F64[0.1, 0.1, 2], 1.5)
+                mr.Movement(SA[0.1, 0.1, 1], SA[0.1, 0.1, 0.5], 0.5)
+                mr.Movement(SA[0.1, 0.1, 0.5], SA[0.1, 0.1, 2], 1.5)
             ])
         end
         @testset "Miss the box" begin
             mesh = mr.box_mesh()
             res = mr.correct_collisions(
-                mr.Movement(SA_F64[0, 0, 1.1], SA_F64[0, 1.1, 0], 2),
+                mr.Movement(SA[0, 0, 1.1], SA[0, 1.1, 0], 2),
                 mesh
             )
             compare(res, [
-                mr.Movement(SA_F64[0, 0, 1.1], SA_F64[0, 1.1, 0], 2)
+                mr.Movement(SA[0, 0, 1.1], SA[0, 1.1, 0], 2)
             ])
         end
         @testset "Straight bounce within the box" begin
             mesh = mr.box_mesh()
             res = mr.correct_collisions(
-                mr.Movement(SA_F64[0, 0, 0], SA_F64[0, 0, 4], 4),
+                mr.Movement(SA[0, 0, 0], SA[0, 0, 4], 4),
                 mesh
             )
             compare(res, [
-                mr.Movement(SA_F64[0, 0, 0], SA_F64[0, 0, 0.5], 0.5),
-                mr.Movement(SA_F64[0, 0, 0.5], SA_F64[0, 0, -0.5], 1),
-                mr.Movement(SA_F64[0, 0, -0.5], SA_F64[0, 0, 0.5], 1),
-                mr.Movement(SA_F64[0, 0, 0.5], SA_F64[0, 0, -0.5], 1),
-                mr.Movement(SA_F64[0, 0, -0.5], SA_F64[0, 0, 0], 0.5),
+                mr.Movement(SA[0, 0, 0], SA[0, 0, 0.5], 0.5),
+                mr.Movement(SA[0, 0, 0.5], SA[0, 0, -0.5], 1),
+                mr.Movement(SA[0, 0, -0.5], SA[0, 0, 0.5], 1),
+                mr.Movement(SA[0, 0, 0.5], SA[0, 0, -0.5], 1),
+                mr.Movement(SA[0, 0, -0.5], SA[0, 0, 0], 0.5),
             ])
         end
     end
