@@ -10,13 +10,15 @@ struct Wall <: Obstruction
     Wall() = new(uuid1())
 end
 
-Wall(offset :: Float) = offset == 0 ? Wall() : Transformed(Wall(), CoordinateTransformations.Translation(offset, 0., 0.))
+Wall(offset :: Real) = iszero(offset) ? Wall() : Transformed(Wall(), CoordinateTransformations.Translation(Float(offset), zero(Float), zero(Float)))
 
 isinside(pos::PosVector, wall::Wall) = false
-BoundingBox(wall::Wall) = BoundingBox([0, -Inf, -Inf], [0, Inf, Inf])
+BoundingBox(wall::Wall) = BoundingBox(SA[0, -Inf, -Inf], SA[0, Inf, Inf])
 
 
-function Wall(normal :: PosVector, offset :: Float)
+function Wall(normal :: AbstractVector, offset :: Real)
+    normal = PosVector(normal)
+    offset = Float(offset)
     n = normal ./ norm(normal)
     shifted = Wall(offset * norm(normal))
     if isapprox(n, SA[1, 0, 0], atol=1e-10)
@@ -27,7 +29,7 @@ function Wall(normal :: PosVector, offset :: Float)
     Transformed(shifted, CoordinateTransformations.LinearMap(Rotations.AngleAxis(rot_angle, rot_axis...)))
 end
 
-function Wall(sym :: Symbol, offset :: Float)
+function Wall(sym :: Symbol, offset :: Real)
     direction = Dict(
         :x => SA[1., 0., 0.],
         :y => SA[0., 1., 0.],

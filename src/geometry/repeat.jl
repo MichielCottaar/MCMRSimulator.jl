@@ -27,15 +27,15 @@ function BoundingBox(repeat::Repeated)
 end
 
 function detect_collision(movement :: Movement, repeat :: Repeated, previous=empty_collision)
-    fdiv(p, r) = p / r + 0.5
+    fdiv(p, r) = p / r + Float(0.5)
     origin = map(fdiv, movement.origin, repeat.repeats)
     destination = map(fdiv, movement.destination, repeat.repeats)
     for (_, t1, p1, t2, p2) in ray_grid_intersections(origin, destination)
-        f(r, p, p_orig) = isfinite(r) ? r * (p - 0.5) : p_orig
+        f(r, p, p_orig) = isfinite(r) ? r * (p - Float(0.5)) : p_orig
         pos1 = f.(repeat.repeats, p1, (movement.destination .* t1) .+ (movement.origin .* (1 - t1)))
         pos2 = f.(repeat.repeats, p2, (movement.destination .* t2) .+ (movement.origin .* (1 - t2)))
         c = detect_collision(
-            Movement(pos1, pos2, 1.),
+            Movement(pos1, pos2, Float(1.)),
             repeat.obstructions,
             previous
         )

@@ -14,8 +14,8 @@ and relaxation of the MR spin orientation.
 It is used internally when evolving [`Simulation`](@ref) objects.
 """
 function evolve_to_time(
-    spin::MultiSpin{N}, current_time::Real, new_time::Real,
-    micro::Microstructure, timestep::Real, B0::SVector{N, <:Real}
+    spin::MultiSpin{N}, current_time::Float, new_time::Float,
+    micro::Microstructure, timestep::Float, B0::SVector{N, Float}
 ) where {N}
     if current_time > new_time
         throw(DomainError("Spins cannot travel backwards in time"))
@@ -24,7 +24,7 @@ function evolve_to_time(
         return spin
     end
     index = div(current_time, timestep, RoundNearest)
-    time_left = ((0.5 + index) * timestep) - current_time
+    time_left = ((Float(0.5) + index) * timestep) - current_time
     orient = MVector{N, SpinOrientation}(spin.orientations)
 
     function proc!(orient, pos, dt, micro=micro, B0=B0) 
@@ -39,8 +39,8 @@ function evolve_to_time(
         return MultiSpin(spin.position, SVector{N, SpinOrientation}(orient), spin.rng)
     end
     proc!(orient, spin.position, time_left)
-    current_time = (index + 0.5) * timestep
-    position = spin.position
+    current_time = (index + Float(0.5)) * timestep
+    position::PosVector = spin.position
 
     # We need to move, so get random number generator from spin object
     old_rng_state = copy(Random.TaskLocalRNG())

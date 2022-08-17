@@ -19,7 +19,7 @@ The returned object is an iterator returning a tuple with:
 """
 function ray_grid_intersections(origin :: PosVector, destination :: PosVector) 
     direction = destination - origin
-    RayGridIntersections(origin, destination, direction, map(d -> 1/abs(d), direction))
+    RayGridIntersections(origin, destination, direction, map(d -> Float(1/abs(d)), direction))
 end
 
 Base.iterate(rgi::RayGridIntersections) = Base.iterate(rgi, (rgi.origin, zero(Float), map(o -> Int(floor(o)), rgi.origin)))
@@ -89,7 +89,7 @@ struct GridShape
         size = SVector{3, Int}(size)
         voxel_size = (bounding_box.upper .- bounding_box.lower) ./ size
         @assert all(isfinite.(voxel_size) .|| isone.(size))
-        inverse_voxel_size = 1. ./ voxel_size
+        inverse_voxel_size = one(Float) ./ voxel_size
         new(bounding_box, size, voxel_size, inverse_voxel_size)
     end
 end
@@ -99,7 +99,7 @@ Base.size(g::GridShape) = tuple(g.size)
 isinside(pos::PosVector, g::GridShape) = isinside(pos, BoundingBox(g))
 function project(pos::PosVector, g::GridShape)
     bb = BoundingBox(g)
-    map((p, l, is) -> iszero(is) ? 1.5 : is * (p - l) + 1, pos, bb.lower, g.inverse_voxel_size)
+    map((p, l, is) -> iszero(is) ? Float(1.5) : is * (p - l) + one(Float), pos, bb.lower, g.inverse_voxel_size)
 end
 
 

@@ -88,17 +88,17 @@ end
 
 
 function PlotPlane(
-    normal :: AbstractVector{<:Real}=SA_F64[0, 0, 1], 
-    position :: AbstractVector{<:Real}=SA_F64[0, 0, 0];
+    normal :: AbstractVector{<:Real}=SA[0, 0, 1], 
+    position :: AbstractVector{<:Real}=SA[0, 0, 0];
     sizex::Real=Inf, sizey::Real=Inf,
     ngrid=100,
 )
     normal = SVector{3}(normal)
     position = SVector{3}(position)
-    if normal ≈ SA_F64[0, 0, 1]
+    if normal ≈ SA[0, 0, 1]
         transform = CoordinateTransformations.Translation(position)
     else
-        rot_axis = cross(SA_F64[0, 0, 1], normal)
+        rot_axis = cross(SA[0, 0, 1], normal)
         rot_angle = acos(normal[3] / norm(normal))
         transform = CoordinateTransformations.AffineMap(
             Rotations.AngleAxis(rot_angle, rot_axis...),

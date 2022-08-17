@@ -53,7 +53,7 @@ function sphere_collision(origin :: SVector{N, Float}, destination :: SVector{N,
     ai = inv(a)
 
     # first try solution with lower s
-    solution = (inside ? (-b + sd) : (-b - sd)) * 0.5 * ai
+    solution = (inside ? (-b + sd) : (-b - sd)) * Float(0.5) * ai
     if solution > 1 || solution <= 0
         return empty_collision
     end
