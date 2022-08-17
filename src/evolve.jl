@@ -1,5 +1,5 @@
 function evolve_to_time(
-    spin::MultiSpin{N}, current_time::Float, new_time::Float,
+    spin::Spin{N}, current_time::Float, new_time::Float,
     micro::Microstructure, timestep::Float=1., B0::Float=3.
 ) where {N}
     evolve_to_time(spin, current_time, new_time, micro, timestep, SVector{N, Float}(repeat([B0], N)))
@@ -14,7 +14,7 @@ and relaxation of the MR spin orientation.
 It is used internally when evolving [`Simulation`](@ref) objects.
 """
 function evolve_to_time(
-    spin::MultiSpin{N}, current_time::Float, new_time::Float,
+    spin::Spin{N}, current_time::Float, new_time::Float,
     micro::Microstructure, timestep::Float, B0::SVector{N, Float}
 ) where {N}
     if current_time > new_time
@@ -36,7 +36,7 @@ function evolve_to_time(
     if time_left > (new_time - current_time)
         # spin does not get to move at all
         proc!(orient, spin.position, new_time-current_time)
-        return MultiSpin(spin.position, SVector{N, SpinOrientation}(orient), spin.rng)
+        return Spin(spin.position, SVector{N, SpinOrientation}(orient), spin.rng)
     end
     proc!(orient, spin.position, time_left)
     current_time = (index + Float(0.5)) * timestep
@@ -63,7 +63,7 @@ function evolve_to_time(
     # Restore random number state
     final_rng_state = FixedXoshiro(copy(Random.TaskLocalRNG()))
     copy!(Random.TaskLocalRNG(), old_rng_state)
-    MultiSpin(position, SVector{N, SpinOrientation}(orient), final_rng_state)
+    Spin(position, SVector{N, SpinOrientation}(orient), final_rng_state)
 end
 
 """
@@ -76,7 +76,7 @@ function Base.append!(simulation::Simulation{N}, delta_time::Real) where {N}
     if delta_time < 0
         return simulation
     end
-    spins::Vector{MultiSpin{N}} = copy(simulation.latest[end].spins)
+    spins::Vector{Spin{N}} = copy(simulation.latest[end].spins)
     current_time::Float = simulation.latest[end].time
     new_time = current_time + delta_time
     sequence_index = MVector{N, Int}(
@@ -94,11 +94,11 @@ function Base.append!(simulation::Simulation{N}, delta_time::Real) where {N}
         end
         current_time = next_time
         if times[1] == current_time
-            push!(simulation.latest, MultiSnapshot(spins, current_time))
+            push!(simulation.latest, Snapshot(spins, current_time))
             break
         end
         if times[2] == current_time
-            push!(simulation.regular, MultiSnapshot(copy(spins), current_time))
+            push!(simulation.regular, Snapshot(copy(spins), current_time))
             times[2] += simulation.store_every
         end
         if any(t -> t == current_time, times[3:end])

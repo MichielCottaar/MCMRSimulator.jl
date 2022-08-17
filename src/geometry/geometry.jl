@@ -14,8 +14,8 @@ const Obstructions{N, T} = SVector{N, T} where {T <: Obstruction}
 Test whether the particles are inside any of the [`Obstrunctions`](@ref) (or in the [`BoundingBox`](@ref)).
 """
 isinside(pos::Vector, o) = isinside(PosVector(pos), o)
-isinside(spin::Union{Spin, MultiSpin}, o) = isinside(position(spin), o)
-isinside(snapshot::Union{Snapshot, MultiSnapshot}, o) = map(s -> isinside(s, o), snapshot.spins)
+isinside(spin::Spin, o) = isinside(position(spin), o)
+isinside(snapshot::Snapshot, o) = map(s -> isinside(s, o), snapshot.spins)
 isinside(pos::PosVector, obstructions::Obstructions) = any(o -> isinside(pos, o), obstructions)
 
 

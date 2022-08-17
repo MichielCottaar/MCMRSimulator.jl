@@ -56,9 +56,9 @@ function project(pp::PlotPlane, pos::PosVector)
     mod.(base .+ correct, (sizex, sizey, Inf)) .- correct
 end
 
-project(pp::PlotPlane, spin::Union{Spin, MultiSpin}) = project(pp, mr.position(spin))
+project(pp::PlotPlane, spin::Spin) = project(pp, mr.position(spin))
 
-function project(pp::PlotPlane, snap::Union{Snapshot, MultiSnapshot})
+function project(pp::PlotPlane, snap::Snapshot)
     Snapshot(
         [Spin(project(pp, s), s.orientation) for s in snap.spins],
         snap.time

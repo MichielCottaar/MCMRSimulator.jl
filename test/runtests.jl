@@ -6,14 +6,14 @@ using LinearAlgebra
 import Random
 
 @testset "MRSimulator tests" begin
-    include("visual_tests/run_visual_tests.jl")
+    #include("visual_tests/run_visual_tests.jl")
     include("test_meshes.jl")
     include("test_field.jl")
     include("test_collisions.jl")
     include("test_evolve.jl")
     include("test_known_sequences.jl")
     @testset "Simple relaxation" begin
-        orient = mr.Spin(transverse=1., longitudinal=0.).orientation
+        orient = mr.Spin(transverse=1., longitudinal=0.).orientations[1]
         pos = zero(SVector{3, Float})
         @testset "R2 relaxation" begin
             env = mr.Microstructure(R2=mr.field(2.))(pos)
@@ -26,22 +26,22 @@ import Random
     end
     @testset "Spin conversions" begin
         vec = SA[1, 0, 0]
-        @test mr.vector2spin(vec).longitudinal ≈ 0.
-        @test mr.vector2spin(vec).transverse ≈ 1.
-        @test mr.phase(mr.vector2spin(vec)) ≈ 0.
-        @test mr.vector(mr.vector2spin(vec)) ≈ vec
+        @test mr.SpinOrientation(vec).longitudinal ≈ 0.
+        @test mr.SpinOrientation(vec).transverse ≈ 1.
+        @test mr.phase(mr.SpinOrientation(vec)) ≈ 0.
+        @test mr.orientation(mr.SpinOrientation(vec)) ≈ vec
 
         vec = SA[0, 1, 1]
-        @test mr.vector2spin(vec).longitudinal ≈ 1.
-        @test mr.vector2spin(vec).transverse ≈ 1.
-        @test mr.phase(mr.vector2spin(vec)) ≈ 90.
-        @test mr.vector(mr.vector2spin(vec)) ≈ vec
+        @test mr.SpinOrientation(vec).longitudinal ≈ 1.
+        @test mr.SpinOrientation(vec).transverse ≈ 1.
+        @test mr.phase(mr.SpinOrientation(vec)) ≈ 90.
+        @test mr.orientation(mr.SpinOrientation(vec)) ≈ vec
 
         vec = SA[1, 1, 2]
-        @test mr.vector2spin(vec).longitudinal ≈ 2.
-        @test mr.vector2spin(vec).transverse ≈ sqrt(2)
-        @test mr.phase(mr.vector2spin(vec)) ≈ 45.
-        @test mr.vector(mr.vector2spin(vec)) ≈ vec
+        @test mr.SpinOrientation(vec).longitudinal ≈ 2.
+        @test mr.SpinOrientation(vec).transverse ≈ sqrt(2)
+        @test mr.phase(mr.SpinOrientation(vec)) ≈ 45.
+        @test mr.orientation(mr.SpinOrientation(vec)) ≈ vec
     end
     @testset "Apply Sequence components" begin
         @testset "0 degree flip angle pulses should do nothing" begin
@@ -49,7 +49,7 @@ import Random
                 pulse = mr.RFPulse(0., 0., pulse_phase)
                 for spin_phase in (-90, -45, 0., 30., 90., 170, 22.123789)
                     spin = mr.Spin(phase=spin_phase, transverse=1.)
-                    spin = mr.apply(pulse, spin.orientation)
+                    spin = mr.apply(pulse, spin)
                     @test mr.phase(spin) ≈ spin_phase
                     @test mr.longitudinal(spin) ≈ 1.
                     @test mr.transverse(spin) ≈ 1.
@@ -61,7 +61,7 @@ import Random
                 pulse = mr.RFPulse(0., 180., pulse_phase)
                 spin = mr.Spin()
                 @test mr.longitudinal(spin) == 1.
-                spin = mr.apply(pulse, spin.orientation)
+                spin = mr.apply(pulse, spin)
                 @test mr.longitudinal(spin) ≈ -1.
             end
         end
@@ -70,7 +70,7 @@ import Random
                 pulse = mr.RFPulse(0., 90., pulse_phase)
                 spin = mr.Spin()
                 @test mr.longitudinal(spin) == 1.
-                spin = mr.apply(pulse, spin.orientation)
+                spin = mr.apply(pulse, spin)
                 @test mr.longitudinal(spin) ≈ 0. atol=1e-7
             end
         end
@@ -80,7 +80,7 @@ import Random
                     pulse = mr.RFPulse(0., flip_angle, pulse_phase)
 
                     spin = mr.Spin(longitudinal=0., transverse=1., phase=pulse_phase)
-                    spin = mr.apply(pulse, spin.orientation)
+                    spin = mr.apply(pulse, spin)
                     @test mr.longitudinal(spin) ≈ zero(Float) atol=1e-7
                     @test mr.transverse(spin) ≈ one(Float)
                     @test mr.phase(spin) ≈ Float(pulse_phase)
@@ -92,7 +92,7 @@ import Random
                 pulse = mr.RFPulse(0., 180, 0.)
 
                 spin = mr.Spin(longitudinal=0., transverse=1., phase=spin_phase)
-                spin = mr.apply(pulse, spin.orientation)
+                spin = mr.apply(pulse, spin)
                 @test mr.longitudinal(spin) ≈ 0. atol=1e-7
                 @test mr.transverse(spin) ≈ 1.
                 @test mr.phase(spin) ≈ -spin_phase
@@ -101,7 +101,7 @@ import Random
                 pulse = mr.RFPulse(0., 180, pulse_phase)
 
                 spin = mr.Spin(longitudinal=0., transverse=1., phase=0.)
-                spin = mr.apply(pulse, spin.orientation)
+                spin = mr.apply(pulse, spin)
                 @test mr.longitudinal(spin) ≈ 0. atol=1e-7
                 @test mr.transverse(spin) ≈ 1.
                 @test mr.phase(spin) ≈ 2 * pulse_phase
@@ -110,7 +110,7 @@ import Random
         @testset "90 pulses flips longitudinal spin into transverse plane" begin
             for pulse_phase in (0., 22., 30., 80.)
                 pulse = mr.RFPulse(0., 90, pulse_phase)
-                spin = mr.apply(pulse, mr.Spin().orientation)
+                spin = mr.apply(pulse, mr.Spin())
                 @test mr.longitudinal(spin) ≈ 0. atol=1e-7
                 @test mr.transverse(spin) ≈ 1.
                 @test mr.phase(spin) ≈ pulse_phase + 90
@@ -121,7 +121,7 @@ import Random
                 pulse = mr.RFPulse(0., 90, pulse_phase)
                 spin_phase = (pulse_phase + 90)
                 spin = mr.Spin(longitudinal=0., transverse=1., phase=spin_phase)
-                spin = mr.apply(pulse, spin.orientation)
+                spin = mr.apply(pulse, spin)
                 @test mr.longitudinal(spin) ≈ -1.
                 @test mr.transverse(spin) ≈ 0. atol=1e-7
             end

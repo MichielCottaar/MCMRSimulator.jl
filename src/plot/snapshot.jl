@@ -18,7 +18,7 @@ function Makie.plot!(sp::SnapshotPlot)
     sp
 end
 
-Makie.plottype(::Union{MultiSnapshot, Snapshot}) = SnapshotPlot
+Makie.plottype(::Snapshot) = SnapshotPlot
 
 
 @Makie.recipe(SnapshotPlanarPlot, snap, plane) do scene
@@ -57,4 +57,4 @@ function Makie.plot!(sp::SnapshotPlanarPlot)
     sp
 end
 
-Makie.plottype(::Union{MultiSnapshot, Snapshot}, ::PlotPlane) = SnapshotPlanarPlot
+Makie.plottype(::Snapshot, ::PlotPlane) = SnapshotPlanarPlot

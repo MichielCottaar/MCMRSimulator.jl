@@ -7,7 +7,7 @@
         for snap in snaps
             @test snap.time == time
             time += 0.5
-            @test mr.vector(snap) == SA[0., 0., 1.]
+            @test mr.orientation(snap) == SA[0., 0., 1.]
             @test mr.longitudinal(snap) == 1.
             @test mr.transverse(snap) == 0.
         end
@@ -20,7 +20,7 @@
         for snap in snaps
             @test snap.time == time
             time += 0.5
-            @test mr.vector(snap) == SA[0., 0., 2.]
+            @test mr.orientation(snap) == SA[0., 0., 2.]
             @test mr.longitudinal(snap) == 2.
             @test mr.transverse(snap) == 0.
         end
@@ -30,9 +30,9 @@
         simulation = mr.Simulation(mr.Spin(), [mr.Sequence([mr.RFPulse(flip_angle=90)], 2.8)], mr.Microstructure(), store_every=0.5)
         append!(simulation, 2.8)
         snaps = mr.get_sequence.(simulation.regular, 1)
-        @test mr.vector(snaps[1]) ≈ SA[0., 0., 1.]
+        @test mr.orientation(snaps[1]) ≈ SA[0., 0., 1.]
         for snap in snaps[2:end]
-            @test mr.vector(snap) ≈ SA[0., 1., 0.]
+            @test mr.orientation(snap) ≈ SA[0., 1., 0.]
         end
         @test length(snaps) == 6
     end
@@ -52,7 +52,7 @@
         spin_with_diff = mr.get_sequence(with_diff.latest[end].spins[1], 1)
         @test spin_no_diff.position == SA[0, 0, 0]
         @test spin_with_diff.position != SA[0, 0, 0]
-        @test spin_with_diff.orientation == spin_no_diff.orientation
+        @test spin_with_diff.orientations == spin_no_diff.orientations
         @test mr.transverse(spin_no_diff) ≈ exp(-0.6)
         @test abs(mr.longitudinal(spin_no_diff)) < Float(1e-6)
     end
@@ -70,8 +70,8 @@
         @test spin_no_diff.position == SA[0, 0, 0]
         @test spin_with_diff.position != SA[0, 0, 0]
         @test spin_with_diff_no_grad.position != SA[0, 0, 0]
-        @test spin_with_diff.orientation != spin_no_diff.orientation
-        @test spin_with_diff_no_grad.orientation == spin_no_diff.orientation
+        @test spin_with_diff.orientations != spin_no_diff.orientations
+        @test spin_with_diff_no_grad.orientations == spin_no_diff.orientations
         @test abs(mr.longitudinal(spin_no_diff)) < 1e-6
     end
     @testset "Basic diffusion run within sphere" begin

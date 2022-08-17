@@ -9,7 +9,7 @@ Note the use of units:
 - magnetic fields are in Tesla
 
 # Arguments
-- `spins`: One of [`Snapshot`](@ref) or [`MultiSnapshot`](@ref). The latter allows all simulated sequences to start out in with a different spin orientation, while the former assumes them to be the same (note that the spin path is always the same across all sequences).
+- `spins`: One of [`Snapshot`](@ref). The latter allows all simulated sequences to start out in with a different spin orientation, while the former assumes them to be the same (note that the spin path is always the same across all sequences).
     - When starting from scratch the easiest way to create these is using one of the methods described in [`Snapshot`](@ref)
     - When starting from an existing simulation, you can access the final state of the simulation using `simulation.latest[end]`. 
         To reset the timer to zero, just extract the spins (`simulation.latest[end].spins`).
@@ -27,9 +27,9 @@ To run the simulation for a given time, you can call:
 
 This will run the simulation for `duration` milliseconds. 
 During this time various intermediate states will be stored:
-    - A [`MultiSnapshot`](@ref) will be added to `simulation.regular` every `store_every` milliseconds.
-    - A [`Snapshot`](@ref) will be added to `simulation.readout[sequence_index]`, whenever a [`Readout`](@ref) object is encountered in the sequence.
-    - The final state of the simulation will be added as a [`MultiSnapshot`](@ref) object to `simulation.latest`, so that `simulation.latest[end]` always contains the final state of the total simulation.
+    - A [`Snapshot`](@ref)(`nsequences`) will be added to `simulation.regular` every `store_every` milliseconds.
+    - A [`Snapshot`](@ref)(1) will be added to `simulation.readout[sequence_index]`, whenever a [`Readout`](@ref) object is encountered in the sequence.
+    - The final state of the simulation will be added as a [`Snapshot`](@ref)(`nsequences`) object to `simulation.latest`, so that `simulation.latest[end]` always contains the final state of the total simulation.
 
 `append!` can be called multiple times to continue the simulation further.
 """
@@ -38,10 +38,10 @@ struct Simulation{N, M<:Microstructure}
     sequences :: SVector{N, <:Sequence}
     micro::M
     timestep::Float
-    regular :: AbstractVector{MultiSnapshot{N}}
+    regular :: AbstractVector{Snapshot{N}}
     store_every :: Float
-    readout :: SVector{N, AbstractVector{Snapshot}}
-    latest :: Vector{MultiSnapshot{N}}
+    readout :: SVector{N, AbstractVector{Snapshot{1}}}
+    latest :: Vector{Snapshot{N}}
     function Simulation(
         spins, 
         sequences :: AbstractVector{<:Sequence}, 
@@ -57,17 +57,17 @@ struct Simulation{N, M<:Microstructure}
         end
         if isa(spins, AbstractVector{<:Spin})
             spins = Snapshot(spins)
-        elseif isa(spins, AbstractVector{<:MultiSpin})
-            spins = MultiSnapshot(spins)
+        elseif isa(spins, AbstractVector{<:Spin})
+            spins = Snapshot(spins)
         end
         if isa(spins, Snapshot)
-            spins = MultiSnapshot(spins, nseq)
+            spins = Snapshot(spins, nseq)
         end
         new{nseq, typeof(micro)}(
             SVector{nseq}(sequences),
             micro,
             timestep,
-            MultiSnapshot{nseq}[],
+            Snapshot{nseq}[],
             store_every,
             [Snapshot[] for _ in 1:nseq],
             [spins]

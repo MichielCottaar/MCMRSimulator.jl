@@ -45,6 +45,12 @@ flip_angle(pulse :: RFPulse) = rad2deg(pulse.flip_angle)
 Applies given sequence component to the spin orientation.
 Returns a new [`SpinOrientation`](@ref).
 Some pulses (e.g., [`InstantGradient`](@ref)) require positional information as well.
+
+    apply(sequence_components, spin)
+    apply(sequence_components, snapshot)
+
+Apply all sequence components to the spin orientation in the [`Spin`](@ref) or to all the spins in [`Snapshot`](@ref) (the return type matches this input type).
+Sequence components (see [`Sequence`](@ref)) can be `nothing` if there is no sequence component at this time.
 """
 function apply(pulse :: RFPulse, spin :: SpinOrientation)
     Bx_init = spin.transverse * cos(spin.phase)
@@ -101,22 +107,22 @@ function apply(pulse :: InstantGradient, orient :: SpinOrientation, pos::PosVect
 end
 
 apply(pulse :: SequenceComponent, orient :: SpinOrientation, pos::PosVector) = apply(pulse, orient)
-apply(pulse :: SequenceComponent, spin :: Spin) = Spin(spin.position, apply(pulse, spin.orientation, spin.position), spin.rng)
+apply(pulse :: SequenceComponent, spin :: Spin{1}) = Spin(spin.position, SVector{1}([apply(pulse, spin.orientations[1], spin.position)]), spin.rng)
 apply(pulse :: Nothing, orient :: SpinOrientation) = orient
 apply(pulse :: Nothing, orient :: SpinOrientation, pos :: PosVector) = orient
-apply(pulse :: SequenceComponent, snap :: Snapshot) = Snapshot(apply.(pulse, snap.spins), span.time)
+apply(pulse :: SequenceComponent, snap :: Snapshot{1}) = Snapshot(apply.(pulse, snap.spins), span.time)
 
-apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spin :: MultiSpin{N}) where {N} = MultiSpin{N}(
+apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spin :: Spin{N}) where {N} = Spin{N}(
     spin.position,
     SVector{N, SpinOrientation}(SpinOrientation[apply(p, o, spin.position) for (p, o) in zip(pulses, spin.orientations)]),
     spin.rng
 )
 
-function apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spins :: AbstractVector{MultiSpin{N}}) where {N}
-    MultiSpin{N}[apply(pulses, s) for s in spins]
+function apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spins :: AbstractVector{Spin{N}}) where {N}
+    map(s->apply(pulses, s), spins)
 end
 
-apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, snap :: MultiSnapshot{N}) where {N} = MultiSnapshot{N}(
+apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, snap :: Snapshot{N}) where {N} = Snapshot{N}(
     apply(pulses, snap.spins),
     snap.time
 )
