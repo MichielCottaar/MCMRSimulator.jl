@@ -27,7 +27,7 @@ include("sequence/sequence.jl")
 include("microstructure.jl")
 include("readout.jl")
 include("evolve.jl")
-include("plot.jl")
+include("plot/plot.jl")
 
 export Simulation, Microstructure, field, Sequence, RFPulse, Readout, InstantGradient, 
     longitudinal, transverse, phase, vector, Repeated, Transformed, Sphere, Cylinder, Wall,
