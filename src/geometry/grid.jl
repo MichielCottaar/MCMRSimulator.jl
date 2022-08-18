@@ -99,7 +99,7 @@ Base.size(g::GridShape) = tuple(g.size)
 isinside(pos::PosVector, g::GridShape) = isinside(pos, BoundingBox(g))
 function project(pos::PosVector, g::GridShape)
     bb = BoundingBox(g)
-    map((p, l, is) -> iszero(is) ? Float(1.5) : is * (p - l) + one(Float), pos, bb.lower, g.inverse_voxel_size)
+    map((p, l, is) -> iszero(is) ? Float(1.5) : is * (p - l) + 1, pos, bb.lower, g.inverse_voxel_size)
 end
 
 

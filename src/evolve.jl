@@ -24,7 +24,7 @@ function evolve_to_time(
         return spin
     end
     index = div(current_time, timestep, RoundNearest)
-    time_left = ((Float(0.5) + index) * timestep) - current_time
+    time_left = ((1//2 + index) * timestep) - current_time
     orient = MVector{N, SpinOrientation}(spin.orientations)
 
     function proc!(orient, pos, dt, micro=micro, B0=B0) 
@@ -39,7 +39,7 @@ function evolve_to_time(
         return Spin(spin.position, SVector{N, SpinOrientation}(orient), spin.rng)
     end
     proc!(orient, spin.position, time_left)
-    current_time = (index + Float(0.5)) * timestep
+    current_time = (index + 1//2) * timestep
     position::PosVector = spin.position
 
     # We need to move, so get random number generator from spin object

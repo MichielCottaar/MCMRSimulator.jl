@@ -17,7 +17,7 @@ The angle in the x-y plane is drawn as a random number between 0 and 2π.
 This results in an unbiased random distribution across the sphere.
 """
 function random_on_sphere()
-    z = rand(Float) * Float(2.) - one(Float)
+    z = rand(Float) * 2 - 1
     r = sqrt(1 - z*z)
     theta = rand(Float) * Float(2 * π)
     (s, c) = sincos(theta)
@@ -35,7 +35,7 @@ Draws the next location of the particle after `timestep` with given `diffusivity
 If provided, this displacement will take into account the obstructions in `geometry`.
 If the `current_pos` is not provided only the displacement is returned (will only work for empty `geometry`).
 """
-draw_step(diffusivity :: Float, timestep :: Float) = sqrt(Float(2.) * timestep * diffusivity) * randn(PosVector)
+draw_step(diffusivity :: Float, timestep :: Float) = sqrt(2 * timestep * diffusivity) * randn(PosVector)
 draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float) = current_pos .+ draw_step(diffusivity, timestep)
 draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: Obstructions{0}) = draw_step(current_pos, diffusivity, timestep)
 function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: Obstructions)
