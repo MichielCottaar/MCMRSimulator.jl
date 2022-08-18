@@ -4,4 +4,5 @@ using VisualRegressionTests
 using Gtk
 
 include("sequence/sequence.jl")
+include("snapshot/snapshot.jl")
 end

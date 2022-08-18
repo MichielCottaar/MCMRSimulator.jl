@@ -2,7 +2,7 @@
 Defines a finite plane in the 3D space used for plotting.
 
 # Constructor
-    PlotPlane(normal::PosVector, position::PosVector; sizex=Inf, sizey=Inf, ngrid=100)
+    PlotPlane(normal::PosVector=[0, 0, 1], position::PosVector=[0, 0, 0]; sizex=Inf, sizey=Inf, ngrid=100)
 
 Arguments:
 - `normal`: length-3 vector with the orientation perpendicular to the plane (default to z-direction).
@@ -50,17 +50,17 @@ end
 Transforms the `position` (length-3 vector) or [`Snapshot`](@ref) to a space, where the [`PlotPlane`](@ref) lies in the x-y-plane centered on origin.
 """
 function project(pp::PlotPlane, pos::PosVector)
-    base = pp.project(pos)
+    base = pp.transformation(pos)
     sizex, sizey = pp.sizex, pp.sizey
     correct = [isfinite(sizex) ? sizex : 0., isfinite(sizey) ? sizey : 0., 0.] / 2.
     mod.(base .+ correct, (sizex, sizey, Inf)) .- correct
 end
 
-project(pp::PlotPlane, spin::Spin) = project(pp, mr.position(spin))
+project(pp::PlotPlane, spin::Spin) = project(pp, position(spin))
 
 function project(pp::PlotPlane, snap::Snapshot)
     Snapshot(
-        [Spin(project(pp, s), s.orientation) for s in snap.spins],
+        [Spin(project(pp, s), s.orientations) for s in snap.spins],
         snap.time
     )
 end
@@ -75,8 +75,8 @@ Spins from the [`Snapshot`](@ref) are projected onto the grid defined by [`PlotP
     This assumes that the geometry and field repeats itself ad infinitum beyond the `PlotPlane` (TODO: allow this assumption to be turned off).
 In effect, this means that all spins are projected onto the `PlotPlane`. The average spin orientation in each grid cell is returned.
 """
-function project_on_grid(pp::PlotPlane, snap::Snapshot)
-    on_plane = transform(pp, snap)
+function project_on_grid(pp::PlotPlane, snap::Snapshot{1})
+    on_plane = project(pp, snap)
     positions = [s.position[1:2] for s in on_plane]
     xrange = extrema(v->v[1], positions)
     yrange = extrema(v->v[2], positions)
@@ -88,7 +88,7 @@ function project_on_grid(pp::PlotPlane, snap::Snapshot)
         rely = (spin.position[2] - yrange[1])/(yrange[2] - yrange[1])
         x_index = min.(Int(floor(relx * (pp.ngrid - 1))), pp.ngrid - 2) + 1
         y_index = min.(Int(floor(rely * (pp.ngrid - 1))), pp.ngrid - 2) + 1
-        vs = vector(spin.orientation)
+        vs = orientation(spin)
         for (xi, yi) in [
             (x_index, y_index),
             (x_index+1, y_index),
@@ -99,6 +99,6 @@ function project_on_grid(pp::PlotPlane, snap::Snapshot)
             hits[xi, yi] += 1
         end
     end
-    (range(xrange..., pp.ngrid), range(yrange..., pp.ngrid), vector2spin.(res ./ hits))
+    (range(xrange..., pp.ngrid), range(yrange..., pp.ngrid), SpinOrientation.(res ./ hits))
 end
 

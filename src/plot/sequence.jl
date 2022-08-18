@@ -1,4 +1,4 @@
-@Makie.recipe(SequencePlot, seq) do scene
+@Makie.recipe(Sequence_Plot, seq) do scene
     Makie.Theme(
     )
 end
@@ -6,10 +6,14 @@ end
 """
     plot(sequence)
     plot!(sequence)
+    plot_sequence(sequence)
+    plot_sequence!(sequence)
 
 Creates a visual representation of a [`Sequence`](@ref) diagram.
 """
-function Makie.plot!(sp::SequencePlot)
+function sequence_plot end
+
+function Makie.plot!(sp::Sequence_Plot)
     seq = sp[1]
     on(seq) do s
         max_angle = maximum([flip_angle(p) for p in s.pulses if isa(p, RFPulse)])
@@ -22,7 +26,7 @@ function Makie.plot!(sp::SequencePlot)
     sp
 end
 
-Makie.plottype(::Sequence) = SequencePlot
+Makie.plottype(::Sequence) = Sequence_Plot
 
 
 @Makie.recipe(PulsePlot, pulse) do scene

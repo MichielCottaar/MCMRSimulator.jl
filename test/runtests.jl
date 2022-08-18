@@ -6,7 +6,7 @@ using LinearAlgebra
 import Random
 
 @testset "MRSimulator tests" begin
-    #include("visual_tests/run_visual_tests.jl")
+    include("visual_tests/run_visual_tests.jl")
     include("test_meshes.jl")
     include("test_field.jl")
     include("test_collisions.jl")
