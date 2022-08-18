@@ -44,14 +44,21 @@ struct Simulation{N, M<:Microstructure}
     latest :: Vector{Snapshot{N}}
     function Simulation(
         spins, 
-        sequences :: AbstractVector{<:Sequence}, 
+        sequences, 
         micro::Microstructure; 
         store_every :: Real=5., 
         timestep :: Real=0.5
     )
+        if isa(sequences, Sequence)
+            sequences = [sequences]
+        elseif length(sequences) == 0
+            sequences = Sequence[]
+        end
         nseq = length(sequences)
+
         store_every = Float(store_every)
         timestep = Float(timestep)
+
         if isa(spins, Spin)
             spins = [spins]
         end
@@ -63,6 +70,7 @@ struct Simulation{N, M<:Microstructure}
         if isa(spins, Snapshot)
             spins = Snapshot(spins, nseq)
         end
+
         new{nseq, typeof(micro)}(
             SVector{nseq}(sequences),
             micro,
@@ -77,7 +85,7 @@ end
 
 function Simulation(
     spins, 
-    sequences :: AbstractVector{<:Sequence};
+    sequences;
     R1=0.,
     R2=0.,
     diffusivity=0.,

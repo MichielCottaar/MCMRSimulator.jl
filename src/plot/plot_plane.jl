@@ -66,6 +66,56 @@ function project(pp::PlotPlane, snap::Snapshot)
 end
 
 
+function project_trajectory(pp::PlotPlane, pos::AbstractVector{<:PosVector})
+    transformed = pp.transformation.(pos)
+    pos2D = map(p -> SA[
+        isfinite(pp.sizex) ? p[1] / pp.sizex + 0.5 : 0.5,
+        isfinite(pp.sizey) ? p[2] / pp.sizey + 0.5 : 0.5,
+        0.5
+    ], transformed)
+    function to_pos!(time::Float, position::PosVector)
+        idx1 = Int(floor(time))
+        idx2 = Int(ceil(time))
+        if idx1 == idx2
+            pos_ref = pos2D[idx1]
+        else
+            pos_ref = pos2D[idx2] .* (time - idx1) .+ pos2D[idx1] .* (idx2 - time)
+        end
+        push!(all_pos, SA[
+            isfinite(pp.sizex) ? pp.sizex * (position[1] - 0.5) : pos_ref[1],
+            isfinite(pp.sizey) ? pp.sizey * (position[2] - 0.5) : pos_ref[2],
+        ])
+        push!(times, time)
+    end
+    empty = SA[NaN, NaN]
+    all_pos = SVector{2, Float}[]
+    times = Float[]
+    for (pos_index, origin, destination) in zip(1:length(pos2D)-1, pos2D[1:end-1], pos2D[2:end])
+        for (_, t1, p1, t2, p2) in  ray_grid_intersections(origin, destination)
+            if pos_index == 1 && t1 == zero(t1)
+                to_pos!(pos_index + t1, p1)
+            end
+            if t1 == zero(t1) && t2 == one(t2)
+                to_pos!(pos_index + t2, p2)
+            elseif t1 == zero(t1)
+                to_pos!(pos_index + t2, p2)
+                push!(all_pos, empty)
+                push!(times, NaN)
+            elseif t2 == one(t2)
+                to_pos!(pos_index + t1, p1)
+                to_pos!(pos_index + t2, p2)
+            else
+                to_pos!(pos_index + t1, p1)
+                to_pos!(pos_index + t2, p2)
+                push!(all_pos, empty)
+                push!(times, NaN)
+            end
+        end
+    end
+    return all_pos, times
+end
+
+
 """
     project_on_grid(plot_plane, snap)
 
