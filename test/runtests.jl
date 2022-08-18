@@ -147,6 +147,13 @@ import Random
             copy!(Random.TaskLocalRNG(), rng)
             @test randn(2) == a
         end
+        @testset "FixedXoshiro predictability" begin
+            Random.seed!(1234)
+            rng = mr.FixedXoshiro()
+            Random.seed!(1234)
+            rng2 = mr.FixedXoshiro()
+            @test rng == rng2
+        end
     end
     @testset "Bounding boxes" begin
         # single obstruction

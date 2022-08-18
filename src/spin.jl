@@ -22,7 +22,12 @@ struct FixedXoshiro
     FixedXoshiro(s0::Integer, s1::Integer, s2::Integer, s3::Integer) = new(s0, s1, s2, s3)
 end
 
-FixedXoshiro(seed=nothing) = FixedXoshiro(Random.Xoshiro(seed))
+function FixedXoshiro(seed=nothing) 
+    if isnothing(seed)
+        seed = rand(typemin(UInt64):typemax(UInt64))
+    end
+    FixedXoshiro(Random.Xoshiro(seed))
+end
 Random.Xoshiro(rng::FixedXoshiro) = Random.Xoshiro(rng.s0, rng.s2, rng.s2, rng.s3)
 function Base.copy!(dst::Random.TaskLocalRNG, src::FixedXoshiro)
     copy!(dst, Random.Xoshiro(src))
