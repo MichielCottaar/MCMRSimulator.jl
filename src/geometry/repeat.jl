@@ -10,10 +10,17 @@ If the obstructions are larger than the repeat size they will be cut off!
 struct Repeated{N, T} <: Obstruction
     obstructions :: Obstructions{N, T}
     repeats :: PosVector
-    function Repeated(obstructions, repeats)
+    lorentz_radius :: Float
+    lorentz_repeats :: SVector{N, Int}
+    chi_sphere :: Float
+    chi_cylinder :: Float
+    function Repeated(obstructions, repeats; lorentz_radius=1.)
         o = isa(obstructions, Obstruction) ? SVector{1}([obstructions]) : SVector{length(obstructions)}(obstructions)
         rs = SVector{3, Float}([iszero(r) ? Inf : abs(r) for r in repeats])
-        any(isfinite.(rs)) ? new{length(o), eltype(o)}(o, rs) : obstructions
+        lorentz_repeats = map(r -> Int(div(lorentz_radius, r, RoundUp)), repeats)
+        chi_sphere = 4. * π / 3. * sum(volume_susceptibility, obstructions) / (repeats[1] * repeats[2])
+        chi_cylinder = 2. * π * sum(surface_susceptibility, obstructions) / (repeats[1] * repeats[2] * repeats[3])
+        any(isfinite.(rs)) ? new{length(o), eltype(o)}(o, rs, lorentz_radius, lorentz_repeats, chi_sphere, chi_cylinder) : obstructions
     end
 end
 
@@ -53,3 +60,11 @@ end
 
 
 isinside(pos::PosVector, repeat::Repeated) = isinside(project(pos, repeat), repeat.obstructions)
+
+
+function off_resonance(obstruction::Repeated, position::PosVector, b0_field::PosVector)
+    # Contribution from outside of the Lorentz cavity
+    field = obstruction.chi_cylinder * (1 - b0_field[3] * b0_field[3]) + obstruction.chi_sphere
+    # Contribution from within the Lorentz cavity
+    return field + repeated_off_resonance(obstruction.obstructions, position, b0_field, obstruction.repeats, obstruction.lorentz_radius, obstruction.lorentz_repeats)
+end

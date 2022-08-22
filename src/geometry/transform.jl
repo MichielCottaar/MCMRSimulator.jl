@@ -51,3 +51,8 @@ function off_resonance(trans::Transformed, position::PosVector, b0_field::PosVec
     B0 = project(b0_field, trans) - project(zero(PosVector), trans)
     off_resonance(trans.obstructions, project(position, trans), B0 / norm(B0))
 end
+
+function lorentz_off_resonance(trans::Transformed, position::PosVector, b0_field::PosVector, repeat_dist::PosVector, radius::Float, nrepeats::SVector{3, Int})
+    B0 = project(b0_field, trans) - project(zero(PosVector), trans)
+    lorentz_off_resonance(trans.obstructions, porject(position, trans), B0/norm(B0), repeat_dist, radius, nrepeats)
+end

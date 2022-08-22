@@ -14,6 +14,9 @@ Both `chi_I` and `chi_A` are given in ppm and set to the value from Wharton & Bo
 struct Cylinder <: Obstruction
     radius :: Float
     id :: UUID
+    g_ratio :: Float
+    chi_I :: Float
+    chi_A :: Float
     internal_field :: Float
     external_field :: Float
     function Cylinder(radius; chi_I=-0.1, chi_A=-0.1, g_ratio=1.)
@@ -23,12 +26,18 @@ struct Cylinder <: Obstruction
             internal_field = -0.75 * chi_A * log(g_ratio)
             external_field = 2 * (chi_I + chi_A / 4) * (1 - g_ratio^2) / (1 + g_ratio)^2 * radius^2
         end
-        new(Float(radius), uuid1(), internal_field, external_field)
+        new(Float(radius), uuid1(), g_ratio, chi_I, chi_A, internal_field, external_field)
     end
 end
 
 isinside(pos::PosVector, cyl::Cylinder) = (pos[1] * pos[1] + pos[2] * pos[2]) <= (cyl.radius * cyl.radius)
 BoundingBox(c::Cylinder) = BoundingBox([-c.radius, -c.radius, -Inf], [c.radius, c.radius, Inf])
+function surface_susceptibility(c::Cylinder)
+    r_outer = 2 * radius / (1 + c.g_ratio)
+    r_inner = c.g_ratio * r_outer
+    chi = c.chi_I + c.chi_A / 4
+    2 * π * chi * (r_outer^2 - r_inner^2)
+end
 
 function Cylinder(radius :: Real, orientation :: AbstractVector{<:Real}; kwargs...)
     radius = Float(radius)
@@ -110,4 +119,33 @@ function off_resonance(cylinder::Cylinder, position::PosVector, b0_field::PosVec
         # cos 2 phi = cos^2 phi - sin^2 phi = 1 - 2 cos^2 phi
         return cylinder.external_field * sin_theta_sq * (2 * cos2 - 1) / rsq
     end
+end
+
+function lorentz_off_resonance(cylinder::Cylinder, position::PosVector, b0_field::PosVector, repeat_dist::PosVector, radius::Float, nrepeats::SVector{3, Int})
+    field = zero(Float)
+    if iszero(cylinder.internal_field) && iszero(cylinder.external_field)
+        return field
+    end
+    lorentz_radius_sq = radius * radius
+    cos_theta_sq = b0_field[3]^2
+    sin_theta_sq = 1 - cos_theta_sq
+    for i in -nrepeats[1]:nrepeats[1]
+        xshift = i * repeat_dist[1]
+        p1 = position[1] + xshift
+        for j in -nrepeats[2]:nrepeats[2]
+            yshift = j * repeat_dist[2]
+            p2 = position[2] + yshift
+            rsq = p1 * p1 + p2 * p2
+            if rsq > lorentz_radius_sq
+                continue
+            end
+            if i == 0 && j == 0 && rsq < cylinder.radius^2
+                field += cylinder.internal_field * sin_theta_sq
+            else
+                cos2 = (b0_field[1] * p1 + b0_field[2] * p2)^2 / rsq
+                field += cylinder.external_field * sin_theta_sq * (2 * cos2 - 1) / rsq
+            end
+        end
+    end
+    return field
 end

@@ -41,7 +41,36 @@ Computes the off-resonance field at the position due to the obstructions with th
 function off_resonance(obstructions::Obstructions, position::PosVector, b0_field=PosVector([0, 0, 1])::PosVector)
     sum(o->off_resonance(o, position, b0_field), obstructions)
 end
+off_resonance(obstructions::Obstruction, position::PosVector, b0_field::PosVector) = zero(Float)
 
+"""
+    lorentz_off_resonance(obstructions, position, b0_field, repeat_dist, radius, nrepeats)
+
+Computes the off-resonance field contribution of repeating compartments within a spherical or cylindrical Lorentz cavity.
+"""
+function lorentz_off_resonance(obstructions::Obstructions, position::PosVector, b0_field::PosVector, repeat_dist::PosVector, radius::Float, nrepeats::SVector{3, Int})
+    map(o->lorentz_off_resonance(o, position, b0_field, repeat_dist, radius, nrepeats), obstructions)
+end
+lorentz_off_resonance(obstructions::Obstruction, position::PosVector, b0_field::PosVector, repeat_dist::PosVector, radius::Float, nrepeats::SVector{3, Int}) = zero(Float)
+
+
+"""
+    volume_susceptibility(obstruction)
+
+Computes the total magnetic susceptibility of an obstructions.
+Returns 0. for a [`Cylinder`](@ref) rather than infinity.
+To get the magnetic susceptibility for a cylinder use [`surface_susceptibility`](@ref)
+"""
+volume_susceptibility(obstruction::Obstruction) = zero(Float)
+
+"""
+    surface_susceptibility(obstruction)
+
+Computes the total magnetic susceptibility of an obstructions.
+Returns 0. for finite objects (e.g., [`Sphere`](@ref) or [`Mesh`](@ref)).
+To get the magnetic susceptibility for finite objects use [`volume_susceptibility`](@ref)
+"""
+volume_susceptibility(obstruction::Obstruction) = zero(Float)
 
 include("bounding_box.jl")
 include("diffuse.jl")
