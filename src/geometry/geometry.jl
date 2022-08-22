@@ -7,9 +7,9 @@ abstract type Obstruction end
 const Obstructions{N, T} = SVector{N, T} where {T <: Obstruction}
 
 """
-    isinside(position, obstructions)
-    isinside(spin, obstructions)
-    isinside(snapshot, obstructions)
+    isinside(position, obstructions/bounding_box)
+    isinside(spin, obstructions/bounding_box)
+    isinside(snapshot, obstructions/bounding_box)
 
 Test whether the particles are inside any of the [`Obstrunctions`](@ref) (or in the [`BoundingBox`](@ref)).
 """
@@ -31,6 +31,16 @@ Computes the voxel index for the position on the [`GridShape`](@ref).
 This will return a result even if the point is outside of the grid. Use [`isinside`](@ref)(position, grid) to check that.
 """
 function project end
+
+
+"""
+    off_resonance(obstructions, position[, b0_field])
+
+Computes the off-resonance field at the position due to the obstructions with the magnetic field orientation from `b0_field`.
+"""
+function off_resonance(obstructions::Obstructions, position::PosVector, b0_field=PosVector([0, 0, 1])::PosVector)
+    sum(o->off_resonance(o, position, b0_field), obstructions)
+end
 
 
 include("bounding_box.jl")

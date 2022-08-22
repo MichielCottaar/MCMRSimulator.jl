@@ -46,3 +46,8 @@ function BoundingBox(trans::Transformed)
     transformed_corners = map(trans.transform, input_corners)
     BoundingBox(min.(transformed_corners...), max.(transformed_corners...))
 end
+
+function off_resonance(trans::Transformed, position::PosVector, b0_field::PosVector)
+    B0 = project(b0_field, trans) - project(zero(PosVector), trans)
+    off_resonance(trans.obstructions, project(position, trans), B0 / norm(B0))
+end
