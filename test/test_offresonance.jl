@@ -20,7 +20,7 @@
                 mr.Cylinder(1., :x, g_ratio=0.8, chi_A=0., chi_I=1.),
             ]
             @test mr.off_resonance(cylinders, zero(mr.PosVector)) ≈ 0.
-            outer_field = 1//16 * (1 - 0.8^2) * (1 + 0.8^2)
+            outer_field = 1//2 * (1 - 0.8^2) / (1 + 0.8)^2
             @test mr.off_resonance(cylinders, mr.PosVector([0, 0, 2])) ≈ outer_field
             @test mr.off_resonance(cylinders, mr.PosVector([0, 2, 0])) ≈ -outer_field
         end
@@ -29,7 +29,7 @@
                 mr.Cylinder(1., :x, g_ratio=0.8, chi_A=1., chi_I=0.),
             ]
             @test mr.off_resonance(cylinders, zero(mr.PosVector)) ≈ -0.75 * log(0.8)
-            outer_field = 1//64 * (1 - 0.8^2) * (1 + 0.8^2)
+            outer_field = 1//8 * (1 - 0.8^2) / (1 + 0.8)^2
             @test mr.off_resonance(cylinders, mr.PosVector([0, 0, 2])) ≈ outer_field
             @test mr.off_resonance(cylinders, mr.PosVector([0, 2, 0])) ≈ -outer_field
         end

@@ -21,7 +21,7 @@ struct Cylinder <: Obstruction
             internal_field, external_field = zero(Float), zero(Float)
         else
             internal_field = -0.75 * chi_A * log(g_ratio)
-            external_field = (chi_I + chi_A / 4) * (1 - g_ratio^2) * (1 + g_ratio^2) / 4 * radius^2
+            external_field = 2 * (chi_I + chi_A / 4) * (1 - g_ratio^2) / (1 + g_ratio)^2 * radius^2
         end
         new(Float(radius), uuid1(), internal_field, external_field)
     end
@@ -100,9 +100,6 @@ function off_resonance(cylinder::Cylinder, position::PosVector, b0_field::PosVec
     if iszero(cylinder.internal_field) && iszero(cylinder.external_field)
         return zero(Float)
     end
-    println("computing field")
-    println(position)
-    println(b0_field)
     rsq = position[1] * position[1] + position[2] * position[2]
     cos_theta_sq = b0_field[3]^2  # theta is the angle between the b0_field and the cylinder orientation
     sin_theta_sq = 1 - cos_theta_sq
