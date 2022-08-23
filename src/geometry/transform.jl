@@ -1,23 +1,23 @@
-struct TransformObstruction{N, O<:BaseObstruction{N}} <: Obstruction{N}
-    obstructions::Vector{O}
-    shifts::Vector{SVector{N, Float}}
+struct TransformObstruction{N, M, O<:BaseObstruction{N}} <: Obstruction{N}
+    obstructions::SVector{M, O}
+    shifts::SVector{M, SVector{N, Float}}
     repeats::SVector{N, Float}
-    shift_quadrants::Vector{SVector{N, Bool}}
+    shift_quadrants::SVector{M, SVector{N, Bool}}
     rotation::SMatrix{3, N, Float}
     inv_rotation::SMatrix{N, 3, Float}
     chi::Float
     lorentz_radius :: Float
     lorentz_repeats :: SVector{N, Int}
-    function TransformObstruction(obstructions::Vector{<:BaseObstruction{N}}, shifts, repeats, rotation, lorentz_radius) where {N}
+    function TransformObstruction(obstructions::SVector{M, <:BaseObstruction{N}}, shifts, repeats, rotation, lorentz_radius) where {N, M}
         @assert all(r -> r>0, repeats)
         repeats = map(Float, repeats)
 
         # normalise shifts by the repeats, so that the base shift is between -repeats/4 and +3 * repeats/4
-        shifts = [map((s, r) -> isfinite(r) ? mod(s + r/4, r) - r/4 : Float(s), single_shift, repeats) for single_shift in shifts]
-        shift_quadrants = [get_shift_quadrants(s, repeats) for s in shifts]
+        shifts = SVector{M}([map((s, r) -> isfinite(r) ? mod(s + r/4, r) - r/4 : Float(s), single_shift, repeats) for single_shift in shifts])
+        shift_quadrants = SVector{M}([get_shift_quadrants(s, repeats) for s in shifts])
         chi = sum(total_susceptibility, obstructions) / prod(repeats)
         lorentz_repeats = map(r -> isfinite(r) ? Int(div(lorentz_radius, r, RoundUp)) : 0, repeats)
-        new{N, eltype(obstructions)}(obstructions, shifts, repeats, shift_quadrants, rotation, transpose(rotation), chi, lorentz_radius, lorentz_repeats)
+        new{N, M, eltype(obstructions)}(obstructions, shifts, repeats, shift_quadrants, rotation, transpose(rotation), chi, lorentz_radius, lorentz_repeats)
     end
 end
 
@@ -28,7 +28,7 @@ function TransformObstruction(Obstruction::Type{<:BaseObstruction{N}}, args...; 
     TransformObstruction(o; shifts=shifts, repeats=repeats, rotation=rotation, lorentz_radius=lorentz_radius)
 end
 
-function TransformObstruction(obstruction::BaseObstruction{N}; shifts, kwargs...) where N
+function TransformObstruction(obstruction::BaseObstruction{N}; shifts=nothing, kwargs...) where N
     if isnothing(shifts)
         return TransformObstruction([obstruction]; shifts=shifts, kwargs...)
     elseif isa(shifts, Real)
@@ -108,9 +108,10 @@ function TransformObstruction(obstructions::AbstractVector{<:BaseObstruction{N}}
     if isa(repeats, Real)
         repeats = fill(repeats, N)
     end
+    M = length(obstructions)
     TransformObstruction(
-        obstructions,
-        shifts,
+        SVector{M}(obstructions),
+        SVector{M}(shifts),
         SVector{N}([iszero(r) ? Float(Inf) : Float(r) for r in repeats]),
         get_rotation(rotation, N),
         lorentz_radius
