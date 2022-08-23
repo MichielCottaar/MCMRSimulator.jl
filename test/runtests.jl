@@ -158,15 +158,15 @@ import Random
     end
     @testset "Bounding boxes" begin
         # single obstruction
-        @test mr.BoundingBox(mr.Cylinder(1)) == mr.BoundingBox([-1, -1, -Inf], [1, 1, Inf])
+        @test mr.BoundingBox(mr.Cylinder(1)) == mr.BoundingBox([-1, -1], [1, 1])
 
-        # multiple obstructions
-        @test mr.BoundingBox(SVector{2}([mr.Sphere(2), mr.Cylinder(1)])) == mr.BoundingBox([-2, -2, -Inf], [2, 2, Inf])
-
-        # shifted obstructions
-        @test mr.BoundingBox(mr.Cylinder(radius=1., position=[2, 2, 2])) == mr.BoundingBox([1., 1., -Inf], [3, 3, Inf])
+        # shifted cylinder
+        @test mr.BoundingBox(mr.cylinders(1., shifts=[2., 2.])) == mr.BoundingBox([1., 1.], [3, 3])
 
         # repeated obstructions
-        @test mr.BoundingBox(mr.Repeated(mr.Cylinder(radius=1.), [1., 3., 3.])) == mr.BoundingBox([-0.5, -1., -1.5], [0.5, 1, 1.5])
+        @test mr.BoundingBox(mr.cylinders(1., repeats=[1., 3.])) == mr.BoundingBox([-1, -1], [1, 1])
+
+        # shifted spheres
+        @test mr.BoundingBox(mr.spheres(1., shifts=[[1, 0, 0], [0, 1, 0]])) == mr.BoundingBox([-1, -1, -1.], [2., 2., 1.])
     end
 end

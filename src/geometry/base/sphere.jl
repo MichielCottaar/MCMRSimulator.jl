@@ -3,22 +3,16 @@
 
 Creates a hollow sphere with a radius of `radius` micrometer (default 1 micrometer) at the given `location` (default: origin).
 """
-struct Sphere <: Obstruction
+struct Sphere <: BaseObstruction{3}
     radius :: Float
     id :: UUID
     Sphere(radius) = new(Float(radius), uuid1())
 end
+Base.copy(s::Sphere) = Sphere(s.radius)
 
-function Sphere(radius :: Real, location :: AbstractVector)
-    radius = convert(Float, radius)
-    location = convert(SVector{3, Float}, location)
-    if all(iszero.(location))
-        return Sphere(radius)
-    else
-        return Transformed(Sphere(radius), CoordinateTransformations.Translation(location))
-    end
+function spheres(args...; kwargs...)
+    TransformObstruction(Sphere, args...; kwargs...)
 end
-Sphere(;radius=1., position=[0, 0, 0]) = Sphere(radius, position)
 
 isinside(pos::PosVector, sphere::Sphere) = norm(pos) <= sphere.radius
 BoundingBox(s::Sphere) = BoundingBox([-s.radius, -s.radius, -s.radius], [s.radius, s.radius, s.radius])
@@ -52,7 +46,6 @@ function sphere_collision(origin :: SVector{N, Float}, destination :: SVector{N,
     sd = sqrt(determinant)
     ai = inv(a)
 
-    # first try solution with lower s
     solution = (inside ? (-b + sd) : (-b - sd)) * 1//2 * ai
     if solution > 1 || solution <= 0
         return empty_collision

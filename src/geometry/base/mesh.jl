@@ -3,7 +3,7 @@
 
 An [`Obstruction`](@ref) formed from a triangular mesh.
 """
-struct Mesh{N} <: Obstruction
+struct Mesh{N} <: BaseObstruction{3}
     vertices :: Vector{PosVector}
     triangles :: Vector{SVector{3, Int}}
     normals :: Vector{PosVector}

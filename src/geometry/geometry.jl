@@ -1,10 +1,11 @@
 """
-Supertype of any obstruction to the free diffusion of water (e.g., [`Wall`](@ref), [`Mesh`](@ref), [`Cylinder`](@ref), [`Sphere`](@ref)).
-"""
-abstract type Obstruction end
+Supertype of any obstruction to the free diffusion of water. Some might also generate off-resonance fields.
 
-"Sequence of [`Obstruction`](@ref) objects that the particles have to navigate."
-const Obstructions{N, T} = SVector{N, T} where {T <: Obstruction}
+There are two types of obstructions:
+- [`BaseObstruction`](@ref) with the basic obstructions (walls, sphere, cylinders, meshes)
+- [`TransformObstruction`](@ref), which transform the base obstructions
+"""
+abstract type Obstruction{N} end
 
 """
     isinside(position, obstructions/bounding_box)
@@ -13,10 +14,10 @@ const Obstructions{N, T} = SVector{N, T} where {T <: Obstruction}
 
 Test whether the particles are inside any of the [`Obstrunctions`](@ref) (or in the [`BoundingBox`](@ref)).
 """
-isinside(pos::Vector, o) = isinside(PosVector(pos), o)
-isinside(spin::Spin, o) = isinside(position(spin), o)
-isinside(snapshot::Snapshot, o) = map(s -> isinside(s, o), snapshot.spins)
-isinside(pos::PosVector, obstructions::Obstructions) = any(o -> isinside(pos, o), obstructions)
+isinside(o, pos::Vector) = isinside(o, PosVector(pos))
+isinside(o, spin::Spin) = isinside(o, position(spin))
+isinside(o, snapshot::Snapshot) = map(s -> isinside(o, s), snapshot.spins)
+isinside(obstructions::Tuple, pos::PosVector) = any(o -> isinside(o, pos), obstructions)
 
 
 """
@@ -38,7 +39,7 @@ function project end
 
 Computes the off-resonance field at the position due to the obstructions with the magnetic field orientation from `b0_field`.
 """
-function off_resonance(obstructions::Obstructions, position::PosVector, b0_field=PosVector([0, 0, 1])::PosVector)
+function off_resonance(obstructions::Tuple, position::PosVector, b0_field=PosVector([0, 0, 1])::PosVector)
     sum(o->off_resonance(o, position, b0_field), obstructions)
 end
 off_resonance(obstructions::Obstruction, position::PosVector, b0_field::PosVector) = zero(Float)
@@ -48,36 +49,19 @@ off_resonance(obstructions::Obstruction, position::PosVector, b0_field::PosVecto
 
 Computes the off-resonance field contribution of repeating compartments within a spherical or cylindrical Lorentz cavity.
 """
-function lorentz_off_resonance(obstructions::Obstructions, position::PosVector, b0_field::PosVector, repeat_dist::PosVector, radius::Float, nrepeats::SVector{3, Int})
-    map(o->lorentz_off_resonance(o, position, b0_field, repeat_dist, radius, nrepeats), obstructions)
-end
-lorentz_off_resonance(obstructions::Obstruction, position::PosVector, b0_field::PosVector, repeat_dist::PosVector, radius::Float, nrepeats::SVector{3, Int}) = zero(Float)
+lorentz_off_resonance(obstruction::Obstruction, position::PosVector, b0_field::PosVector, repeat_dist::PosVector, radius::Float, nrepeats::SVector{3, Int}) = zero(Float)
 
 
 """
-    volume_susceptibility(obstruction)
+    total_susceptibility(obstruction)
 
 Computes the total magnetic susceptibility of an obstructions.
-Returns 0. for a [`Cylinder`](@ref) rather than infinity.
-To get the magnetic susceptibility for a cylinder use [`surface_susceptibility`](@ref)
+This might be integrated over the surface or the volume depending on the dimensionality of the obstruction.
 """
-volume_susceptibility(obstruction::Obstruction) = zero(Float)
-
-"""
-    surface_susceptibility(obstruction)
-
-Computes the total magnetic susceptibility of an obstructions.
-Returns 0. for finite objects (e.g., [`Sphere`](@ref) or [`Mesh`](@ref)).
-To get the magnetic susceptibility for finite objects use [`volume_susceptibility`](@ref)
-"""
-volume_susceptibility(obstruction::Obstruction) = zero(Float)
+total_susceptibility(obstruction::Obstruction) = zero(Float)
 
 include("bounding_box.jl")
 include("diffuse.jl")
 include("grid.jl")
-include("repeat.jl")
+include("base/base.jl")
 include("transform.jl")
-include("wall.jl")
-include("sphere.jl")
-include("cylinder.jl")
-include("mesh.jl")

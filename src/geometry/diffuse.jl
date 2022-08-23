@@ -1,11 +1,14 @@
 "Intermediate object used internally to represent a movement from one position to another"
-struct Movement
-    origin :: PosVector
-    destination :: PosVector
+struct Movement{N}
+    origin :: SVector{N, Float}
+    destination :: SVector{N, Float}
     timestep :: Float
 end
 
-Movement(origin::AbstractArray, destination::AbstractArray, timestep::Real) = Movement(PosVector(origin), PosVector(destination), Float(timestep))
+function Movement(origin::AbstractArray, destination::AbstractArray, timestep::Real) 
+    ndim = length(origin)
+    Movement{ndim}(SVector{ndim, Float}(origin), SVector{ndim, Float}(destination), Float(timestep))
+end
 
 """
     random_on_sphere()
@@ -37,8 +40,8 @@ If the `current_pos` is not provided only the displacement is returned (will onl
 """
 draw_step(diffusivity :: Float, timestep :: Float) = sqrt(2 * timestep * diffusivity) * randn(PosVector)
 draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float) = current_pos .+ draw_step(diffusivity, timestep)
-draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: Obstructions{0}) = draw_step(current_pos, diffusivity, timestep)
-function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: Obstructions)
+draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: Tuple{}) = draw_step(current_pos, diffusivity, timestep)
+function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry::Tuple)
     new_pos = draw_step(current_pos, diffusivity, timestep)
     displacement = norm(new_pos .- current_pos)
     collision = empty_collision
@@ -66,11 +69,11 @@ Splits the given movement from point A to point B into multiple steps that bounc
 This function assumes perfect reflection rather than the diffuse reflection used in [`draw_step`](@ref).
 It is used to test the collision detection and resolution, but not actually used in the simulations.
 """
-correct_collisions(to_try :: Movement, geometry :: Obstruction) = correct_collisions(to_try, SVector{1}(geometry))
-correct_collisions(to_try :: Movement, geometry :: Obstructions{0}) = [to_try]
-correct_collisions(to_try :: Movement, geometry :: AbstractVector{<:Obstruction}) = correct_collisions(to_try, SVector{length(geometry)}(geometry))
+correct_collisions(to_try :: Movement, geometry :: Obstruction) = correct_collisions(to_try, tuple(geometry))
+correct_collisions(to_try :: Movement, geometry :: Tuple{}) = [to_try]
+correct_collisions(to_try :: Movement, geometry :: AbstractVector{<:Obstruction}) = correct_collisions(to_try, tuple(geometry...))
 
-function correct_collisions(to_try :: Movement, geometry :: Obstructions)
+function correct_collisions(to_try :: Movement, geometry::Tuple)
     steps = Movement[]
     collision = empty_collision
     while true
@@ -130,10 +133,10 @@ Returns a [`Collision`](@ref) object if the given `movement` crosses any obstruc
 The first collision is always returned.
 If no collision is detected, `empty_collision` will be returned
 """
-detect_collision(movement :: Movement, obstructions :: Obstructions{0}, previous=empty_collision::Collision) = empty_collision
-detect_collision(movement :: Movement, obstructions :: Obstructions{1}, previous=empty_collision::Collision) = detect_collision(movement, obstructions[1], previous)
+detect_collision(movement :: Movement, obstructions :: Tuple{}, previous=empty_collision::Collision) = empty_collision
+detect_collision(movement :: Movement, obstructions :: Tuple{<:Obstruction}, previous=empty_collision::Collision) = detect_collision(movement, obstructions[1], previous)
 
-function detect_collision(movement :: Movement, obstructions :: Obstructions, previous=empty_collision::Collision)
+function detect_collision(movement :: Movement, obstructions :: Tuple, previous=empty_collision::Collision)
     collision = empty_collision
     for o in obstructions
         c_new = detect_collision(movement, o, previous)

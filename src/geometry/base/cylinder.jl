@@ -11,7 +11,7 @@ however it will generate an off-resonance field determined by the myelin's isotr
 the anisotropic magnetic susceptibility (`chi_A`), and the g-ratio (`g_ratio`).
 Both `chi_I` and `chi_A` are given in ppm and set to the value from Wharton & Bowtell (2012).
 """
-struct Cylinder <: Obstruction
+struct Cylinder <: BaseObstruction{2}
     radius :: Float
     id :: UUID
     g_ratio :: Float
@@ -30,73 +30,24 @@ struct Cylinder <: Obstruction
     end
 end
 
-isinside(pos::PosVector, cyl::Cylinder) = (pos[1] * pos[1] + pos[2] * pos[2]) <= (cyl.radius * cyl.radius)
-BoundingBox(c::Cylinder) = BoundingBox([-c.radius, -c.radius, -Inf], [c.radius, c.radius, Inf])
-function surface_susceptibility(c::Cylinder)
-    r_outer = 2 * radius / (1 + c.g_ratio)
+Base.copy(c::Cylinder) = Cylinder(c.radius; chi_I=c.chi_I, chi_A=c.chi_A, g_ratio=c.g_ratio)
+isinside(pos::SVector{2, Float}, cyl::Cylinder) = (pos[1] * pos[1] + pos[2] * pos[2]) <= (cyl.radius * cyl.radius)
+BoundingBox(c::Cylinder) = BoundingBox([-c.radius, -c.radius], [c.radius, c.radius])
+
+function total_susceptibility(c::Cylinder)
+    r_outer = 2 * c.radius / (1 + c.g_ratio)
     r_inner = c.g_ratio * r_outer
     chi = c.chi_I + c.chi_A / 4
     2 * π * chi * (r_outer^2 - r_inner^2)
 end
 
-function Cylinder(radius :: Real, orientation :: AbstractVector{<:Real}; kwargs...)
-    radius = Float(radius)
-    o = SVector{3, Float}(orientation / norm(orientation))
-    if isapprox(o, SA[0, 0, 1], atol=1e-10)
-        return Cylinder(radius; kwargs...)
-    end
-    rot_axis = cross(SA[0, 0, 1], o)
-    rot_angle = acos(o[end])
-    Transformed(Cylinder(radius; kwargs...), CoordinateTransformations.LinearMap(Rotations.AngleAxis(rot_angle, rot_axis...)))
+function cylinders(args...; kwargs...)
+    TransformObstruction(Cylinder, args...; kwargs...)
 end
 
-function Cylinder(radius :: Real, orientation :: AbstractVector{<:Real}, location :: AbstractVector{<:Real}; kwargs...)
-    c = Cylinder(radius, orientation; kwargs...)
-    location = SVector{3, Float}(location)
-    return all(iszero.(location)) ? c : Transformed(c, CoordinateTransformations.Translation(location...))
-end
-
-function Cylinder(radius :: Real, sym :: Symbol, args...; kwargs...)
-    orientation = Dict(
-        :x => SA[1., 0., 0.],
-        :y => SA[0., 1., 0.],
-        :z => SA[0., 0., 1.],
-    )
-    Cylinder(radius, orientation[sym], args...; kwargs...)
-end
-
-Cylinder(;radius=1., orientation=[0., 0, 1], position=[0., 0, 0]) = Cylinder(radius, orientation, position)
-
-function detect_collision(movement :: Movement, cylinder :: Cylinder, previous=empty_collision)
-    select(a) = SA[a[1], a[2]]
+function detect_collision(movement :: Movement{2}, cylinder :: Cylinder, previous=empty_collision)
     inside = previous.id != cylinder.id ? -1 : previous.index
-    sphere_collision(select(movement.origin), select(movement.destination), cylinder, inside)
-end
-
-
-"""
-    cylinder_plane(radius; rotation=0., repeatx=0., repeaty=0., shiftx=0.)
-
-Creates a plane of infinitely repeating cylinders in the y-z plane.
-
-# Arguments
-- radius: cylinder radius in micrometer
-- rotation: angle of cylinders with respect to the z-axis
-- repeatx: distance between repeating cylinders along x-axis
-- repeaty: distance between repeating cylinders in y-z plane
-- shiftx: distance to shift first cylinder from origin along x-axis
-"""
-function cylinder_plane(radius :: Real; rotation=0., repeatx=0., repeaty=0., shiftx=0.)
-    Transformed(
-        Repeated(
-            Cylinder(radius),
-            SA[repeatx, repeaty, 0]
-        ),
-        CoordinateTransformations.AffineMap(
-            Rotations.AngleAxis(Float(deg2rad(rotation)), 1, 0, 0),
-            SA[shiftx, 0., 0.]
-        )
-    )
+    sphere_collision(movement.origin, movement.destination, cylinder, inside)
 end
 
 
@@ -105,13 +56,12 @@ end
 
 Computed by the hollow cylinder fiber model from Wharton & Bowtell (2012).
 """
-function off_resonance(cylinder::Cylinder, position::PosVector, b0_field::PosVector)
+function off_resonance(cylinder::Cylinder, position::SVector{2, Float}, b0_field::SVector{2, Float})
     if iszero(cylinder.internal_field) && iszero(cylinder.external_field)
         return zero(Float)
     end
     rsq = position[1] * position[1] + position[2] * position[2]
-    cos_theta_sq = b0_field[3]^2  # theta is the angle between the b0_field and the cylinder orientation
-    sin_theta_sq = 1 - cos_theta_sq
+    sin_theta_sq = 1 - b0_field[1] * b0_field[1] - b0_field[2] + b0_field[2]
     if rsq < cylinder.radius^2
         return cylinder.internal_field * sin_theta_sq
     else
@@ -121,14 +71,16 @@ function off_resonance(cylinder::Cylinder, position::PosVector, b0_field::PosVec
     end
 end
 
-function lorentz_off_resonance(cylinder::Cylinder, position::PosVector, b0_field::PosVector, repeat_dist::PosVector, radius::Float, nrepeats::SVector{3, Int})
+function lorentz_off_resonance(cylinder::Cylinder, position::SVector{2, Float}, b0_field::SVector{2, Float}, repeat_dist::SVector{2, Float}, radius::Float, nrepeats::SVector{2, Int})
     field = zero(Float)
     if iszero(cylinder.internal_field) && iszero(cylinder.external_field)
         return field
     end
     lorentz_radius_sq = radius * radius
-    cos_theta_sq = b0_field[3]^2
-    sin_theta_sq = 1 - cos_theta_sq
+    sin_theta_sq = b0_field[1] * b0_field[1] - b0_field[2] + b0_field[2]
+    if iszero(sin_theta_sq)
+        return field
+    end
     for i in -nrepeats[1]:nrepeats[1]
         xshift = i * repeat_dist[1]
         p1 = position[1] + xshift

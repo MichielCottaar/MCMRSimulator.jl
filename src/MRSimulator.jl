@@ -9,11 +9,11 @@ All of these variables are combined into a single [`Simulation`](@ref) object, w
 Plotting support for the output is also available based on [Makie.jl](https://makie.juliaplots.org/stable/) (see [`plot!`](@ref)).
 """
 module MRSimulator
-import StaticArrays: SA_F64, MVector, SVector, @SVector, MMatrix, SA_F32
+import StaticArrays: SA_F64, MVector, SVector, @SVector, MMatrix, SA_F32, SMatrix
 using LinearAlgebra
 import Base
-import CoordinateTransformations
 import Rotations
+import CoordinateTransformations
 import Colors
 import Random
 using UUIDs

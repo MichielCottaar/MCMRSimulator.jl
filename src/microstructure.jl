@@ -18,7 +18,7 @@ The `R1`, `R2`, `off-resonance`, and `diffusivity` parameters can be defined as 
 - `(gradient::PosVector, value::Number)`: gradient across the microstructure.
 - `field::Field`: as generated using [`field`](@ref).
 """
-struct Microstructure{F1 <: Field, F2 <: Field, F3 <: Field, F4 <: Field, G <: Obstructions}
+struct Microstructure{F1 <: Field, F2 <: Field, F3 <: Field, F4 <: Field, G <: Tuple}
     off_resonance :: F1  # in ppm
     R2 :: F2
     R1 :: F3
@@ -32,7 +32,11 @@ struct Microstructure{F1 <: Field, F2 <: Field, F3 <: Field, F4 <: Field, G <: O
         R2 = field(R2)
         diffusivity = field(diffusivity)
         off_resonance = field(off_resonance)
-        geometry = SVector{length(geometry)}(geometry)
+        if isa(geometry, Obstruction)
+            geometry = tuple(geometry)
+        else
+            geometry = tuple(geometry...)
+        end
         if isa(diffusivity, ZeroField) && length(geometry) > 0
             @warn "Restrictive geometry will have no effect, because the diffusivity is set at zero"
         end
