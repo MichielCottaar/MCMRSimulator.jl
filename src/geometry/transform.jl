@@ -140,31 +140,67 @@ function detect_collision(movement :: Movement{3}, trans :: TransformObstruction
     # apply rotation
     projected_origin = project_rotation(trans, movement.origin)
     projected_destination = project_rotation(trans, movement.destination)
+    if !any(isfinite, trans.repeats)
+        c = empty_collision
+
+        for (shift, obstruction) in zip(trans.shifts, trans.obstructions)
+            ctest = detect_collision(
+                Movement{N}(projected_origin - shift, projected_destination - shift, Float(1)),
+                obstruction,
+                previous
+            )
+            if ctest.distance < c.distance
+                c = ctest
+            end
+        end
+    elseif all(isfinite, trans.repeats)
+        c = detect_collision(projected_origin, projected_destination, previous, trans.repeats, trans.shifts, trans.shift_quadrants, trans.obstructions)
+    else
+        error()
+    end
+    if c.distance <= 1.
+        if N == 1
+            n = SVector{1, Float}(c.normal[1])
+        elseif N == 2
+            n = SVector{2, Float}(c.normal[1], c.normal[2])
+        else
+            n = c.normal
+        end
+        return Collision(
+            c.distance,
+            trans.rotation * n,
+            c.id,
+            c.index
+        )
+    end
+    return empty_collision
+end
+
     
+function detect_collision(
+    origin :: SVector{N, Float}, destination :: SVector{N, Float}, previous::Collision, repeats::SVector{N, Float}, 
+    shifts::SVector{M, SVector{N, Float}}, shift_quadrants::SVector{M, SVector{N, Bool}},
+    obstructions::SVector{M, <:BaseObstruction}
+    )  where {N, M}
+    half_repeats = map(r -> 0.5 * r, repeats)
     # project onto 1x1x1 grid
-    fdiv(p, r) = isfinite(r) ? 2 * p / r : 0.5
-    frev(r, p, lower, p_orig) = isfinite(r) ? r * (p - lower) / 2 : p_orig
-    origin = map(fdiv, projected_origin, trans.repeats)
-    destination = map(fdiv, projected_destination, trans.repeats)
+    grid_origin = map(/, origin, half_repeats)
+    grid_destination = map(/, destination, half_repeats)
 
     # iterate over multiple crossings of repeat boundaries
-    for (voxel, _, _, t2, _) in ray_grid_intersections(origin, destination)
-        lower = mod.(voxel, 2)
-        upper = 1 .- lower
-        p1 = origin - voxel
-        p2 = destination - voxel
-        pos1_center = map(frev, trans.repeats, p1, lower, projected_origin)
-        pos2_center = map(frev, trans.repeats, p2, lower, projected_destination)
-        pos1_shift = map(frev, trans.repeats, p1, upper, projected_origin)
-        pos2_shift = map(frev, trans.repeats, p2, upper, projected_destination)
+    for (voxel, _, _, t2, _) in ray_grid_intersections(grid_origin, grid_destination)
+        lower = map(v -> mod(v, 2), voxel)
+        
+        voxel_orig = map(*, voxel + lower, half_repeats)
+        p1 = origin - voxel_orig
+        p2 = destination - voxel_orig
 
         c = empty_collision
-        for (s, q, o) in zip(trans.shifts, trans.shift_quadrants, trans.obstructions)
-            part_origin = map(project_repeat_scalar, pos1_shift, pos1_center, s, q)
-            part_destination = map(project_repeat_scalar, pos2_shift, pos2_center, s, q)
+        for (shift, quadrant, obstruction) in zip(shifts, shift_quadrants, obstructions)
+            to_shift = map((s, q, h) -> s + q * h, shift, quadrant, half_repeats)
             ctest = detect_collision(
-                Movement{N}(part_origin, part_destination, Float(1)),
-                o,
+                Movement{N}(p1 - to_shift, p2 - to_shift, Float(1)),
+                obstruction,
                 previous
             )
             if ctest.distance < c.distance
@@ -172,12 +208,7 @@ function detect_collision(movement :: Movement{3}, trans :: TransformObstruction
             end
         end
         if c.distance <= t2
-            return Collision(
-                c.distance,
-                trans.rotation * SVector{N, Float}(c.normal[1:N]),
-                c.id,
-                c.index
-            )
+            return c
         end
     end
     return empty_collision

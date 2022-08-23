@@ -65,7 +65,7 @@
         end
         @testset "Hitting vertical and horizontal walls" begin
             res = mr.correct_collisions(
-                mr.Movement(SA[-1, 0, 0], SA[2, 3, 3], Float(3.)),
+                mr.Movement([-1, 0, 0], [2, 3, 3], 3.),
                 [mr.walls(rotation=:x, shifts=1.), mr.walls(rotation=:y, shifts=1.)]
             )
             @test length(res) == 3
