@@ -147,15 +147,15 @@ function detect_collision(movement :: Movement{3}, trans :: TransformObstruction
     destination = map(fdiv, projected_destination, trans.repeats)
 
     # iterate over multiple crossings of repeat boundaries
-    for (voxel, t1, p1, t2, p2) in ray_grid_intersections(origin, destination)
+    for (voxel, _, _, t2, _) in ray_grid_intersections(origin, destination)
         lower = mod.(voxel, 2)
         upper = 1 .- lower
-        orig1 = (projected_destination .* t1) .+ (projected_origin .* (1 - t1))
-        orig2 = (projected_destination .* t2) .+ (projected_origin .* (1 - t2))
-        pos1_center = map(frev, trans.repeats, p1, lower, orig1)
-        pos2_center = map(frev, trans.repeats, p2, lower, orig2)
-        pos1_shift = map(frev, trans.repeats, p1, upper, orig1)
-        pos2_shift = map(frev, trans.repeats, p2, upper, orig2)
+        p1 = origin - voxel
+        p2 = destination - voxel
+        pos1_center = map(frev, trans.repeats, p1, lower, projected_origin)
+        pos2_center = map(frev, trans.repeats, p2, lower, projected_destination)
+        pos1_shift = map(frev, trans.repeats, p1, upper, projected_origin)
+        pos2_shift = map(frev, trans.repeats, p2, upper, projected_destination)
 
         c = empty_collision
         for (s, q, o) in zip(trans.shifts, trans.shift_quadrants, trans.obstructions)
@@ -170,9 +170,9 @@ function detect_collision(movement :: Movement{3}, trans :: TransformObstruction
                 c = ctest
             end
         end
-        if c !== empty_collision
+        if c.distance <= t2
             return Collision(
-                c.distance * (t2 - t1) + t1,
+                c.distance,
                 trans.rotation * SVector{N, Float}(c.normal[1:N]),
                 c.id,
                 c.index
