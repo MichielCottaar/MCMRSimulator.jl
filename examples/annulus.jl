@@ -16,5 +16,5 @@ snap = mr.Snapshot(3000);
 simulation = mr.Simulation(snap, [sequence], diffusivity=3., geometry=geometry);
 
 append!(simulation, 2.);
-@time append!(simulation, 20.);
-@profview append!(simulation, 20.);
+@time append!(simulation, 200.);
+@profview append!(simulation, 200.);
