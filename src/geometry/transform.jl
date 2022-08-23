@@ -1,10 +1,11 @@
-struct TransformObstruction{N, M, O<:BaseObstruction{N}} <: Obstruction{N}
+using StaticArrays
+struct TransformObstruction{N, M, K, O<:BaseObstruction{N}} <: Obstruction{N}
     obstructions::SVector{M, O}
     shifts::SVector{M, SVector{N, Float}}
     repeats::SVector{N, Float}
     shift_quadrants::SVector{M, SVector{N, Bool}}
-    rotation::SMatrix{3, N, Float}
-    inv_rotation::SMatrix{N, 3, Float}
+    rotation::SMatrix{3, N, Float, K}
+    inv_rotation::SMatrix{N, 3, Float, K}
     chi::Float
     lorentz_radius :: Float
     lorentz_repeats :: SVector{N, Int}
@@ -17,7 +18,7 @@ struct TransformObstruction{N, M, O<:BaseObstruction{N}} <: Obstruction{N}
         shift_quadrants = SVector{M}([get_shift_quadrants(s, repeats) for s in shifts])
         chi = sum(total_susceptibility, obstructions) / prod(repeats)
         lorentz_repeats = map(r -> isfinite(r) ? Int(div(lorentz_radius, r, RoundUp)) : 0, repeats)
-        new{N, M, eltype(obstructions)}(obstructions, shifts, repeats, shift_quadrants, rotation, transpose(rotation), chi, lorentz_radius, lorentz_repeats)
+        new{N, M, 3 * N, eltype(obstructions)}(obstructions, shifts, repeats, shift_quadrants, rotation, transpose(rotation), chi, lorentz_radius, lorentz_repeats)
     end
 end
 
