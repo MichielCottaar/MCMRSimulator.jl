@@ -157,7 +157,7 @@ function detect_collision(movement :: Movement{3}, trans :: TransformObstruction
     elseif all(isfinite, trans.repeats)
         c = detect_collision(projected_origin, projected_destination, previous, trans.repeats, trans.shifts, trans.shift_quadrants, trans.obstructions)
     else
-        error()
+        error("Repeating only along a subset of directions is not yet supported")
     end
     if c.distance <= 1.
         if N == 1
