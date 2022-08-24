@@ -1,7 +1,7 @@
 import MRSimulator as mr
 using StaticArrays
 # Set up infinitely repeating aligned cylinders
-geometry = mr.cylinders([0.8, 0.9], shifts=[[0, 0], [0, 0]], repeats=[2., 2.])
+geometry = mr.annuli(0.8, 0.9, shifts=[0, 0], repeats=[2., 2.])
 
 #geometry = mr.TransformObstruction(mr.box_mesh(grid_size=10), repeats=[1.5, 1.5, 1.5])
 
