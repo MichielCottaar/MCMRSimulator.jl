@@ -6,6 +6,7 @@ MRSimulator.jl comes with a variety of basic components that can be used to repr
 | ------------- | ---------------- | ------------------- | -------------- |
 | infinite walls | [`Wall`](@ref) | [`walls`](@ref)   | 1 |
 | hollow infinite cylinder | [`Cylinder`](@ref) | [`cylinders`](@ref)   | 2 |
+| Annulus with inner and outer radius | [`Annulus`](@ref) | [`annuli`](@ref)   | 2 |
 | hollow sphere | [`Sphere`](@ref) | [`spheres`](@ref)   | 3 |
 | mesh | [`Mesh`](@ref) | see [Defining a mesh](@ref)   | 3 |
 
