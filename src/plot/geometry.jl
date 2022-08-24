@@ -139,7 +139,7 @@ function project_obstruction(cylinder::Cylinder, center::PosVector, obstruction_
             end
         end
     else
-        line = get_line(center)
+        line = get_line(SVector{2}(center))
     end
     [(Makie.lines!, (cut_line(line, halfs), ), Dict())]
 end
