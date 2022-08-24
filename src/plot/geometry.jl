@@ -44,22 +44,22 @@ end
 Projects the plane on the intrinsic plane of the obstructions deformed by `transform`.
 """
 function project_geometry(plot_plane::PlotPlane, transform::TransformObstruction{N}) where {N}
-    center_plot_plane = inv(plot_plane.transformation)(SA[0, 0, 0])
+    center_obstruction_space = plot_plane.transformation(SA[0, 0, 0])
 
-    to_plot_plane = plot_plane.transformation(SA[0, 0, 0])
-    coordinates_unnormed = map(p->plot_plane.transformation(p) - to_plot_plane, eachcol(transform.rotation))
-    coordinates = SVector{N}(map(p->p ./ norm(p), coordinates_unnormed))
+    obstruction_coordinates_in_plot_plane = SVector{N}(map(p->PosVector(plot_plane.transformation(p)) - center_obstruction_space, eachcol(transform.rotation)))
 
     projections = []
-    for (obstruction, origin) in zip(transform.obstructions, project(transform, center_plot_plane))
-        append!(projections, project_obstruction(obstruction, origin, coordinates, transform.repeats, (plot_plane.sizex, plot_plane.sizey)))
+    for (obstruction, shift) in zip(transform.obstructions, transform.shifts)
+        obstruction_center_in_plot_plane = plot_plane.transformation(transform.rotation * shift)
+        append!(projections, project_obstruction(obstruction, obstruction_center_in_plot_plane, obstruction_coordinates_in_plot_plane, transform.repeats, (plot_plane.sizex, plot_plane.sizey)))
     end
     projections
 end
 
 
-function project_obstruction(wall::Wall, origin::SVector{1, Float}, coordinates::SVector{1, PosVector}, repeats::SVector{1, Float}, sizes::Tuple{<:Real, <:Real})
-    normal = coordinates[1][1:2]
+function project_obstruction(wall::Wall, center::PosVector, obstruction_coordinates_in_plot_plane::SVector{1, PosVector}, repeats::SVector{1, Float}, sizes::Tuple{<:Real, <:Real})
+    constant_center = obstruction_coordinates_in_plot_plane[1] ⋅ center
+    normal = obstruction_coordinates_in_plot_plane[1][1:2]
     halfs = (sizes[1]/2, sizes[2]/2)
 
     function get_line(constant::Float)
@@ -77,55 +77,70 @@ function project_obstruction(wall::Wall, origin::SVector{1, Float}, coordinates:
             ]
         end
     end
-
-    max_size = normal[1] * halfs[1] + normal[2] * half[2]
-    nshift = isfinite(repeats[1]) ? div(max_size + abs(origin[1]), repeats[1], RoundUp) : 0
-    line = SVector{2, Float}[]
-    for shift in -nshift:nshift
-        append!(line, get_line(shift * repeats[1] + origin[1]))
+    if isfinite(repeats[1])
+        repeat_constant_shift = repeats[1] * norm(normal)
+        closest_center = mod(constant_center, repeat_constant_shift)
+        max_size = abs.(normal) ⋅ halfs
+        nshift = div(max_size + abs(closest_center), repeat_constant_shift, RoundUp)
+    
+        line = SVector{2, Float}[]
+        for shift in -nshift:nshift
+            append!(line, get_line(shift * repeat_constant_shift + closest_center))
+        end
+    else
+        line = get_line(constant_center)[1:2]
     end
     [(Makie.lines!, (cut_line(line, halfs), ), Dict())]
 end
 
-function project_obstruction(cylinder::Cylinder, origin::SVector{2, Float}, coordinates::SVector{2, PosVector}, repeats::SVector{2, Float}, sizes::Tuple{<:Real, <:Real})
-    normal = SVector{2}(coordinates[1][3], coordinates[2][3])
-    projection_size = (1-sum(c->c*c, normal))^2
+function project_obstruction(cylinder::Cylinder, center::PosVector, obstruction_coordinates_in_plot_plane::SVector{2, PosVector}, repeats::SVector{2, Float}, sizes::Tuple{<:Real, <:Real})
+    (dirx, diry) = obstruction_coordinates_in_plot_plane
+    normal = cross(dirx, diry)
+    if normal[3] == 0
+        error("Can not plot cylinders perfectly aligned with plotting plane")
+    end
+    halfs = (sizes[1]/2, sizes[2]/2)
+    center = (center .- normal .* (center[3] / normal[3]))[1:2]
+    dirx = (dirx .- normal .* (dirx[3] / normal[3]))[1:2]
+    diry = (diry .- normal .* (diry[3] / normal[3]))[1:2]
+
+    projection_size = normal[3] * normal[3]
+
     theta_normal = atan(normal[2], normal[1])
-
-    theta = (0:0.02:2) * π
-
     function relative_radius(theta)
         ct_rot = cos(theta - theta_normal)
         sqrt(1 / (1 - ct_rot * ct_rot * (1 - projection_size)))
     end
+    theta = (0:0.02:2) * π
     radius = cylinder.radius .* relative_radius.(theta)
 
-    dirx = SVector{2}(coordinates[1][1], coordinates[2][1])
-    diry = SVector{2}(coordinates[1][2], coordinates[2][2])
-    scalex = relative_radius(0)
-    scaley = relative_radius(π/2)
-
-    points = map((r, t) -> dirx .* (r .* cos(t)) .+ diry .* (r * sin(t)), radius, theta)
+    points = map((r, t) -> SVector{2, Float}(r .* cos(t), r * sin(t)), radius, theta)
     push!(points, SVector{2, Float}(NaN, NaN))
 
     function get_line(center :: SVector{2, Float})
         map(p->SVector{2, Float}(p[1] + center[1], p[2] + center[2]), points)
     end
 
-    max_sizex = isfinite(repeats[1]) ? div(abs(dirx ⋅ sizes), 2 * repeats[1], RoundUp) + 1 : 0
-    max_sizey = isfinite(repeats[2]) ? div(abs(diry ⋅ sizes), 2 * repeats[2], RoundUp) + 1 : 0
+    if all(isfinite.(repeats))
+        stepx = dirx * repeats[1]
+        stepy = diry * repeats[2]
 
-    line = SVector{2, Float}[]
-    for shiftx in -max_sizex:max_sizex
-        fx = scalex * ((iszero(shiftx) ? 0. : shiftx * repeats[1]) + origin[1])
-        for shifty in -max_sizey:max_sizey
-            fy = scaley * ((iszero(shifty) ? 0. : shifty * repeats[2]) + origin[2])
-            center = @. fx * dirx + fy * diry
-            append!(line, get_line(center))
+        toshift = [stepx stepy] \ center
+        closest_center = center - (toshift[1] * stepx + toshift[2] * stepy)
+
+        nshiftx = div(abs.(dirx) ⋅ (halfs .+ abs.(closest_center)) + projection_size * cylinder.radius, repeats[1], RoundUp)
+        nshifty = div(abs.(diry) ⋅ (halfs .+ abs.(closest_center)) + projection_size * cylinder.radius, repeats[2], RoundUp)
+        line = SVector{2, Float}[]
+        for i in -nshiftx:nshiftx
+            int_pos = closest_center .+ i .* stepx
+            for j in -nshifty:nshifty
+                pos = SVector{2}(int_pos .+ j .* stepy)
+                append!(line, get_line(pos))
+            end
         end
+    else
+        line = get_line(center)
     end
-
-    halfs = (sizes[1]/2, sizes[2]/2)
     [(Makie.lines!, (cut_line(line, halfs), ), Dict())]
 end
 
@@ -186,11 +201,11 @@ function add_overlap!(new_line, prev_point, new_point, sizes)
         end
     end
     x1 = (constant - sizes[2] * normal[2]) / normal[1]
-    if abs(x1) < sizes[1]
+    if abs(x1) <= sizes[1]
         add_valid!(SVector{2, Float}(x1, sizes[2]))
     end
     x2 = (constant + sizes[2] * normal[2]) / normal[1]
-    if abs(x2) < sizes[1]
+    if abs(x2) <= sizes[1]
         add_valid!(SVector{2, Float}(x2, -sizes[2]))
     end
 
