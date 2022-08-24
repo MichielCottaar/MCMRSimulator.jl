@@ -2,6 +2,7 @@
     Sphere([radius[, location]])
 
 Creates a hollow sphere with a radius of `radius` micrometer (default 1 micrometer) at the given `location` (default: origin).
+Generate spheres using [`spheres`](@ref).
 """
 struct Sphere <: BaseObstruction{3}
     radius :: Float
@@ -10,6 +11,13 @@ struct Sphere <: BaseObstruction{3}
 end
 Base.copy(s::Sphere) = Sphere(s.radius)
 
+"""
+    spheres(radii; positions=[[0, 0, 0]], repeats=[Inf, Inf, Inf], rotation=I(3))
+
+Creates one or more [`Sphere`](@ref)s with given radius (or vector of `radii`).
+The `positions`, `repeats`, and `rotation` control the sphere positions and is explained in 
+more detail in [Defining the geometry](@ref).
+"""
 function spheres(args...; kwargs...)
     TransformObstruction(Sphere, args...; kwargs...)
 end

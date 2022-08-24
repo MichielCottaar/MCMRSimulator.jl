@@ -1,9 +1,8 @@
 """
-    Wall([[normal,] offset])
+    Wall()
 
-Infinitely large wall with an orientation given by `normal` (default in the x-direction).
-The normal can also be defined using :x, :y, or :z, to point in that cardinal direction.
-The offset of the wall from the origin along this `normal` is given by `offset` (so that `offset .* normal` is on the wall).
+Wall stretching to infinite along two dimensions.
+Generate walls using [`walls`](@ref).
 """
 struct Wall <: BaseObstruction{1}
     id :: UUID
@@ -14,6 +13,13 @@ Base.copy(w::Wall) = Wall()
 isinside(pos::PosVector, wall::Wall) = false
 BoundingBox(wall::Wall) = BoundingBox(SA[0], SA[0])
 
+"""
+    walls(positions=0, repeats=Inf, rotation=I(3))
+
+Creates one or more [`Wall`](@ref)s.
+The `positions`, `repeats`, and `rotation` control the wall position and orientation and is explained in 
+more detail in [Defining the geometry](@ref).
+"""
 walls(;kwargs...) = TransformObstruction(Wall(); kwargs...)
 
 function detect_collision(movement :: Movement{1}, wall :: Wall, previous=empty_collision)

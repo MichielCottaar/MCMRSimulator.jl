@@ -1,15 +1,9 @@
 """
-    Cylinder([radius[, orientation[, location]; chi_I=-0.1, chi_A=-0.1, g_ratio=1]])
+    Cylinder(radius; chi_I=-0.1, chi_A=-0.1, g_ratio=1)
 
 Creates a hollow cylinder with a radius of `radius` micrometer (default 1 micrometer) at the given `location` (default: origin).
-The orientation of the cylinder (default: z-direction) can be given as a symbol of the cardinal orientation (:x, :y, or :z) or as a length-3 vector.
-
-# Myelin sheath
-The cylinder can be wrapped in a myelin sheath by setting `g_ratio` to a different value from 1.
-The myelin sheath will be infinitely thin, when considering collisions,
-however it will generate an off-resonance field determined by the myelin's isotropic magnetic susceptibility (`chi_I`),
-the anisotropic magnetic susceptibility (`chi_A`), and the g-ratio (`g_ratio`).
-Both `chi_I` and `chi_A` are given in ppm and set to the value from Wharton & Bowtell (2012).
+Generate cylinders using [`cylinders`](@ref).
+See [Myelinated cylinders](@ref) for an explanation of the myelin sheath.
 """
 struct Cylinder <: BaseObstruction{2}
     radius :: Float
@@ -41,6 +35,15 @@ function total_susceptibility(c::Cylinder)
     2 * π * chi * (r_outer^2 - r_inner^2)
 end
 
+"""
+    cylinders(radii; g_ratio=1, chi_I=-0.1, chi_A=-0.1, positions=[0, 0], repeats=[Inf, Inf], rotation=I(3)
+
+Creates one or more [`Cylinder`](@ref)s with given radius (or vector of `radii`).
+[Myelinated cylinders](@ref) can be created by setting the `g_ratio` to a different value that 1.
+All parameters can be either a single value or a vector of values.
+The `positions`, `repeats`, and `rotation` control the cylinder position and orientation and is explained in 
+more detail in [Defining the goemetry](@ref).
+"""
 function cylinders(args...; kwargs...)
     TransformObstruction(Cylinder, args...; kwargs...)
 end
