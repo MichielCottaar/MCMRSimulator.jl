@@ -31,4 +31,5 @@ where we have also used ``\cos 2 \phi = (2 \cos^2 \phi - 1)``.
 Once again we pre-compute most of this equation (``\omega_{\rm external} \equiv 2 \left(\chi_I + \chi_A/4 \right) r_c^2 \frac{1-g^2}{(1 + g)^2}`` when the [`Cylinder`](@ref) is created.
 This is multiplied by ``\sin^2 \theta (2 \cos^2 \phi - 1) / r^2`` when callling [`off_resonance`](@ref) for the cylinder.
 
+## Myelinated annuli
 
