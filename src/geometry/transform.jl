@@ -58,20 +58,16 @@ function get_rotation(rotation::AbstractVector, ndim::Int)
     if ndim == 1
         return reshape(normed, 3, 1)
     end
-    try_vec = [1., 0, 0]
+    try_vec = [0., 1., 0.]
     vec1 = cross(normed, try_vec)
     if iszero(norm(vec1))
-        try_vec = [0., 1, 0]
+        try_vec = [1., 0, 0]
         vec1 = cross(normed, try_vec)
     end
     vec2 = cross(normed, vec1)
     vec1 = vec1 ./ norm(vec1)
     vec2 = vec2 ./ norm(vec2)
-    if ndim == 2
-        return hcat(vec1, vec2)
-    else
-        return hcat(vec1, vec2, normed)
-    end
+    return get_rotation(transpose(hcat(vec1, vec2, normed)), ndim)
 end
 
 function get_rotation(rotation::Symbol, ndim::Int)

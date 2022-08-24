@@ -25,7 +25,7 @@ end
 function PlotPlane(
     normal :: AbstractVector{<:Real}=SA[0, 0, 1], 
     position :: AbstractVector{<:Real}=SA[0, 0, 0];
-    sizex::Real=Inf, sizey::Real=Inf,
+    sizex::Real=2., sizey::Real=2.,
     ngrid=100,
 )
     normal = SVector{3}(normal)

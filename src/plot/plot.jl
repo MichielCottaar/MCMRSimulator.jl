@@ -11,5 +11,6 @@ color(orient::Union{Spin{1}, SpinOrientation}; saturation=1.) = Colors.HSV(phase
 
 include("plot_plane.jl")
 include("sequence.jl")
+include("geometry.jl")
 include("snapshot.jl")
 include("trajectory.jl")
