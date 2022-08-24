@@ -16,6 +16,8 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "Geometry" => "obstructions.md",
+        "Magnetic susceptibility" => "off_resonance.md",
         "API" => "api.md",
     ],
 )

@@ -7,4 +7,5 @@ At present, the simulator allows to model
 - MR sequences consisting of RF pulses, gradients, and readouts
 - [Off-resonance field](@ref) generation by myelinated cylinders
 
-
+```@index
+```
