@@ -22,7 +22,7 @@ function spheres(args...; kwargs...)
     TransformObstruction(Sphere, args...; kwargs...)
 end
 
-isinside(pos::PosVector, sphere::Sphere) = norm(pos) <= sphere.radius
+isinside(sphere::Sphere, pos::PosVector) = norm(pos) <= sphere.radius
 BoundingBox(s::Sphere) = BoundingBox([-s.radius, -s.radius, -s.radius], [s.radius, s.radius, s.radius])
 
 function detect_collision(movement :: Movement, sphere :: Sphere, previous=empty_collision) 

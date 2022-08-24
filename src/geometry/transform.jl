@@ -216,7 +216,7 @@ function detect_collision(
 end
 
 
-isinside(trans::TransformObstruction, pos::PosVector) = any(po -> isinside(po[1], po[2]), zip(project(trans, pos), trans.obstructions))
+isinside(trans::TransformObstruction, pos::PosVector) = maximum(po -> isinside(po[2], po[1]), zip(project(trans, pos), trans.obstructions))
 
 function BoundingBox(trans::TransformObstruction{N}) where {N}
     bbs = [BoundingBox(o) for o in trans.obstructions]

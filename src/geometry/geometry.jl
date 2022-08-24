@@ -8,16 +8,16 @@ There are two types of obstructions:
 abstract type Obstruction{N} end
 
 """
-    isinside(position, obstructions/bounding_box)
-    isinside(spin, obstructions/bounding_box)
-    isinside(snapshot, obstructions/bounding_box)
+    isinside(obstructions/bounding_box, position)
+    isinside(obstructions/bounding_box, spin)
+    isinside(obstructions/bounding_box, snapshot)
 
 Test whether the particles are inside any of the [`Obstrunctions`](@ref) (or in the [`BoundingBox`](@ref)).
 """
 isinside(o, pos::Vector) = isinside(o, PosVector(pos))
 isinside(o, spin::Spin) = isinside(o, position(spin))
 isinside(o, snapshot::Snapshot) = map(s -> isinside(o, s), snapshot.spins)
-isinside(obstructions::Tuple, pos::PosVector) = any(o -> isinside(o, pos), obstructions)
+isinside(obstructions::Tuple, pos::PosVector) = maximum(o -> isinside(o, pos), obstructions)
 
 
 """

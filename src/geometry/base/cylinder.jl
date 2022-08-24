@@ -25,7 +25,7 @@ struct Cylinder <: BaseObstruction{2}
 end
 
 Base.copy(c::Cylinder) = Cylinder(c.radius; chi_I=c.chi_I, chi_A=c.chi_A, g_ratio=c.g_ratio)
-isinside(pos::SVector{2, Float}, cyl::Cylinder) = (pos[1] * pos[1] + pos[2] * pos[2]) <= (cyl.radius * cyl.radius)
+isinside(cyl::Cylinder, pos::SVector{2, Float}) = (pos[1] * pos[1] + pos[2] * pos[2]) <= (cyl.radius * cyl.radius)
 BoundingBox(c::Cylinder) = BoundingBox([-c.radius, -c.radius], [c.radius, c.radius])
 
 function total_susceptibility(c::Cylinder)

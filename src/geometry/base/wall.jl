@@ -10,7 +10,7 @@ struct Wall <: BaseObstruction{1}
 end
 
 Base.copy(w::Wall) = Wall()
-isinside(pos::PosVector, wall::Wall) = false
+isinside(wall::Wall, pos::PosVector) = false
 BoundingBox(wall::Wall) = BoundingBox(SA[0], SA[0])
 
 """
