@@ -67,7 +67,7 @@ function get_rotation(rotation::AbstractVector, ndim::Int)
     vec2 = cross(normed, vec1)
     vec1 = vec1 ./ norm(vec1)
     vec2 = vec2 ./ norm(vec2)
-    return get_rotation(transpose(hcat(vec1, vec2, normed)), ndim)
+    return get_rotation(hcat(vec1, vec2, normed), ndim)
 end
 
 function get_rotation(rotation::Symbol, ndim::Int)
