@@ -235,7 +235,7 @@ Base.iterate(s::Snapshot, state) = iterate(s.spins, state)
 
 Returns all the positions of the spin particles as a vector of length-3 vectors.
 """
-position(s::Snapshot) = mr.position.(s.spins)
+position(s::Snapshot) = position.(s.spins)
 
 Snapshot(snap :: Snapshot{1}, nsequences::Integer) = Snapshot([Spin(spin, nsequences) for spin in snap.spins], snap.time)
 get_sequence(snap::Snapshot, index) = Snapshot(get_sequence.(snap.spins, index), snap.time)
