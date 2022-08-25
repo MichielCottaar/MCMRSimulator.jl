@@ -29,8 +29,10 @@ include("readout.jl")
 include("evolve.jl")
 include("plot/plot.jl")
 
-export Simulation, Microstructure, field, Sequence, RFPulse, Readout, InstantGradient, 
-    longitudinal, transverse, phase, vector, Repeated, Transformed, Sphere, Cylinder, Wall,
-    perfect_dwi
+export Sequence, RFPulse, Readout, InstantGradient
+export perfect_dwi
+export longitudinal, transverse, phase, vector, Spin, Snapshot, SpinOrientation
+export Simulation, Microstructure, evolve, readout, signal, trajectory
+export PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d
 end
 
