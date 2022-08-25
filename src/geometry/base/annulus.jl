@@ -23,7 +23,7 @@ struct Annulus <: BaseObstruction{2}
     end
 end
 
-Base.copy(a::Annulus) = Annulus(a.inner.radius, a.outer.radius; chi_I=a.chi_I, chi_A=a.chi_A, myelin=myelin)
+Base.copy(a::Annulus) = Annulus(a.inner.radius, a.outer.radius; chi_I=a.chi_I, chi_A=a.chi_A, myelin=a.myelin)
 isinside(a::Annulus, pos::SVector{2, Float}) = isinside(a.inner, pos) + isinside(a.outer, pos)
 BoundingBox(a::Annulus) = BoundingBox(a.outer)
 
