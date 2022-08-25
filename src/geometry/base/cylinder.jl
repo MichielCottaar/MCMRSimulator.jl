@@ -80,7 +80,7 @@ function lorentz_off_resonance(cylinder::Cylinder, position::SVector{2, Float}, 
         return field
     end
     lorentz_radius_sq = radius * radius
-    sin_theta_sq = b0_field[1] * b0_field[1] - b0_field[2] + b0_field[2]
+    sin_theta_sq = b0_field[1] * b0_field[1] + b0_field[2] + b0_field[2]
     if iszero(sin_theta_sq)
         return field
     end

@@ -81,10 +81,7 @@ function lorentz_off_resonance(annulus::Annulus, position::SVector{2, Float}, b0
         return field
     end
     lorentz_radius_sq = radius * radius
-    sin_theta_sq = b0_field[1] * b0_field[1] - b0_field[2] + b0_field[2]
-    if iszero(sin_theta_sq)
-        return field
-    end
+    sin_theta_sq = b0_field[1] * b0_field[1] + b0_field[2] + b0_field[2]
     for i in -nrepeats[1]:nrepeats[1]
         xshift = i * repeat_dist[1]
         p1 = position[1] + xshift
