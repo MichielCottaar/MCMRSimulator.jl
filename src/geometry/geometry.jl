@@ -50,7 +50,7 @@ off_resonance(obstructions::Tuple{}, position::PosVector, b0_field=PosVector([0,
 
 Computes the off-resonance field contribution of repeating compartments within a spherical or cylindrical Lorentz cavity.
 """
-lorentz_off_resonance(cylinder::Obstruction, position::SVector{N, Float}, b0_field::SVector{N, Float}, repeat_dist::SVector{N, Float}, radius::Float, nrepeats::SVector{N, Int}) where {N} = zero(Float)
+lorentz_off_resonance(obstruction::Obstruction{N}, position::SVector{N, Float}, b0_field::SVector{N, Float}, repeat_dist::SVector{N, Float}, radius::Float, nrepeats::SVector{N, Int}) where {N} = zero(Float)
 
 
 """
