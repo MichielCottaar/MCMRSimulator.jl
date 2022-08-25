@@ -33,7 +33,7 @@ function total_susceptibility(a::Annulus)
     if !a.myelin
         return zero(Float)
     end
-    chi = c.chi_I + c.chi_A / 4
+    chi = a.chi_I + a.chi_A / 4
     2 * π * chi * (a.outer.radius^2 - a.inner.radius^2)
 end
 
