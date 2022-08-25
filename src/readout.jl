@@ -76,7 +76,7 @@ end
 
 _to_snapshot(spins::Int, nseq) = _to_snapshot(Snapshot(spins), nseq)
 _to_snapshot(spins::AbstractVector{<:Real}, nseq) = _to_snapshot(Spin(position=spins), nseq)
-_to_snapshot(spins::AbstractVector{AbstractVector{<:Real}}, nseq) = _to_snapshot(Spin.(position=spins), nseq)
+_to_snapshot(spins::AbstractVector{<:AbstractVector{<:Real}}, nseq) = _to_snapshot([Spin(position=pos) for pos in spins], nseq)
 function _to_snapshot(spins::AbstractMatrix{<:Real}, nseq) 
     if size(spins, 2) != 3
         spins = transpose(spins)
