@@ -15,8 +15,10 @@ struct Annulus <: BaseObstruction{2}
     chi_A :: Float
     internal_field :: Float
     external_field :: Float
-    function Annulus(inner::Float, outer::Float; chi_I=-0.1, chi_A=-0.1, myelin=false)
+    function Annulus(inner::Real, outer::Real; chi_I=-0.1, chi_A=-0.1, myelin=false)
         @assert outer > inner
+        inner = Float(inner)
+        outer = Float(outer)
         internal_field = 0.75 * chi_A * log(outer / inner)
         external_field = (chi_I + chi_A / 4) * (outer * outer - inner * inner) / 2
         new(Cylinder(inner), Cylinder(outer), myelin, chi_I, chi_A, internal_field, external_field)
