@@ -46,7 +46,7 @@ struct Microstructure{F1 <: Field, F2 <: Field, F3 <: Field, F4 <: Field, G <: T
 end
 
 (micro::Microstructure)(position) = LocalEnvironment(
-    micro.off_resonance(position),
+    micro.off_resonance(position) + off_resonance(micro.geometry, position),
     micro.R2(position),
     micro.R1(position),
 )
