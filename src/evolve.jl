@@ -67,57 +67,72 @@ function evolve_to_time(
 end
 
 """
-    append!(simulation, delta_time)
+    evolve_to_time(simulation, snapshot, new_time)
 
-Continue the MR simulation with given timespan
+Evolves the full [`Snapshot`](@ref) through the [`Simulation`](@ref) to the given `new_time`.
+Multi-threading is used to evolve multiple spins in parallel.
+This is used internally when calling any of the snapshot evolution methods (e.g., [`evolve`](@ref)).
 """
-function Base.append!(simulation::Simulation{N}, delta_time::Real) where {N}
-    delta_time = Float(delta_time)
-    if delta_time < 0
-        return simulation
+function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_time::Float) where {N}
+    current_time::Float = snapshot.time
+    if new_time < current_time
+        error("New requested time ($(new_time)) is less than current time ($(snapshot.time)). Simulator does not work backwards in time.")
     end
-    spins::Vector{Spin{N}} = copy(simulation.latest[end].spins)
-    current_time::Float = simulation.latest[end].time
-    new_time = current_time + delta_time
+    spins::Vector{Spin{N}} = copy(snapshot.spins)
+
+    # define next stopping times due to sequence, readout or times
     sequence_index = MVector{N, Int}(
         [next_pulse(seq, current_time) for seq in simulation.sequences]
     )
-    next_readout = div(current_time, simulation.store_every, RoundUp) * simulation.store_every
-    times = [new_time, next_readout, time.(simulation.sequences, sequence_index)...]
+    times = [new_time, time.(simulation.sequences, sequence_index)...]
+
+    readouts = SVector{N, Vector{Snapshot{1}}}([Snapshot{1}[] for _ in 1:N])
+
     B0_field = SVector{N, Float}(Float[s.B0 for s in simulation.sequences])
     nspins = length(spins)
     while true
         next = argmin(times)
         next_time::Float = times[next]
+
+        # evolve all spins to next interesting time
         Threads.@threads for idx in 1:nspins
             spins[idx] = evolve_to_time(spins[idx], current_time, next_time, simulation.micro, simulation.timestep, B0_field)
         end
         current_time = next_time
-        if times[1] == current_time
-            push!(simulation.latest, Snapshot(spins, current_time))
-            break
-        end
-        if times[2] == current_time
-            push!(simulation.regular, Snapshot(copy(spins), current_time))
-            times[2] += simulation.store_every
-        end
-        if any(t -> t == current_time, times[3:end])
-            components = SVector{N, Union{Nothing, SequenceComponent}}([
-                time == current_time ? seq[index] : nothing 
-                for (seq, index, time) in zip(simulation.sequences, sequence_index, times[3:end])
-            ])
-            spins = apply(components, spins)
-            for (idx, ctime) in enumerate(times[3:end])
+
+        # take care of any readouts
+        if any(t -> t == current_time, times[2:end])
+            for (idx, ctime) in enumerate(times[2:end])
                 if ctime == current_time
                     sequence = simulation.sequences[idx]
                     if isa(sequence[sequence_index[idx]], Readout)
-                        push!(simulation.readout[idx], Snapshot(get_sequence.(spins, idx), current_time))
+                        push!(readouts[idx], Snapshot(get_sequence.(spins, idx), current_time))
+                        sequence_index[idx] += 1
+                        times[idx + 1] = time(sequence, sequence_index[idx])
                     end
+                end
+            end
+        end
+
+        # return final snapshot state
+        if times[1] == current_time
+            return (Snapshot(spins, current_time), readouts)
+        end
+
+        # apply RF pulses
+        if any(t -> t == current_time, times[2:end])
+            components = SVector{N, Union{Nothing, SequenceComponent}}([
+                time == current_time ? seq[index] : nothing 
+                for (seq, index, time) in zip(simulation.sequences, sequence_index, times[2:end])
+            ])
+            spins = apply(components, spins)
+            for (idx, ctime) in enumerate(times[2:end])
+                if ctime == current_time
+                    sequence = simulation.sequences[idx]
                     sequence_index[idx] += 1
-                    times[idx + 2] = time(sequence, sequence_index[idx])
+                    times[idx + 1] = time(sequence, sequence_index[idx])
                 end
             end
         end
     end
-    simulation
 end

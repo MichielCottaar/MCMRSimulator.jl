@@ -271,18 +271,16 @@
         @testset "Test lots of particles still don't cross compartments" begin
             for geometry in (
                 mr.cylinders([0.8, 0.9], shifts=[[0, 0], [0, 0]], repeats=[2, 2]),
-                mr.spheres([0.8, 0.9], shifts=[[0, 0, 0], [0, 0, 0]], repeats=[2, 2, 2]),
+                mr.spheres([0.8, 0.9], shifts=[[0, 0, 0], [2, 0, 2]], repeats=[2, 2, 2]),
             )
                 sequence = mr.perfect_dwi(bval=2.)
 
                 snap = mr.Snapshot(300);
 
-                simulation = mr.Simulation(snap, [sequence], diffusivity=3., geometry=geometry);
+                simulation = mr.Simulation([sequence], diffusivity=3., geometry=geometry);
 
-                append!(simulation, 200.);
-
-                before = mr.isinside(geometry, simulation.latest[1]);
-                after = mr.isinside(geometry, simulation.latest[end]);
+                before = mr.isinside(geometry, snap);
+                after = mr.isinside(geometry, mr.evolve(snap, simulation, 200.))
                 switched = sum(xor.(before, after))
                 @test switched == 0
             end
@@ -292,10 +290,9 @@
             walls = mr.walls(shifts=[0, 1])
             snap = mr.Snapshot([mr.Spin(position=rand(3)) for _ in 1:3000])
             sequence = mr.perfect_dwi(bval=2.)
-            simulation = mr.Simulation(snap, [sequence]; geometry=walls, diffusivity=3.);
+            simulation = mr.Simulation([sequence]; geometry=walls, diffusivity=3.);
 
-            append!(simulation, 200.);
-            final = simulation.latest[end]
+            final = mr.evolve(snap, simulation, 200.)
             xfinal = [s.position[1] for s in final.spins]
             @test all(xfinal .>= 0.)
             @test all(xfinal .<= 1.)

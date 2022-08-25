@@ -14,24 +14,21 @@
         end
         @testset "Perfect PGSE with no diffusion" begin
             nspins = 300
-            spins = mr.Snapshot(nspins)
-            TE = 80.
-            sequence = mr.perfect_dwi(bval=2., TE=TE)
-            readout = mr.Simulation(spins, [sequence])
-            append!(readout, TE * 1.01)
-            @test length(readout.readout[1]) == 1
-            snap = readout.readout[1][1]
-            @test snap.time == TE
+            sequence = mr.perfect_dwi(bval=2., TE=80.)
+            sim = mr.Simulation([sequence])
+            readout = mr.readout(nspins, sim)
+            @test length(readout[1]) == 1
+            snap = readout[1][1]
+            @test snap.time == 80.
             @test mr.transverse(snap) ≈ nspins rtol=1e-2
         end
         @testset "Perfect PGSE with free diffusion" begin
             nspins = 1000
-            spins = mr.Snapshot(nspins)
             TE = 80.
             sequence = mr.perfect_dwi(bval=0.3, TE=TE)
-            readout = mr.Simulation(spins, [sequence], diffusivity=0.5)
-            append!(readout, TE * 1.01)
-            snap = readout.readout[1][1]
+            sim = mr.Simulation([sequence], diffusivity=0.5)
+            readout = mr.readout(nspins, sim)
+            snap = readout[1][1]
             @test snap.time == TE
             @test mr.transverse(snap) ≈ nspins * exp(-0.15) rtol=0.05
         end
@@ -44,9 +41,9 @@
                     # equation 4 from Balinov, B. et al. (1993) ‘The NMR Self-Diffusion Method Applied to Restricted Diffusion. Simulation of Echo Attenuation from Molecules in Spheres and between Planes’, Journal of Magnetic Resonance, Series A, 104(1), pp. 17–25. doi:10.1006/jmra.1993.1184.
                     qvals = [0.01, 0.1, 1.]
                     sequences = [mr.perfect_dwi(TE=101, diffusion_time=100, qval=qval) for qval in qvals]
-                    simulation = mr.Simulation(snap, sequences; geometry=sphere, diffusivity=3.)
-                    append!(simulation, 102)
-                    for (qval, readouts) in zip(qvals, simulation.readout)
+                    simulation = mr.Simulation(sequences; geometry=sphere, diffusivity=3.)
+                    at_readout = mr.readout(snap, simulation)
+                    for (qval, readouts) in zip(qvals, at_readout)
                         readout = readouts[1]
                         factor = qval * radius
                         expected = 9 * (factor * cos(factor) - sin(factor)) ^2 / factor^6
@@ -64,9 +61,9 @@
                     # equation 6 from Balinov, B. et al. (1993) ‘The NMR Self-Diffusion Method Applied to Restricted Diffusion. Simulation of Echo Attenuation from Molecules in Spheres and between Planes’, Journal of Magnetic Resonance, Series A, 104(1), pp. 17–25. doi:10.1006/jmra.1993.1184.
                     qvals = [0.01, 0.1, 1.]
                     sequences = [mr.perfect_dwi(TE=101, diffusion_time=100, qval=qval, orientation=[1., 0., 0.]) for qval in qvals]
-                    simulation = mr.Simulation(snap, sequences; geometry=walls, diffusivity=3.)
-                    append!(simulation, 102)
-                    for (qval, readouts) in zip(qvals, simulation.readout)
+                    simulation = mr.Simulation(sequences; geometry=walls, diffusivity=3.)
+                    at_readout = mr.readout(snap, simulation)
+                    for (qval, readouts) in zip(qvals, at_readout)
                         readout = readouts[1]
                         factor = qval * distance
                         #factor = 2 * π * qval * distance

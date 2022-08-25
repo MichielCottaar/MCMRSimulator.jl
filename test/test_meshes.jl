@@ -97,9 +97,8 @@
 
         sequence = mr.perfect_dwi(bval=2.)
 
-        simulation = mr.Simulation(snap, [sequence]; geometry=mesh, diffusivity=3.)
-        append!(simulation, 20)
-        final = mr.get_sequence(simulation.latest[end], 1)
+        simulation = mr.Simulation([sequence]; geometry=mesh, diffusivity=3.)
+        final = mr.evolve(snap, simulation, 20)
         @test all(mr.position.(snap) != mr.position.(final))
         @test all(map(spin -> all(abs.(mr.position(spin) .<= 0.5)), final.spins))
     end
