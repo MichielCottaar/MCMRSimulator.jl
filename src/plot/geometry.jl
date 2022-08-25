@@ -125,7 +125,7 @@ function project_obstruction(cylinder::Cylinder, center::PosVector, obstruction_
         stepx = dirx * repeats[1]
         stepy = diry * repeats[2]
 
-        toshift = [stepx stepy] \ center
+        toshift = round.([stepx stepy] \ center)
         closest_center = center - (toshift[1] * stepx + toshift[2] * stepy)
 
         nshiftx = div(abs.(dirx) ⋅ (halfs .+ abs.(closest_center)) + projection_size * cylinder.radius, repeats[1], RoundUp)
