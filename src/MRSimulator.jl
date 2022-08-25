@@ -31,7 +31,7 @@ include("plot/plot.jl")
 
 export Sequence, RFPulse, Readout, InstantGradient
 export perfect_dwi
-export longitudinal, transverse, phase, vector, Spin, Snapshot, SpinOrientation
+export longitudinal, transverse, phase, vector, Spin, Snapshot, SpinOrientation, isinside
 export Simulation, Microstructure, evolve, readout, signal, trajectory
 export PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d
 end
