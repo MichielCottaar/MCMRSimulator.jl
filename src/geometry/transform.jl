@@ -191,10 +191,11 @@ function detect_collision(
         voxel_orig = map(*, voxel + lower, half_repeats)
         p1 = origin - voxel_orig
         p2 = destination - voxel_orig
+        to_correct = map(*, lower, repeats)
 
         c = empty_collision
         for (shift, quadrant, obstruction) in zip(shifts, shift_quadrants, obstructions)
-            to_shift = map((s, q, h) -> s + q * h, shift, quadrant, half_repeats)
+            to_shift = map((s, q, t) -> s - q * t, shift, quadrant, to_correct)
             ctest = detect_collision(
                 Movement{N}(p1 - to_shift, p2 - to_shift, Float(1)),
                 obstruction,
