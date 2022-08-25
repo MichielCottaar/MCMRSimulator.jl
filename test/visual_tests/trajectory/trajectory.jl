@@ -5,10 +5,10 @@
         function plot_trajectory(fname)
             Random.seed!(1234)
             snapshot = mr.Snapshot([mr.Spin() for _ in 1:4])
-            simulation = mr.Simulation(snapshot, [mr.perfect_dwi(bval=0.1, TE=80)], diffusivity=3., timestep=0.1)
-            append!(simulation, 80)
+            simulation = mr.Simulation([mr.perfect_dwi(bval=0.1, TE=80)], diffusivity=3., timestep=0.1)
+            trajectory = mr.trajectory(snapshot, simulation, 80)
             f = Figure()
-            mr.plot_trajectory3d(f[1, 1], simulation.regular, sequence=1)
+            mr.plot_trajectory3d(f[1, 1], trajectory, sequence=1)
             CairoMakie.save(fname, f)
         end
 
@@ -18,11 +18,11 @@
         function plot_trajectory(fname)
             Random.seed!(1234)
             snapshot = mr.Snapshot([mr.Spin() for _ in 1:4])
-            simulation = mr.Simulation(snapshot, [mr.perfect_dwi(bval=0.1, TE=80)], diffusivity=3., timestep=0.1)
-            append!(simulation, 80)
+            simulation = mr.Simulation([mr.perfect_dwi(bval=0.1, TE=80)], diffusivity=3., timestep=0.1)
+            trajectory = mr.trajectory(snapshot, simulation, 80)
             pp = mr.PlotPlane(sizex=30., sizey=30.)
             f = Figure()
-            mr.plot_trajectory2d(f[1, 1], pp, simulation.regular, sequence=1)
+            mr.plot_trajectory2d(f[1, 1], pp, trajectory, sequence=1)
             CairoMakie.save(fname, f)
         end
 

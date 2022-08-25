@@ -25,9 +25,15 @@ end
 function PlotPlane(
     normal :: AbstractVector{<:Real}=SA[0, 0, 1], 
     position :: AbstractVector{<:Real}=SA[0, 0, 0];
-    sizex::Real=2., sizey::Real=2.,
+    sizex=nothing, sizey=nothing, size=10.,
     ngrid=100,
 )
+    if isnothing(sizex)
+        sizex = size
+    end
+    if isnothing(sizey)
+        sizey = size
+    end
     normal = SVector{3}(normal)
     position = SVector{3}(position)
     if normal ≈ SA[0, 0, 1]
