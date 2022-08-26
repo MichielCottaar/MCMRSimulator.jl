@@ -9,6 +9,7 @@ The dimensionality N indicates the dimensionality of the input data
 abstract type BaseObstruction{N} <: Obstruction{N} end
 
 
+include("random_draws.jl")
 include("cylinder.jl")
 include("sphere.jl")
 include("wall.jl")

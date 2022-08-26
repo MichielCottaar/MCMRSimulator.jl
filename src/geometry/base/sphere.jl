@@ -69,3 +69,16 @@ function sphere_collision(origin :: SVector{N, Float}, destination :: SVector{N,
         index=Int(inside)
     )
 end
+
+"""
+Generate infinitely repeating box with non-overlapping spheres.
+
+A box with the size of `repeats` will be filled with spheres for a total volume density of `target_density`.
+The sphere radii will be drawn from the selected `distribution` (if not set, a Gamma distribution is used with given `mean_radius` and `var_radius`).
+An error is raised if no solution for non-overlapping spheres is found.
+Other sphere parameters (besides `radii`, `shifts`, and `repeats`) are identical as in `mr.spheres`.
+"""
+function random_spheres(target_density; repeats, distribution=nothing, mean_radius=1., variance_radius=0.5, max_iter=1000, kwargs...)
+    (positions, radii) = random_positions_radii(repeats, target_density, 3; distribution=distribution, mean=mean_radius, variance=variance_radius, max_iter=max_iter)
+    spheres(radii; shifts=positions, repeats=repeats, kwargs...)
+end

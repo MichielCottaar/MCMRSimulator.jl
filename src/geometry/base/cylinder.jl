@@ -104,3 +104,16 @@ function lorentz_off_resonance(cylinder::Cylinder, position::SVector{2, Float}, 
     end
     return field
 end
+
+"""
+Generate infinitely repeating box with non-overlapping cylinders.
+
+A rectangle with the size of `repeats` will be filled with cylinders for a total surface density of `target_density`.
+The cylinder radii will be drawn from the selected `distribution` (if not set, a Gamma distribution is used with given `mean_radius` and `var_radius`).
+An error is raised if no solution for non-overlapping cylinders is found.
+Other cylinder parameters (besides `radii`, `shifts`, and `repeats`) are identical as in `mr.cylinders`.
+"""
+function random_cylinders(target_density; repeats, distribution=nothing, mean_radius=1., variance_radius=0.5, max_iter=1000, kwargs...)
+    (positions, radii) = random_positions_radii(repeats, target_density, 2; distribution=distribution, mean=mean_radius, variance=variance_radius, max_iter=max_iter)
+    cylinders(radii; shifts=positions, repeats=repeats, kwargs...)
+end
