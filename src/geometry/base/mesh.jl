@@ -149,12 +149,6 @@ function mesh_grid_intersection(shape::GridShape, vertices::Vector{PosVector}, t
                 if cube_upper < lower || cube_lower > upper
                     hit[index] = false
                 end
-                if (index == CartesianIndex(69, 37, 100)) && (store_index == 3) && false
-                    println(project_onto)
-                    println(lower, ", ", upper)
-                    println(cube_lower, ", ", cube_upper)
-                    println(hit[index])
-                end
             end
         end
         for index in findall(hit)
