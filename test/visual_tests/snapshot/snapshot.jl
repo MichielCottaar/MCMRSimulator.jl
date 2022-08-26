@@ -29,9 +29,9 @@
                     for pos in positions
                 ]
             )
-            plot_plane = mr.PlotPlane(ngrid=10)
+            plot_plane = mr.PlotPlane()
             f = Figure()
-            mr.plot_snapshot(f[1, 1], plot_plane, snapshot, ndyads=10, dyadlength=0.5)
+            mr.plot_snapshot(f[1, 1], plot_plane, snapshot, ndyads=10, dyadlength=0.5, ngrid=10)
             CairoMakie.save(fname, f)
         end
 

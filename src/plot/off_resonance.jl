@@ -6,7 +6,8 @@ Plots the off-resonance of `geometry` in the [`PlotPlane`](@ref).
 """
 @Makie.recipe(Plot_Off_Resonance, plot_plane, geometry) do scene
     Makie.Theme(
-        colormap=:viridis
+        colormap=:viridis,
+        ngrid=400
     )
 end
 
@@ -14,7 +15,7 @@ function Makie.plot!(por::Plot_Off_Resonance)
     plot_plane = por[1]
     geometry = por[2]
 
-    dims = @lift -0.5:(1/$plot_plane.ngrid):0.5
+    dims = @lift -0.5:(1/$(por[:ngrid])):0.5
     xx_1d = @lift $dims * $plot_plane.sizex
     yy_1d = @lift $dims * $plot_plane.sizey
     pos_plane = @lift broadcast(

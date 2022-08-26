@@ -57,7 +57,8 @@ end
 
 @Makie.recipe(Image_Snapshot, plane, snap) do scene
     Makie.Attributes(
-        sequence=1
+        sequence=1,
+        ngrid=20
     )
 end
 
@@ -74,7 +75,7 @@ function Makie.plot!(sp::Image_Snapshot)
     planar = sp[1]
     snap = sp[2]
 
-    projection = @lift project_on_grid($planar, $snap)
+    projection = @lift project_on_grid($planar, $snap, $(sp[:ngrid]))
     xs = @lift $projection[1]
     ys = @lift $projection[2]
     c = @lift color.($projection[3])
