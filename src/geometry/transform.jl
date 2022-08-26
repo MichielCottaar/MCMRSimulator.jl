@@ -1,21 +1,21 @@
 using StaticArrays
 struct TransformObstruction{N, M, K, O<:BaseObstruction{N}} <: Obstruction{N}
-    obstructions::SVector{M, O}
-    shifts::SVector{M, SVector{N, Float}}
+    obstructions::NTuple{M, O}
+    shifts::NTuple{M, SVector{N, Float}}
     repeats::SVector{N, Float}
-    shift_quadrants::SVector{M, SVector{N, Bool}}
+    shift_quadrants::NTuple{M, SVector{N, Bool}}
     rotation::SMatrix{3, N, Float, K}
     inv_rotation::SMatrix{N, 3, Float, K}
     chi::Float
     lorentz_radius :: Float
     lorentz_repeats :: SVector{N, Int}
-    function TransformObstruction(obstructions::SVector{M, <:BaseObstruction{N}}, shifts, repeats, rotation, lorentz_radius) where {N, M}
+    function TransformObstruction(obstructions::NTuple{M, <:BaseObstruction{N}}, shifts, repeats, rotation, lorentz_radius) where {N, M}
         @assert all(r -> r>0, repeats)
-        repeats = map(Float, repeats)
+        repeats = SVector{N}(map(Float, repeats))
 
         # normalise shifts by the repeats, so that the base shift is between -repeats/4 and +3 * repeats/4
-        shifts = SVector{M}([map((s, r) -> isfinite(r) ? mod(s + r/4, r) - r/4 : Float(s), single_shift, repeats) for single_shift in shifts])
-        shift_quadrants = SVector{M}([get_shift_quadrants(s, repeats) for s in shifts])
+        shifts = NTuple{M, SVector{N, Float}}([map((s, r) -> isfinite(r) ? mod(s + r/4, r) - r/4 : Float(s), single_shift, repeats) for single_shift in shifts])
+        shift_quadrants = NTuple{M, SVector{N, Bool}}([get_shift_quadrants(s, repeats) for s in shifts])
         chi = sum(total_susceptibility, obstructions) / prod(repeats)
         lorentz_repeats = map(r -> isfinite(r) ? Int(div(lorentz_radius, r, RoundUp)) : 0, repeats)
         new{N, M, 3 * N, eltype(obstructions)}(obstructions, shifts, repeats, shift_quadrants, rotation, transpose(rotation), chi, lorentz_radius, lorentz_repeats)
@@ -107,9 +107,9 @@ function TransformObstruction(obstructions::AbstractVector{<:BaseObstruction{N}}
     end
     M = length(obstructions)
     TransformObstruction(
-        SVector{M}(obstructions),
-        SVector{M}(shifts),
-        SVector{N}([iszero(r) ? Float(Inf) : Float(r) for r in repeats]),
+        NTuple{M, eltype(obstructions)}(obstructions),
+        NTuple{M, SVector{N, Float}}(shifts),
+        SVector{N, Float}([iszero(r) ? Float(Inf) : Float(r) for r in repeats]),
         get_rotation(rotation, N),
         lorentz_radius
     )
@@ -177,8 +177,8 @@ end
     
 function detect_collision(
     origin :: SVector{N, Float}, destination :: SVector{N, Float}, previous::Collision, repeats::SVector{N, Float}, 
-    shifts::SVector{M, SVector{N, Float}}, shift_quadrants::SVector{M, SVector{N, Bool}},
-    obstructions::SVector{M, <:BaseObstruction}
+    shifts::NTuple{M, SVector{N, Float}}, shift_quadrants::NTuple{M, SVector{N, Bool}},
+    obstructions::NTuple{M, <:BaseObstruction}
     )  where {N, M}
     half_repeats = map(r -> 0.5 * r, repeats)
     # project onto 1x1x1 grid
