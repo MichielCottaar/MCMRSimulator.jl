@@ -119,14 +119,15 @@ function project_rotation(trans::TransformObstruction{N}, pos::PosVector) where 
     trans.inv_rotation * pos
 end
 
-function project_repeat(trans::TransformObstruction{N}, pos::SVector{N, Float}) where {N}
+function project_repeat(trans::TransformObstruction{N, M}, pos::SVector{N, Float}) where {N, M}
     pos_shifted = map((p, r) -> isfinite(r) ? mod(p, r) : p, pos, trans.repeats)
-    pos_center = map((p, r) -> (isfinite(r) && p > r/2) ? p - r : p, pos_shifted, trans.repeats)
-    [map(project_repeat_scalar, pos_shifted, pos_center, s, q) for (s, q) in zip(trans.shifts, trans.shift_quadrants)]
-end
+    will_shift = map((p, r) -> (isfinite(r) && p > r/2) ? r : zero(Float), pos_shifted, trans.repeats)
 
-function project_repeat_scalar(pos_shifted::Float, pos_center:: Float, shift::Float, shift_quadrant::Bool) where {N}
-    (shift_quadrant ? pos_shifted : pos_center) - shift
+    function shifted(quadrant, shift)
+        toshift = map(+, map((q, r) -> (!q) * r, quadrant, will_shift), shift)
+        return map(-, pos_shifted, toshift)
+    end
+    map(shifted, trans.shift_quadrants, trans.shifts)
 end
 
 function project(trans::TransformObstruction{N}, pos::PosVector) where {N}
