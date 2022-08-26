@@ -23,7 +23,7 @@ function Makie.plot!(por::Plot_Off_Resonance)
         reshape($yy_1d, 1, length($yy_1d)),
     )
     pos_orig = @lift inv($plot_plane.transformation).($pos_plane)
-    field = @lift map(p->off_resonance($geometry, p), $pos_orig)
+    field = @lift map(p->off_resonance(Tuple($geometry), p), $pos_orig)
     Makie.image!(por, xx_1d, yy_1d, field, colormap=por[:colormap])
     por
 end
