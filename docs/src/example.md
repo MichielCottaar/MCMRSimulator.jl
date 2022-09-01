@@ -19,8 +19,8 @@ As the annuli have been defined to be oriented in the y-direction, we also place
 of this [`PlotPlane`](@ref) in the y-direction
 ```@example 1
 pp = PlotPlane(:y, size=20.)  # Define the plane in which to make the plot
-plot_off_resonance(pp, geometry)  # plot the off-resonance field produced by the annuli
+f = plot_off_resonance(pp, geometry)  # plot the off-resonance field produced by the annuli
 plot!(pp, geometry)  # overlay the geometry
-save("myelinated_annuli.png") # hide
+save("myelinated_annuli.png", f); # hide
 ```
 ![](myelinated_annuli.png)
