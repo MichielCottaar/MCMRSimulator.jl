@@ -34,7 +34,7 @@ export Sequence, RFPulse, Readout, InstantGradient
 export perfect_dwi
 export longitudinal, transverse, phase, vector, Spin, Snapshot, SpinOrientation, isinside
 export Simulation, Microstructure, evolve, readout, signal, trajectory
-export Annulus, annuli, Cylinder, cylinders, random_cylinders, Wall, walls, Sphere, spheres, random_spheres, Mesh, box_mesh
+export Annulus, annuli, random_annuli, Cylinder, cylinders, random_cylinders, Wall, walls, Sphere, spheres, random_spheres, Mesh, box_mesh
 export PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d
 end
 
