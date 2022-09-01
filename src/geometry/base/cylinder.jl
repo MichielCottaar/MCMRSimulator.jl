@@ -42,7 +42,7 @@ Creates one or more [`Cylinder`](@ref)s with given radius (or vector of `radii`)
 [Myelinated cylinders](@ref) can be created by setting the `g_ratio` to a different value that 1.
 All parameters can be either a single value or a vector of values.
 The `positions`, `repeats`, and `rotation` control the cylinder position and orientation and is explained in 
-more detail in [Defining the goemetry](@ref).
+more detail in [Defining the geometry](@ref).
 """
 function cylinders(args...; kwargs...)
     TransformObstruction(Cylinder, args...; kwargs...)
@@ -117,5 +117,5 @@ Other cylinder parameters (besides `radii`, `shifts`, and `repeats`) are identic
 """
 function random_cylinders(target_density; repeats, distribution=nothing, mean_radius=1., variance_radius=0.5, max_iter=1000, kwargs...)
     (positions, radii) = random_positions_radii(repeats, target_density, 2; distribution=distribution, mean=mean_radius, variance=variance_radius, max_iter=max_iter)
-    cylinders(radii; shifts=positions, repeats=repeats, kwargs...)
+    cylinders(radii; positions=positions, repeats=repeats, kwargs...)
 end

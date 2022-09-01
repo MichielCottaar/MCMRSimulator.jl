@@ -49,7 +49,7 @@ function project_geometry(plot_plane::PlotPlane, transform::TransformObstruction
     obstruction_coordinates_in_plot_plane = SVector{N}(map(p->PosVector(plot_plane.transformation(p)) - center_obstruction_space, eachcol(transform.rotation)))
 
     projections = []
-    for (obstruction, shift) in zip(transform.obstructions, transform.shifts)
+    for (obstruction, shift) in zip(transform.obstructions, transform.positions)
         obstruction_center_in_plot_plane = plot_plane.transformation(transform.rotation * shift)
         append!(projections, project_obstruction(obstruction, obstruction_center_in_plot_plane, obstruction_coordinates_in_plot_plane, transform.repeats, (plot_plane.sizex, plot_plane.sizey)))
     end

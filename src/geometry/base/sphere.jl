@@ -82,5 +82,5 @@ Other sphere parameters (besides `radii`, `positions`, and `repeats`) are identi
 """
 function random_spheres(target_density; repeats, distribution=nothing, mean_radius=1., variance_radius=0.5, max_iter=1000, kwargs...)
     (positions, radii) = random_positions_radii(repeats, target_density, 3; distribution=distribution, mean=mean_radius, variance=variance_radius, max_iter=max_iter)
-    spheres(radii; shifts=positions, repeats=repeats, kwargs...)
+    spheres(radii; positions=positions, repeats=repeats, kwargs...)
 end

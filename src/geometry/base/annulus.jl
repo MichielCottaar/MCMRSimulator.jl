@@ -45,7 +45,7 @@ Creates one or more [`Annulus`](@ref) with given `inner` and `outer` radii.
 All parameters can be either a single value or a vector of values.
 
 The `positions`, `repeats`, and `rotation` control the annulus position and orientation and is explained in 
-more detail in [Defining the goemetry](@ref).
+more detail in [Defining the geometry](@ref).
 """
 function annuli(args...; kwargs...)
     TransformObstruction(Annulus, args...; kwargs...)
@@ -125,5 +125,5 @@ Other annuli parameters (besides `inner`, `outer`, `shifts`, and `repeats`) are 
 function random_annuli(target_density; repeats, g_ratio=0.8, distribution=nothing, mean_radius=1., variance_radius=0.5, max_iter=1000, kwargs...)
     (positions, outer) = random_positions_radii(repeats, target_density, 2; distribution=distribution, mean=mean_radius, variance=variance_radius, max_iter=max_iter)
     inner = g_ratio .* outer
-    annuli(inner, outer; shifts=positions, repeats=repeats, kwargs...)
+    annuli(inner, outer; positions=positions, repeats=repeats, kwargs...)
 end
