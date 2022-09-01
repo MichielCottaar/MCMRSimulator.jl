@@ -106,6 +106,8 @@ function lorentz_off_resonance(cylinder::Cylinder, position::SVector{2, Float}, 
 end
 
 """
+    random_cylinders(target_density; repeats, distribution=Distributions.Gamma, mean_radius=1., variance_radius=0.5, max_iter=1000, g_ratio=1., chi_I=-0.1, chi_A=-0.1, rotation=I(3))
+
 Generate infinitely repeating box with non-overlapping cylinders.
 
 A rectangle with the size of `repeats` will be filled with cylinders for a total surface density of `target_density`.
