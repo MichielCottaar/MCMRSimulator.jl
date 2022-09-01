@@ -55,7 +55,7 @@
         end
         @testset "Diffusion between two planes" begin
             for distance in [0.5, 1]
-                walls = mr.walls(shifts=[0., distance])
+                walls = mr.walls(positions=[0., distance])
                 snap = mr.Snapshot([mr.Spin(position=rand(3) * distance) for _ in 1:2000])
                 @testset "Stejskal-Tanner approximation at long diffusion times for a=$distance" begin
                     # equation 6 from Balinov, B. et al. (1993) ‘The NMR Self-Diffusion Method Applied to Restricted Diffusion. Simulation of Echo Attenuation from Molecules in Spheres and between Planes’, Journal of Magnetic Resonance, Series A, 104(1), pp. 17–25. doi:10.1006/jmra.1993.1184.

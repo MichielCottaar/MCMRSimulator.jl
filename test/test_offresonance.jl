@@ -7,7 +7,7 @@
             @test mr.off_resonance(cylinders, mr.PosVector([1, 1, 1])) == 0.
         end
         @testset "Myelinated cylinders aligned with field produce no off-resonance" begin
-            cylinders = mr.cylinders(1., shifts=[[0, 0], [2, 0]], g_ratio=0.8)
+            cylinders = mr.cylinders(1., positions=[[0, 0], [2, 0]], g_ratio=0.8)
             @test mr.off_resonance(cylinders, zero(mr.PosVector)) == 0.
             @test mr.off_resonance(cylinders, mr.PosVector([0, 0, 2])) == 0.
             @test mr.off_resonance(cylinders, mr.PosVector([0, 2, 0])) == 0.

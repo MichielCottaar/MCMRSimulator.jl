@@ -161,12 +161,12 @@ import Random
         @test mr.BoundingBox(mr.Cylinder(1)) == mr.BoundingBox([-1, -1], [1, 1])
 
         # shifted cylinder
-        @test mr.BoundingBox(mr.cylinders(1., shifts=[2., 2.])) == mr.BoundingBox([1., 1.], [3, 3])
+        @test mr.BoundingBox(mr.cylinders(1., positions=[2., 2.])) == mr.BoundingBox([1., 1.], [3, 3])
 
         # repeated obstructions
         @test mr.BoundingBox(mr.cylinders(1., repeats=[1., 3.])) == mr.BoundingBox([-1, -1], [1, 1])
 
         # shifted spheres
-        @test mr.BoundingBox(mr.spheres(1., shifts=[[1, 0, 0], [0, 1, 0]])) == mr.BoundingBox([-1, -1, -1.], [2., 2., 1.])
+        @test mr.BoundingBox(mr.spheres(1., positions=[[1, 0, 0], [0, 1, 0]])) == mr.BoundingBox([-1, -1, -1.], [2., 2., 1.])
     end
 end
