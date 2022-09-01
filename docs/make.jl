@@ -18,6 +18,7 @@ makedocs(;
         "Home" => "index.md",
         "Geometry" => "obstructions.md",
         "Magnetic susceptibility" => "off_resonance.md",
+        "Example" => "example.md",
         "API" => "api.md",
     ],
 )

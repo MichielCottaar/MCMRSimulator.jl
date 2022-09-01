@@ -12,19 +12,19 @@ abstract type Obstruction{N} end
     isinside(obstructions/bounding_box, spin)
     isinside(obstructions/bounding_box, snapshot)
 
-Test whether the particles are inside any of the [`Obstrunctions`](@ref) (or in the [`BoundingBox`](@ref)).
+Test whether the particles are inside any of the [`Obstruction`](@ref) objects (or in the [`BoundingBox`](@ref)).
 """
 isinside(o, pos::Vector) = isinside(o, PosVector(pos))
 isinside(o, spin::Spin) = isinside(o, position(spin))
 isinside(o, snapshot::Snapshot) = map(s -> isinside(o, s), snapshot.spins)
 isinside(obstructions::Tuple, pos::PosVector) = maximum(o -> isinside(o, pos), obstructions)
+isinside(obstructions::AbstractVector{<:Obstruction}, position::PosVector) = isinside(Tuple(obstructions), position)
 
 
 """
-    project(position, repeat::Repeated)
-    project(position, transform::Transformed)
+    project(position, transform::TransformObstruction)
 
-Computes the position in the space of the obstructions wrapped by the [`Repeated`](@ref) or [`Transformed`](@ref).
+Computes the position in the space of the obstructions wrapped by the [`TransformObstruction`](@ref).
 
     project(position, grid::GridShape)
 
@@ -44,6 +44,7 @@ function off_resonance(obstructions::Tuple, position::PosVector, b0_field=PosVec
 end
 off_resonance(obstructions::Obstruction, position::PosVector, b0_field::PosVector) = zero(Float)
 off_resonance(obstructions::Tuple{}, position::PosVector, b0_field=PosVector([0, 0, 1])::PosVector) = zero(Float)
+off_resonance(obstructions::AbstractVector{<:Obstruction}, position::PosVector, b0_field=PosVector([0, 0, 1])::PosVector) = sum(o->off_resonance(o, position, b0_field), obstructions)
 
 """
     lorentz_off_resonance(obstructions, position, b0_field, repeat_dist, radius, nrepeats)

@@ -41,6 +41,7 @@ If the `current_pos` is not provided only the displacement is returned (will onl
 draw_step(diffusivity :: Float, timestep :: Float) = sqrt(2 * timestep * diffusivity) * randn(PosVector)
 draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float) = current_pos .+ draw_step(diffusivity, timestep)
 draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: Tuple{}) = draw_step(current_pos, diffusivity, timestep)
+draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: AbstractVector{<:Obstruction}) = draw_step(current_pos, diffusivity, timestep, Tuple(geometry))
 function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry::Tuple)
     new_pos = draw_step(current_pos, diffusivity, timestep)
     displacement = norm(new_pos .- current_pos)

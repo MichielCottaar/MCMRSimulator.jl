@@ -136,7 +136,7 @@ end
     trajectory(snapshot, simulation, times=[TR])
 
 Evolves the [`Snapshot`](@ref) through the [`Simulation`](@ref) and outputs at the requested times.
-Returns a vector of [`Snapshot`](@ref) objects with the current state of each time in [`times`](@ref).
+Returns a vector of [`Snapshot`](@ref) objects with the current state of each time in times.
 When you are only interested in the signal at each timepoint, use [`signal`](@ref) instead.
 """
 function trajectory(spins, simulation::Simulation{N}, times=nothing) where{N}
@@ -163,7 +163,7 @@ end
 
 Evolves the [`Snapshot`](@ref) through the [`Simulation`](@ref) and outputs the total signal at the requested times.
 To get the full snapshot at each timepoint use [`trajectory`](@ref).
-Returns a vector of [`SpinOrientation`](@ref) object with the total signal at each time in [`times`](@ref).
+Returns a vector of [`SpinOrientation`](@ref) object with the total signal at each time in `times`.
 """
 function signal(spins, simulation::Simulation{N}, times=nothing) where {N}
     snapshot = _to_snapshot(spins, N)

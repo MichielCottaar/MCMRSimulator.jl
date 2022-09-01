@@ -1,9 +1,3 @@
-@Makie.recipe(Scatter_Snapshot, snap) do scene
-    Makie.Theme(
-    )
-end
-
-
 """
     plot(snapshot)
     plot!(snapshot)
@@ -12,7 +6,10 @@ end
 
 Plots the spin positions in the [`Snapshot`](@ref) in 3D color coded by the spin's orientation (see [`color`](@ref)).
 """
-function scatter_snapshot end
+@Makie.recipe(Scatter_Snapshot, snap) do scene
+    Makie.Theme(
+    )
+end
 
 function Makie.plot!(ss::Scatter_Snapshot)
     snap = ss[1]

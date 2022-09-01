@@ -22,7 +22,7 @@ end
 
 
 function PlotPlane(
-    normal :: AbstractVector{<:Real}=SA[0, 0, 1], 
+    normal=:z, 
     position :: AbstractVector{<:Real}=SA[0, 0, 0];
     sizex=nothing, sizey=nothing, size=10.,
 )
@@ -32,18 +32,9 @@ function PlotPlane(
     if isnothing(sizey)
         sizey = size
     end
-    normal = SVector{3}(normal)
+    rotation = get_rotation(normal, 3)
     position = SVector{3}(position)
-    if normal ≈ SA[0, 0, 1]
-        transform = CoordinateTransformations.Translation(position)
-    else
-        rot_axis = cross(SA[0, 0, 1], normal)
-        rot_angle = acos(normal[3] / norm(normal))
-        transform = CoordinateTransformations.AffineMap(
-            Rotations.AngleAxis(rot_angle, rot_axis...),
-            position
-        )
-    end
+    transform = CoordinateTransformations.AffineMap(rotation, position)
     PlotPlane(CoordinateTransformations.inv(transform), sizex, sizey)
 end
 

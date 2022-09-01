@@ -1,10 +1,10 @@
 """
     BoundingBox(lower::PosVector, upper::PosVector)
-    BoundingBox(obstructions::Obstructions)
     BoundingBox(obstruction::Obstruction)
+    BoundingBox(obstructions)
 
-Creates a bounding box containing the [`Obstruction`](@ref) (or [`Obsructions`](@ref)).
-For infinitely repeated objects (using [`Repeated`](@ref)) the bounding box of the central object is returned.
+Creates a bounding box containing one or more [`Obstruction`](@ref).
+For infinitely repeated objects (using [`TransformObstruction`](@ref)) the bounding box of the central object is returned.
 
 Check whether particles are inside using [`isinside`](@ref).
 """
