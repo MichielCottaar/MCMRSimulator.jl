@@ -55,7 +55,7 @@ end
 
 
 """
-    off_resonance(position, cylinder, b0_field)
+    off_resonance(cylinder, position, b0_field)
 
 Computed by the hollow cylinder fiber model from Wharton & Bowtell (2012).
 """
