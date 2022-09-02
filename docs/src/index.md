@@ -5,7 +5,162 @@ At present, the simulator allows to model
 - Free diffusion and diffusion restricted by walls, cylinders, spheres, or meshes
 - T1 and T2 relaxation
 - MR sequences consisting of RF pulses, gradients, and readouts
-- [Off-resonance field](@ref) generation by myelinated cylinders
+- Off-resonance field generation by myelinated cylinders
 
-```@index
+# [Installation](@id installation)
+1. First install julia (e.g., from the [official website](https://julialang.org/downloads/) or using [juliaup](https://github.com/JuliaLang/juliaup)).
+2. Start julia in the terminal (`$ julia`).
+3. Enter the package manager by pressing "]"
+   - Install MRSimulator.jl (`pkg> add MRSimulator`)
+   - Install one of the [Makie backends](https://makie.juliaplots.org/stable/documentation/backends/) for plotting (e.g., `pkg> add CairoMakie`)
+   - Press "\[backspace\]" to leave the package manager
+After this installation, you should be able to follow the steps in the tutorial below
+or create your own simulations.
+# Tutorial
+This tutorial will walk through an example of modelling the MRI signal evolution for a diffusion-weighted sequence.
+The spins in this simulation will be constrained by regularly packed cylinders.
+After [installation](@ref installation) we can load MRSimulator.jl using
+```@example tutorial
+using MRSimulator
+using CairoMakie  # used for plotting; use GLMakie or WGLMakie for interactive plots
 ```
+
+In general, running a simulation will consist of the following three steps:
+- Defining the microstructure and on or more sequences by creating an appropriate [`Simulation`](@ref) object.
+- Initialising one or more [`Spin`](@ref) objects.
+- Simulating a random walk of the spins through the microstructure and the MR signal produced by those spins.
+- Plotting the MR signal or storing it to disk.
+We will look through each of these steps below.
+## Defining the simulation
+The first step is to define the environment through which the spins will evolve.
+We will do so by creating an appropriate [`Simulation`](@ref) object.
+This `Simulation` will contain information on the microstructure, the MR physics, and the enabled sequences.
+
+These different steps are described in more detail in other sections of this documentation:
+- [How to define the microstrutural geometry](@ref geometry)
+- [Generate off-resonance fields due to the microstructural geometry](@ref off_resonance)
+- Sequence generation
+
+First we will define the geometry formed of regularly packed axons.
+This is represented by a single cylinder with a radius of 1 micrometer that repeats itself every 2.5 micrometer (in both the x-, and y-direction).
+```@example tutorial
+import Random; Random.seed!(1) # hide
+geometry = cylinders(1., repeats=[2.5, 2.5])
+
+f = plot(PlotPlane(size=5), geometry)
+save("tutorial_geometry.png", f) # hide
+```
+![](tutorial_geometry.png)
+More complicated geometries can be generated as described [here](@ref geometry) including geometries with magnetic susceptibility that produce off-resonance fields (see [here](@ref off_resonance)).
+
+The next step is to define a sequence. 
+Here we will adopt a single diffusion-weighted MRI sequence.
+```@example tutorial
+sequence = perfect_dwi(bval=2., TR=300, TE=80)  # default gradient orientation in the x-direction
+f = plot(sequence)
+save("tutorial_sequence.png", f) # hide
+```
+![](tutorial_sequence.png)
+
+Once we have both a geometry and one or more sequences, we can put them together in a [`Simulation`](@ref) object:
+```@example tutorial
+simulation = Simulation(sequence, R2=0.012, R1=3e-3, diffusivity=2., off_resonance=0.1, timestep=0.01, geometry=geometry)
+```
+Note that we actually have to set the `R2`, `R1`, and `diffusivity` to non-zero values to enable those pieces of physics.
+
+## Initialising the simulation
+We can initialise the simulation in one of three ways:
+- An integer value indicating the number of spins to be simulated. The spins will be randomly distributed through a 1mm x 1mm x 1mm voxel and start in equilibrium.
+- A sequence of positions (i.e., length-3 vectors) with the initial spin positions.
+- A [`Snapshot`](@ref) from a previous simulation.
+We will see examples of all three below.
+
+In all cases the first step will be to create a [`Snapshot`](@ref) with the initial [`Spin`](@ref) objects.
+Each `Spin` represents a single diffusing particle.
+Besides containing its current position, it also contains its contribution to the MR signal for each of the sequences in the simulation.
+Finally, each `Spin` contains its own random number generator.
+This ensures that when a spin is evolved the same simulation multiple times, it will follow the same path each time.
+
+At each timepoint the current state of the spins is represented by a [`Snapshot`](@ref).
+## Running the simulation
+Running the simulation is done through 4 functions, for which examples are shown below:
+- [`trajectory`](@ref): follow the full state evolution for a small number of spins
+- [`evolve`](@ref): evolve a large number of spins for a specific time
+- [`readout`](@ref): return the spin states at the time of the sequence readouts
+- [`signal`](@ref): return the average signal at high temporal resolution
+### Illustrating trajectories
+We will start by illustrating the 2D trajectory for two spins, one inside and one outside of the cylinder.
+To plot the trajectory we first need to output the state of the all spins at a high temporal resolution,
+which can be done using `trajectory`:
+```@example tutorial
+# Simulate 2 spins with given starting positions for 3 ms
+snapshots = trajectory([[0, 0, 0], [1, 1, 0]], simulation, 3.)
+
+pp = PlotPlane(size=5.)
+f = plot(pp, geometry)
+plot_trajectory2d!(pp, snapshots)
+save("tutorial_trajectory2D.png", f) # hide
+```
+![](tutorial_trajectory2D.png)
+In this plot the color at each timepoint encodes the spin orientation.
+The brightness of the spin indicates the size of the transverse component with purely longitudinal spins being in black.
+The color of the spin encodes the phase of the MR signal in the transverse plane.
+
+The trajectories can also be plotted in 3D:
+```@example tutorial
+f = plot_trajectory3d(snapshots)
+save("tutorial_trajectory3D.png", f) # hide
+```
+![](tutorial_trajectory3D.png)
+
+When simulating a large number of spins, storing the spin state every timestep would become very memory-intensive.
+To get around this we will typically either store the average signal at a high temporal resolution
+or the full state at a low resolution. Let's have a look of examples for both.
+### Signal evolution
+To store the total signal evolution we can use [`signal`](@ref).
+At each timepoint this will return the total MR signal (for each sequence) as a [`SpinOrientation`](@ref) object.
+From this one can estimate the [`transverse`](@ref) component, the [`longitudinal`](@ref) component, and the [`phase`](@ref).
+Here we plot the transverse component of the signal evolution as an example
+```@example tutorial
+times = 0:0.1:sequence.TR
+average_signals = signal(3000, simulation, times)  # simulate 3000 spins for a single repetition time
+f = plot(sequence)
+lines!(times, transverse.(average_signals)/3000.)
+save("tutorial_transverse.png", f) # hide
+```
+![](tutorial_transverse.png)
+
+### Readout at specific times
+We can return a [`Snapshot`](@ref) at any time simply by running:
+```@example tutorial
+snapshot = evolve(3000, simulation, 80.)
+pp = PlotPlane(size=2.5)
+f = plot(pp, snapshot)
+plot!(pp, geometry)
+save("tutorial_snapshot.png", f) # hide
+```
+![](tutorial_snapshot.png)
+The color encoding is the same as for the trajectory plot above.
+The brightness encodes the size of the transverse component, while
+the color encodes the phase of the MR signal in the transverse plane.
+We can see that outside of the cylinder the signal contribution is significantly reduced.
+The black arrows show the transverse spin for some random spins.
+
+We can use this to plot the longitudinal signal at the first and third TR using:
+```@example tutorial
+first_TR_start = Snapshot(1000)
+fifth_TR_start = evolve(first_TR_start, simulation, sequence.TR * 2)
+
+f = plot(sequence)
+
+for start in (first_TR_start, fifth_TR_start)
+    times = 0:0.1:100.
+    average_signals = signal(start, simulation, times .+ start.time)
+    plot!(times, longitudinal.(average_signals)/3000., cycle=[:color])
+end
+save("tutorial_longitudinal.png", f) # hide
+```
+![](tutorial_longitudinal.png)
+
+Sequences will usually contain one or more [`Readout`](@ref) objects to mark the readout times.
+To get the [`Snapshot`](@ref) at these readouts during one repetition time, you can use [`readout`](@ref).

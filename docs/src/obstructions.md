@@ -1,4 +1,4 @@
-# Obstructions to free diffusion
+# [Obstructions to free diffusion](@id geometry)
 ## Defining the geometry
 MRSimulator.jl comes with a variety of basic components that can be used to represent various components in the tissue microstructure.
 
@@ -12,7 +12,7 @@ MRSimulator.jl comes with a variety of basic components that can be used to repr
 
 The constructors for these components all have a similar interface.
 Some expect certain component-specific arguments (e.g., radii for [`spheres`](@ref) and [`cylinders`](@ref).
-Some also have component-specific keyword argumetns (e.g., the keywords regarding the off-resonance produces by [Myelinated cylinders](@ref)).
+Some also have component-specific keyword argumetns (e.g., the keywords regarding the off-resonance produces by [Myelinated cylinders](@ref Myelinated_cylinders)).
 Finally, they expect a set of keyword arguments that control their location.
 These arguments are identicaly across all constructors (although the expected input depends on the dimensionality of the component as listed in the table above):
 - `positions`: Set the positions for each generated components
@@ -62,6 +62,8 @@ save("random_cylinders.png", f) # hide
 ```  
 
 ![Illustrating configuration of random cylinders](random_cylinders.png)
+
+Myelin can be added to either the cylinders or annuli as described [here](@ref off_resonance).
 
 A geometry is defined by either the [`TransformObstruction`](@ref) returned by a single call to these constructors
 or by an array of [`TransformObstruction`](@ref) objects.
