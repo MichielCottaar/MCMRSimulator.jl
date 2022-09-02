@@ -90,5 +90,5 @@ function perfect_dwi(;
             InstantGradient(time=(TE + diffusion_time) / 2., qvec=qvec),
         ])
     end
-    Sequence(base_components, TR)
+    Sequence(pulses=base_components, TR=TR)
 end

@@ -7,7 +7,7 @@ sg = SliderGrid(fig[2, 1],
 	(label="TE", range=1:0.1:50, format="{:.1f}μs", startvalue=20),
 )
 TE = sg.sliders[1].value
-sequence = @lift Sequence([RFPulse(flip_angle=90), RFPulse(flip_angle=180, time=$TE/2.)], 1.5 * $TE)
+sequence = @lift Sequence(pulses=[RFPulse(flip_angle=90), RFPulse(flip_angle=180, time=$TE/2.)], TR=1.5 * $TE)
 ax, _ = plot(fig[1, 1], sequence)
 ylims!(ax, 0., nothing)
 on(sequence) do s

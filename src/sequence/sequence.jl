@@ -1,6 +1,9 @@
 include("components.jl")
+include("gradients.jl")
 
 """
+    Sequence(;TR, gradients=nothing, pulses=nothing, B0=3., interplate_gradients=:step)
+
 An MR sequence represented by a series of pulses repeated with a given repetition time (`TR`).
 
 Possible sequence components are:
@@ -12,12 +15,13 @@ The index of the next pulse is given by [`next_pulse`](@ref)(sequence, current_t
 The time of this pulse can then be extracted using [`time`](@ref)(sequence, index).
 Note that these indices go on till infinite reflecting the repetitive nature of RF pulses over the `TR` time.
 """
-struct Sequence{N, P<:SequenceComponent}
+struct Sequence{N, P<:SequenceComponent, G<:MRGradients}
     pulses :: SVector{N, P}
+    gradient :: G
     TR :: Float
     B0 :: Float
-    function Sequence(pulses::AbstractVector{<:SequenceComponent}, TR :: Real, B0 :: Real = 3.)
-        result = new{length(pulses), eltype(pulses)}(sort(pulses, by=x->x.time), Float(TR), Float(B0))
+    function Sequence(gradients::MRGradients, pulses::AbstractVector{<:SequenceComponent}, TR :: Real, B0 :: Real)
+        result = new{length(pulses), eltype(pulses), typeof(gradients)}(sort(pulses, by=x->x.time), gradients, Float(TR), Float(B0))
         if length(result.pulses) > 0
             @assert result.pulses[end].time <= TR
         end
@@ -25,7 +29,13 @@ struct Sequence{N, P<:SequenceComponent}
     end
 end
 
-Sequence(TR :: Real, B0 :: Real = 3.) = Sequence(SequenceComponent[], TR, B0)
+function Sequence(; gradients=[], pulses::AbstractVector{<:SequenceComponent}=SequenceComponent[], TR::Real, B0::Real=3., interpolate_gradients=:linear)
+    if !isa(gradients, MRGradients)
+        gradients = create_gradients(gradients, TR, interpolate=interpolate_gradients)
+    end
+    Sequence(gradients, pulses, TR, B0)
+end
+
 Base.getindex(s :: Sequence, index :: Integer) = s.pulses[mod(index - 1, length(s.pulses)) + 1]
 Base.getindex(s :: Sequence{0}, index :: Integer) = error("Can not index an empty sequence")
 
