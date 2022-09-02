@@ -1,11 +1,14 @@
 using MRSimulator
 using Documenter
+using DocumenterCitations
 
 DocMeta.setdocmeta!(MRSimulator, :DocTestSetup, :(using MRSimulator); recursive=true)
+bib = CitationBibliography(joinpath(@__DIR__, "references.bib"), sorting=:nyt)
 
-makedocs(;
+makedocs(
+    bib;
     modules=[MRSimulator],
-    authors="Michiel Cottaar <Mmichiel.cottaar@ndcn.ox.ac.uk>",
+    authors="Michiel Cottaar <Michiel.cottaar@ndcn.ox.ac.uk>",
     repo="https://git.fmrib.ox.ac.uk/ndcn0236/MRSimulator.jl/blob/{commit}{path}#{line}",
     sitename="MRSimulator.jl",
     format=Documenter.HTML(;
@@ -20,5 +23,6 @@ makedocs(;
         "Magnetic susceptibility" => "off_resonance.md",
         "Example" => "example.md",
         "API" => "api.md",
+        "References" => "references.md",
     ],
 )

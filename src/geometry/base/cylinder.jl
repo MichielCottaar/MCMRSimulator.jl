@@ -57,7 +57,7 @@ end
 """
     off_resonance(cylinder, position, b0_field)
 
-Computed by the hollow cylinder fiber model from Wharton & Bowtell (2012).
+Computed by the hollow cylinder fiber model from [Wharton_2012](@cite).
 """
 function off_resonance(cylinder::Cylinder, position::SVector{2, Float}, b0_field::SVector{2, Float})
     if iszero(cylinder.internal_field) && iszero(cylinder.external_field)
