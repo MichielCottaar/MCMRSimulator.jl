@@ -24,6 +24,7 @@ import Distributions
 
 
 include("constants.jl")
+include("scanner.jl")
 include("spin.jl")
 include("field.jl")
 include("geometry/geometry.jl")

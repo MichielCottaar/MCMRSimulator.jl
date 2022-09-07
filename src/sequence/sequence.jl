@@ -16,24 +16,25 @@ The time of this pulse can then be extracted using [`time`](@ref)(sequence, inde
 Note that these indices go on till infinite reflecting the repetitive nature of RF pulses over the `TR` time.
 """
 struct Sequence{N, P<:SequenceComponent, G<:MRGradients}
-    pulses :: SVector{N, P}
+    scanner :: Scanner
     gradient :: G
+    pulses :: SVector{N, P}
     TR :: Float
-    B0 :: Float
-    function Sequence(gradients::MRGradients, pulses::AbstractVector{<:SequenceComponent}, TR :: Real, B0 :: Real)
-        result = new{length(pulses), eltype(pulses), typeof(gradients)}(sort(pulses, by=x->x.time), gradients, Float(TR), Float(B0))
-        if length(result.pulses) > 0
-            @assert result.pulses[end].time <= TR
-        end
+    function Sequence(scanner::Scanner, gradients::MRGradients, pulses::AbstractVector{<:SequenceComponent}, TR :: Real)
+        result = new{length(pulses), eltype(pulses), typeof(gradients)}(scanner, gradients, sort(pulses, by=x->x.time), Float(TR))
+        @assert length(result.pulses) == 0 || result.pulses[end].time <= TR
         result
     end
 end
 
-function Sequence(; gradients=[], pulses::AbstractVector{<:SequenceComponent}=SequenceComponent[], TR::Real, B0::Real=3., interpolate_gradients=:linear)
+function Sequence(; scanner=nothing, gradients=[], pulses::AbstractVector{<:SequenceComponent}=SequenceComponent[], TR::Real, B0::Real=3., interpolate_gradients=:linear)
+    if isnothing(scanner)
+        scanner = Scanner(B0=B0)
+    end
     if !isa(gradients, MRGradients)
         gradients = create_gradients(gradients, TR, interpolate=interpolate_gradients)
     end
-    Sequence(gradients, pulses, TR, B0)
+    Sequence(scanner, gradients, pulses, TR)
 end
 
 Base.getindex(s :: Sequence, index :: Integer) = s.pulses[mod(index - 1, length(s.pulses)) + 1]
