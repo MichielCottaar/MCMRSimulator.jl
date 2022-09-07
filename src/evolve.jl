@@ -22,7 +22,7 @@ function evolve_to_time(
     function proc!(orient, pos, dt, sim=simulation) 
         for idx in 1:N
             grad = get_gradient(pos, sim.sequences[idx], current_time, dt + current_time)
-            orient[idx] = relax(orient[idx], sim.micro(pos), dt, sim.sequences[idx].B0)
+            orient[idx] = relax(orient[idx], sim.micro(pos), dt, grad, sim.sequences[idx].scanner.B0)
         end
     end
 
