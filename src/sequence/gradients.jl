@@ -148,7 +148,7 @@ end
 Models MRI gradients as a sequence of linear functions.
 `interpolate` can be set to :step to model the gradients as stepwise functions.
 """
-function create_gradients(steps, TR::Real; origin=zero(PosVector), interpolate=:linear)
+function create_gradients(steps::AbstractVector, TR::Real; origin=zero(PosVector), interpolate=:linear)
     if interpolate == :linear
         return LinearGradients(steps, origin; TR=TR)
     elseif interpolate == :step
