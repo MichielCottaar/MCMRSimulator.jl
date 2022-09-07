@@ -19,3 +19,5 @@ The gradient profile over time can be modeled as:
 - Stepwise function: [`StepGradients`](@ref).
 - Gradient profile consisting only of straight lines: [`LinearGradients`](@ref).
 - Generic gradient profiles: [`GenericGradients`](@ref).
+All of these can be created using [`create_gradients`](@ref).
+The off-resonance field at a specific time (or averaged over a timespan) and position can be computed using [`get_gradient`](@ref).
