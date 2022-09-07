@@ -13,7 +13,7 @@ The strength of the diffusion weighting can be defined in 3 ways:
 - setting two out of three of the `b-value`, `diffusion_time`, and `qval`. The last one will be calculated.
 If all three are defined an AssertionError is raised if they do not agree with each other.
 
-Assumes equation of ``b = \\q^2 \\Delta``, where
+Assumes equation of ``b = q^2 \\Delta``, where
 - `bval` is the diffusion-weighted strength (b-value) in ``s/mm^2``.
 - `qval` is the gradient applied due to the diffusion-weighted gradients in the spin phase field (``rad/\\mu m``). 
     For a square pulse this is computed as ``\\gamma G \\delta``.
