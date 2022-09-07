@@ -1,12 +1,5 @@
-function evolve_to_time(
-    spin::Spin{N}, current_time::Float, new_time::Float,
-    micro::Microstructure, timestep::Float=1., B0::Float=3.
-) where {N}
-    evolve_to_time(spin, current_time, new_time, micro, timestep, SVector{N, Float}(repeat([B0], N)))
-end
-
 """
-    evolve_to_time(spin, current_time, new_time, micro, timestep, B0)
+    evolve_to_time(spin, simulation, current_time, new_time)
 
 Evolve a single spin to the next time of interest.
 This takes into account both random diffusion of the spin's position
@@ -14,8 +7,7 @@ and relaxation of the MR spin orientation.
 It is used internally when evolving [`Simulation`](@ref) objects.
 """
 function evolve_to_time(
-    spin::Spin{N}, current_time::Float, new_time::Float,
-    micro::Microstructure, timestep::Float, B0::SVector{N, Float}
+    spin::Spin{N}, simulation::Simulation{N}, current_time::Float, new_time::Float
 ) where {N}
     if current_time > new_time
         throw(DomainError("Spins cannot travel backwards in time"))
@@ -23,13 +15,13 @@ function evolve_to_time(
     if new_time == current_time
         return spin
     end
-    index = div(current_time, timestep, RoundNearest)
-    time_left = ((1//2 + index) * timestep) - current_time
+    index = div(current_time, simulation.timestep, RoundNearest)
+    time_left = ((1//2 + index) * simulation.timestep) - current_time
     orient = MVector{N, SpinOrientation}(spin.orientations)
 
-    function proc!(orient, pos, dt, micro=micro, B0=B0) 
+    function proc!(orient, pos, dt, sim=simulation) 
         for idx in 1:N
-            orient[idx] = relax(orient[idx], micro(pos), dt, B0[idx])
+            orient[idx] = relax(orient[idx], sim.micro(pos), dt, sim.sequences[idx].B0)
         end
     end
 
@@ -39,24 +31,24 @@ function evolve_to_time(
         return Spin(spin.position, SVector{N, SpinOrientation}(orient), spin.rng)
     end
     proc!(orient, spin.position, time_left)
-    current_time = (index + 1//2) * timestep
+    current_time = (index + 1//2) * simulation.timestep
     position::PosVector = spin.position
 
     # We need to move, so get random number generator from spin object
     old_rng_state = copy(Random.TaskLocalRNG())
     copy!(Random.TaskLocalRNG(), spin.rng)
 
-    while new_time > (current_time + timestep)
+    while new_time > (current_time + simulation.timestep)
         # Take full timesteps for a while
-        if !isa(micro.diffusivity, ZeroField)
-            position = draw_step(position, micro.diffusivity(position), timestep, micro.geometry)
+        if !isa(simulation.micro.diffusivity, ZeroField)
+            position = draw_step(position, simulation.micro.diffusivity(position), simulation.timestep, simulation.micro.geometry)
         end
-        proc!(orient, position, timestep)
-        current_time += timestep
+        proc!(orient, position, simulation.timestep)
+        current_time += simulation.timestep
     end
 
-    if !isa(micro.diffusivity, ZeroField)
-        position = draw_step(position, micro.diffusivity(position), timestep, micro.geometry)
+    if !isa(simulation.micro.diffusivity, ZeroField)
+        position = draw_step(position, simulation.micro.diffusivity(position), simulation.timestep, simulation.micro.geometry)
     end
     proc!(orient, position, new_time - current_time)
 
@@ -88,7 +80,6 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
 
     readouts = SVector{N, Vector{Snapshot{1}}}([Snapshot{1}[] for _ in 1:N])
 
-    B0_field = SVector{N, Float}(Float[s.B0 for s in simulation.sequences])
     nspins = length(spins)
     while true
         next = argmin(times)
@@ -96,7 +87,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
 
         # evolve all spins to next interesting time
         Threads.@threads for idx in 1:nspins
-            spins[idx] = evolve_to_time(spins[idx], current_time, next_time, simulation.micro, simulation.timestep, B0_field)
+            spins[idx] = evolve_to_time(spins[idx], simulation, current_time, next_time)
         end
         current_time = next_time
 
