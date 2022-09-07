@@ -67,7 +67,7 @@ function evolve_to_time(
 end
 
 """
-    evolve_to_time(simulation, snapshot, new_time)
+    evolve_to_time(snapshot, simulation, new_time)
 
 Evolves the full [`Snapshot`](@ref) through the [`Simulation`](@ref) to the given `new_time`.
 Multi-threading is used to evolve multiple spins in parallel.
