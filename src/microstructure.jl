@@ -52,11 +52,11 @@ end
 )
 
 """
-    relax(orientation::SpinOrientation, environment::LocalEnvironment, timestep::Real, B0=3.)
+    relax(spin_orientation, environment, timestep::Real, gradient_off_resonance=0., B0=3.)
 
-Relaxes the spin `orientation` within the R1, R2, and off-resonance given by the local `environment` over time `timestep`
+Relaxes the [`SpinOrientation`](@ref) within the R1, R2, and off-resonance given by the [`LocalEnvironment`](@ref) over given `timestep`
 """
-function relax(orientation :: SpinOrientation, environment :: LocalEnvironment, timestep :: Real, B0=3.)
+function relax(orientation :: SpinOrientation, environment :: LocalEnvironment, timestep :: Real, gradient_off_resonance=0., B0=3.)
     @assert timestep >= 0
     if iszero(timestep)
         return orientation
