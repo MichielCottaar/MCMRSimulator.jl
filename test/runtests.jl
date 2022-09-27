@@ -5,14 +5,29 @@ using StaticArrays
 using LinearAlgebra
 import Random
 
+if length(ARGS) == 0
+    tests = [
+        "collisions",
+        "evolve",
+        "plots",
+        "field",
+        "known_sequences",
+        "meshes",
+        "offresonance",
+    ]
+else
+    tests = ARGS
+end
+
+
 @testset "MRSimulator tests" begin
-    include("visual_tests/run_visual_tests.jl")
-    include("test_offresonance.jl")
-    include("test_meshes.jl")
-    include("test_field.jl")
-    include("test_collisions.jl")
-    include("test_evolve.jl")
-    include("test_known_sequences.jl")
+    for test in tests
+        if test == "plots"
+            include("visual_tests/run_visual_tests.jl")
+        else
+            include("test_$test.jl")
+        end
+    end
     @testset "Simple relaxation" begin
         orient = mr.Spin(transverse=1., longitudinal=0.).orientations[1]
         pos = zero(SVector{3, Float})
