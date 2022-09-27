@@ -49,7 +49,7 @@ struct StepWiseGradients <: MRGradients
         push!(times, Float(TR))
         @assert issorted(times)
 
-        gradients = PosVector[PosVector(s[1]) for s in steps]
+        gradients = PosVector[PosVector(s[2]) for s in steps]
         pushfirst!(gradients, zero(PosVector))
         push!(gradients, zero(PosVector))
 
@@ -110,7 +110,7 @@ struct LinearGradients <: MRGradients
         times = [Float(s[1]) for s in steps]
         pushfirst!(times, zero(Float))
         push!(times, Float(TR))
-        gradients = [PosVector(s[1]) for s in steps]
+        gradients = [PosVector(s[2]) for s in steps]
         pushfirst!(gradients, zero(PosVector))
         push!(gradients, zero(PosVector))
         new(times, gradients, PosVector(origin))
@@ -176,3 +176,16 @@ function create_gradients(steps::AbstractVector, TR::Real; origin=zero(PosVector
         error("interpolate should be :step or :linear, not $interpolate")
     end
 end
+
+
+"""
+    rotate_bvec(gradients, bvec; orig_bvec=nothing)
+
+Rotates the gradients in `gradients` to align with `bvec`.
+If not provided, the original gradient orientation is estimated as the first eigenvector of the b-tensor.
+"""
+function rotate_bvec(gradients::AbstractVector{<:Tuple{Real, Real}}, bvec; orig_bvec=nothing)
+    bvec = PosVector(bvec / norm(bvec))
+    [(time, bvec * grad) for (time, grad) in gradients]
+end
+

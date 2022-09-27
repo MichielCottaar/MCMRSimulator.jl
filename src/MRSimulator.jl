@@ -35,7 +35,7 @@ include("evolve.jl")
 include("plot/plot.jl")
 
 export Sequence, RFPulse, Readout, InstantGradient
-export perfect_dwi
+export dwi
 export longitudinal, transverse, phase, vector, Spin, Snapshot, SpinOrientation, isinside
 export Simulation, Microstructure, evolve, readout, signal, trajectory
 export Annulus, annuli, random_annuli, Cylinder, cylinders, random_cylinders, Wall, walls, Sphere, spheres, random_spheres, Mesh, box_mesh

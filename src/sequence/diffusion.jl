@@ -56,7 +56,6 @@ derive_qval_time(
 ) = derive_qval_time(bval, diffusion_time, qval, max_diffusion_time)
 
 
-
 """
     perfect_dwi(; TE=80., TR=2000., bval=nothing, diffusion_time=nothing, qval=nothing, orientation = [0, 0, 1.])
 
@@ -92,3 +91,89 @@ function perfect_dwi(;
     end
     Sequence(pulses=base_components, TR=TR)
 end
+
+"""
+    dwi(; TE=80., TR=2000., bval=nothing, diffusion_time=nothing, qval=nothing, gradient_duration=nothing, readout_time=0., scanner=Scanner(B0=3.), orientation = [0, 0, 1.])
+
+Creates a diffusion-weighted pulsed gradient spin echo MRI sequence
+
+The timings of the RF pulses is set by `TE` and `TR`. 
+The gradient timings will also be affected by `gradient_duration`, `diffusion_time`, `scanner` and `readout_time`:
+- By default the gradient durations are set to the maximum value possible within the echo time (`TE`) keeping in mind the time needed for the MR readout (`readout_time`) and the time needed to ramp to the maximum gradient strength (set by the `scanner`).
+- When `gradient_duration` is set to 0, the gradient pulses are assumed to be instanteneous (i.e., using [`InstantGradient`](@ref)). The time between these instant gradients can be set using `diffusion_time` (defaults to `TE`/2).
+
+The strength of the diffusion gradients is set by one of `bval` or `qval`.
+If this strength exceeds the maximum allowed for the `scanner` an AssertionError is raised.
+The gradient orientation is set by `orientation`.
+"""
+function dwi(;
+    TE=80.,
+    TR=2000.,
+    bval=nothing,
+    diffusion_time=nothing,
+    qval=nothing,
+    gradient_duration=nothing,
+    readout_time=0.,
+    orientation=SVector{3, Float}([1., 0., 0.]),
+    scanner=Scanner(B0=3.)
+)
+    if !isnothing(gradient_duration) && iszero(gradient_duration)
+        return perfect_dwi(TE=TE, TR=TR, bval=bval, diffusion_time=diffusion_time, qval=qval, orientation=orientation)
+    end
+    if !isnothing(diffusion_time) || !isnothing(gradient_duration)
+        error("Custom diffusion times not implemented yet for finite gradients. Either set gradient_duration to zero or don't set the diffusion time.")
+    end
+    grad_1D = dwi_gradients_1D(TE=TE, bval=bval, qval=qval, readout_time=readout_time, scanner=scanner)
+    grad = rotate_bvec(grad_1D, orientation)
+    pulses = SequenceComponent[
+        RFPulse(time=0., flip_angle=90., phase=-90.),
+        RFPulse(time=TE/2., flip_angle=180.),
+        Readout(time=TE),
+    ]
+    Sequence(scanner=scanner, pulses=pulses, gradients=grad, TR=TR)
+end
+
+
+function dwi_gradients_1D(;
+    TE=80.,
+    bval=nothing,
+    qval=nothing,
+    gradient_strength=nothing,
+    readout_time=0.,
+    scanner=Scanner(B0=3.)
+)
+    if isinf(scanner.gradient) || isinf(scanner.slew_rate)
+        ramp_time = 0.
+    else
+        ramp_time = scanner.gradient / scanner.slew_rate
+    end
+    total_pulse_time = (TE - readout_time) / 2
+    pulse_duration = total_pulse_time - ramp_time
+
+    diffusion_time = TE/2
+    t1 = 0.
+    t2 = TE/2
+
+    if isnothing(gradient_strength)
+        if isnothing(qval)
+            if isnothing(bval) || iszero(bval)
+                # no diffusion weighting
+                return [(t1, 0.)]
+            end
+            qval = sqrt(bval / (diffusion_time - pulse_duration/3))
+        end
+        gradient_strength = qval / (π * gyromagnetic_ratio * pulse_duration)
+    end
+    @assert gradient_strength <= scanner.gradient "Requested gradient strength exceeds scanner limits"
+    return [
+        (t1, 0.),
+        (t1 + ramp_time, gradient_strength),
+        (t1 + pulse_duration, gradient_strength),
+        (t1 + pulse_duration + ramp_time, 0.),
+        (t2, 0.),
+        (t2 + ramp_time, gradient_strength),
+        (t2 + pulse_duration, gradient_strength),
+        (t2 + pulse_duration + ramp_time, 0.),
+    ]
+end
+
