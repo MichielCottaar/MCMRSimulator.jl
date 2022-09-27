@@ -20,6 +20,7 @@ makedocs(
     pages=[
         "Home" => "index.md",
         "Geometry" => "obstructions.md",
+        "Sequence" => "sequence.md",
         "Magnetic susceptibility" => "off_resonance.md",
         "Example" => "example.md",
         "API" => "api.md",
