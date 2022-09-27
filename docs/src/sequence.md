@@ -1,14 +1,14 @@
 # MR sequences
 ## Built-in MR sequences
-- Diffusion-weighted MRI
-    - [perfect_dwi](@ref)
+- Diffusion-weighted MRI: [dwi](@ref)
 ## Custom MR sequences
 In MRSimulator.jl an MR [`Sequence`](@ref) describes the RF pulses and gradients applied by the MRI scanner.
-This comes in three different types:
+
+This sequence contains:
 - A set of instantaneous RF pulses ([`RFPulse`](@ref)), gradients ([`InstantGradient`](@ref)), or readouts ([`Readout`](@ref)). Each of these changes or reads the spin orientations at a specific timepoint.
-- TODO: how the gradient changes over time
+- A gradient profile from [`create_gradients`](@ref). They can be rotated using [`rotate_bvec`](@ref).
 - TODO: how the RF pulse changes over time
-Each of these components will play identically every repetition time (TR) of the sequence.
+Each of these sequence components will play identically every repetition time (TR) of the sequence.
 
 ## Defining the MR gradients
 The MRI scanner gradients cause the spins to precess at different rates in different part of the tissue.
