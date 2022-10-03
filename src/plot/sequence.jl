@@ -1,5 +1,6 @@
 @Makie.recipe(Sequence_Plot, seq) do scene
     Makie.Theme(
+        max_G=nothing
     )
 end
 
@@ -15,7 +16,8 @@ function sequence_plot end
 
 function Makie.plot!(sp::Sequence_Plot)
     seq = sp[1]
-    on(seq) do s
+    on(@lift (sp[1], sp[:max_G])) do as_tuple
+        (s, max_G) = as_tuple
         if any(p->isa(p, RFPulse), s.pulses)
             max_angle = maximum([flip_angle(p) for p in s.pulses if isa(p, RFPulse)])
         else
@@ -29,7 +31,7 @@ function Makie.plot!(sp::Sequence_Plot)
         for pulse in s.pulses
             pulseplot!(sp, pulse; max_rf_pulse=max_angle, max_qval=max_qval)
         end
-        gradientplot!(sp, s.gradient)
+        gradientplot!(sp, s.gradient, max_G=max_G)
     end
     seq[] = seq[]
     sp
