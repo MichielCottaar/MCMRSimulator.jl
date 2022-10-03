@@ -17,7 +17,7 @@ function sequence_plot end
 
 function Makie.plot!(sp::Sequence_Plot)
     seq = sp[1]
-    on(@lift (sp[1], sp[:max_G], sp[:single_gradient])) do as_tuple
+    on(@lift ($(sp[1]), $(sp[:max_G]), $(sp[:single_gradient]))) do as_tuple
         (s, max_G, sg) = as_tuple
         if any(p->isa(p, RFPulse), s.pulses)
             max_angle = maximum([flip_angle(p) for p in s.pulses if isa(p, RFPulse)])
