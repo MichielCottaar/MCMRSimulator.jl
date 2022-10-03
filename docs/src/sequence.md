@@ -1,6 +1,6 @@
 # MR sequences
 ## Built-in MR sequences
-- Diffusion-weighted MRI: [dwi](@ref)
+- Diffusion-weighted MRI: [`dwi`](@ref)
 ## Custom MR sequences
 In MRSimulator.jl an MR [`Sequence`](@ref) describes the RF pulses and gradients applied by the MRI scanner.
 
