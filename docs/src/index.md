@@ -7,6 +7,9 @@ At present, the simulator allows to model
 - MR sequences consisting of RF pulses, gradients, and readouts
 - Off-resonance field generation by myelinated cylinders
 
+!!! warning "beta"
+    This MR simulator is still under very active development and the API might still change substantially at any time!
+
 # [Installation](@id installation)
 1. First install julia (e.g., from the [official website](https://julialang.org/downloads/) or using [juliaup](https://github.com/JuliaLang/juliaup)).
 2. Start julia in the terminal (`$ julia`).
