@@ -16,11 +16,20 @@ function sequence_plot end
 function Makie.plot!(sp::Sequence_Plot)
     seq = sp[1]
     on(seq) do s
-        max_angle = maximum([flip_angle(p) for p in s.pulses if isa(p, RFPulse)])
-        max_qval = maximum([qval(p) for p in s.pulses if isa(p, InstantGradient)])
+        if any(p->isa(p, RFPulse), s.pulses)
+            max_angle = maximum([flip_angle(p) for p in s.pulses if isa(p, RFPulse)])
+        else
+            max_angle = nothing
+        end
+        if any(p->isa(p, InstantGradient), s.pulses)
+            max_qval = maximum([qval(p) for p in s.pulses if isa(p, InstantGradient)])
+        else
+            max_qval = nothing
+        end
         for pulse in s.pulses
             pulseplot!(sp, pulse; max_rf_pulse=max_angle, max_qval=max_qval)
         end
+        gradientplot!(sp, s.gradient)
     end
     seq[] = seq[]
     sp
@@ -61,3 +70,45 @@ function Makie.plot!(pp::PulsePlot)
 end
 
 Makie.plottype(::SequenceComponent) = PulsePlot
+
+
+@Makie.recipe(GradientPlot, pulse) do scene
+    Makie.Theme(
+        max_G=nothing,
+        single_gradient=false,
+    )
+end
+
+function Makie.plot!(gp::GradientPlot)
+    comb = @lift ($(gp[1]), $(gp[:max_G]), $(gp[:single_gradient]))
+
+    on(comb) do as_tuple
+        (gradient, max_G, single_grad) = as_tuple
+        times = Float[]
+        push!(times, nextfloat(Float(gradient.times[1])))
+        for t in gradient.times[2:end-1]
+            if t > times[end]
+                push!(times, prevfloat(Float(t)))
+                push!(times, nextfloat(Float(t)))
+            end
+        end
+        push!(times, prevfloat(Float(gradient.times[end])))
+        gradients = [get_gradient(gradient, t) for t in times]
+        grad_sizes = [norm(g) for g in gradients]
+        if isnothing(max_G)
+            max_G = maximum(grad_sizes)
+        end
+        if single_grad
+            rgb = [Tuple(g./s) for (g, s) in zip(gradients, grad_sizes)]
+            Makie.lines!(gp, times, [s / max_G for s in grad_sizes], colors=rgb)
+        else
+            for (dim, color) in zip(1:3, ("red", "green", "blue"))
+                Makie.lines!(gp, times, [g[dim] / max_G for g in gradients], color=color)
+            end
+        end
+    end
+    gp[1][] = gp[1][]
+    gp
+end
+
+Makie.plottype(::MRGradients) = GradientPlot
