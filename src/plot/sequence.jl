@@ -102,8 +102,8 @@ function Makie.plot!(gp::GradientPlot)
             max_G = maximum(grad_sizes)
         end
         if single_grad
-            rgb = [Tuple(g./s) for (g, s) in zip(gradients, grad_sizes)]
-            Makie.lines!(gp, times, [s / max_G for s in grad_sizes], colors=rgb)
+            rgb = [Colors.RGB(abs.(g./s)...) for (g, s) in zip(gradients, grad_sizes)]
+            Makie.lines!(gp, times, [s / max_G for s in grad_sizes], color=1:length(times), colormap=rgb)
         else
             for (dim, color) in zip(1:3, ("red", "green", "blue"))
                 Makie.lines!(gp, times, [g[dim] / max_G for g in gradients], color=color)
