@@ -17,15 +17,15 @@ end
 
 @testset "Finite gradients" begin
     function plot_finite_dwi(fname, single_gradient=false)
-        sequence = mr.dwi(bval=2.)
+        sequence = mr.dwi(bval=2., TE=80, TR=100, orientation=[0, -1, 1])
         f = Figure()
         Axis(f[1, 1])
         plot!(sequence; single_gradient=single_gradient)
         CairoMakie.save(fname, f)
     end
 
-    @visualtest fn->plot_perfect_dwi(fn, true) "$dir/single_grad_dwi.png" !isCI
-    @visualtest fn->plot_perfect_dwi(fn, false) "$dir/multi_grad_dwi.png" !isCI
+    @visualtest fn->plot_finite_dwi(fn, true) "$dir/single_grad_dwi.png" !isCI
+    @visualtest fn->plot_finite_dwi(fn, false) "$dir/multi_grad_dwi.png" !isCI
 end
 
 end
