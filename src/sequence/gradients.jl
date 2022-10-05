@@ -132,7 +132,7 @@ function get_gradient(grad::LinearGradients, time::Real)
     dt2 = 1 - dt1
     g1 = grad.gradients[index]
     g2 = grad.gradients[index + 1]
-    return @. g1 * dt1 + g2 * dt2
+    return @. g2 * dt1 + g1 * dt2
 end
 
 function get_gradient(grad::LinearGradients, t1::Real, t2::Real)
