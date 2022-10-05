@@ -66,6 +66,6 @@ function relax(orientation :: SpinOrientation, environment :: LocalEnvironment, 
     SpinOrientation(
         (1 - (1 - orientation.longitudinal) * exp(-environment.R1 * timestep)),
         orientation.transverse * exp(-environment.R2 * timestep),
-        (environment.off_resonance + gradient_off_resonance) * timestep * gyromagnetic_ratio * B0 + orientation.phase
+        (environment.off_resonance * B0 + gradient_off_resonance) * timestep * gyromagnetic_ratio + orientation.phase
     )
 end

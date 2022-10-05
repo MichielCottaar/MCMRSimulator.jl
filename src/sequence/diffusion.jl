@@ -180,7 +180,7 @@ function dwi_gradients_1D(;
             end
             qval = sqrt(bval / (diffusion_time - pulse_duration/3))
         end
-        gradient_strength = qval / (π * gyromagnetic_ratio * pulse_duration)
+        gradient_strength = 1e3 * (qval / (gyromagnetic_ratio * pulse_duration))  # in mT/m
     end
     @assert gradient_strength <= scanner.gradient "Requested gradient strength exceeds scanner limits"
     return [
