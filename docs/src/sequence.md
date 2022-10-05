@@ -34,8 +34,8 @@ This encodes the spin location into the spin orientation and can hence be used t
 Crusher gradients are also commonly used to get rid of unwanted signal contributions due to imperfect RF pulses.
 
 The gradient profile over time can be modeled as:
-- Stepwise function: [`StepGradients`](@ref).
+- Stepwise function: [`StepWiseGradients`](@ref).
 - Gradient profile consisting only of straight lines: [`LinearGradients`](@ref).
-- Generic gradient profiles: [`GenericGradients`](@ref).
+- TODO: Generic gradient profiles: [`GenericGradients`](@ref).
 All of these can be created using [`create_gradients`](@ref).
 The off-resonance field at a specific time (or averaged over a timespan) and position can be computed using [`get_gradient`](@ref).
