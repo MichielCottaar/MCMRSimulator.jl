@@ -2,13 +2,14 @@
 Defines a finite plane in the 3D space used for plotting.
 
 # Constructor
-    PlotPlane(normal::PosVector=[0, 0, 1], position::PosVector=[0, 0, 0]; sizex=Inf, sizey=Inf, ngrid=100)
+    PlotPlane(normal::PosVector=[0, 0, 1], position::PosVector=[0, 0, 0]; size=10., sizex=<size>, sizey=<size>, ngrid=100)
 
 Arguments:
 - `normal`: length-3 vector with the orientation perpendicular to the plane (default to z-direction).
 - `position`: position of plane as a length-3 vector (defaults to origin).
 - `sizex`: size of the plane in the x-direction (before rotating to `normal`).
 - `sizey`: size of the plane in the y-direction (before rotating to `normal`).
+- `size`: set default value for `sizex` and `sizey`.
 - `ngrid`: number of grid elements to split the plane up into for plotting.
 
 # Spin projection onto plane
