@@ -105,24 +105,6 @@ The gradient timings will also be affected by `gradient_duration`, `diffusion_ti
 The strength of the diffusion gradients is set by one of `bval` or `qval`.
 If this strength exceeds the maximum allowed for the `scanner` an AssertionError is raised.
 The gradient orientation is set by `orientation`.
-
-```@example
-using MRSimulator
-sequence = dwi(TR=100., bval=3.)
-using CairoMakie # hide
-f = plot(sequence) # hide
-save("dwi_sequence.png", f) # hide
-```  
-![DWI sequence diagram](dwi_sequence.png)
-
-```@example
-using MRSimulator
-sequence = dwi(TR=100., bval=3., gradient_duration=0.)
-using CairoMakie # hide
-f = plot(sequence) # hide
-save("dwi_sequence_delta_0.png", f) # hide
-```  
-![DWI sequence diagram with instanteneous gradients](dwi_sequence_delta_0.png)
 """
 function dwi(;
     TE=80.,

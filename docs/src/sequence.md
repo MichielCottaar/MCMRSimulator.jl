@@ -1,6 +1,24 @@
 # MR sequences
 ## Built-in MR sequences
-- Diffusion-weighted MRI: [`dwi`](@ref)
+### Diffusion-weighted MRI
+A pulsed-gradient spin-echo can be created using [`dwi`](@ref)
+```@example
+using MRSimulator
+sequence = dwi(TR=100., bval=3.)
+using CairoMakie # hide
+f = plot(sequence) # hide
+save("dwi_sequence.png", f) # hide
+```  
+![DWI sequence diagram](dwi_sequence.png)
+
+```@example
+using MRSimulator
+sequence = dwi(TR=100., bval=3., gradient_duration=0.)
+using CairoMakie # hide
+f = plot(sequence) # hide
+save("dwi_sequence_delta_0.png", f) # hide
+```  
+![DWI sequence diagram with instanteneous gradients](dwi_sequence_delta_0.png)
 ## Custom MR sequences
 In MRSimulator.jl an MR [`Sequence`](@ref) describes the RF pulses and gradients applied by the MRI scanner.
 
