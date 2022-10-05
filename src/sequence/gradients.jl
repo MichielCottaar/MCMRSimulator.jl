@@ -4,7 +4,7 @@
 Models MRI gradients as a sequence of stepwise or linear functions.
 Times are in ms and gradients in mT/m.
 
-Off-resonance fields are estimated by calling [`get_gradients`](@ref).
+Off-resonance fields are estimated by calling [`get_gradient`](@ref).
 """
 abstract type MRGradients end
 

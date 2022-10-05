@@ -1,4 +1,4 @@
-# MR sequences
+# [MR sequences](@id sequence)
 ## Built-in MR sequences
 ### Diffusion-weighted MRI
 A pulsed-gradient spin-echo can be created using [`dwi`](@ref)

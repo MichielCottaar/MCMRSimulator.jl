@@ -34,7 +34,7 @@ include("readout.jl")
 include("evolve.jl")
 include("plot/plot.jl")
 
-export Sequence, RFPulse, Readout, InstantGradient
+export Sequence, RFPulse, Readout, InstantGradient, create_gradients
 export dwi
 export longitudinal, transverse, phase, vector, Spin, Snapshot, SpinOrientation, isinside
 export Simulation, Microstructure, evolve, readout, signal, trajectory

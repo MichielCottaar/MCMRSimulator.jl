@@ -22,6 +22,11 @@ end
 Makie.plottype(::Snapshot) = Scatter_Snapshot
 
 
+"""
+    dyad_snapshot(plot_plane, snapshot; dyadlength=0.1, arrowsize=0.1, color=:black, sequence=1)
+
+Plots the spins in the [`Snapshot`](@ref) projected onto given [`PlotPlane`](@ref) as arrows.
+"""
 @Makie.recipe(Dyad_Snapshot, plane, snap) do scene
     Makie.Attributes(
         dyadlength=0.1,
@@ -52,13 +57,6 @@ function Makie.plot!(sp::Dyad_Snapshot)
 end
 
 
-@Makie.recipe(Image_Snapshot, plane, snap) do scene
-    Makie.Attributes(
-        sequence=1,
-        ngrid=20
-    )
-end
-
 """
     image_snapshot(plot_plane, snapshot; vectorlength=0.1, arrowsize=0.1, color=:black, sequence=1)
     image_snapshot!(plot_plane, snapshot; vectorlength=0.1, arrowsize=0.1, color=:black, sequence=1)
@@ -66,7 +64,12 @@ end
 Plots the spins in the [`Snapshot`](@ref) projected onto given [`PlotPlane`](@ref).
 The average spin orientation across the plot plane is plotted using the colour coding from [`color`](@ref).
 """
-function image_snapshot end
+@Makie.recipe(Image_Snapshot, plane, snap) do scene
+    Makie.Attributes(
+        sequence=1,
+        ngrid=20
+    )
+end
 
 function Makie.plot!(sp::Image_Snapshot)
     planar = sp[1]
