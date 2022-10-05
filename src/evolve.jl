@@ -100,9 +100,11 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
                 if ctime == current_time
                     sequence = simulation.sequences[idx]
                     if isa(sequence[sequence_index[idx]], Readout)
-                        push!(readouts[idx], Snapshot(get_sequence.(spins, idx), current_time))
-                        sequence_index[idx] += 1
-                        times[idx + 1] = time(sequence, sequence_index[idx])
+                        while (times[idx + 1] == current_time)
+                            push!(readouts[idx], Snapshot(get_sequence.(spins, idx), current_time))
+                            sequence_index[idx] += 1
+                            times[idx + 1] = time(sequence, sequence_index[idx])
+                        end
                     end
                 end
             end
