@@ -41,8 +41,8 @@ end
 Models MRI gradients as a sequence of stepwise functions.
 """
 struct StepWiseGradients <: MRGradients
-    times::AbstractVector{Float}
-    gradients::AbstractVector{PosVector}
+    times::Vector{Float}
+    gradients::Vector{PosVector}
     origin::PosVector
     function StepWiseGradients(steps, origin=zero(PosVector); TR)
         times = Float[Float(s[1]) for s in steps]
@@ -103,8 +103,8 @@ end
 Models MRI gradients as a sequence of linear functions.
 """
 struct LinearGradients <: MRGradients
-    times::AbstractVector{Float}
-    gradients::AbstractVector{PosVector}
+    times::Vector{Float}
+    gradients::Vector{PosVector}
     origin::PosVector
     function LinearGradients(steps, origin=zero(PosVector); TR)
         @assert issorted(steps, by=s->s[1])
