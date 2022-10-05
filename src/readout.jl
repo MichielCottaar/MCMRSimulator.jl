@@ -33,9 +33,9 @@ During this time various intermediate states will be stored:
 
 `append!` can be called multiple times to continue the simulation further.
 """
-struct Simulation{N, M<:Microstructure}
+struct Simulation{N, M<:Microstructure, S<:Sequence}
     # N sequences, datatype T
-    sequences :: SVector{N, <:Sequence}
+    sequences :: SVector{N, S}
     micro::M
     timestep::Float
     function Simulation(
@@ -52,7 +52,7 @@ struct Simulation{N, M<:Microstructure}
 
         timestep = Float(timestep)
 
-        new{nseq, typeof(micro)}(
+        new{nseq, typeof(micro), eltype(sequences)}(
             SVector{nseq}(sequences),
             micro,
             timestep,

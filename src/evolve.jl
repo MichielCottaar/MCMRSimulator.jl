@@ -1,3 +1,11 @@
+function _proc!(orient::MVector{N}, pos, dt, ct, sim::Simulation{N}) where {N}
+    for idx in 1:N
+        sequence = sim.sequences[idx]
+        grad = get_gradient(pos, sequence, ct, dt + ct)
+        orient[idx] = relax(orient[idx], sim.micro(pos), dt, grad, sequence.scanner.B0)
+    end
+end
+
 """
     evolve_to_time(spin, simulation, current_time, new_time)
 
@@ -15,23 +23,16 @@ function evolve_to_time(
     if new_time == current_time
         return spin
     end
-    index = div(current_time, simulation.timestep, RoundNearest)
+    index = Int(div(current_time, simulation.timestep, RoundNearest))
     time_left = ((1//2 + index) * simulation.timestep) - current_time
     orient = MVector{N, SpinOrientation}(spin.orientations)
 
-    function proc!(orient, pos, dt, sim=simulation) 
-        for idx in 1:N
-            grad = get_gradient(pos, sim.sequences[idx], current_time, dt + current_time)
-            orient[idx] = relax(orient[idx], sim.micro(pos), dt, grad, sim.sequences[idx].scanner.B0)
-        end
-    end
-
     if time_left > (new_time - current_time)
         # spin does not get to move at all
-        proc!(orient, spin.position, new_time-current_time)
+        _proc!(orient, spin.position, new_time-current_time, current_time, simulation)
         return Spin(spin.position, SVector{N, SpinOrientation}(orient), spin.rng)
     end
-    proc!(orient, spin.position, time_left)
+    _proc!(orient, spin.position, time_left, current_time, simulation)
     current_time = (index + 1//2) * simulation.timestep
     position::PosVector = spin.position
 
@@ -44,14 +45,14 @@ function evolve_to_time(
         if !isa(simulation.micro.diffusivity, ZeroField)
             position = draw_step(position, simulation.micro.diffusivity(position), simulation.timestep, simulation.micro.geometry)
         end
-        proc!(orient, position, simulation.timestep)
+        _proc!(orient, position, simulation.timestep, current_time, simulation)
         current_time += simulation.timestep
     end
 
     if !isa(simulation.micro.diffusivity, ZeroField)
         position = draw_step(position, simulation.micro.diffusivity(position), simulation.timestep, simulation.micro.geometry)
     end
-    proc!(orient, position, new_time - current_time)
+    _proc!(orient, position, new_time - current_time, current_time, simulation)
 
     # Restore random number state
     final_rng_state = FixedXoshiro(copy(Random.TaskLocalRNG()))
