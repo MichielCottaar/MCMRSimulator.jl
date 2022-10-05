@@ -1,8 +1,9 @@
 function _proc!(orient::MVector{N}, pos, dt, ct, sim::Simulation{N}) where {N}
+    env = sim.micro(pos)
     for idx in 1:N
         sequence = sim.sequences[idx]
         grad = get_gradient(pos, sequence, ct, dt + ct)
-        orient[idx] = relax(orient[idx], sim.micro(pos), dt, grad, sequence.scanner.B0)
+        orient[idx] = relax(orient[idx], env, dt, grad, sequence.scanner.B0)
     end
 end
 
