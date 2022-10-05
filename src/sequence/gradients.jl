@@ -22,7 +22,7 @@ end
 
 function get_gradient(position::PosVector, grad::MRGradients, time::Float)
     g = get_gradient(grad, time)
-    return (g ⋅ (position - grad.origin)) * 1e3
+    return (g ⋅ (position - grad.origin)) * 1e-3
 end
 
 function get_gradient(position::AbstractVector{<:Real}, grad::MRGradients, t1::Real, t2::Real)
@@ -31,7 +31,7 @@ end
 
 function get_gradient(position::PosVector, grad::MRGradients, t1::Float, t2::Float)
     g = get_gradient(grad, t1, t2)
-    return (g ⋅ (position - grad.origin)) * 1e3
+    return (g ⋅ (position - grad.origin)) * 1e-3
 end
 
 
