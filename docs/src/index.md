@@ -42,7 +42,7 @@ This `Simulation` will contain information on the microstructure, the MR physics
 These different steps are described in more detail in other sections of this documentation:
 - [How to define the microstrutural geometry](@ref geometry)
 - [Generate off-resonance fields due to the microstructural geometry](@ref off_resonance)
-- Sequence generation
+- [Sequence generation](@ref sequence)
 
 First we will define the geometry formed of regularly packed axons.
 This is represented by a single cylinder with a radius of 1 micrometer that repeats itself every 2.5 micrometer (in both the x-, and y-direction).
@@ -156,10 +156,10 @@ fifth_TR_start = evolve(first_TR_start, simulation, sequence.TR * 2)
 
 f = plot(sequence)
 
+times = 0:0.1:100.
 for start in (first_TR_start, fifth_TR_start)
-    times = 0:0.1:100.
-    average_signals = signal(start, simulation, times .+ start.time)
-    plot!(times, longitudinal.(average_signals)/3000., cycle=[:color])
+    simulated_signals = signal(start, simulation, times .+ start.time)
+    lines!(times, longitudinal.(simulated_signals)/3000., cycle=[:color])
 end
 save("tutorial_longitudinal.png", f) # hide
 ```
