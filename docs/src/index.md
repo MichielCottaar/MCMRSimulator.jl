@@ -149,6 +149,7 @@ the color encodes the phase of the MR signal in the transverse plane.
 We can see that outside of the cylinder the signal contribution is significantly reduced.
 The black arrows show the transverse spin for some random spins.
 
+The snapshot returned by [`evolve`](@ref) can be used as a starting point for further simulations.
 We can use this to plot the longitudinal signal at the first and third TR using:
 ```@example tutorial
 first_TR_start = Snapshot(1000)
