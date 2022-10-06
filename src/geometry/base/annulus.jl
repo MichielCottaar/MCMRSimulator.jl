@@ -99,8 +99,8 @@ function lorentz_off_resonance(annulus::Annulus, position::SVector{2, Float}, b0
                 # between cylinders
                 cos2 = (b0_field[1] * p1 + b0_field[2] * p2)^2 / rsq
                 cos2f = 2 * cos2 - 1
-                field += annulus.chi_I * (2//3 -  sin_theta_sq * (1 + cos2f * (annulus.inner.radius^2 / rsq))) / 2
-                field += annulus.chi_A * sin_theta_sq * (-5//12 - cos2f/8 * (1 + annulus.inner.radius^2/rsq) + 3//8 * log(annulus.outer.radius^2/rsq)) - (1-sin_theta_sq) / 6
+                field += annulus.chi_I * (2//3 - sin_theta_sq * (1 + cos2f * (annulus.inner.radius^2 / rsq))) / 2
+                field += annulus.chi_A * (sin_theta_sq * (-5//12 - cos2f/8 * (1 + annulus.inner.radius^2/rsq) + 3//8 * log(annulus.outer.radius^2/rsq)) - (1-sin_theta_sq) / 6)
             else
                 # outside annulus
                 cos2 = (b0_field[1] * p1 + b0_field[2] * p2)^2 / rsq
