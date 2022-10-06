@@ -32,6 +32,7 @@ function Makie.plot!(sp::Sequence_Plot)
         for pulse in s.pulses
             pulseplot!(sp, pulse; max_rf_pulse=max_angle, max_qval=max_qval)
         end
+        max_G = isnothing(max_G) ? s.scanner.gradient : max_G
         gradientplot!(sp, s.gradient, max_G=max_G, single_gradient=sg)
     end
     seq[] = seq[]
@@ -98,7 +99,7 @@ function Makie.plot!(gp::GradientPlot)
         push!(times, prevfloat(Float(gradient.times[end])))
         gradients = [get_gradient(gradient, t) for t in times]
         grad_sizes = [norm(g) for g in gradients]
-        if isnothing(max_G)
+        if isnothing(max_G) | !isfinite(max_G)
             max_G = maximum(grad_sizes)
         end
         if single_grad
