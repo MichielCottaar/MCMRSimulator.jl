@@ -59,7 +59,7 @@ More complicated geometries can be generated as described [here](@ref geometry) 
 The next step is to define a sequence. 
 Here we will adopt a single diffusion-weighted MRI sequence.
 ```@example tutorial
-sequence = dwi(bval=2., TR=300, TE=80)  # default gradient orientation in the x-direction
+sequence = dwi(bval=2., TR=300, TE=80, scanner=Siemens_Prisma)  # default gradient orientation in the x-direction
 f = plot(sequence)
 save("tutorial_sequence.png", f) # hide
 ```

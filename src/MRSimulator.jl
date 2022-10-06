@@ -37,6 +37,7 @@ include("plot/plot.jl")
 export Sequence, RFPulse, Readout, InstantGradient, create_gradients
 export create_gradients, get_gradient, LinearGradients, StepWiseGradients, rotate_bvec
 export dwi
+export Scanner, Siemens_Connectom, Siemens_Prisma, Siemens_Terra
 export longitudinal, transverse, phase, vector, Spin, Snapshot, SpinOrientation, isinside, off_resonance
 export Simulation, Microstructure, evolve, readout, signal, trajectory, TransformObstruction
 export Annulus, annuli, random_annuli, Cylinder, cylinders, random_cylinders, Wall, walls, Sphere, spheres, random_spheres, Mesh, box_mesh
