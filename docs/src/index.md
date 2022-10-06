@@ -75,16 +75,16 @@ Note that we actually have to set the `R2`, `R1`, and `diffusivity` to non-zero 
 We can initialise the simulation in one of three ways:
 - An integer value indicating the number of spins to be simulated. The spins will be randomly distributed through a 1mm x 1mm x 1mm voxel and start in equilibrium.
 - A sequence of positions (i.e., length-3 vectors) with the initial spin positions.
-- A [`Snapshot`](@ref) from a previous simulation.
+- A [`Snapshot`](@ref) (i.e., collection of spins with a timestamp) from a previous simulation.
 We will see examples of all three below.
 
-In all cases the first step will be to create a [`Snapshot`](@ref) with the initial [`Spin`](@ref) objects.
 Each `Spin` represents a single diffusing particle.
 Besides containing its current position, it also contains its contribution to the MR signal for each of the sequences in the simulation.
-Finally, each `Spin` contains its own random number generator.
-This ensures that when a spin is evolved the same simulation multiple times, it will follow the same path each time.
 
 At each timepoint the current state of the spins is represented by a [`Snapshot`](@ref).
+
+!!! note "Deterministic spins"
+    Each [`Spin`](@ref) is assigned a random number state at creation, which will be used for its future evolution. This means that after creation of a spin or a [`Snapshot`](@ref) its future is fully determined. This ensures that when a spin is evolved through the same simulation multiple times, it sill follow the same path each time. This allows improved comparisons between simulations with the same geometry, but different sequences/physics. However, it can lead to confusing results (e.g., a simulation initialised with `fill(Spin(), 500)` will contain 500 spins all following the exact same path).
 ## Running the simulation
 Running the simulation is done through 4 functions, for which examples are shown below:
 - [`trajectory`](@ref): follow the full state evolution for a small number of spins
