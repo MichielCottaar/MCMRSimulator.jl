@@ -242,15 +242,7 @@ end
 function off_resonance(transform::TransformObstruction{N}, position::PosVector, b0_field::PosVector=PosVector([0, 0, 1])) where {N}
     b0 = project_rotation(transform, b0_field)
 
-    # Contribution from outside of the Lorentz cavity
-    if N == 2
-        sinsq = b0[1] * b0[1] + b0[2] * b0[2]
-        field = transform.chi * sinsq
-    else
-        field = transform.chi
-    end
-
     finite_repeats = map(r -> isfinite(r) ? r : zero(Float), transform.repeats)
     # Contribution from within the Lorentz cavity
-    return field + sum(map((o, p)->lorentz_off_resonance(o, p, b0, finite_repeats, transform.lorentz_radius, transform.lorentz_repeats), transform.obstructions, project(transform, position)))
+    return sum(map((o, p)->lorentz_off_resonance(o, p, b0, finite_repeats, transform.lorentz_radius, transform.lorentz_repeats), transform.obstructions, project(transform, position)))
 end
