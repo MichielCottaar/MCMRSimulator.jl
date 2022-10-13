@@ -204,11 +204,11 @@ function detect_collision(movement::Movement{3, M}, mesh::Mesh, to_check::Int) w
     dist_orig = normal ⋅ movement.origin
     dist_dest = normal ⋅ movement.destination
     if abs(dist_orig - dist_dest) < 1e-8
-        return empty_collision{M}
+        return empty_collision(M)
     end
     time = (dist_plane - dist_orig) / (dist_dest - dist_orig)
     if time < 0 || time > 1
-        return empty_collision{M}
+        return empty_collision(M)
     end
 
     intersect_point = @. time * movement.destination + (1 - time) * movement.origin
@@ -223,7 +223,7 @@ function detect_collision(movement::Movement{3, M}, mesh::Mesh, to_check::Int) w
         to_point = intersect_point - triangle[dim]
         along_normal = cross(edge, to_point)
         if (along_normal ⋅ normal) < 0
-            return empty_collision{M}  # intersect point is on the wrong side of this edge and hence not in the triangle
+            return empty_collision(M)  # intersect point is on the wrong side of this edge and hence not in the triangle
         end
     end
     return Collision(time, dist_dest > dist_orig ? -normal : normal, movement.orientations, mesh.id, index=to_check)
