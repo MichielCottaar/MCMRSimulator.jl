@@ -22,14 +22,14 @@ more detail in [Defining the geometry](@ref).
 """
 walls(;kwargs...) = TransformObstruction(Wall(); kwargs...)
 
-function detect_collision(movement :: Movement{1}, wall :: Wall, previous=empty_collision)
+function detect_collision(movement :: Movement{1, M}, wall :: Wall, previous=empty_collision) where {M}
     if previous.id == wall.id
-        return empty_collision
+        return empty_collision(M)
     end
     origin = movement.origin[1]
     destination = movement.destination[1]
     if origin * destination > 0
-        return empty_collision
+        return empty_collision(M)
     end
     total_length = abs(origin - destination)
     Collision(

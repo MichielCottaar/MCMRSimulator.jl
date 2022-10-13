@@ -146,16 +146,16 @@ function project(trans::TransformObstruction{N}, pos::PosVector) where {N}
     project_repeat(trans, project_rotation(trans, pos))
 end
 
-function detect_collision(movement :: Movement{3, L}, trans :: TransformObstruction{N}, previous=empty_collision) where {N, L}
+function detect_collision(movement :: Movement{3, L}, trans :: TransformObstruction{N}, previous::Collision{L}) where {N, L}
     # apply rotation
     projected_origin = project_rotation(trans, movement.origin)
     projected_destination = project_rotation(trans, movement.destination)
     if !any(isfinite, trans.repeats)
-        c = empty_collision
+        c = empty_collision(L)
 
         for (shift, obstruction) in zip(trans.positions, trans.obstructions)
             ctest = detect_collision(
-                Movement{N. L}(projected_origin - shift, projected_destination - shift, movement.orientations, Float(1)),
+                Movement{N, L}(projected_origin - shift, projected_destination - shift, movement.orientations, Float(1)),
                 obstruction,
                 previous
             )
@@ -184,13 +184,13 @@ function detect_collision(movement :: Movement{3, L}, trans :: TransformObstruct
             c.index
         )
     end
-    return empty_collision
+    return empty_collision(L)
 end
 
     
 function detect_collision(
     origin :: SVector{N, Float}, destination :: SVector{N, Float}, orient :: SVector{L, SpinOrientation},
-    previous::Collision, repeats::SVector{N, Float}, 
+    previous::Collision{L}, repeats::SVector{N, Float}, 
     positions::NTuple{M, SVector{N, Float}}, shift_quadrants::NTuple{M, SVector{N, Bool}},
     obstructions::NTuple{M, <:BaseObstruction}
     )  where {N, M, L}
@@ -208,7 +208,7 @@ function detect_collision(
         p2 = destination - voxel_orig
         to_correct = map(*, lower, repeats)
 
-        c = empty_collision
+        c = empty_collision(L)
         for (shift, quadrant, obstruction) in zip(positions, shift_quadrants, obstructions)
             to_shift = map((s, q, t) -> s - q * t, shift, quadrant, to_correct)
             ctest = detect_collision(
@@ -224,7 +224,7 @@ function detect_collision(
             return c
         end
     end
-    return empty_collision
+    return empty_collision(L)
 end
 
 

@@ -158,14 +158,14 @@ function mesh_grid_intersection(shape::GridShape, vertices::Vector{PosVector}, t
     grid
 end
 
-function detect_collision(movement::Movement, mesh::Mesh{N}, previous=empty_collision) where {N}
-    collision = empty_collision
+function detect_collision(movement::Movement{3, M}, mesh::Mesh{N}, previous=empty_collision) where {N, M}
+    collision = empty_collision(M)
     within_bounds = false
     prev_check = mesh.empty_vector
     for (voxel, _, _, grid_time, _) in ray_grid_intersections(GridShape(mesh), movement.origin, movement.destination)
         if any(voxel .< 1) || any(voxel .> size(mesh.grid))
             if within_bounds
-                return empty_collision  # was within bounds, but left it, so we will never return
+                return empty_collision(M)  # was within bounds, but left it, so we will never return
             end
             continue
         end
@@ -188,10 +188,10 @@ function detect_collision(movement::Movement, mesh::Mesh{N}, previous=empty_coll
         end
         prev_check = will_check
     end
-    return empty_collision
+    return empty_collision(M)
 end
 
-function detect_collision(movement::Movement, mesh::Mesh, to_check::Int)
+function detect_collision(movement::Movement{3, M}, mesh::Mesh, to_check::Int) where {M}
     indices = mesh.triangles[to_check]
     triangle = (
         mesh.vertices[indices[1]],
@@ -204,11 +204,11 @@ function detect_collision(movement::Movement, mesh::Mesh, to_check::Int)
     dist_orig = normal ⋅ movement.origin
     dist_dest = normal ⋅ movement.destination
     if abs(dist_orig - dist_dest) < 1e-8
-        return empty_collision
+        return empty_collision{M}
     end
     time = (dist_plane - dist_orig) / (dist_dest - dist_orig)
     if time < 0 || time > 1
-        return empty_collision
+        return empty_collision{M}
     end
 
     intersect_point = @. time * movement.destination + (1 - time) * movement.origin
@@ -223,7 +223,7 @@ function detect_collision(movement::Movement, mesh::Mesh, to_check::Int)
         to_point = intersect_point - triangle[dim]
         along_normal = cross(edge, to_point)
         if (along_normal ⋅ normal) < 0
-            return empty_collision  # intersect point is on the wrong side of this edge and hence not in the triangle
+            return empty_collision{M}  # intersect point is on the wrong side of this edge and hence not in the triangle
         end
     end
     return Collision(time, dist_dest > dist_orig ? -normal : normal, movement.orientations, mesh.id, index=to_check)

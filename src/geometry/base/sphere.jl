@@ -30,7 +30,7 @@ function detect_collision(movement :: Movement, sphere :: Sphere, previous=empty
     sphere_collision(movement, sphere, inside)
 end
 
-function sphere_collision(movement :: Movement{N}, obstruction::Obstruction, inside_index::Int) where {N}
+function sphere_collision(movement :: Movement{N, M}, obstruction::Obstruction{N}, inside_index::Int) where {N, M}
     radius = obstruction.radius
     origin = movement.origin
     destination = movement.destination
@@ -40,7 +40,7 @@ function sphere_collision(movement :: Movement{N}, obstruction::Obstruction, ins
             (origin[dim] > radius && destination[dim] > radius) ||
             (origin[dim] < -radius && destination[dim] < -radius)
         )
-            return empty_collision
+            return empty_collision(M)
         end
     end
     inside = inside_index == -1 ? norm(origin) < radius : Bool(inside_index)
@@ -52,14 +52,14 @@ function sphere_collision(movement :: Movement{N}, obstruction::Obstruction, ins
     c = sum(origin .* origin)
     determinant = b ^ 2 - 4 * a * (c - radius ^ 2)
     if determinant < 0
-        return empty_collision
+        return empty_collision(M)
     end
     sd = sqrt(determinant)
     ai = inv(a)
 
     solution = (inside ? (-b + sd) : (-b - sd)) * 1//2 * ai
     if solution > 1 || solution <= 0
-        return empty_collision
+        return empty_collision(M)
     end
     point_hit = solution * destination + (1 - solution) * origin
     if N == 2

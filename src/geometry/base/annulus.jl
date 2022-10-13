@@ -51,8 +51,8 @@ function annuli(args...; kwargs...)
     TransformObstruction(Annulus, args...; kwargs...)
 end
 
-function detect_collision(movement :: Movement{2}, annulus :: Annulus, previous=empty_collision)
-    if previous !== empty_collision
+function detect_collision(movement :: Movement{2, N}, annulus :: Annulus, previous) where {N}
+    if previous !== empty_collision(N)
         if previous.id == annulus.inner.id
             if previous.index == 1
                 # we are inside the inner sphere
