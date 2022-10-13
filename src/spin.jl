@@ -71,7 +71,7 @@ A random number generator is stored in the `Spin` object as well, which will be 
 # Constructors
     Spin(;nsequences=1, position=[0, 0, 0], longitudinal=1., transverse=0., phase=0.)
 
-Creates a new spin with `nsequences` identical spin orienations (given by `longitudinal`, `transverse`, and `phase` flags).
+Creates a new spin with `nsequences` identical spin orientations (given by `longitudinal`, `transverse`, and `phase` flags).
 The spin will start at given position.
 
     Spin(reference_spin::Spin{1}, nsequences)

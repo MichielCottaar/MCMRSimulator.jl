@@ -62,7 +62,7 @@ function draw_step(current :: Spin, diffusivity :: Float, timestep :: Float, geo
 
     current_pos = current.position
     new_pos = proposed.position
-    orient = proposed.orienations
+    orient = proposed.orientations
 
     final_rng = @spin_rng proposed begin
         for _ in 1:1000
