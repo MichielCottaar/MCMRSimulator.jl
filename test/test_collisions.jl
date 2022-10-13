@@ -181,7 +181,7 @@
             geometry = mr.cylinders([0.8, 0.9], repeats=[2., 2.])
             c2 = mr.Cylinder(0.8)
             spin = mr.Spin(position=SA[200., 200., 0.])
-            @test mr.isinside(geometry, position)
+            @test mr.isinside(geometry, spin)
             inside = true
             for _ in 1:100
                 spin = mr.draw_step(spin, Float(3.), Float(0.5), tuple(geometry))
