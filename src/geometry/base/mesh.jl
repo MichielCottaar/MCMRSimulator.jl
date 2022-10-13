@@ -226,5 +226,5 @@ function detect_collision(movement::Movement, mesh::Mesh, to_check::Int)
             return empty_collision  # intersect point is on the wrong side of this edge and hence not in the triangle
         end
     end
-    return Collision(time, dist_dest > dist_orig ? -normal : normal, movement.rientations, mesh.id, index=to_check)
+    return Collision(time, dist_dest > dist_orig ? -normal : normal, movement.orientations, mesh.id, index=to_check)
 end
