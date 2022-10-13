@@ -38,26 +38,21 @@ function evolve_to_time(
     position::PosVector = spin.position
 
     # We need to move, so get random number generator from spin object
-    old_rng_state = copy(Random.TaskLocalRNG())
-    copy!(Random.TaskLocalRNG(), spin.rng)
+    final_rng_state = @spin_rng spin begin
+        while new_time > (current_time + simulation.timestep)
+            # Take full timesteps for a while
+            if !isa(simulation.micro.diffusivity, ZeroField)
+                position = draw_step(position, simulation.micro.diffusivity(position), simulation.timestep, simulation.micro.geometry)
+            end
+            _proc!(orient, position, simulation.timestep, current_time, simulation)
+            current_time += simulation.timestep
+        end
 
-    while new_time > (current_time + simulation.timestep)
-        # Take full timesteps for a while
         if !isa(simulation.micro.diffusivity, ZeroField)
             position = draw_step(position, simulation.micro.diffusivity(position), simulation.timestep, simulation.micro.geometry)
         end
-        _proc!(orient, position, simulation.timestep, current_time, simulation)
-        current_time += simulation.timestep
+        _proc!(orient, position, new_time - current_time, current_time, simulation)
     end
-
-    if !isa(simulation.micro.diffusivity, ZeroField)
-        position = draw_step(position, simulation.micro.diffusivity(position), simulation.timestep, simulation.micro.geometry)
-    end
-    _proc!(orient, position, new_time - current_time, current_time, simulation)
-
-    # Restore random number state
-    final_rng_state = FixedXoshiro(copy(Random.TaskLocalRNG()))
-    copy!(Random.TaskLocalRNG(), old_rng_state)
     Spin(position, SVector{N, SpinOrientation}(orient), final_rng_state)
 end
 

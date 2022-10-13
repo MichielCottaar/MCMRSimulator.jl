@@ -97,6 +97,17 @@ end
 Spin(;nsequences=1, position=zero(SVector{3,Float}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin{nsequences}(SVector{3, Float}(position), SVector{1}(SpinOrientation(longitudinal, transverse, deg2rad(phase))), rng)
 Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.rng)
 
+macro spin_rng(spin, expr)
+    return quote
+        local old_rng_state = copy(Random.TaskLocalRNG())
+        copy!(Random.TaskLocalRNG(), $(esc(spin)).rng)
+        $(esc(expr))
+        local final_rng_state = FixedXoshiro(copy(Random.TaskLocalRNG()))
+        copy!(Random.TaskLocalRNG(), old_rng_state)
+        final_rng_state
+    end
+end
+
 """
     transverse(spin)
     transverse(snapshot)
