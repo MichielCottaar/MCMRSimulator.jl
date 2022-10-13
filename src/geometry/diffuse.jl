@@ -2,7 +2,7 @@
 struct Movement{N, M}
     origin :: SVector{N, Float}
     destination :: SVector{N, Float}
-    orientation :: SVector{M, SpinOrientation}
+    orientations :: SVector{M, SpinOrientation}
     timestep :: Float
 end
 
@@ -55,10 +55,11 @@ function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float) 
 end
 draw_step(current :: Spin, diffusivity :: Float, timestep :: Float, geometry :: Tuple{}) = draw_step(current, diffusivity, timestep)
 draw_step(current :: Spin, diffusivity :: Float, timestep :: Float, geometry :: AbstractVector{<:Obstruction}) = draw_step(current, diffusivity, timestep, Tuple(geometry))
-function draw_step(current :: Spin, diffusivity :: Float, timestep :: Float, geometry::Tuple)
+function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, geometry::Tuple) where {N}
     proposed = draw_step(current, diffusivity, timestep)
     displacement = norm(current.position .- proposed.position)
-    collision = empty_collision
+    empty = empty_collision(N)
+    collision = empty
 
     current_pos = current.position
     new_pos = proposed.position
@@ -71,8 +72,8 @@ function draw_step(current :: Spin, diffusivity :: Float, timestep :: Float, geo
                 geometry,
                 collision
             )
-            if collision === empty_collision
-                return proposed
+            if collision === empty
+                break
             end
             orient = collision.new_orient
             current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
@@ -81,7 +82,7 @@ function draw_step(current :: Spin, diffusivity :: Float, timestep :: Float, geo
             new_pos = current_pos .+ (sign(direction ⋅ collision.normal) * displacement) .* direction
         end
     end
-    if collision !== empty_collision
+    if collision !== empty
         error("Bounced single particle for 1000 times in single step; terminating!")
     end
     Spin(new_pos, orient, final_rng)
@@ -98,12 +99,13 @@ correct_collisions(to_try :: Movement, geometry :: Obstruction) = correct_collis
 correct_collisions(to_try :: Movement, geometry :: Tuple{}) = [to_try]
 correct_collisions(to_try :: Movement, geometry :: AbstractVector{<:Obstruction}) = correct_collisions(to_try, tuple(geometry...))
 
-function correct_collisions(to_try :: Movement, geometry::Tuple)
+function correct_collisions(to_try :: Movement{N, M}, geometry::Tuple) where {N, M}
     steps = Movement[]
-    collision = empty_collision
+    empty = empty_collision(M)
+    collision = empty
     while true
         collision = detect_collision(to_try, geometry, collision)
-        if collision === empty_collision
+        if collision === empty
             push!(steps, to_try)
             break
         end
@@ -139,32 +141,34 @@ A detected collision along the movement.
 - `normal`: normal of the obstruction at the collision site. To get correct reflection the normal should point in the direction of the incoming particle.
 - `new_orient`: new spin orientation after magnetisation transfer with the obstruction.
 """
-struct Collision
+struct Collision{N}
     distance :: Float
     normal :: PosVector
-    new_orient :: SpinOrientation
+    new_orient :: SVector{N, SpinOrientation}
     id :: UUID
     index :: Int
-    Collision(distance, normal, new_orient, id, index) = new(prevfloat(distance), normal, new_orient, id, index)
+    Collision(distance, normal, new_orient, id, index) = new{length(new_orient)}(prevfloat(distance), normal, new_orient, id, index)
 end
 
 Collision(distance, normal, new_orient, id; index=0) = Collision(distance, normal, new_orient, id, index)
 
 
-const empty_collision = Collision(Inf, SA[0, 0, 0], SpinOrientation(zeros(3)), uuid1(), 0)
+const empty_collision_id = uuid1()
+empty_collision(N::Int) = Collision(Inf, SA[0, 0, 0], SVector{N, SpinOrientation}([SpinOrientation(0., 0., 0.) for _ in 1:N]), empty_collision_id, 0)
 
 """
-    detect_collision(movement, obstructions)
+    detect_collision(movement, obstructions[, previous])
 
 Returns a [`Collision`](@ref) object if the given `movement` crosses any obstructions.
 The first collision is always returned.
 If no collision is detected, `empty_collision` will be returned
 """
-detect_collision(movement :: Movement, obstructions :: Tuple{}, previous=empty_collision::Collision) = empty_collision
-detect_collision(movement :: Movement, obstructions :: Tuple{<:Obstruction}, previous=empty_collision::Collision) = detect_collision(movement, obstructions[1], previous)
+detect_collision(movement :: Movement{M, N}, obstructions) where {M, N} = detect_collision(movement, obstructions, empty_collision(N))
+detect_collision(movement :: Movement{M, N}, obstructions :: Tuple{}, previous::Collision{N}) where {M, N} = empty_collision(N)
+detect_collision(movement :: Movement, obstructions :: Tuple{<:Obstruction}, previous::Collision) = detect_collision(movement, obstructions[1], previous)
 
-function detect_collision(movement :: Movement, obstructions :: Tuple, previous=empty_collision::Collision)
-    collision = empty_collision
+function detect_collision(movement :: Movement{M, N}, obstructions :: Tuple, previous::Collision{N}) where {M, N}
+    collision = empty_collision(N)
     for o in obstructions
         c_new = detect_collision(movement, o, previous)
         if c_new.distance < collision.distance
