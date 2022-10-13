@@ -68,7 +68,7 @@ function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, 
     final_rng = @spin_rng proposed begin
         for _ in 1:1000
             collision = detect_collision(
-                Movement(current.position, proposed.position, orient, one(Float)),
+                Movement(current_pos, new_pos, orient, one(Float)),
                 geometry,
                 collision
             )
