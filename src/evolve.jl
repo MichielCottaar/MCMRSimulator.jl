@@ -1,10 +1,13 @@
-function _proc!(orient::MVector{N}, pos, dt, ct, sim::Simulation{N}) where {N}
-    env = sim.micro(pos)
-    for idx in 1:N
-        sequence = sim.sequences[idx]
-        grad = get_gradient(pos, sequence, ct, dt + ct)
-        orient[idx] = relax(orient[idx], env, dt, grad, sequence.scanner.B0)
+function _relax_mult(spin::Spin{N}, dt, ct, sim::Simulation{N}) where {N}
+    env = sim.micro(spin.position)
+
+    function get_rng(sequence, orient)
+        grad = get_gradient(spin.position, sequence, ct, dt + ct)
+        relax(orient, env, dt, grad, sequence.scanner.B0)
     end
+
+    orient = map(get_rng, sim.sequences, spin.orientations)
+    Spin(spin.position, orient, spin.rng)
 end
 
 """
@@ -26,34 +29,28 @@ function evolve_to_time(
     end
     index = Int(div(current_time, simulation.timestep, RoundNearest))
     time_left = ((1//2 + index) * simulation.timestep) - current_time
-    orient = MVector{N, SpinOrientation}(spin.orientations)
 
     if time_left > (new_time - current_time)
         # spin does not get to move at all
-        _proc!(orient, spin.position, new_time-current_time, current_time, simulation)
-        return Spin(spin.position, SVector{N, SpinOrientation}(orient), spin.rng)
+        return _relax_mult(spin, new_time-current_time, current_time, simulation)
     end
-    _proc!(orient, spin.position, time_left, current_time, simulation)
+    spin = _relax_mult(spin, time_left, current_time, simulation)
     current_time = (index + 1//2) * simulation.timestep
-    position::PosVector = spin.position
 
     # We need to move, so get random number generator from spin object
-    final_rng_state = @spin_rng spin begin
-        while new_time > (current_time + simulation.timestep)
-            # Take full timesteps for a while
-            if !isa(simulation.micro.diffusivity, ZeroField)
-                position = draw_step(position, simulation.micro.diffusivity(position), simulation.timestep, simulation.micro.geometry)
-            end
-            _proc!(orient, position, simulation.timestep, current_time, simulation)
-            current_time += simulation.timestep
-        end
-
+    while new_time > (current_time + simulation.timestep)
+        # Take full timesteps for a while
         if !isa(simulation.micro.diffusivity, ZeroField)
-            position = draw_step(position, simulation.micro.diffusivity(position), simulation.timestep, simulation.micro.geometry)
+            spin = draw_step(spin, simulation.micro.diffusivity(spin.position), simulation.timestep, simulation.micro.geometry)
         end
-        _proc!(orient, position, new_time - current_time, current_time, simulation)
+        spin = _relax_mult(spin, simulation.timestep, current_time, simulation)
+        current_time += simulation.timestep
     end
-    Spin(position, SVector{N, SpinOrientation}(orient), final_rng_state)
+
+    if !isa(simulation.micro.diffusivity, ZeroField)
+        spin = draw_step(spin, simulation.micro.diffusivity(spin.position), simulation.timestep, simulation.micro.geometry)
+    end
+   _relax_mult(spin, new_time - current_time, current_time, simulation)
 end
 
 """

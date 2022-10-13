@@ -27,11 +27,14 @@ BoundingBox(s::Sphere) = BoundingBox([-s.radius, -s.radius, -s.radius], [s.radiu
 
 function detect_collision(movement :: Movement, sphere :: Sphere, previous=empty_collision) 
     inside = previous.id != sphere.id ? -1 : previous.index
-    sphere_collision(movement.origin, movement.destination, sphere, inside)
+    sphere_collision(movement, sphere, inside)
 end
 
-function sphere_collision(origin :: SVector{N, Float}, destination :: SVector{N, Float}, obstruction::Obstruction, inside_index::Int) where {N}
+function sphere_collision(movement :: Movement{N}, obstruction::Obstruction, inside_index::Int) where {N}
     radius = obstruction.radius
+    origin = movement.origin
+    destination = movement.destination
+
     for dim in 1:N
         if (
             (origin[dim] > radius && destination[dim] > radius) ||
@@ -65,6 +68,7 @@ function sphere_collision(origin :: SVector{N, Float}, destination :: SVector{N,
     return Collision(
         solution,
         inside ? -point_hit : point_hit,
+        movement.orientations,
         obstruction.id,
         index=Int(inside)
     )

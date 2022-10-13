@@ -35,6 +35,7 @@ function detect_collision(movement :: Movement{1}, wall :: Wall, previous=empty_
     Collision(
         abs(origin) / total_length,
         origin < 0 ? SA[-1, 0, 0] : SA[1, 0, 0],
+        movement.orientations,
         wall.id
     )
 end

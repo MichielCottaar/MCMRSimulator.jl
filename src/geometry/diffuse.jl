@@ -1,13 +1,14 @@
 "Intermediate object used internally to represent a movement from one position to another"
-struct Movement{N}
+struct Movement{N, M}
     origin :: SVector{N, Float}
     destination :: SVector{N, Float}
+    orientation :: SVector{M, SpinOrientation}
     timestep :: Float
 end
 
 function Movement(origin::AbstractArray, destination::AbstractArray, timestep::Real) 
     ndim = length(origin)
-    Movement{ndim}(SVector{ndim, Float}(origin), SVector{ndim, Float}(destination), Float(timestep))
+    Movement{ndim, 0}(SVector{ndim, Float}(origin), SVector{ndim, Float}(destination), SVector{0, SpinOrientation}(), Float(timestep))
 end
 
 """
@@ -32,35 +33,58 @@ function random_on_sphere()
 end
 
 """
-    draw_step([current_pos::PosVector], diffusivity::Float, timestep::Float[, geometry::Obstructions])
+    random_gauss(diffusivity, timestep)
 
-Draws the next location of the particle after `timestep` with given `diffusivity`.
-If provided, this displacement will take into account the obstructions in `geometry`.
-If the `current_pos` is not provided only the displacement is returned (will only work for empty `geometry`).
+Draws a random step from a Gaussian distribution with a variance of 2 * diffusivity * timestep.
 """
-draw_step(diffusivity :: Float, timestep :: Float) = sqrt(2 * timestep * diffusivity) * randn(PosVector)
-draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float) = current_pos .+ draw_step(diffusivity, timestep)
-draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: Tuple{}) = draw_step(current_pos, diffusivity, timestep)
-draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry :: AbstractVector{<:Obstruction}) = draw_step(current_pos, diffusivity, timestep, Tuple(geometry))
-function draw_step(current_pos :: PosVector, diffusivity :: Float, timestep :: Float, geometry::Tuple)
-    new_pos = draw_step(current_pos, diffusivity, timestep)
-    displacement = norm(new_pos .- current_pos)
-    collision = empty_collision
-    for _ in 1:1000
-        collision = detect_collision(
-            Movement(current_pos, new_pos, one(Float)),
-            geometry,
-            collision
-        )
-        if collision === empty_collision
-            return new_pos
-        end
-        current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
-        direction = random_on_sphere()
-        displacement = (1 - collision.distance) * displacement
-        new_pos = current_pos .+ (sign(direction ⋅ collision.normal) * displacement) .* direction
+random_gauss(diffusivity :: Float, timestep :: Float) = sqrt(2 * timestep * diffusivity) * randn(PosVector)
+
+"""
+    draw_step(current::Spin, diffusivity::Float, timestep::Float[, geometry::Obstructions])
+
+Returns a new spin with the state of the particle after `timestep`:
+- draws the next location of the particle after `timestep` with given `diffusivity`.  
+  If provided, this displacement will take into account the obstructions in `geometry`.
+- the spin orientation might be affected by collisions with the obstructions in `geometry`.
+"""
+function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float) where {N}
+    new_rng = @spin_rng current begin
+        new_pos = current.position .+ random_gauss(diffusivity, timestep)
     end
-    error("Bounced single particle for 1000 times in single step; terminating!")
+    Spin{N}(new_pos, current.orientations, new_rng)
+end
+draw_step(current :: Spin, diffusivity :: Float, timestep :: Float, geometry :: Tuple{}) = draw_step(current, diffusivity, timestep)
+draw_step(current :: Spin, diffusivity :: Float, timestep :: Float, geometry :: AbstractVector{<:Obstruction}) = draw_step(current, diffusivity, timestep, Tuple(geometry))
+function draw_step(current :: Spin, diffusivity :: Float, timestep :: Float, geometry::Tuple)
+    proposed = draw_step(current, diffusivity, timestep)
+    displacement = norm(current.position .- proposed.position)
+    collision = empty_collision
+
+    current_pos = current.position
+    new_pos = proposed.position
+    orient = proposed.orienations
+
+    final_rng = @spin_rng proposed begin
+        for _ in 1:1000
+            collision = detect_collision(
+                Movement(current.position, proposed.position, orient, one(Float)),
+                geometry,
+                collision
+            )
+            if collision === empty_collision
+                return proposed
+            end
+            orient = collision.new_orient
+            current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
+            direction = random_on_sphere()
+            displacement = (1 - collision.distance) * displacement
+            new_pos = current_pos .+ (sign(direction ⋅ collision.normal) * displacement) .* direction
+        end
+    end
+    if collision !== empty_collision
+        error("Bounced single particle for 1000 times in single step; terminating!")
+    end
+    Spin(new_pos, orient, final_rng)
 end
 
 """
@@ -106,26 +130,28 @@ end
 
 
 """
-    Collision(distance::Float, normal::PosVector)
+    Collision(distance, normal, new_orient, id[, index])
 
 A detected collision along the movement.
 
 # Parameters
 - `distance`: number between 0 and 1 indicating the distance of the collision from the origin (0) to the destination point (1)
 - `normal`: normal of the obstruction at the collision site. To get correct reflection the normal should point in the direction of the incoming particle.
+- `new_orient`: new spin orientation after magnetisation transfer with the obstruction.
 """
 struct Collision
     distance :: Float
     normal :: PosVector
+    new_orient :: SpinOrientation
     id :: UUID
     index :: Int
-    Collision(distance, normal, id, index) = new(prevfloat(distance), normal, id, index)
+    Collision(distance, normal, new_orient, id, index) = new(prevfloat(distance), normal, new_orient, id, index)
 end
 
-Collision(distance, normal, id; index=0) = Collision(distance, normal, id, index)
+Collision(distance, normal, new_orient, id; index=0) = Collision(distance, normal, new_orient, id, index)
 
 
-const empty_collision = Collision(Inf, SA[0, 0, 0], uuid1(), 0)
+const empty_collision = Collision(Inf, SA[0, 0, 0], SpinOrientation(zeros(3)), uuid1(), 0)
 
 """
     detect_collision(movement, obstructions)
