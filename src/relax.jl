@@ -20,8 +20,10 @@ end
 
 """
     transfer(spin1, spin2, fraction)
+    transfer(orientation, obstruction)
 
 Transfers `fraction` of the total spin orientation between `spin1` and `spin2`.
+Alternatively transfers spin between spin `orientation` and `obstruction`.
 """
 function transfer(spin1 :: SpinOrientation, spin2 :: SpinOrientation, fraction :: Real)
     if iszero(fraction)
@@ -55,4 +57,15 @@ function transfer(spin1 :: Spin{N}, spin2 :: Spin{N}, fraction :: Real) where {N
         Spin(spin1.position, orient1, spin1.rng),
         Spin(spin2.position, orient2, spin2.rng),
     )
+end
+
+
+function transfer(orientation :: SpinOrientation, fraction::Float) where {N}
+    inv_fraction = 1 - fraction
+    SpinOrientation((1 - (1 - orientation.longitudinal) * inv_fraction), orientation.transverse * inv_fraction, orientation.phase)
+end
+
+function transfer(orientations :: SVector{N, SpinOrientation}, obstruction :: BaseObstruction) where {N}
+    fraction = hasfield(typeof(obstruction), :MT_fraction) ? obstruction.MT_fraction : zero(Float)
+    map(o->transfer(o, fraction), orientations)
 end

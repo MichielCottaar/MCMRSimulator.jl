@@ -7,7 +7,8 @@ Generate spheres using [`spheres`](@ref).
 struct Sphere <: BaseObstruction{3}
     radius :: Float
     id :: UUID
-    Sphere(radius) = new(Float(radius), uuid1())
+    MT_fraction :: Float
+    Sphere(radius; MT_fraction=0.) = new(Float(radius), uuid1(), Float(MT_fraction))
 end
 Base.copy(s::Sphere) = Sphere(s.radius)
 
@@ -68,7 +69,7 @@ function sphere_collision(movement :: Movement{N, M}, obstruction::Obstruction{N
     return Collision(
         solution,
         inside ? -point_hit : point_hit,
-        movement.orientations,
+        transfer(movement.orientations, obstruction),
         obstruction.id,
         index=Int(inside)
     )

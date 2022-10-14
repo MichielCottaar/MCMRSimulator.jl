@@ -13,14 +13,15 @@ struct Cylinder <: BaseObstruction{2}
     chi_A :: Float
     internal_field :: Float
     external_field :: Float
-    function Cylinder(radius; chi_I=-0.1, chi_A=-0.1, g_ratio=1.)
+    MT_fraction :: Float
+    function Cylinder(radius; chi_I=-0.1, chi_A=-0.1, g_ratio=1., MT_fraction=0.)
         if isone(g_ratio)
             internal_field, external_field = zero(Float), zero(Float)
         else
             internal_field = -0.75 * chi_A * log(g_ratio)
             external_field = 2 * (chi_I + chi_A / 4) * (1 - g_ratio^2) / (1 + g_ratio)^2 * radius^2
         end
-        new(Float(radius), uuid1(), g_ratio, chi_I, chi_A, internal_field, external_field)
+        new(Float(radius), uuid1(), g_ratio, chi_I, chi_A, internal_field, external_field, Float(MT_fraction))
     end
 end
 
