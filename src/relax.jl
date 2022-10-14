@@ -65,7 +65,7 @@ function transfer(orientation :: SpinOrientation, fraction::Float) where {N}
     SpinOrientation((1 - (1 - orientation.longitudinal) * inv_fraction), orientation.transverse * inv_fraction, orientation.phase)
 end
 
-function transfer(orientations :: SVector{N, SpinOrientation}, obstruction :: BaseObstruction) where {N}
-    fraction = hasfield(typeof(obstruction), :MT_fraction) ? obstruction.MT_fraction : zero(Float)
+function transfer(orientations :: SVector{N, SpinOrientation}, obstruction :: ObstructionProperties) where {N}
+    fraction = obstruction.MT_fraction
     map(o->transfer(o, fraction), orientations)
 end

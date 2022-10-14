@@ -62,6 +62,7 @@ function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, 
 
     current_pos = current.position
     new_pos = proposed.position
+    orient = proposed.orientations
 
     final_rng = @spin_rng proposed begin
         for _ in 1:1000
@@ -73,6 +74,9 @@ function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, 
             if collision === empty_collision
                 break
             end
+
+            transfer(orient, ObstructionProperties(collision))
+
             current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
             direction = random_on_sphere()
             displacement = (1 - collision.distance) * displacement
@@ -82,7 +86,7 @@ function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, 
     if collision !== empty_collision
         error("Bounced single particle for 1000 times in single step; terminating!")
     end
-    Spin(new_pos, proposed.orientations, final_rng)
+    Spin(new_pos, orient, final_rng)
 end
 
 """
