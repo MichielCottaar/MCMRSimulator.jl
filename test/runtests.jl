@@ -4,6 +4,7 @@ import MRSimulator: Float, SA
 using StaticArrays
 using LinearAlgebra
 import Random
+import SpecialFunctions: erf
 
 if length(ARGS) == 0
     tests = [
@@ -14,6 +15,7 @@ if length(ARGS) == 0
         "known_sequences",
         "meshes",
         "offresonance",
+        "transfer",
     ]
 else
     tests = ARGS
