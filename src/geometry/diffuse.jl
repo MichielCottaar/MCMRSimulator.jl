@@ -75,7 +75,7 @@ function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, 
                 break
             end
 
-            transfer(orient, ObstructionProperties(collision))
+            orient = transfer(orient, ObstructionProperties(collision))
 
             current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
             direction = random_on_sphere()
