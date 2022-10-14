@@ -19,7 +19,7 @@ Creates one or more [`Wall`](@ref)s.
 The `positions`, `repeats`, and `rotation` control the wall position and orientation and is explained in 
 more detail in [Defining the geometry](@ref).
 """
-walls(;kwargs...) = TransformObstruction(Wall(); kwargs...)
+walls(;kwargs...) = TransformObstruction(Wall; kwargs...)
 
 function detect_collision(movement :: Movement{1}, wall :: Wall, previous=empty_collision)
     if id(previous) == id(wall)
