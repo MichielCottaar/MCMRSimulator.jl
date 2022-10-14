@@ -10,7 +10,7 @@ struct Sphere <: BaseObstruction{3}
     MT_fraction :: Float
     Sphere(radius; MT_fraction=0.) = new(Float(radius), uuid1(), Float(MT_fraction))
 end
-Base.copy(s::Sphere) = Sphere(s.radius)
+Base.copy(s::Sphere) = Sphere(s.radius; MT_fraction=s.MT_fraction)
 
 """
     spheres(radii; positions=[[0, 0, 0]], repeats=[Inf, Inf, Inf], rotation=I(3))

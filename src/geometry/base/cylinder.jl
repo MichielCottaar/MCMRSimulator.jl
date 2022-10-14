@@ -25,7 +25,7 @@ struct Cylinder <: BaseObstruction{2}
     end
 end
 
-Base.copy(c::Cylinder) = Cylinder(c.radius; chi_I=c.chi_I, chi_A=c.chi_A, g_ratio=c.g_ratio)
+Base.copy(c::Cylinder) = Cylinder(c.radius; chi_I=c.chi_I, chi_A=c.chi_A, g_ratio=c.g_ratio, MT_fraction=c.MT_fraction)
 isinside(cyl::Cylinder, pos::SVector{2, Float}) = (pos[1] * pos[1] + pos[2] * pos[2]) <= (cyl.radius * cyl.radius)
 BoundingBox(c::Cylinder) = BoundingBox([-c.radius, -c.radius], [c.radius, c.radius])
 

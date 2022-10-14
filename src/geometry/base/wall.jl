@@ -6,10 +6,11 @@ Generate walls using [`walls`](@ref).
 """
 struct Wall <: BaseObstruction{1}
     id :: UUID
-    Wall() = new(uuid1())
+    MT_fraction :: Float
+    Wall(; MT_fraction=0.) = new(uuid1(), MT_fraction)
 end
 
-Base.copy(w::Wall) = Wall()
+Base.copy(w::Wall) = Wall(MT_fraction=w.MT_fraction)
 isinside(wall::Wall, pos::PosVector) = false
 BoundingBox(wall::Wall) = BoundingBox(SA[0], SA[0])
 

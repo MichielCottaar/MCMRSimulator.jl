@@ -10,6 +10,7 @@ abstract type BaseObstruction{N} <: Obstruction{N} end
 
 
 include("random_draws.jl")
+include("properties.jl")
 include("cylinder.jl")
 include("sphere.jl")
 include("wall.jl")
