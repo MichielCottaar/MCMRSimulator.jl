@@ -15,13 +15,13 @@ struct Annulus <: BaseObstruction{2}
     chi_A :: Float
     internal_field :: Float
     external_field :: Float
-    function Annulus(inner::Real, outer::Real; chi_I=-0.1, chi_A=-0.1, myelin=false)
+    function Annulus(inner::Real, outer::Real; chi_I=-0.1, chi_A=-0.1, myelin=false, kwargs...)
         @assert outer > inner
         inner = Float(inner)
         outer = Float(outer)
         internal_field = 0.75 * chi_A * log(outer / inner)
         external_field = (chi_I + chi_A / 4) * (outer * outer - inner * inner) / 2
-        new(Cylinder(inner), Cylinder(outer), myelin, chi_I, chi_A, internal_field, external_field)
+        new(Cylinder(inner; kwargs...), Cylinder(outer; kwargs...), myelin, chi_I, chi_A, internal_field, external_field)
     end
 end
 
@@ -51,9 +51,9 @@ function annuli(args...; kwargs...)
     TransformObstruction(Annulus, args...; kwargs...)
 end
 
-function detect_collision(movement :: Movement{2, N}, annulus :: Annulus, previous) where {N}
+function detect_collision(movement :: Movement{2}, annulus :: Annulus, previous)
     if previous !== empty_collision(N)
-        if previous.id == annulus.inner.id
+        if id(previous) == id(annulus.inner)
             if previous.index == 1
                 # we are inside the inner sphere
                 return detect_collision(movement, annulus.inner, previous)
@@ -61,7 +61,7 @@ function detect_collision(movement :: Movement{2, N}, annulus :: Annulus, previo
                 # we just bounced on the outside of the inner sphere. Let's not do that again
                 return detect_collision(movement, annulus.outer, previous)
             end
-        elseif previous.id == annulus.outer.id
+        elseif id(previous) == id(annulus.outer)
             if previous.index == 0
                 # We just bounced on the outside of the outer cylinder. Let's check if we hit it again (could be due to repeats).
                 return detect_collision(movement, annulus.outer, previous)

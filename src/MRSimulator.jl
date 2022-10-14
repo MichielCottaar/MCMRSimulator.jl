@@ -21,6 +21,7 @@ import Colors
 import Random
 using UUIDs
 import Distributions
+import Accessors: @set
 
 
 include("constants.jl")

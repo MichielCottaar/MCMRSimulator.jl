@@ -63,6 +63,7 @@ This might be integrated over the surface or the volume depending on the dimensi
 total_susceptibility(obstruction::Obstruction) = zero(Float)
 
 include("bounding_box.jl")
+include("properties.jl")
 include("diffuse.jl")
 include("grid.jl")
 include("base/base.jl")

@@ -8,9 +8,11 @@ The dimensionality N indicates the dimensionality of the input data
 """
 abstract type BaseObstruction{N} <: Obstruction{N} end
 
+ObstructionProperties(obstruction :: BaseObstruction) = obstruction.properties
+
+Base.copy(o::BaseObstruction) = @set o.properties.id = uuid1()
 
 include("random_draws.jl")
-include("properties.jl")
 include("cylinder.jl")
 include("sphere.jl")
 include("wall.jl")

@@ -146,16 +146,16 @@ function project(trans::TransformObstruction{N}, pos::PosVector) where {N}
     project_repeat(trans, project_rotation(trans, pos))
 end
 
-function detect_collision(movement :: Movement{3, L}, trans :: TransformObstruction{N}, previous::Collision{L}) where {N, L}
+function detect_collision(movement :: Movement{3}, trans :: TransformObstruction{N}, previous::Collision) where {N}
     # apply rotation
     projected_origin = project_rotation(trans, movement.origin)
     projected_destination = project_rotation(trans, movement.destination)
     if !any(isfinite, trans.repeats)
-        c = empty_collision(L)
+        c = empty_collision
 
         for (shift, obstruction) in zip(trans.positions, trans.obstructions)
             ctest = detect_collision(
-                Movement{N, L}(projected_origin - shift, projected_destination - shift, movement.orientations, Float(1)),
+                Movement{N}(projected_origin - shift, projected_destination - shift, Float(1)),
                 obstruction,
                 previous
             )
@@ -164,7 +164,7 @@ function detect_collision(movement :: Movement{3, L}, trans :: TransformObstruct
             end
         end
     elseif all(isfinite, trans.repeats)
-        c = detect_collision(projected_origin, projected_destination, movement.orientations, previous, trans.repeats, trans.positions, trans.shift_quadrants, trans.obstructions)
+        c = detect_collision(projected_origin, projected_destination, previous, trans.repeats, trans.positions, trans.shift_quadrants, trans.obstructions)
     else
         error("Repeating only along a subset of directions is not yet supported")
     end
@@ -179,21 +179,20 @@ function detect_collision(movement :: Movement{3, L}, trans :: TransformObstruct
         return Collision(
             c.distance,
             trans.rotation * n,
-            c.new_orient,
-            c.id,
+            c.properties,
             c.index
         )
     end
-    return empty_collision(L)
+    return empty_collision
 end
 
     
 function detect_collision(
-    origin :: SVector{N, Float}, destination :: SVector{N, Float}, orient :: SVector{L, SpinOrientation},
-    previous::Collision{L}, repeats::SVector{N, Float}, 
+    origin :: SVector{N, Float}, destination :: SVector{N, Float},
+    previous::Collision, repeats::SVector{N, Float}, 
     positions::NTuple{M, SVector{N, Float}}, shift_quadrants::NTuple{M, SVector{N, Bool}},
     obstructions::NTuple{M, <:BaseObstruction}
-    )  where {N, M, L}
+    )  where {N, M}
     half_repeats = map(r -> 0.5 * r, repeats)
     # project onto 1x1x1 grid
     grid_origin = map(/, origin, half_repeats)
@@ -208,11 +207,11 @@ function detect_collision(
         p2 = destination - voxel_orig
         to_correct = map(*, lower, repeats)
 
-        c = empty_collision(L)
+        c = empty_collision
         for (shift, quadrant, obstruction) in zip(positions, shift_quadrants, obstructions)
             to_shift = map((s, q, t) -> s - q * t, shift, quadrant, to_correct)
             ctest = detect_collision(
-                Movement{N,L}(p1 - to_shift, p2 - to_shift, orient, Float(1)),
+                Movement{N}(p1 - to_shift, p2 - to_shift, Float(1)),
                 obstruction,
                 previous
             )
@@ -224,7 +223,7 @@ function detect_collision(
             return c
         end
     end
-    return empty_collision(L)
+    return empty_collision
 end
 
 

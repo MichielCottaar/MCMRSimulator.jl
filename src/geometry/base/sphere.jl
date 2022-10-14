@@ -6,11 +6,9 @@ Generate spheres using [`spheres`](@ref).
 """
 struct Sphere <: BaseObstruction{3}
     radius :: Float
-    id :: UUID
-    MT_fraction :: Float
-    Sphere(radius; MT_fraction=0.) = new(Float(radius), uuid1(), Float(MT_fraction))
+    properties :: ObstructionProperties
 end
-Base.copy(s::Sphere) = Sphere(s.radius; MT_fraction=s.MT_fraction)
+Sphere(radius; kwargs...) = Sphere(Float(radius), ObstructionProperties(; kwargs...))
 
 """
     spheres(radii; positions=[[0, 0, 0]], repeats=[Inf, Inf, Inf], rotation=I(3))
@@ -27,11 +25,11 @@ isinside(sphere::Sphere, pos::PosVector) = norm(pos) <= sphere.radius
 BoundingBox(s::Sphere) = BoundingBox([-s.radius, -s.radius, -s.radius], [s.radius, s.radius, s.radius])
 
 function detect_collision(movement :: Movement, sphere :: Sphere, previous=empty_collision) 
-    inside = previous.id != sphere.id ? -1 : previous.index
+    inside = id(previous) != id(sphere) ? -1 : previous.index
     sphere_collision(movement, sphere, inside)
 end
 
-function sphere_collision(movement :: Movement{N, M}, obstruction::Obstruction{N}, inside_index::Int) where {N, M}
+function sphere_collision(movement :: Movement{N}, obstruction::Obstruction, inside_index::Int) where {N}
     radius = obstruction.radius
     origin = movement.origin
     destination = movement.destination
@@ -41,7 +39,7 @@ function sphere_collision(movement :: Movement{N, M}, obstruction::Obstruction{N
             (origin[dim] > radius && destination[dim] > radius) ||
             (origin[dim] < -radius && destination[dim] < -radius)
         )
-            return empty_collision(M)
+            return empty_collision
         end
     end
     inside = inside_index == -1 ? norm(origin) < radius : Bool(inside_index)
@@ -53,14 +51,14 @@ function sphere_collision(movement :: Movement{N, M}, obstruction::Obstruction{N
     c = sum(origin .* origin)
     determinant = b ^ 2 - 4 * a * (c - radius ^ 2)
     if determinant < 0
-        return empty_collision(M)
+        return empty_collision
     end
     sd = sqrt(determinant)
     ai = inv(a)
 
     solution = (inside ? (-b + sd) : (-b - sd)) * 1//2 * ai
     if solution > 1 || solution <= 0
-        return empty_collision(M)
+        return empty_collision
     end
     point_hit = solution * destination + (1 - solution) * origin
     if N == 2
@@ -69,8 +67,7 @@ function sphere_collision(movement :: Movement{N, M}, obstruction::Obstruction{N
     return Collision(
         solution,
         inside ? -point_hit : point_hit,
-        transfer(movement.orientations, obstruction),
-        obstruction.id,
+        ObstructionProperties(obstruction),
         index=Int(inside)
     )
 end

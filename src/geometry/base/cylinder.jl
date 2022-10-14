@@ -7,25 +7,23 @@ See [Myelinated cylinders](@ref Myelinated_cylinders) for an explanation of the 
 """
 struct Cylinder <: BaseObstruction{2}
     radius :: Float
-    id :: UUID
+    properties :: ObstructionProperties
     g_ratio :: Float
     chi_I :: Float
     chi_A :: Float
     internal_field :: Float
     external_field :: Float
-    MT_fraction :: Float
-    function Cylinder(radius; chi_I=-0.1, chi_A=-0.1, g_ratio=1., MT_fraction=0.)
-        if isone(g_ratio)
-            internal_field, external_field = zero(Float), zero(Float)
-        else
-            internal_field = -0.75 * chi_A * log(g_ratio)
-            external_field = 2 * (chi_I + chi_A / 4) * (1 - g_ratio^2) / (1 + g_ratio)^2 * radius^2
-        end
-        new(Float(radius), uuid1(), g_ratio, chi_I, chi_A, internal_field, external_field, Float(MT_fraction))
+end
+function Cylinder(radius; chi_I=-0.1, chi_A=-0.1, g_ratio=1., kwargs...)
+    if isone(g_ratio)
+        internal_field, external_field = zero(Float), zero(Float)
+    else
+        internal_field = -0.75 * chi_A * log(g_ratio)
+        external_field = 2 * (chi_I + chi_A / 4) * (1 - g_ratio^2) / (1 + g_ratio)^2 * radius^2
     end
+    Cylinder(Float(radius), ObstructionProperties(; kwargs...), g_ratio, chi_I, chi_A, internal_field, external_field)
 end
 
-Base.copy(c::Cylinder) = Cylinder(c.radius; chi_I=c.chi_I, chi_A=c.chi_A, g_ratio=c.g_ratio, MT_fraction=c.MT_fraction)
 isinside(cyl::Cylinder, pos::SVector{2, Float}) = (pos[1] * pos[1] + pos[2] * pos[2]) <= (cyl.radius * cyl.radius)
 BoundingBox(c::Cylinder) = BoundingBox([-c.radius, -c.radius], [c.radius, c.radius])
 
@@ -49,8 +47,8 @@ function cylinders(args...; kwargs...)
     TransformObstruction(Cylinder, args...; kwargs...)
 end
 
-function detect_collision(movement :: Movement{2, N}, cylinder :: Cylinder, previous::Collision{N}) where {N}
-    inside = previous.id != cylinder.id ? -1 : previous.index
+function detect_collision(movement :: Movement{2}, cylinder :: Cylinder, previous::Collision) where {N}
+    inside = id(previous) != id(cylinder) ? -1 : previous.index
     sphere_collision(movement, cylinder, inside)
 end
 
