@@ -60,7 +60,7 @@ function transfer(spin1 :: Spin{N}, spin2 :: Spin{N}, fraction :: Real) where {N
 end
 
 
-function transfer(orientation :: SpinOrientation, fraction::Float) where {N}
+function transfer(orientation :: SpinOrientation, fraction::Float)
     inv_fraction = 1 - fraction
     SpinOrientation((1 - (1 - orientation.longitudinal) * inv_fraction), orientation.transverse * inv_fraction, orientation.phase)
 end
