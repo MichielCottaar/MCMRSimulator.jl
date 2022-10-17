@@ -47,7 +47,7 @@ function cylinders(args...; kwargs...)
     TransformObstruction(Cylinder, args...; kwargs...)
 end
 
-function detect_collision(movement :: Movement{2}, cylinder :: Cylinder, previous::Collision) where {N}
+function detect_collision(movement :: Movement{2}, cylinder :: Cylinder, previous::Collision)
     inside = id(previous) != id(cylinder) ? -1 : previous.index
     sphere_collision(movement, cylinder, inside)
 end
