@@ -62,11 +62,13 @@ function sphere_collision(movement :: Movement{N}, obstruction::Obstruction, ins
     end
     point_hit = solution * destination + (1 - solution) * origin
     if N == 2
-        point_hit = SA[point_hit[1], point_hit[2], 0.]
+        normal = SA[point_hit[1], point_hit[2], 0.]
+    else
+        normal = point_hit
     end
     return Collision(
         solution,
-        inside ? -point_hit : point_hit,
+        inside ? -normal : normal,
         ObstructionProperties(obstruction),
         index=Int(inside)
     )
