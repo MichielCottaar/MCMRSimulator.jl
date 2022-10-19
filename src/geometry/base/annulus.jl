@@ -52,7 +52,7 @@ function annuli(args...; kwargs...)
 end
 
 function detect_collision(movement :: Movement{2}, annulus :: Annulus, previous)
-    if previous !== empty_collision(N)
+    if previous !== empty_collision
         if id(previous) == id(annulus.inner)
             if previous.index == 1
                 # we are inside the inner sphere

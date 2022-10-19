@@ -22,6 +22,7 @@ import Random
 using UUIDs
 import Distributions
 import Accessors: @set
+import Roots
 
 
 include("constants.jl")
