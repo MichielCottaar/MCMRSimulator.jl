@@ -121,7 +121,10 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
     line_slope = diff[2] / diff[1]
     line_shift = -line_slope * movement.origin[1] + movement.origin[2]
 
-    froot(theta :: Float) = (sin(theta + spiral.theta0) - line_slope * cos(theta + spiral.theta0)) * (slope * theta + spiral.inner) - line_shift
+    function froot(theta :: Float)
+        (s, c) = sincos(theta + spiral.theta0)
+        (s - line_slope * c) * (slope * theta + spiral.inner) - line_shift
+    end
     theta_min_rsq = get_theta(min_rsq_pos, min_rsq; round_down=false, ignore_toskip=!iszero(min_rsq_dist))
 
     function get_solution(theta_sol, index)
