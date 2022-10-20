@@ -158,6 +158,18 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
         )
     end
 
+    function get_zero_solution()
+        t1, t2 = get_theta(movement.origin, rsq_origin, ignore_toskip=false), get_theta(movement.destination, rsq_destination, ignore_toskip=true)
+        if id(previous) == id(spiral)
+            index = previous.index
+            normal = previous.normal
+        else
+            index = t1 > t2 ? 1 : 0
+            normal = get_solution(t1, index).normal
+        end
+        return Collision(zero(Float), normal, spiral.properties, previous.index)
+    end
+
     if !iszero(min_rsq_dist) & (rsq_origin > spiral.inner * spiral.inner)
         # check downward trajectory
         theta_orig = get_theta(movement.origin, rsq_origin, ignore_toskip=false)
@@ -185,7 +197,7 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
                 upper = theta_range
             end
             if sign(froot(lower)) == sign(froot(upper))
-                return Collision(zero(Float), previous.normal, spiral.properties, previous.index)
+                return get_zero_solution()
             end
             theta_sol = Roots.find_zero(froot, (lower, upper))
             if (theta_sol < 0)
@@ -227,7 +239,7 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
                 lower = 0
             end
             if sign(froot(lower)) == sign(froot(upper))
-                return Collision(zero(Float), previous.normal, spiral.properties, previous.index)
+                return get_zero_solution()
             end
             theta_sol = Roots.find_zero(froot, (lower, upper))
             if (theta_sol > theta_range)
@@ -238,12 +250,7 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
     end
     t1, t2 = get_theta(movement.origin, rsq_origin, ignore_toskip=false), get_theta(movement.destination, rsq_destination, ignore_toskip=true)
     if abs(t1 - t2) > π
-        if id(previous) == id(spiral)
-            index = previous.index
-        else
-            index = t1 > t2 ? 1 : 0
-        end
-        return get_solution(t1, index)
+        return get_zero_solution()
     end
     return empty_collision
 end
