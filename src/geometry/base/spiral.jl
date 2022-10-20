@@ -214,14 +214,15 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
                 continue
             end
             (lower, upper) = pos_shift ? (theta1, theta1 + theta_shift) : (theta1 + theta_shift, theta1)
+            (lower, upper) = (prevfloat(lower), nextfloat(upper))
             if (upper < 0)
                 continue
             end
             if (lower < 0)
-                if sign(froot(upper)) == sign(froot(zero(Float)))
-                    continue
-                end
                 lower = 0
+            end
+            if sign(froot(upper)) == sign(froot(lower))
+                continue
             end
             theta_sol = Roots.find_zero(froot, (lower, upper))
             if (theta_sol > theta_range)
