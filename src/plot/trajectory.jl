@@ -43,6 +43,14 @@ Plots trajectory of the spins in a sequence of [`Snapshot`](@ref) objects.
 end
 
 function Makie.plot!(ss::Plot_Trajectory2D)
+    function _get_colors(sequence_index :: Integer, spin_index :: Integer, snapshots :: Vector{Snapshot{N}}, times :: Vector{Float}) where {N}
+        if N == 0
+            return [Colors.HSV() for _ in times]
+        else
+            colors_main = map(s -> color(get_sequence(s[spin_index], sequence_index)), snapshots)
+            return [isfinite(index) ? colors_main[round(Int(time))] : Colors.HSV() for time in times]
+        end
+    end
     plane = ss[1]
     snapshots = ss[2]
     nspins = @lift isnothing($(ss[:nspins])) ? length($snapshots[1]) : maximum(($(ss[:nspins]), length($snapshots[1])))
@@ -50,8 +58,7 @@ function Makie.plot!(ss::Plot_Trajectory2D)
         positions_3d = @lift map(s -> position(s[index]), $snapshots)
         projected = @lift project_trajectory($plane, $positions_3d)
         positions = @lift Makie.Point2f.($projected[1])
-        colors_main = @lift map(s -> color(get_sequence(s[index], $(ss[:sequence]))), $snapshots)
-        colors = @lift [isfinite(index) ? $colors_main[Int(round(index))] : Colors.HSV() for index in $projected[2]]
+        colors = @lift _get_colors($(ss[:sequence]), index, $snapshots, $projected[2])
         Makie.lines!(ss, positions; color=colors)
     end
     ss
