@@ -224,9 +224,6 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
                 lower = 0
             end
             if sign(froot(lower)) == sign(froot(upper))
-                @show previous
-                @show line_slope, line_shift, slope
-                @show lower, upper
                 return Collision(0., previous.normal, spiral.properties, previous.index)
             end
             theta_sol = Roots.find_zero(froot, (lower, upper))
