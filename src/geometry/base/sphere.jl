@@ -16,6 +16,7 @@ Sphere(radius; kwargs...) = Sphere(Float(radius), ObstructionProperties(; kwargs
 Creates one or more [`Sphere`](@ref)s with given radius (or vector of `radii`).
 The `positions`, `repeats`, and `rotation` control the sphere positions and is explained in 
 more detail in [Defining the geometry](@ref).
+Additional keyword arguments are available to set generic obstruction settings as described in [`ObstructionProperties`](@ref).
 """
 function spheres(args...; kwargs...)
     TransformObstruction(Sphere, args...; kwargs...)

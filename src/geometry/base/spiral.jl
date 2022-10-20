@@ -52,6 +52,20 @@ function isinside(s::Spiral, pos::SVector{2, Float})
 end
 
 
+"""
+    spirals(inner, outer; theta0=0., thickness=0.014, myelin=false, chi_I=-0.1, chi_A=-0.1, positions=[0, 0], repeats=[Inf, Inf], rotation=I(3)
+
+Creates one or more [`Spiral`](@ref).
+Spirals range from `inner` to `outer` radii starting at an angle of `theta0`.
+Each wrap has a thickness of `thickness` micrometers.
+
+[Myelinated spirals](@ref Myelinated_annuli) can be created by setting the `myelin` to true.
+All parameters can be either a single value or a vector of values.
+
+The `positions`, `repeats`, and `rotation` control the annulus position and orientation and is explained in 
+more detail in [Defining the geometry](@ref).
+Additional keyword arguments are available to set generic obstruction settings as described in [`ObstructionProperties`](@ref).
+"""
 function spirals(args...; kwargs...)
     TransformObstruction(Spiral, args...; kwargs...)
 end

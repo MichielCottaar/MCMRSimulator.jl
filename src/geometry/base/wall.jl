@@ -18,6 +18,7 @@ BoundingBox(wall::Wall) = BoundingBox(SA[0], SA[0])
 Creates one or more [`Wall`](@ref)s.
 The `positions`, `repeats`, and `rotation` control the wall position and orientation and is explained in 
 more detail in [Defining the geometry](@ref).
+Additional keyword arguments are available to set generic obstruction settings as described in [`ObstructionProperties`](@ref).
 """
 walls(;kwargs...) = TransformObstruction(Wall; kwargs...)
 

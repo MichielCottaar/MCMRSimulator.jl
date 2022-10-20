@@ -42,6 +42,7 @@ Creates one or more [`Cylinder`](@ref)s with given radius (or vector of `radii`)
 All parameters can be either a single value or a vector of values.
 The `positions`, `repeats`, and `rotation` control the cylinder position and orientation and is explained in 
 more detail in [Defining the geometry](@ref).
+Additional keyword arguments are available to set generic obstruction settings as described in [`ObstructionProperties`](@ref).
 """
 function cylinders(args...; kwargs...)
     TransformObstruction(Cylinder, args...; kwargs...)

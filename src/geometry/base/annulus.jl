@@ -46,6 +46,7 @@ All parameters can be either a single value or a vector of values.
 
 The `positions`, `repeats`, and `rotation` control the annulus position and orientation and is explained in 
 more detail in [Defining the geometry](@ref).
+Additional keyword arguments are available to set generic obstruction settings as described in [`ObstructionProperties`](@ref).
 """
 function annuli(args...; kwargs...)
     TransformObstruction(Annulus, args...; kwargs...)
