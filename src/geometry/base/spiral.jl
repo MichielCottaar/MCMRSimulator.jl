@@ -123,7 +123,7 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
             nwrap = div(sqrt(rsq) - inner_radius, spiral.thickness, RoundNearest)
             if !round_down && (toskip == 0)
                 nwrap += 1
-            elseif !round_down && (toskip == 1)
+            elseif round_down && (toskip == 1)
                 nwrap -= 1
             end
         end
@@ -168,7 +168,7 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
         theta_shift = mod((theta_min_rsq - theta_orig) + π, 2π) - π
         pos_shift = sign(theta_shift) > 0
         for theta1 in theta_orig:-2π:theta_min_rsq
-            if iszero(theta_shift)
+            if abs(theta_shift) < 1e-8
                 # particle heading straight for the centre
                 if 0 < theta1 < theta_range
                     return get_solution(theta1, 0)
@@ -202,7 +202,7 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
         theta_shift = mod((theta_dest - theta_min_rsq) + π, 2π) - π
         pos_shift = sign(theta_shift) > 0
         for theta1 in theta_min_rsq:2π:nextfloat(theta_dest)
-            if iszero(theta_shift)
+            if abs(theta_shift) < 1e-8
                 # particle heading straight out of centre
                 if 0 < theta1 < theta_range
                     return get_solution(theta1, 1)
