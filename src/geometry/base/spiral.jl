@@ -16,14 +16,13 @@ struct Spiral <: BaseObstruction{2}
     properties :: ObstructionProperties
 end
 
-function Spiral(inner::Float, outer::Float, theta0::Float, thickness::Float; kwargs...)
+function Spiral(inner, outer; theta0=zero(Float), thickness=0.014, myelin=false, chi_I=-0.1, chi_A=-0.1, kwargs...)
     @assert outer > inner
     closed = (outer - inner) > thickness
     theta_end = theta0 + Float(2π) * (outer - inner) / thickness
-    Spiral(inner, outer, theta0, theta_end, thickness, closed, Annulus(inner, outer), ObstructionProperties(kwargs...))
+    Spiral(Float(inner), Float(outer), Float(theta0), Float(theta_end), Float(thickness), closed, Annulus(inner, outer, myelin=myelin, chi_I=chi_I, chi_A=chi_A), ObstructionProperties(kwargs...))
 end
 
-Spiral(inner, outer; theta0=0., thickness=0.014, kwargs...) = Spiral(Float(inner), Float(outer), Float(theta0), Float(thickness); kwargs...)
 function isinside(s::Spiral, pos::SVector{2, Float})
     rsq = (pos[1] * pos[1]) + (pos[2] * pos[2])
     if !s.closed
@@ -206,4 +205,8 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
         end
     end
     return empty_collision
+end
+
+function lorentz_off_resonance(spiral::Spiral, position::SVector{2, Float}, b0_field::SVector{2, Float}, repeat_dist::SVector{2, Float}, radius::Float, nrepeats::SVector{2, Int})
+    lorentz_off_resonance(spiral.equivalent_annulus, position, b0_field, repeat_dist, radius, nrepeats)
 end
