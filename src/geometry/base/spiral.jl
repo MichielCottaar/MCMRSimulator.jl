@@ -184,6 +184,9 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
                 end
                 upper = theta_range
             end
+            if sign(froot(lower)) == sign(froot(upper))
+                return Collision(zero(Float), previous.normal, spiral.properties, previous.index)
+            end
             theta_sol = Roots.find_zero(froot, (lower, upper))
             if (theta_sol < 0)
                 break
@@ -240,7 +243,6 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
         else
             index = t1 > t2 ? 1 : 0
         end
-
         return get_solution(t1, index)
     end
     return empty_collision
