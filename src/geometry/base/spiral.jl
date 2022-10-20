@@ -144,10 +144,14 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
         radius = slope * theta_sol + spiral.inner
         x = radius * cos(theta_sol + spiral.theta0)
         y = radius * sin(theta_sol + spiral.theta0)
-        dist = (x - movement.origin[1]) / diff[1]
+        if iszero(diff[1])
+            dist = (y - movement.origin[2]) / diff[2]
+        else
+            dist = (x - movement.origin[1]) / diff[1]
+        end
         return Collision(
             dist,
-            SA[-y, x, 0],  # TODO: include spiralling in normal calculation
+            iszero(index) ? SA[x, y, 0] : SA[-x, -y, 0],  # TODO: include spiralling in normal calculation
             ObstructionProperties(spiral),
             index=index
         )
@@ -158,9 +162,19 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
     if !iszero(min_rsq_dist) & (rsq_origin > spiral.inner * spiral.inner)
         # check downward trajectory
         theta_orig = get_theta(movement.origin, rsq_origin, ignore_toskip=false)
+        if iszero(min_rsq)
+            theta_min_rsq = mod(theta_dest, 2π) - 2π
+        end
         theta_shift = mod((theta_min_rsq - theta_orig) + π, 2π) - π
         pos_shift = sign(theta_shift) > 0
         for theta1 in theta_orig:-2π:theta_min_rsq
+            if iszero(theta_shift)
+                # particle heading straight for the centre
+                if 0 < theta1 < theta_range
+                    return get_solution(theta1, 0)
+                end
+                continue
+            end
             (lower, upper) = pos_shift ? (theta1, theta1 + theta_shift) : (theta1 + theta_shift, theta1)
             if (lower > theta_range)
                 continue
@@ -172,7 +186,6 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
                 upper = theta_range
             end
             theta_sol = Roots.find_zero(froot, (lower, upper))
-            @assert (theta_sol > theta_min_rsq) 
             if (theta_sol < 0)
                 break
             end
@@ -183,21 +196,31 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
     if !isone(min_rsq_dist) & (rsq_destination > spiral.inner * spiral.inner)
         # check upward trajectory
         theta_dest = get_theta(movement.destination, rsq_destination, ignore_toskip=true)
+        if iszero(min_rsq)
+            theta_min_rsq = mod(theta_dest, 2π) - 2π
+        end
         theta_shift = mod((theta_dest - theta_min_rsq) + π, 2π) - π
         pos_shift = sign(theta_shift) > 0
-        for theta1 in theta_min_rsq:2π:theta_dest
+        for theta1 in theta_min_rsq:2π:nextfloat(theta_dest)
+            if iszero(theta_shift)
+                # particle heading straight out of centre
+                if 0 < theta1 < theta_range
+                    return get_solution(theta1, 1)
+                end
+                continue
+            end
             (lower, upper) = pos_shift ? (theta1, theta1 + theta_shift) : (theta1 + theta_shift, theta1)
             if (upper < 0)
                 continue
             end
             if (lower < 0)
-                if sign(froot(upper)) == sign(froot(0))
+                if sign(froot(upper)) == sign(froot(zero(Float)))
                     continue
                 end
                 lower = 0
             end
             theta_sol = Roots.find_zero(froot, (lower, upper))
-            @assert (theta_sol > theta_min_rsq) 
+            @show lower, upper, theta_sol, theta_min_rsq
             if (theta_sol > theta_range)
                 break
             end
