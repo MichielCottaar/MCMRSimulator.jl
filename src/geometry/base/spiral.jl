@@ -113,6 +113,7 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
     end
 
     slope = spiral.thickness / 2π
+    theta_range = spiral.theta_end - spiral.theta0
 
     function get_theta(pos, rsq; round_down=true, ignore_toskip=true)
         theta = atan(pos[2], pos[1]) - spiral.theta0
@@ -157,13 +158,11 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
         )
     end
 
-    theta_range = spiral.theta_end - spiral.theta0
-
     if !iszero(min_rsq_dist) & (rsq_origin > spiral.inner * spiral.inner)
         # check downward trajectory
         theta_orig = get_theta(movement.origin, rsq_origin, ignore_toskip=false)
         if iszero(min_rsq)
-            theta_min_rsq = mod(theta_dest, 2π) - 2π
+            theta_min_rsq = mod(theta_orig, 2π) - 2π
         end
         theta_shift = mod((theta_min_rsq - theta_orig) + π, 2π) - π
         pos_shift = sign(theta_shift) > 0
@@ -193,15 +192,20 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
         end
     end
 
-    if !isone(min_rsq_dist) & (rsq_destination > spiral.inner * spiral.inner)
+    if (rsq_destination > spiral.inner * spiral.inner)
         # check upward trajectory
         theta_dest = get_theta(movement.destination, rsq_destination, ignore_toskip=true)
         if iszero(min_rsq)
-            theta_min_rsq = mod(theta_dest, 2π) - 2π
+            theta_ref = mod(theta_dest, 2π) - 2π
+        else
+            theta_ref = get_theta(movement.origin, rsq_origin, ignore_toskip=false, round_down=false)
+            if theta_ref > theta_range
+                theta_ref -= div(theta_ref-theta_range, 2π, RoundDown) * 2π
+            end
         end
-        theta_shift = mod((theta_dest - theta_min_rsq) + π, 2π) - π
+        theta_shift = mod((theta_dest - theta_ref) + π, 2π) - π
         pos_shift = sign(theta_shift) > 0
-        for theta1 in theta_min_rsq:2π:(theta_dest - theta_shift + π)
+        for theta1 in theta_ref:2π:(theta_dest - theta_shift + π)
             if abs(theta_shift) < 1e-8
                 # particle heading straight out of centre
                 if 0 < theta1 < theta_range
