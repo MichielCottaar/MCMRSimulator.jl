@@ -220,7 +220,6 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
                 lower = 0
             end
             theta_sol = Roots.find_zero(froot, (lower, upper))
-            @show lower, upper, theta_sol, theta_min_rsq
             if (theta_sol > theta_range)
                 break
             end
