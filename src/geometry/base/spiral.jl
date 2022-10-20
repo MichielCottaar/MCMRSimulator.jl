@@ -233,6 +233,12 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
             return get_solution(theta_sol, 1)
         end
     end
+    if abs(
+        get_theta(movement.origin, rsq_origin, ignore_toskip=false) -
+        get_theta(movement.destination, rsq_destination, ignore_toskip=true)
+        ) > 3.1
+        return Collision(0., previous.normal, spiral.properties, previous.index)
+    end
     return empty_collision
 end
 
