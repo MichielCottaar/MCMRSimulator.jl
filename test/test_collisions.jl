@@ -298,4 +298,33 @@
             @test all(xfinal .<= 1.)
         end
     end
+    @testset "Test spiral collision detection" begin
+        spiral = mr.spirals(1., 10., thickness=1.)
+
+        function test(origin, destination, distance, normal)
+            m = mr.Movement(origin, destination, 1)
+            c = mr.detect_collision(m, spiral, mr.empty_collision)
+            @test c.distance ≈ distance
+            @test (c.normal ./ norm(c.normal)) ≈ (mr.PosVector(normal) ./ norm(normal))
+        end
+
+        test([0.5, 0.5, 0], [1.5, 1.5, 0], (1.125 / sqrt(2)) - 0.5, [-1, -1, 0])
+        test([0., 0., 0], [1., 1., 0], 1.125 / sqrt(2), [-1, -1, 0])
+        test([0, 1, 0], [0, 2, 0], 0.25, [0, -1, 0])
+        test([-1, 0, 0], [-2, 0, 0], 0.5, [1, 0, 0])
+        test([1, 1, 0], [0.5, 0.5, 0], (1 - 1.125 / sqrt(2)) * 2, [1, 1, 0])
+        test([1, 1, 0], [0., 0., 0], 1 - 1.125 / sqrt(2), [1, 1, 0])
+        test([0, 2, 0], [0, 1, 0], 0.75, [0, 1, 0])
+        test([-2, 0, 0], [-1, 0, 0], 0.5, [-1, 0, 0])
+
+        test([0, -1, 0], [4, 1, 0], 0.5, [-1, 0, 0])
+        m = mr.Movement([0, 1, 0], [4, -1, 0], 1)
+        c = mr.detect_collision(m, spiral, mr.empty_collision)
+        @test 0 < c.distance < 0.25
+
+        test([11, 1, 0], [7, -1, 0], 0.5, [1, 0, 0])
+        m = mr.Movement([11, -1, 0], [7, 1, 0], 1)
+        c = mr.detect_collision(m, spiral, mr.empty_collision)
+        @test 0.25 < c.distance < 0.3
+    end
 end
