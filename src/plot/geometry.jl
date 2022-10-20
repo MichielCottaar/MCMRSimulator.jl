@@ -93,11 +93,11 @@ function project_obstruction(wall::Wall, center::PosVector, obstruction_coordina
     [(Makie.lines!, (cut_line(line, halfs), ), Dict())]
 end
 
-function project_obstruction(cylinder::Cylinder, center::PosVector, obstruction_coordinates_in_plot_plane::SVector{2, PosVector}, repeats::SVector{2, Float}, sizes::Tuple{<:Real, <:Real})
+function project_obstruction(obstruction::Union{Cylinder, Spiral}, center::PosVector, obstruction_coordinates_in_plot_plane::SVector{2, PosVector}, repeats::SVector{2, Float}, sizes::Tuple{<:Real, <:Real})
     (dirx, diry) = obstruction_coordinates_in_plot_plane
     normal = cross(dirx, diry)
     if normal[3] == 0
-        error("Can not plot cylinders perfectly aligned with plotting plane")
+        error("Can not plot cylinders or spirals perfectly aligned with plotting plane")
     end
     halfs = (sizes[1]/2, sizes[2]/2)
     center = (center .- normal .* (center[3] / normal[3]))[1:2]
@@ -111,8 +111,13 @@ function project_obstruction(cylinder::Cylinder, center::PosVector, obstruction_
         ct_rot = cos(theta - theta_normal)
         sqrt(1 / (1 - ct_rot * ct_rot * (1 - projection_size)))
     end
-    theta = (0:0.02:2) * π
-    radius = cylinder.radius .* relative_radius.(theta)
+    if isa(obstruction, Cylinder)
+        theta = (0:0.02:2) * π
+        radius = obstruction.radius .* relative_radius.(theta)
+    elseif isa(obstruction, Spiral)
+        theta = obstruction.theta0:0.02:obstruction.theta_end
+        radius = @. (theta - obstruction.theta0) * obstruction.thickness / 2π + obstruction.inner
+    end
 
     points = map((r, t) -> SVector{2, Float}(r .* cos(t), r * sin(t)), radius, theta)
     push!(points, SVector{2, Float}(NaN, NaN))
@@ -128,8 +133,9 @@ function project_obstruction(cylinder::Cylinder, center::PosVector, obstruction_
         toshift = round.([stepx stepy] \ center)
         closest_center = center - (toshift[1] * stepx + toshift[2] * stepy)
 
-        nshiftx = div(abs.(dirx) ⋅ (halfs .+ abs.(closest_center)) + projection_size * cylinder.radius, repeats[1], RoundUp)
-        nshifty = div(abs.(diry) ⋅ (halfs .+ abs.(closest_center)) + projection_size * cylinder.radius, repeats[2], RoundUp)
+        outer_radius = isa(obstruction, Cylinder) ? obstruction.radius : obstruction.outer
+        nshiftx = div(abs.(dirx) ⋅ (halfs .+ abs.(closest_center)) + projection_size * outer_radius, repeats[1], RoundUp)
+        nshifty = div(abs.(diry) ⋅ (halfs .+ abs.(closest_center)) + projection_size * outer_radius, repeats[2], RoundUp)
         line = SVector{2, Float}[]
         for i in -nshiftx:nshiftx
             int_pos = closest_center .+ i .* stepx
