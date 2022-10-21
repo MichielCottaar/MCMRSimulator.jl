@@ -147,7 +147,7 @@ struct Collision
     normal :: PosVector
     properties :: ObstructionProperties
     index :: Int
-    Collision(distance, normal, properties, index) = new(prevfloat(distance), normal, properties, index)
+    Collision(distance, normal, properties, index) = new(iszero(distance) ? distance : prevfloat(distance), normal, properties, index)
 end
 
 Collision(distance, normal, properties; index=0) = Collision(distance, normal, properties, index)
