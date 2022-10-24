@@ -298,8 +298,8 @@ An error is raised if no solution for non-overlapping annuli is found.
 The inner radius with respect to the outer radius is set by the `g-ratio`.
 Other spiral parameters (besides `inner`, `outer`, `positions`, and `repeats`) are identical as in `mr.spirals`.
 """
-function random_annuli(target_density; repeats, g_ratio=0.8, distribution=nothing, mean_radius=1., variance_radius=0.5, max_iter=1000, kwargs...)
+function random_spirals(target_density; repeats, g_ratio=0.8, distribution=nothing, mean_radius=1., variance_radius=0.5, max_iter=1000, kwargs...)
     (positions, outer) = random_positions_radii(repeats, target_density, 2; distribution=distribution, mean=mean_radius, variance=variance_radius, max_iter=max_iter)
     inner = g_ratio .* outer
-    annuli(inner, outer; positions=positions, repeats=repeats, kwargs...)
+    spirals(inner, outer; positions=positions, repeats=repeats, kwargs...)
 end
