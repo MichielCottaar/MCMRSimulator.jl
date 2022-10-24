@@ -2,14 +2,14 @@
 ## Defining the geometry
 MRSimulator.jl comes with a variety of basic components that can be used to represent various components in the tissue microstructure.
 
-| Component     | Class            | Constructor         | Random geometry | Dimensionality |
-| ------------- | ---------------- | ------------------- | ------------------- | -------------- |
-| infinite walls | [`Wall`](@ref) | [`walls`](@ref)  | None | 1 |
-| hollow infinite cylinder | [`Cylinder`](@ref) |  [`cylinders`](@ref)   | [`random_cylinders`](@ref) | 2 |
-| Annulus with inner and outer cylinders | [`Annulus`](@ref) | [`annuli`](@ref)   | [`random_annuli`](@ref) | 2 |
-| Spirals | [`Spiral`](@ref) | [`spirals`](@ref)   | [`random_spirals`](@ref) | 2 |
-| hollow sphere | [`Sphere`](@ref) |  [`spheres`](@ref)   | [`random_spheres`](@ref) | 3 |
-| mesh | [`Mesh`](@ref) | see [Defining a mesh](@ref) | None | 3 |
+| Component     | Class            | Constructor         |  Dimensionality |
+| ------------- | ---------------- | ------------------- |  -------------- |
+| infinite walls | [`Wall`](@ref) | [`walls`](@ref)  |  1 |
+| hollow infinite cylinder | [`Cylinder`](@ref) |  [`cylinders`](@ref)   |  2 |
+| Annulus with inner and outer cylinders | [`Annulus`](@ref) | [`annuli`](@ref)   |  2 |
+| Spirals | [`Spiral`](@ref) | [`spirals`](@ref)   |  2 |
+| hollow sphere | [`Sphere`](@ref) |  [`spheres`](@ref)   |  3 |
+| mesh | [`Mesh`](@ref) | see [Defining a mesh](@ref) |  3 |
 
 The constructors for these components all have a similar interface.
 Some expect certain component-specific arguments (e.g., radii for [`spheres`](@ref) and [`cylinders`](@ref).
