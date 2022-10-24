@@ -22,7 +22,7 @@ function Spiral(inner, outer; theta0=zero(Float), thickness=0.014, myelin=false,
     @assert outer > inner
     closed = (outer - inner) > thickness
     theta_end = theta0 + Float(2π) * (outer - inner) / thickness
-    Spiral(Float(inner), Float(outer), Float(theta0), Float(theta_end), Float(thickness), closed, inner_cylinder, outer_cylinder, Annulus(inner, outer, myelin=myelin, chi_I=chi_I, chi_A=chi_A), ObstructionProperties(kwargs...))
+    Spiral(Float(inner), Float(outer), Float(theta0), Float(theta_end), Float(thickness), closed, inner_cylinder, outer_cylinder, Annulus(inner, outer, myelin=myelin, chi_I=chi_I, chi_A=chi_A), ObstructionProperties(; kwargs...))
 end
 
 function isinside(s::Spiral, pos::SVector{2, Float})
