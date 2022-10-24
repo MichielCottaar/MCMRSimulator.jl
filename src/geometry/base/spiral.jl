@@ -59,6 +59,7 @@ end
 Creates one or more [`Spiral`](@ref).
 Spirals range from `inner` to `outer` radii starting at an angle of `theta0`.
 Each wrap has a thickness of `thickness` micrometers.
+Inner/outer cylinders can be added using respectively the `inner_cylinder` and `outer_cylinder` flags (default: only inner cylinder).
 
 [Myelinated spirals](@ref Myelinated_annuli) can be created by setting the `myelin` to true.
 All parameters can be either a single value or a vector of values.
@@ -284,4 +285,21 @@ end
 
 function lorentz_off_resonance(spiral::Spiral, position::SVector{2, Float}, b0_field::SVector{2, Float}, repeat_dist::SVector{2, Float}, radius::Float, nrepeats::SVector{2, Int})
     lorentz_off_resonance(spiral.equivalent_annulus, position, b0_field, repeat_dist, radius, nrepeats)
+end
+
+"""
+    random_spirals(target_density; repeats, g_ratio=0.8, distribution=Distributions.Gamma, mean_radius=1., variance_radius=0.5, max_iter=1000, rotation=I(3))
+
+Generate infinitely repeating box with non-overlapping spirals.
+
+A rectangle with the size of `repeats` will be filled with spirals for a total surface density of `target_density`.
+The spiral outer radii will be drawn from the selected `distribution` (if not set, a Gamma distribution is used with given `mean_radius` and `var_radius`).
+An error is raised if no solution for non-overlapping annuli is found.
+The inner radius with respect to the outer radius is set by the `g-ratio`.
+Other spiral parameters (besides `inner`, `outer`, `positions`, and `repeats`) are identical as in `mr.spirals`.
+"""
+function random_annuli(target_density; repeats, g_ratio=0.8, distribution=nothing, mean_radius=1., variance_radius=0.5, max_iter=1000, kwargs...)
+    (positions, outer) = random_positions_radii(repeats, target_density, 2; distribution=distribution, mean=mean_radius, variance=variance_radius, max_iter=max_iter)
+    inner = g_ratio .* outer
+    annuli(inner, outer; positions=positions, repeats=repeats, kwargs...)
 end
