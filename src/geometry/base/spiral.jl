@@ -78,7 +78,7 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
     # check collisions with cylinders first
     if spiral.inner_cylinder
         c_inner = detect_collision(movement, spiral.equivalent_annulus.inner, previous)
-        if c_inner.index == 1
+        if (c_inner !== empty_collision) && c_inner.index == 1
             # hit inside of inner cylinder
             return c_inner
         end
@@ -87,7 +87,7 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
     end
     if spiral.outer_cylinder
         c_outer = detect_collision(movement, spiral.equivalent_annulus.outer, previous)
-        if c_outer.index == 0
+        if (c_outer !== empty_collision) && c_outer.index == 0
             # hit inside of outer cylinder
             return c_outer
         end
