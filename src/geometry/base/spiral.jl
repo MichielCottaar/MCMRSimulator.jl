@@ -12,15 +12,17 @@ struct Spiral <: BaseObstruction{2}
     theta_end :: Float
     thickness :: Float
     closed :: Bool
+    inner_cylinder :: Bool
+    outer_cylinder :: Bool
     equivalent_annulus :: Annulus
     properties :: ObstructionProperties
 end
 
-function Spiral(inner, outer; theta0=zero(Float), thickness=0.014, myelin=false, chi_I=-0.1, chi_A=-0.1, kwargs...)
+function Spiral(inner, outer; theta0=zero(Float), thickness=0.014, myelin=false, chi_I=-0.1, chi_A=-0.1, inner_cylinder=true, outer_cylinder=false, kwargs...)
     @assert outer > inner
     closed = (outer - inner) > thickness
     theta_end = theta0 + Float(2π) * (outer - inner) / thickness
-    Spiral(Float(inner), Float(outer), Float(theta0), Float(theta_end), Float(thickness), closed, Annulus(inner, outer, myelin=myelin, chi_I=chi_I, chi_A=chi_A), ObstructionProperties(kwargs...))
+    Spiral(Float(inner), Float(outer), Float(theta0), Float(theta_end), Float(thickness), closed, inner_cylinder, outer_cylinder, Annulus(inner, outer, myelin=myelin, chi_I=chi_I, chi_A=chi_A), ObstructionProperties(kwargs...))
 end
 
 function isinside(s::Spiral, pos::SVector{2, Float})
@@ -71,6 +73,28 @@ end
 
 
 function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous :: Collision)
+    # check collisions with cylinders first
+    if spiral.inner_cylinder
+        c_inner = detect_collision(movement, spiral.equivalent_annulus.inner, previous)
+        if c_inner.index == 1
+            # hit inside of inner cylinder
+            return c_inner
+        end
+    else
+        c_inner = empty_collision
+    end
+    if spiral.outer_cylinder
+        c_outer = detect_collision(movement, spiral.equivalent_annulus.outer, previous)
+        if c_outer.index == 0
+            # hit inside of outer cylinder
+            return c_outer
+        end
+    else
+        c_outer = empty_collision
+    end
+    c_cylinders = c_inner.distance < c_outer.distance ? c_inner : c_outer
+
+
     toskip = previous === empty_collision ? -1 : previous.index
     for dim in 1:2
         if (
@@ -149,6 +173,9 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
             dist = (y - movement.origin[2]) / diff[2]
         else
             dist = (x - movement.origin[1]) / diff[1]
+        end
+        if c_cylinders.distance < dist
+            return c_cylinders
         end
         return Collision(
             dist,

@@ -93,14 +93,14 @@ function project_obstruction(wall::Wall, center::PosVector, obstruction_coordina
     [(Makie.lines!, (cut_line(line, halfs), ), Dict())]
 end
 
-function project_obstruction(obstruction::Union{Cylinder, Spiral}, center::PosVector, obstruction_coordinates_in_plot_plane::SVector{2, PosVector}, repeats::SVector{2, Float}, sizes::Tuple{<:Real, <:Real})
+function project_obstruction(obstruction::Union{Cylinder, Spiral}, center_vec::PosVector, obstruction_coordinates_in_plot_plane::SVector{2, PosVector}, repeats::SVector{2, Float}, sizes::Tuple{<:Real, <:Real})
     (dirx, diry) = obstruction_coordinates_in_plot_plane
     normal = cross(dirx, diry)
     if normal[3] == 0
         error("Can not plot cylinders or spirals perfectly aligned with plotting plane")
     end
     halfs = (sizes[1]/2, sizes[2]/2)
-    center = (center .- normal .* (center[3] / normal[3]))[1:2]
+    center = (center_vec .- normal .* (center_vec[3] / normal[3]))[1:2]
     dirx = (dirx .- normal .* (dirx[3] / normal[3]))[1:2]
     diry = (diry .- normal .* (diry[3] / normal[3]))[1:2]
 
@@ -147,7 +147,16 @@ function project_obstruction(obstruction::Union{Cylinder, Spiral}, center::PosVe
     else
         line = get_line(SVector{2}(center))
     end
-    [(Makie.lines!, (cut_line(line, halfs), ), Dict())]
+    res = [(Makie.lines!, (cut_line(line, halfs), ), Dict())]
+    if isa(obstruction, Spiral)
+        if obstruction.inner_cylinder
+            append!(res, project_obstruction(obstruction.equivalent_annulus.inner, center_vec, obstruction_coordinates_in_plot_plane, repeats, sizes))
+        end
+        if obstruction.outer_cylinder
+            append!(res, project_obstruction(obstruction.equivalent_annulus.outer, center_vec, obstruction_coordinates_in_plot_plane, repeats, sizes))
+        end
+    end
+    res
 end
 
 function project_obstruction(annulus::Annulus, args...)
