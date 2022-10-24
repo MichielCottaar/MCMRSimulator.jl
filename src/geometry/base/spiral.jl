@@ -26,30 +26,7 @@ function Spiral(inner, outer; theta0=zero(Float), thickness=0.014, myelin=false,
 end
 
 function isinside(s::Spiral, pos::SVector{2, Float})
-    rsq = (pos[1] * pos[1]) + (pos[2] * pos[2])
-    if !s.closed
-        return 0
-    elseif rsq > s.outer * s.outer
-        return 0
-    elseif rsq < s.inner * s.inner
-        return 2
-    end
-
-    half_inner = s.inner + s.thickness
-    half_outer = s.outer - s.thickness
-    if rsq < half_outer * half_outer && rsq > half_inner * half_inner
-        return 1
-    end
-    theta = atan(pos[2], pos[1])
-    if rsq > half_outer * half_outer
-        dtheta = mod((s.theta_end - theta) / 2π, 1)
-        local_r = s.outer - dtheta * s.thickness
-        return rsq > (local_r * local_r) ? 0 : 1
-    else
-        dtheta = mod((theta - s.theta0) / 2π, 1)
-        local_r = s.inner + dtheta * s.thickness
-        return rsq > (local_r * local_r) ? 1 : 2
-    end
+    return isinside(s.equivalent_annulus, pos)
 end
 
 
