@@ -299,7 +299,7 @@
         end
     end
     @testset "Test spiral collision detection" begin
-        spiral = mr.spirals(1., 10., thickness=1.)
+        spiral = mr.spirals(1., 10., thickness=1., inner_cylinder=false)
 
         function test(origin, destination, distance, normal)
             m = mr.Movement(origin, destination, 1)
