@@ -65,7 +65,7 @@ function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, 
     orient = proposed.orientations
 
     final_rng = @spin_rng proposed begin
-        for _ in 1:1000
+        for _ in 1:10000
             collision = detect_collision(
                 Movement(current_pos, new_pos, one(Float)),
                 geometry,
@@ -84,7 +84,7 @@ function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, 
         end
     end
     if collision !== empty_collision
-        error("Bounced single particle for 1000 times in single step; terminating!")
+        error("Bounced single particle for 10000 times in single step; terminating!")
     end
     Spin(new_pos, orient, final_rng)
 end
