@@ -43,7 +43,8 @@ export dwi
 export Scanner, Siemens_Connectom, Siemens_Prisma, Siemens_Terra
 export longitudinal, transverse, phase, vector, Spin, Snapshot, SpinOrientation, isinside, off_resonance
 export Simulation, Microstructure, evolve, readout, signal, trajectory, TransformObstruction
-export Annulus, annuli, random_annuli, Spiral, spirals, random_spirals, Cylinder, cylinders, random_cylinders, Wall, walls, Sphere, spheres, random_spheres, Mesh, box_mesh
+export Annulus, annuli, Spiral, spirals, Cylinder, cylinders, Wall, walls, Sphere, spheres, Mesh, box_mesh
+export random_positions_radii
 export PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d
 end
 

@@ -53,6 +53,20 @@ function eliminate_overlap(positions::AbstractVector{SVector{N, Float}}, radii::
 end
 
 
+"""
+    random_positions_radii(box_size, target_density, n_dimensions; distribution=Gamma, mean=1., variance=1., max_iter=1000)
+
+Randomly distributes circles or spheres in space.
+
+Arguments:
+- `box_size`: Size of the infinitely repeating box of random positions
+- `target_density`: Final density of the circles/spheres. This density will only be approximately reached
+- `n_dimensions`: dimensionality of the space (2 for cicles; 3 for spheres)
+- `distribution`: distribution from which the radii are drawn (from [Distributions.jl](https://juliastats.org/Distributions.jl/stable/))
+- `mean`: mean of the gamma distribution (ignored if `distribution` explicitly set)
+- `variance`: variance of the gamma distribution (ignored if `distribution` explicitly set)
+- `max_iter`: maximum number of iterations to try to prevent the circles/spheres from overlapping. An error is raised if they still overlap after this number of iterations.
+"""
 function random_positions_radii(
     box_size, target_density::Real, ndim::Int;
     distribution=nothing, mean=1., variance=1., max_iter=1000

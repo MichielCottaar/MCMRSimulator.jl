@@ -6,7 +6,8 @@ MRSimulator.jl comes with a variety of basic components that can be used to repr
 | ------------- | ---------------- | ------------------- | ------------------- | -------------- |
 | infinite walls | [`Wall`](@ref) | [`walls`](@ref)  | None | 1 |
 | hollow infinite cylinder | [`Cylinder`](@ref) |  [`cylinders`](@ref)   | [`random_cylinders`](@ref) | 2 |
-| Annulus with inner and outer radius | [`Annulus`](@ref) | [`annuli`](@ref)   | [`random_annuli`](@ref) | 2 |
+| Annulus with inner and outer cylinders | [`Annulus`](@ref) | [`annuli`](@ref)   | [`random_annuli`](@ref) | 2 |
+| Spirals | [`Spiral`](@ref) | [`spirals`](@ref)   | [`random_spirals`](@ref) | 2 |
 | hollow sphere | [`Sphere`](@ref) |  [`spheres`](@ref)   | [`random_spheres`](@ref) | 3 |
 | mesh | [`Mesh`](@ref) | see [Defining a mesh](@ref) | None | 3 |
 
@@ -49,25 +50,35 @@ save("regular_cylinders2.png", f) # hide
 ```  
 ![Plot showing single cylinders repeating ad infinitum](regular_cylinders2.png)
 
-Constructors also exist to generate a random distribution of spheres, cylinders, or annuli (see table above).
-Both the radii and positions will be set by random distributions.
-The user in this case sets a target density (75% in the example below) and over which length scale the configuration should repeat itself.
-```@example
-import Random; Random.seed!(1) # hide
-using MRSimulator
-geometry = random_annuli(0.75, repeats=[20, 20], g_ratio=0.7)
-using CairoMakie # hide
-f = plot(PlotPlane(size=20), geometry) # hide
-save("random_cylinders.png", f) # hide
-```  
-
-![Illustrating configuration of random cylinders](random_cylinders.png)
-
-Myelin can be added to either the cylinders or annuli as described [here](@ref off_resonance).
+Myelin can be added to the cylinders, spirals, or annuli as described [here](@ref off_resonance).
 
 A geometry is defined by either the [`TransformObstruction`](@ref) returned by a single call to these constructors
 or by an array of [`TransformObstruction`](@ref) objects.
-### Randomly distributed cylinders
+### Randomly distributed cylinders/annuli/spirals
+A random set of positions and radii can be created using [`random_positions_radii`](@ref).
+The user in this case sets a target density (70% in the example below) and over which length scale the configuration should repeat itself (20x20 micrometer in the example below).
+```@example random_distribution
+(positions, outer_radii) = random_positions_radii((20, 20), 0.7, 2)
+```
+
+These can be used to produce randomly distributed cylinders:
+```@example random_distributions
+geometry = cylinders(outer_radii; positions=positions, repeat=(20, 20))
+using CairoMakie # hide
+f = plot(PlotPlane(size=20), geometry) # hide
+save("random_cylinders.png", f) # hide
+```
+![Illustrating configuration of random cylinders](random_cylinders.png)
+
+When used as initialisation for annuli or spirals, an inner radius will also need to be computed:
+```@example random_distributions
+inner_radii = 0.8 .* outer_radii
+geometry = annuli(inner_radii, outer_radii; positions=positions, repeat=(20, 20))
+using CairoMakie # hide
+f = plot(PlotPlane(size=20), geometry) # hide
+save("random_annuli.png", f) # hide
+```
+![Illustrating configuration of random annuli](random_annuli.png)
 
 
 ## Defining a mesh
