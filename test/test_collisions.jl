@@ -331,14 +331,10 @@
         spiral = mr.spirals(0.8, 1., inner_cylinder=true, outer_cylinder=true)
         spin = mr.Spin(position=[0.9, 0., 0.])
         theta = mr.spiral_theta(spiral.obstructions[1], SVector{2}(spin.position[1:2]))
-        @show spin.position
-        @show theta
         for _ in 1:100000
             prev_theta = theta
             spin = mr.draw_step(spin, 1., 0.01, [spiral])
-            @show spin.position
             theta = mr.spiral_theta(spiral.obstructions[1], SVector{2}(spin.position[1:2]))
-            @show theta
             if abs(theta - prev_theta) > π
                 error("Leaked through spiral!")
             end
