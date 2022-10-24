@@ -29,6 +29,30 @@ function isinside(s::Spiral, pos::SVector{2, Float})
     return isinside(s.equivalent_annulus, pos)
 end
 
+"""
+    spiral_theta(spiral, position; assume_inner)
+
+Computes the location of the particle within the spiral.
+This function returns 0 if the particle has just entered the inner part of the spiral.
+Each wrap further outwards will add 2π to the result.
+
+When the particle is at the spiral edge, `assume_inner` should be set to true if the particle should be considered just on the inner side of the surface or to false if it should be considered just on the outer surface.
+"""
+function spiral_theta(spiral::Spiral, pos::SVector{2, Float}; assume_inner=nothing)
+    radius = norm(pos)
+    theta = atan(pos[2], pos[1]) - spiral.theta0
+    slope = spiral.thickness / 2π
+    inner_radius = slope * theta + spiral.inner
+    if isnothing(assume_inner)
+        nwrap = div(radius - inner_radius, spiral.thickness, RoundDown)
+    else
+        nwrap = div(radius - inner_radius, spiral.thickness, RoundNearest)
+        if assume_inner
+            nwrap -= 1
+        end
+    end
+    theta + nwrap * 2π
+end
 
 """
     spirals(inner, outer; theta0=0., thickness=0.014, myelin=false, chi_I=-0.1, chi_A=-0.1, positions=[0, 0], repeats=[Inf, Inf], rotation=I(3)
@@ -73,7 +97,7 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
     c_cylinders = c_inner.distance < c_outer.distance ? c_inner : c_outer
 
 
-    toskip = previous === empty_collision ? -1 : previous.index
+    assume_inner = id(previous) != id(spiral) ? nothing : previous.index == 1
     for dim in 1:2
         if (
             (movement.origin[dim] > spiral.outer && movement.destination[dim] > spiral.outer) ||
@@ -118,19 +142,11 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
     theta_range = spiral.theta_end - spiral.theta0
 
     function get_theta(pos, rsq; round_down=true, ignore_toskip=true)
-        theta = atan(pos[2], pos[1]) - spiral.theta0
-        inner_radius = slope * theta + spiral.inner
-        if ignore_toskip || (toskip == -1)
-            nwrap = div(sqrt(rsq) - inner_radius, spiral.thickness, round_down ? RoundDown : RoundUp)
-        else
-            nwrap = div(sqrt(rsq) - inner_radius, spiral.thickness, RoundNearest)
-            if !round_down && (toskip == 0)
-                nwrap += 1
-            elseif round_down && (toskip == 1)
-                nwrap -= 1
-            end
+        theta = spiral_theta(spiral, pos; assume_inner=ignore_toskip ? nothing : assume_inner)
+        if !round_down
+            theta += 2π
         end
-        theta + nwrap * 2π
+        theta
     end
 
     # y = line_slope * x + line_shift
@@ -241,7 +257,7 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
                 if sign(froot(upper)) == sign(froot(zero(Float)))
                     continue
                 end
-                lower = 0
+                lower = zero(Float)
             end
             if sign(froot(lower)) == sign(froot(upper))
                 return get_zero_solution()
