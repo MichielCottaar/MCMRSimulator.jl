@@ -51,7 +51,7 @@ function sphere_collision(movement :: Movement{N}, obstruction::Obstruction, ins
     a = sum(diff .* diff)
     b = sum(2 .* origin .* diff)
     c = rsq_origin
-    determinant = b ^ 2 - 4 * a * (c - radius ^ 2)
+    determinant = b * b - 4 * a * (c - radius ^ 2)
     if determinant < 0
         return empty_collision
     end
