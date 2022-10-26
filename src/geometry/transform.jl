@@ -11,26 +11,26 @@ Transforms the [`BaseObstruction`](@ref) objects in `base` in one of several way
 The [`BaseObstruction`](@ref) objects an already be initialised.
 If a [`BaseObstruction`](@ref) type is given instead it will be initialised using `args` and `kwargs` not used by `TransformObstruction`.
 """
-struct TransformObstruction{N, M, K, O<:BaseObstruction{N}} <: Obstruction{N}
-    obstructions::NTuple{M, O}
-    positions::NTuple{M, SVector{N, Float}}
+struct TransformObstruction{N, K, O<:BaseObstruction{N}} <: Obstruction{N}
+    obstructions::Vector{O}
+    positions::Vector{SVector{N, Float}}
     repeats::SVector{N, Float}
-    shift_quadrants::NTuple{M, SVector{N, Bool}}
+    shift_quadrants::Vector{SVector{N, Bool}}
     rotation::SMatrix{3, N, Float, K}
     inv_rotation::SMatrix{N, 3, Float, K}
     chi::Float
     lorentz_radius :: Float
     lorentz_repeats :: SVector{N, Int}
-    function TransformObstruction(obstructions::NTuple{M, <:BaseObstruction{N}}, positions, repeats, rotation, lorentz_radius) where {N, M}
+    function TransformObstruction(obstructions::AbstractVector{<:BaseObstruction{N}}, positions, repeats, rotation, lorentz_radius) where {N, M}
         @assert all(r -> r>0, repeats)
         repeats = SVector{N}(map(Float, repeats))
 
         # normalise shifts by the repeats, so that the base shift is between -repeats/4 and +3 * repeats/4
-        positions = NTuple{M, SVector{N, Float}}([map((s, r) -> isfinite(r) ? mod(s + r/4, r) - r/4 : Float(s), single_shift, repeats) for single_shift in positions])
-        shift_quadrants = NTuple{M, SVector{N, Bool}}([get_shift_quadrants(s, repeats) for s in positions])
+        positions = Vector([map((s, r) -> isfinite(r) ? mod(s + r/4, r) - r/4 : Float(s), single_shift, repeats) for single_shift in positions])
+        shift_quadrants = [get_shift_quadrants(s, repeats) for s in positions]
         chi = sum(total_susceptibility, obstructions) / prod(repeats)
         lorentz_repeats = map(r -> isfinite(r) ? Int(div(lorentz_radius, r, RoundUp)) : 0, repeats)
-        new{N, M, 3 * N, eltype(obstructions)}(obstructions, positions, repeats, shift_quadrants, rotation, transpose(rotation), chi, lorentz_radius, lorentz_repeats)
+        new{N, 3 * N, eltype(obstructions)}(Vector(obstructions), positions, repeats, shift_quadrants, rotation, transpose(rotation), chi, lorentz_radius, lorentz_repeats)
     end
 end
 
@@ -117,10 +117,9 @@ function TransformObstruction(obstructions::AbstractVector{<:BaseObstruction{N}}
     if isa(repeats, Real)
         repeats = fill(repeats, N)
     end
-    M = length(obstructions)
     TransformObstruction(
-        NTuple{M, eltype(obstructions)}(obstructions),
-        NTuple{M, SVector{N, Float}}(positions),
+        obstructions,
+        positions,
         SVector{N, Float}([iszero(r) ? Float(Inf) : Float(r) for r in repeats]),
         get_rotation(rotation, N),
         lorentz_radius
@@ -139,7 +138,7 @@ function project_repeat(trans::TransformObstruction{N, M}, pos::SVector{N, Float
         toshift = map(+, map((q, r) -> (!q) * r, quadrant, will_shift), shift)
         return map(-, pos_shifted, toshift)
     end
-    map(shifted, trans.shift_quadrants, trans.positions) :: NTuple{M, SVector{2, Float}}
+    map(shifted, trans.shift_quadrants, trans.positions)
 end
 
 function project(trans::TransformObstruction{N}, pos::PosVector) where {N}
@@ -190,8 +189,8 @@ end
 function detect_collision(
     origin :: SVector{N, Float}, destination :: SVector{N, Float},
     previous::Collision, repeats::SVector{N, Float}, 
-    positions::NTuple{M, SVector{N, Float}}, shift_quadrants::NTuple{M, SVector{N, Bool}},
-    obstructions::NTuple{M, <:BaseObstruction}
+    positions::Vector{SVector{N, Float}}, shift_quadrants::Vector{SVector{N, Bool}},
+    obstructions::Vector{<:BaseObstruction}
     )  where {N, M}
     half_repeats = map(r -> 0.5 * r, repeats)
     # project onto 1x1x1 grid
@@ -245,6 +244,5 @@ function off_resonance(transform::TransformObstruction{N, M}, position::PosVecto
 
     finite_repeats = map(r -> isfinite(r) ? r : zero(Float), transform.repeats)
     # Contribution from within the Lorentz cavity
-    off_resonances = map((o, p)->lorentz_off_resonance(o, p, b0, finite_repeats, transform.lorentz_radius, transform.lorentz_repeats), transform.obstructions, project(transform, position)) :: NTuple{M, Float}
-    return sum(off_resonances)
+    return sum(map((o, p)->lorentz_off_resonance(o, p, b0, finite_repeats, transform.lorentz_radius, transform.lorentz_repeats), transform.obstructions, project(transform, position)))
 end
