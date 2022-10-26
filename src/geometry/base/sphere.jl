@@ -43,13 +43,14 @@ function sphere_collision(movement :: Movement{N}, obstruction::Obstruction, ins
             return empty_collision
         end
     end
-    inside = inside_index == -1 ? norm(origin) < radius : Bool(inside_index)
+    rsq_origin = sum(origin .* origin)
+    inside = inside_index == -1 ? rsq_origin < radius * radius : Bool(inside_index)
     diff = destination - origin
 
     # terms for quadratic equation for where distance squared equals radius squared d^2 = a s^2 + b s + c == radius ^ 2
     a = sum(diff .* diff)
     b = sum(2 .* origin .* diff)
-    c = sum(origin .* origin)
+    c = rsq_origin
     determinant = b ^ 2 - 4 * a * (c - radius ^ 2)
     if determinant < 0
         return empty_collision
