@@ -2,7 +2,7 @@ import MRSimulator as mr
 using StaticArrays
 # Set up infinitely repeating aligned cylinders
 @time (positions, radii) = mr.random_positions_radii((30., 30.), 0.7, 2);
-geometry = mr.annuli(0.8 .* radii, radii, positions=positions, repeats=[30., 30.], MT_fraction=1e-3, orientation=:y, myelin=true)
+geometry = mr.annuli(0.8 .* radii, radii, positions=positions, repeats=[30., 30.], MT_fraction=1e-3, rotation=:y, myelin=true)
 
 #geometry = mr.TransformObstruction(mr.box_mesh(grid_size=10), repeats=[1.5, 1.5, 1.5])
 
