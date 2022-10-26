@@ -11,7 +11,7 @@ Transforms the [`BaseObstruction`](@ref) objects in `base` in one of several way
 The [`BaseObstruction`](@ref) objects an already be initialised.
 If a [`BaseObstruction`](@ref) type is given instead it will be initialised using `args` and `kwargs` not used by `TransformObstruction`.
 """
-struct TransformObstruction{N, K, O<:BaseObstruction{N}} <: Obstruction{N}
+struct TransformObstruction{N, M, K, O<:BaseObstruction{N}} <: Obstruction{N}
     obstructions::Vector{O}
     positions::Vector{SVector{N, Float}}
     repeats::SVector{N, Float}
@@ -30,7 +30,8 @@ struct TransformObstruction{N, K, O<:BaseObstruction{N}} <: Obstruction{N}
         shift_quadrants = [get_shift_quadrants(s, repeats) for s in positions]
         chi = sum(total_susceptibility, obstructions) / prod(repeats)
         lorentz_repeats = map(r -> isfinite(r) ? Int(div(lorentz_radius, r, RoundUp)) : 0, repeats)
-        new{N, 3 * N, eltype(obstructions)}(Vector(obstructions), positions, repeats, shift_quadrants, rotation, transpose(rotation), chi, lorentz_radius, lorentz_repeats)
+        @assert length(obstructions) == length(positions)
+        new{N, length(obstructions), 3 * N, eltype(obstructions)}(Vector(obstructions), positions, repeats, shift_quadrants, rotation, transpose(rotation), chi, lorentz_radius, lorentz_repeats)
     end
 end
 
@@ -134,15 +135,16 @@ function project_repeat(trans::TransformObstruction{N, M}, pos::SVector{N, Float
     pos_shifted = map((p, r) -> isfinite(r) ? mod(p, r) : p, pos, trans.repeats)
     will_shift = map((p, r) -> (isfinite(r) && p > r/2) ? r : zero(Float), pos_shifted, trans.repeats)
 
-    function shifted(quadrant, shift)
-        toshift = map(+, map((q, r) -> (!q) * r, quadrant, will_shift), shift)
+    function shifted(index)
+        toshift = map(+, map((q, r) -> (!q) * r, trans.shift_quadrants[index], will_shift), trans.positions[index])
         return map(-, pos_shifted, toshift)
     end
+    return shifted
     map(shifted, trans.shift_quadrants, trans.positions)
 end
 
-function project(trans::TransformObstruction{N}, pos::PosVector) where {N}
-    project_repeat(trans, project_rotation(trans, pos))
+function project(trans::TransformObstruction{N, M}, pos::PosVector) where {N, M}
+    [project_repeat(trans, project_rotation(trans, pos))(index) for index in 1:M]
 end
 
 function detect_collision(movement :: Movement{3}, trans :: TransformObstruction{N}, previous::Collision) where {N}
@@ -163,7 +165,7 @@ function detect_collision(movement :: Movement{3}, trans :: TransformObstruction
             end
         end
     elseif all(isfinite, trans.repeats)
-        current_guess = detect_collision(projected_origin, projected_destination, previous, trans.repeats, trans.positions, trans.shift_quadrants, trans.obstructions)
+        current_guess = detect_collision_repeats(projected_origin, projected_destination, trans, previous)
     else
         error("Repeating only along a subset of directions is not yet supported")
     end
@@ -186,13 +188,12 @@ function detect_collision(movement :: Movement{3}, trans :: TransformObstruction
 end
 
     
-function detect_collision(
+function detect_collision_repeats(
     origin :: SVector{N, Float}, destination :: SVector{N, Float},
-    previous::Collision, repeats::SVector{N, Float}, 
-    positions::Vector{SVector{N, Float}}, shift_quadrants::Vector{SVector{N, Bool}},
-    obstructions::Vector{<:BaseObstruction}
-    )  where {N}
-    half_repeats = map(r -> 0.5 * r, repeats)
+    trans :: TransformObstruction{N, M},
+    previous::Collision
+    )  where {N, M}
+    half_repeats = map(r -> 0.5 * r, trans.repeats)
     # project onto 1x1x1 grid
     grid_origin = map(/, origin, half_repeats)
     grid_destination = map(/, destination, half_repeats)
@@ -204,10 +205,13 @@ function detect_collision(
         voxel_orig = map(*, voxel + lower, half_repeats)
         p1 = origin - voxel_orig
         p2 = destination - voxel_orig
-        to_correct = map(*, lower, repeats)
+        to_correct = map(*, lower, trans.repeats)
 
         current_guess = empty_collision
-        for (shift, quadrant, obstruction) in zip(positions, shift_quadrants, obstructions)
+        for index in 1:M
+            shift = trans.positions[index]
+            quadrant = trans.shift_quadrants[index]
+            obstruction = trans.obstructions[index]
             to_shift = map((s, q, t) -> s - q * t, shift, quadrant, to_correct)
             ctest = detect_collision(
                 Movement{N}(p1 - to_shift, p2 - to_shift, Float(1)),
@@ -243,6 +247,16 @@ function off_resonance(transform::TransformObstruction{N, M}, position::PosVecto
     b0 = project_rotation(transform, b0_field)
 
     finite_repeats = map(r -> isfinite(r) ? r : zero(Float), transform.repeats)
+
     # Contribution from within the Lorentz cavity
-    return sum(map((o, p)->lorentz_off_resonance(o, p, b0, finite_repeats, transform.lorentz_radius, transform.lorentz_repeats), transform.obstructions, project(transform, position)))
+    positions_func = project_repeat(transform, project_rotation(transform, position))
+    total = zero(Float)
+    for index in 1:M
+        total += lorentz_off_resonance(
+            transform.obstructions[index],
+            positions_func(index),
+            b0, finite_repeats, transform.lorentz_radius,
+            transform.lorentz_repeats)
+    end
+    return total
 end
