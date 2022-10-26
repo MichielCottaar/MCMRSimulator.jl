@@ -31,6 +31,7 @@ geometry = cylinders(sqrt(0.5), positions=[[0, 0], [1, 1]], repeats=[2, 2])
 using CairoMakie # hide
 f = plot(PlotPlane(size=4), geometry) # hide
 save("regular_cylinders.png", f) # hide
+nothing # hide
 ```  
 
 ![Plot showing two cylinders repeating ad infinitum](regular_cylinders.png)
@@ -47,6 +48,7 @@ geometry = cylinders(sqrt(0.5), repeats=[sqrt(2), sqrt(2)], rotation=rotation)
 using CairoMakie # hide
 f = plot(PlotPlane(size=4), geometry) # hide
 save("regular_cylinders2.png", f) # hide
+nothing # hide
 ```  
 ![Plot showing single cylinders repeating ad infinitum](regular_cylinders2.png)
 
@@ -59,6 +61,7 @@ A random set of positions and radii can be created using [`random_positions_radi
 The user in this case sets a target density (70% in the example below) and over which length scale the configuration should repeat itself (20x20 micrometer in the example below).
 ```@example random_distribution
 (positions, outer_radii) = random_positions_radii((20, 20), 0.7, 2)
+nothing # hide
 ```
 
 These can be used to produce randomly distributed cylinders:
@@ -67,6 +70,7 @@ geometry = cylinders(outer_radii; positions=positions, repeat=(20, 20))
 using CairoMakie # hide
 f = plot(PlotPlane(size=20), geometry) # hide
 save("random_cylinders.png", f) # hide
+nothing # hide
 ```
 ![Illustrating configuration of random cylinders](random_cylinders.png)
 
@@ -77,6 +81,7 @@ geometry = annuli(inner_radii, outer_radii; positions=positions, repeat=(20, 20)
 using CairoMakie # hide
 f = plot(PlotPlane(size=20), geometry) # hide
 save("random_annuli.png", f) # hide
+nothing # hide
 ```
 ![Illustrating configuration of random annuli](random_annuli.png)
 

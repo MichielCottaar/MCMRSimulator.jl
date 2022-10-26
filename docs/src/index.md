@@ -62,6 +62,7 @@ geometry = cylinders(1., repeats=[2.5, 2.5])
 
 f = plot(PlotPlane(size=5), geometry)
 save("tutorial_geometry.png", f) # hide
+nothing # hide
 ```
 ![](tutorial_geometry.png)
 More complicated geometries can be generated as described [here](@ref geometry) including geometries with magnetic susceptibility that produce off-resonance fields (see [here](@ref off_resonance)).
@@ -71,13 +72,15 @@ Here we will adopt a single diffusion-weighted MRI sequence.
 ```@example tutorial
 sequence = dwi(bval=2., TR=300, TE=80, scanner=Siemens_Prisma)  # default gradient orientation in the x-direction
 f = plot(sequence)
-save("tutorial_sequence.png", f) # hide
+save("tutorial_sequence.png", f); # hide
+nothing # hide
 ```
 ![](tutorial_sequence.png)
 
 Once we have both a geometry and one or more sequences, we can put them together in a [`Simulation`](@ref) object:
 ```@example tutorial
 simulation = Simulation(sequence, R2=0.012, R1=3e-3, diffusivity=2., off_resonance=0.1, timestep=0.01, geometry=geometry)
+nothing # hide
 ```
 Note that we actually have to set the `R2`, `R1`, and `diffusivity` to non-zero values to enable those pieces of physics.
 
@@ -113,6 +116,7 @@ pp = PlotPlane(size=5.)
 f = plot(pp, geometry)
 plot_trajectory2d!(pp, snapshots)
 save("tutorial_trajectory2D.png", f) # hide
+nothing # hide
 ```
 ![](tutorial_trajectory2D.png)
 In this plot the color at each timepoint encodes the spin orientation.
@@ -123,6 +127,7 @@ The trajectories can also be plotted in 3D:
 ```@example tutorial
 f = plot_trajectory3d(snapshots)
 save("tutorial_trajectory3D.png", f) # hide
+nothing # hide
 ```
 ![](tutorial_trajectory3D.png)
 
@@ -140,6 +145,7 @@ average_signals = signal(3000, simulation, times)  # simulate 3000 spins for a s
 f = plot(sequence)
 lines!(times, transverse.(average_signals)/3000.)
 save("tutorial_transverse.png", f) # hide
+nothing # hide
 ```
 ![](tutorial_transverse.png)
 
@@ -151,6 +157,7 @@ pp = PlotPlane(size=2.5)
 f = plot(pp, snapshot)
 plot!(pp, geometry)
 save("tutorial_snapshot.png", f) # hide
+nothing # hide
 ```
 ![](tutorial_snapshot.png)
 The color encoding is the same as for the trajectory plot above.
@@ -173,6 +180,7 @@ for start in (first_TR_start, fifth_TR_start)
     lines!(times, longitudinal.(simulated_signals)/3000., cycle=[:color])
 end
 save("tutorial_longitudinal.png", f) # hide
+nothing # hide
 ```
 ![](tutorial_longitudinal.png)
 

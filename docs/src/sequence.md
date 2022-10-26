@@ -8,6 +8,7 @@ sequence = dwi(TR=100., bval=3.)
 using CairoMakie # hide
 f = plot(sequence) # hide
 save("dwi_sequence.png", f) # hide
+nothing # hide
 ```  
 ![DWI sequence diagram](dwi_sequence.png)
 
@@ -17,6 +18,7 @@ sequence = dwi(TR=100., bval=3., gradient_duration=0.)
 using CairoMakie # hide
 f = plot(sequence) # hide
 save("dwi_sequence_delta_0.png", f) # hide
+nothing # hide
 ```  
 ![DWI sequence diagram with instanteneous gradients](dwi_sequence_delta_0.png)
 ## Custom MR sequences
