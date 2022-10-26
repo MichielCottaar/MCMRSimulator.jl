@@ -150,7 +150,7 @@ function detect_collision(movement :: Movement{3}, trans :: TransformObstruction
     projected_origin = project_rotation(trans, movement.origin)
     projected_destination = project_rotation(trans, movement.destination)
     if !any(isfinite, trans.repeats)
-        c = empty_collision
+        current_guess = empty_collision
 
         for (shift, obstruction) in zip(trans.positions, trans.obstructions)
             ctest = detect_collision(
@@ -158,28 +158,28 @@ function detect_collision(movement :: Movement{3}, trans :: TransformObstruction
                 obstruction,
                 previous
             )
-            if ctest.distance < c.distance
-                c = ctest
+            if ctest.distance < current_guess.distance
+                current_guess = ctest
             end
         end
     elseif all(isfinite, trans.repeats)
-        c = detect_collision(projected_origin, projected_destination, previous, trans.repeats, trans.positions, trans.shift_quadrants, trans.obstructions)
+        current_guess = detect_collision(projected_origin, projected_destination, previous, trans.repeats, trans.positions, trans.shift_quadrants, trans.obstructions)
     else
         error("Repeating only along a subset of directions is not yet supported")
     end
-    if c.distance <= 1.
+    if current_guess.distance <= 1.
         if N == 1
             n = SVector{1, Float}(c.normal[1])
         elseif N == 2
             n = SVector{2, Float}(c.normal[1], c.normal[2])
         else
-            n = c.normal
+            n = current_guess.normal
         end
         return Collision(
-            c.distance,
+            current_guess.distance,
             trans.rotation * n,
-            c.properties,
-            c.index
+            current_guess.properties,
+            current_guess.index
         )
     end
     return empty_collision
@@ -191,7 +191,7 @@ function detect_collision(
     previous::Collision, repeats::SVector{N, Float}, 
     positions::Vector{SVector{N, Float}}, shift_quadrants::Vector{SVector{N, Bool}},
     obstructions::Vector{<:BaseObstruction}
-    )  where {N, M}
+    )  where {N}
     half_repeats = map(r -> 0.5 * r, repeats)
     # project onto 1x1x1 grid
     grid_origin = map(/, origin, half_repeats)
