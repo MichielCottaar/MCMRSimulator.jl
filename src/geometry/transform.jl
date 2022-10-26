@@ -169,9 +169,9 @@ function detect_collision(movement :: Movement{3}, trans :: TransformObstruction
     end
     if current_guess.distance <= 1.
         if N == 1
-            n = SVector{1, Float}(c.normal[1])
+            n = SVector{1, Float}(current_guess.normal[1])
         elseif N == 2
-            n = SVector{2, Float}(c.normal[1], c.normal[2])
+            n = SVector{2, Float}(current_guess.normal[1], current_guess.normal[2])
         else
             n = current_guess.normal
         end
@@ -206,7 +206,7 @@ function detect_collision(
         p2 = destination - voxel_orig
         to_correct = map(*, lower, repeats)
 
-        c = empty_collision
+        current_guess = empty_collision
         for (shift, quadrant, obstruction) in zip(positions, shift_quadrants, obstructions)
             to_shift = map((s, q, t) -> s - q * t, shift, quadrant, to_correct)
             ctest = detect_collision(
@@ -214,12 +214,12 @@ function detect_collision(
                 obstruction,
                 previous
             )
-            if ctest.distance < c.distance
-                c = ctest
+            if ctest.distance < current_guess.distance
+                current_guess = ctest
             end
         end
-        if c.distance <= t2
-            return c
+        if current_guess.distance <= t2
+            return current_guess
         end
     end
     return empty_collision
