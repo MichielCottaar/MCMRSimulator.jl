@@ -40,7 +40,11 @@ function project end
 Computes the off-resonance field at the position due to the obstructions with the magnetic field orientation from `b0_field`.
 """
 function off_resonance(obstructions::Tuple, position::PosVector, b0_field=PosVector([0, 0, 1])::PosVector)
-    sum(o->off_resonance(o, position, b0_field), obstructions)
+    total = zero(Float)
+    for o in obstructions
+        total += off_resonance(o, position, b0_field)
+    end
+    total
 end
 off_resonance(obstructions::Obstruction, position::PosVector, b0_field::PosVector) = zero(Float)
 off_resonance(obstructions::Tuple{}, position::PosVector, b0_field=PosVector([0, 0, 1])::PosVector) = zero(Float)
