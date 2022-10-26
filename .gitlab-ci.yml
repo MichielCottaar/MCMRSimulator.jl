@@ -33,7 +33,6 @@ Julia 1.7:
     - .coverage
 pages:
   image: julia:1.7
-  stage: deploy
   script:
     - apt-get update
     - apt-get install -y git
