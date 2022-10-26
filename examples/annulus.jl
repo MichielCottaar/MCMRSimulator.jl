@@ -1,6 +1,8 @@
 import MRSimulator as mr
 using StaticArrays
+import Random
 # Set up infinitely repeating aligned cylinders
+Random.seed!(123)
 @time (positions, radii) = mr.random_positions_radii((30., 30.), 0.7, 2);
 geometry = mr.annuli(0.8 .* radii, radii, positions=positions, repeats=[30., 30.], MT_fraction=1e-3, rotation=:y, myelin=true)
 
