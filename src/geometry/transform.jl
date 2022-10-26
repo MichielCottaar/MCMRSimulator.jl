@@ -139,7 +139,7 @@ function project_repeat(trans::TransformObstruction{N, M}, pos::SVector{N, Float
         toshift = map(+, map((q, r) -> (!q) * r, quadrant, will_shift), shift)
         return map(-, pos_shifted, toshift)
     end
-    map(shifted, trans.shift_quadrants, trans.positions)
+    map(shifted, trans.shift_quadrants, trans.positions) :: NTuple{M, SVector{2, Float}}
 end
 
 function project(trans::TransformObstruction{N}, pos::PosVector) where {N}
@@ -240,10 +240,11 @@ function BoundingBox(trans::TransformObstruction{N}) where {N}
 end
 
 
-function off_resonance(transform::TransformObstruction{N}, position::PosVector, b0_field::PosVector=PosVector([0, 0, 1])) where {N}
+function off_resonance(transform::TransformObstruction{N, M}, position::PosVector, b0_field::PosVector=PosVector([0, 0, 1])) where {N, M}
     b0 = project_rotation(transform, b0_field)
 
     finite_repeats = map(r -> isfinite(r) ? r : zero(Float), transform.repeats)
     # Contribution from within the Lorentz cavity
-    return sum(map((o, p)->lorentz_off_resonance(o, p, b0, finite_repeats, transform.lorentz_radius, transform.lorentz_repeats), transform.obstructions, project(transform, position)))
+    off_resonances = map((o, p)->lorentz_off_resonance(o, p, b0, finite_repeats, transform.lorentz_radius, transform.lorentz_repeats), transform.obstructions, project(transform, position)) :: NTuple{M, Float}
+    return sum(off_resonances)
 end
