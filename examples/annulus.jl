@@ -16,7 +16,7 @@ sequence = mr.perfect_dwi(TR=TR, TE=TE, bval=bval)
 
 snap = mr.Snapshot(3000);
 
-simulation = mr.Simulation([sequence], diffusivity=3., geometry=geometry);
+simulation = mr.Simulation([sequence], diffusivity=3., geometry=geometry, timestep=0.1);
 
 mr.evolve(snap, simulation, 2.);
 @time mr.evolve(snap, simulation, 200.);
