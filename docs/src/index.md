@@ -24,7 +24,7 @@ Future (potential) features:
 1. First install julia (e.g., from the [official website](https://julialang.org/downloads/) or using [juliaup](https://github.com/JuliaLang/juliaup)).
 2. Start julia in the terminal (`$ julia`).
 3. Enter the package manager by pressing "]"
-   - Install MRSimulator.jl (`pkg> add MRSimulator`)
+   - Install MRSimulator.jl (`pkg> add https://git.fmrib.ox.ac.uk/ndcn0236/mrsimulator.jl.git`)
    - Install one of the [Makie backends](https://makie.juliaplots.org/stable/documentation/backends/) for plotting (e.g., `pkg> add CairoMakie`)
    - Press "\[backspace\]" to leave the package manager
 After this installation, you should be able to follow the steps in the tutorial below
