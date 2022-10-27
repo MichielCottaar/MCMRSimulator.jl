@@ -48,7 +48,7 @@ function Makie.plot!(ss::Plot_Trajectory2D)
             return [Colors.HSV() for _ in times]
         else
             colors_main = map(s -> color(get_sequence(s[spin_index], sequence_index)), snapshots)
-            return [isfinite(spin_index) ? colors_main[round(Int(time))] : Colors.HSV() for time in times]
+            return [isfinite(spin_index) ? colors_main[Int(round(time))] : Colors.HSV() for time in times]
         end
     end
     plane = ss[1]
