@@ -36,11 +36,11 @@ function eliminate_overlap(positions::AbstractVector{SVector{N, Float}}, radii::
                 total_radius = radii[i] + radii[j]
                 if distsq < (total_radius * total_radius)
                     moved = true
-                    total_movement = max((total_radius - sqrt(distsq)) * (1 + step_size), 0.01 * total_radius)
-                    #println(i, " ", j, " ", total_movement)
+                    dist = sqrt(distsq)
+                    total_movement = max((total_radius - dist) * (1 + step_size), 0.01 * total_radius)
                     # move larger cylinder less
-                    positions[i] = positions[i] .+ displacement .* (total_movement * radii[j] / total_radius)
-                    positions[j] = positions[j] .- displacement .* (total_movement * radii[i] / total_radius)
+                    positions[i] = positions[i] .+ displacement .* (total_movement * radii[j] / (total_radius * dist))
+                    positions[j] = positions[j] .- displacement .* (total_movement * radii[i] / (total_radius * dist))
                 end
             end
         end
