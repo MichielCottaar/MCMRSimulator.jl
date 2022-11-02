@@ -25,4 +25,5 @@ makedocs(
         "API" => "api.md",
         "References" => "references.md",
     ],
+    strict=[:example_block],
 )
