@@ -11,7 +11,7 @@ See [`Simulation`](@ref) for how to run the simulation.
 
 Plotting support for the output is also available based on [Makie.jl](https://makie.juliaplots.org/stable/).
 """
-module MRSimulator
+module MCMRSimulator
 import StaticArrays: SA_F64, MVector, SVector, @SVector, MMatrix, SA_F32, SMatrix
 using LinearAlgebra
 import Base

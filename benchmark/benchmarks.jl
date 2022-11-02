@@ -1,5 +1,5 @@
 using BenchmarkTools
-import MRSimulator as mr
+import MCMRSimulator as mr
 
 
 span = mr.Snapshot(300)

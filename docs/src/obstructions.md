@@ -1,6 +1,6 @@
 # [Obstructions to free diffusion](@id geometry)
 ## Defining the geometry
-MRSimulator.jl comes with a variety of basic components that can be used to represent various components in the tissue microstructure.
+MCMRSimulator.jl comes with a variety of basic components that can be used to represent various components in the tissue microstructure.
 
 | Component     | Class            | Constructor         |  Dimensionality |
 | ------------- | ---------------- | ------------------- |  -------------- |
@@ -26,7 +26,7 @@ The `rotation` can be used to define these components along other lines/planes.
 
 For example, we can create two base cylinders, which repeeat infinitely by running:
 ```@example
-using MRSimulator
+using MCMRSimulator
 geometry = cylinders(sqrt(0.5), positions=[[0, 0], [1, 1]], repeats=[2, 2])
 using CairoMakie # hide
 f = plot(PlotPlane(size=4), geometry) # hide
@@ -38,7 +38,7 @@ nothing # hide
 
 Alternatively, the same configuration could be produced with a single cylinder by providing a `rotation`.
 ```@example
-using MRSimulator
+using MCMRSimulator
 rotation = [
     sqrt(0.5) sqrt(0.5) 0.
     -sqrt(0.5) sqrt(0.5) 0.
@@ -60,7 +60,7 @@ or by an array of [`TransformObstruction`](@ref) objects.
 A random set of positions and radii can be created using [`random_positions_radii`](@ref).
 The user in this case sets a target density (70% in the example below) and over which length scale the configuration should repeat itself (20x20 micrometer in the example below).
 ```@example random_distribution
-using MRSimulator # hide
+using MCMRSimulator # hide
 (positions, outer_radii) = random_positions_radii((20, 20), 0.7, 2)
 nothing # hide
 ```

@@ -1,4 +1,4 @@
-import MRSimulator as mr
+import MCMRSimulator as mr
 using StaticArrays
 import Random
 # Set up infinitely repeating aligned cylinders

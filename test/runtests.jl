@@ -1,6 +1,6 @@
 using Test
-import MRSimulator as mr
-import MRSimulator: Float, SA
+import MCMRSimulator as mr
+import MCMRSimulator: Float, SA
 using StaticArrays
 using LinearAlgebra
 import Random
@@ -22,7 +22,7 @@ else
 end
 
 
-@testset "MRSimulator tests" begin
+@testset "MCMRSimulator tests" begin
     for test in tests
         if test == "plots"
             include("visual_tests/run_visual_tests.jl")

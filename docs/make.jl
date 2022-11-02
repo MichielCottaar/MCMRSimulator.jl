@@ -1,19 +1,18 @@
-using MRSimulator
+using MCMRSimulator
 using Documenter
 using DocumenterCitations
 
-DocMeta.setdocmeta!(MRSimulator, :DocTestSetup, :(using MRSimulator); recursive=true)
+DocMeta.setdocmeta!(MCMRSimulator, :DocTestSetup, :(using MCMRSimulator); recursive=true)
 bib = CitationBibliography(joinpath(@__DIR__, "references.bib"), sorting=:nyt)
 
 makedocs(
     bib;
-    modules=[MRSimulator],
+    modules=[MCMRSimulator],
     authors="Michiel Cottaar <Michiel.cottaar@ndcn.ox.ac.uk>",
-    repo="https://git.fmrib.ox.ac.uk/ndcn0236/MRSimulator.jl/blob/{commit}{path}#{line}",
-    sitename="MRSimulator.jl",
+    repo="https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/blob/{commit}{path}#{line}",
+    sitename="MCMRSimulator.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://ndcn0236.gitlab.io/MRSimulator.jl",
         edit_link="main",
         assets=String[],
     ),

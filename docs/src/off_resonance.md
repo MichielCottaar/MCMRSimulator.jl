@@ -6,7 +6,7 @@ The off-resonance field will have three components:
 
 ## Myelin off-resonance
 The myelin surrounding some axons contributes to the off-resonance field experienced by the spins in the neighbourhood.
-Within MRSimulator.jl this off-resonance field is modeled in one of three ways:
+Within MCMRSimulator.jl this off-resonance field is modeled in one of three ways:
 - [As an infinitely narrow sheath surrounding the cylinders.](@ref Myelinated_cylinders)
 - [As uniform myelin between the inner and outer radius of an annulus.](@ref Myelinated_annuli)
 - TODO: as a spiral
@@ -23,7 +23,7 @@ The myelin sheath will be infinitely thin, when considering collisions.
 
 ```@example
 import Random; Random.seed!(2) # hide
-using MRSimulator
+using MCMRSimulator
 (positions, radii) = random_positions_radii((20, 20), 0.7, 2)
 geometry = cylinders(radii; repeats=[20, 20], positions=positions, rotation=:y, g_ratio=0.6)
 
@@ -69,7 +69,7 @@ The off-resonance field from this myelin is given by [Wharton_2012](@cite).
 
 ```@example
 import Random; Random.seed!(2) # hide
-using MRSimulator
+using MCMRSimulator
 (positions, radii) = random_positions_radii((20, 20), 0.7, 2)
 geometry = annuli(0.6 .* radii, radii; repeats=[20, 20], positions=positions, rotation=:y, myelin=true)
 

@@ -1,5 +1,5 @@
 # Introduction
-[MRSimulator.jl](https://git.fmrib.ox.ac.uk/ndcn0236/MRSimulator.jl) allows simulation of MR signal generation using Monte Carlo simulations.
+[MCMRSimulator.jl](https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl) allows simulation of MR signal generation using Monte Carlo simulations.
 The spin evolution of randomly diffusing particles is tracked under influence of one or more MR sequences.
 At present, the simulator allows to model
 - Free diffusion and diffusion restricted by walls, cylinders, spirals (experimental, spheres, or meshes
@@ -24,7 +24,7 @@ Future (potential) features:
 1. First install julia (e.g., from the [official website](https://julialang.org/downloads/) or using [juliaup](https://github.com/JuliaLang/juliaup)).
 2. Start julia in the terminal (`$ julia`).
 3. Enter the package manager by pressing "]"
-   - Install MRSimulator.jl (`pkg> add https://git.fmrib.ox.ac.uk/ndcn0236/mrsimulator.jl.git`)
+   - Install MCMRSimulator.jl (`pkg> add https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl.git`)
    - Install one of the [Makie backends](https://makie.juliaplots.org/stable/documentation/backends/) for plotting (e.g., `pkg> add CairoMakie`)
    - Press "\[backspace\]" to leave the package manager
 After this installation, you should be able to follow the steps in the tutorial below
@@ -32,9 +32,9 @@ or create your own simulations.
 # Tutorial
 This tutorial will walk through an example of modelling the MRI signal evolution for a diffusion-weighted sequence.
 The spins in this simulation will be constrained by regularly packed cylinders.
-After [installation](@ref installation) we can load MRSimulator.jl using
+After [installation](@ref installation) we can load MCMRSimulator.jl using
 ```@example tutorial
-using MRSimulator
+using MCMRSimulator
 using CairoMakie  # used for plotting; use GLMakie or WGLMakie for interactive plots
 ```
 

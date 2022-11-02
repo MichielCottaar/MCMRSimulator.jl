@@ -6,19 +6,19 @@ Pkg.instantiate()
 using PkgBenchmark
 branch_or_commit = nothing
 kwargs = Dict(
-    :juliacmd => `julia -O3 --project=MRSimulator`, 
+    :juliacmd => `julia -O3 --project=MCMRSimulator`, 
     :env => Dict("JULIA_NUM_THREADS" => 4))
 
 if length(ARGS) > 0
     branch_or_commit = ARGS[1]
     result = judge(
-        "MRSimulator",
+        "MCMRSimulator",
         BenchmarkConfig(;kwargs...),
         BenchmarkConfig(;id=branch_or_commit, kwargs...)
     )
 else
     result = benchmarkpkg(
-        "MRSimulator",
+        "MCMRSimulator",
         BenchmarkConfig(;kwargs...),
     )
 end

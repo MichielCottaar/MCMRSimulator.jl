@@ -1,5 +1,5 @@
 using GLMakie
-using MRSimulator
+using MCMRSimulator
 
 ## Create an interactive sequence plot
 fig = Figure()

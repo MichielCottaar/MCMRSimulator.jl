@@ -3,7 +3,7 @@
 ### Diffusion-weighted MRI
 A pulsed-gradient spin-echo can be created using [`dwi`](@ref)
 ```@example
-using MRSimulator
+using MCMRSimulator # hide
 sequence = dwi(TR=100., bval=3.)
 using CairoMakie # hide
 f = plot(sequence) # hide
@@ -13,7 +13,7 @@ nothing # hide
 ![DWI sequence diagram](dwi_sequence.png)
 
 ```@example
-using MRSimulator
+using MCMRSimulator # hide
 sequence = dwi(TR=100., bval=3., gradient_duration=0.)
 using CairoMakie # hide
 f = plot(sequence) # hide
@@ -22,7 +22,7 @@ nothing # hide
 ```  
 ![DWI sequence diagram with instanteneous gradients](dwi_sequence_delta_0.png)
 ## Custom MR sequences
-In MRSimulator.jl an MR [`Sequence`](@ref) describes the RF pulses and gradients applied by the MRI scanner.
+In MCMRSimulator.jl an MR [`Sequence`](@ref) describes the RF pulses and gradients applied by the MRI scanner.
 
 This sequence contains:
 - A set of instantaneous RF pulses ([`RFPulse`](@ref)), gradients ([`InstantGradient`](@ref)), or readouts ([`Readout`](@ref)). Each of these changes or reads the spin orientations at a specific timepoint.
