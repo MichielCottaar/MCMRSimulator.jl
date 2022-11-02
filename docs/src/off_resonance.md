@@ -24,7 +24,8 @@ The myelin sheath will be infinitely thin, when considering collisions.
 ```@example
 import Random; Random.seed!(2) # hide
 using MRSimulator
-geometry = random_cylinders(0.75, repeats=[20, 20], g_ratio=0.6, rotation=:y)
+(positions, radii) = random_positions_radii((20, 20), 0.7, 2)
+geometry = cylinders(radii; repeats=[20, 20], positions=positions, rotation=:y, g_ratio=0.6)
 
 using CairoMakie
 pp = PlotPlane(:y, size=20)  # plane used for plotting
@@ -69,7 +70,8 @@ The off-resonance field from this myelin is given by [Wharton_2012](@cite).
 ```@example
 import Random; Random.seed!(2) # hide
 using MRSimulator
-geometry = random_annuli(0.75, repeats=[20, 20], g_ratio=0.6, myelin=true, rotation=:y)
+(positions, radii) = random_positions_radii((20, 20), 0.7, 2)
+geometry = annuli(0.6 .* radii, radii; repeats=[20, 20], positions=positions, rotation=:y, myelin=true)
 
 using CairoMakie
 pp = PlotPlane(:y, size=20)
