@@ -44,11 +44,11 @@ end
 
 function Makie.plot!(ss::Plot_Trajectory2D)
     function _get_colors(sequence_index :: Integer, spin_index :: Integer, snapshots :: Vector{Snapshot{N}}, times :: Vector{Float}) where {N}
-        if N == 0
+        if N == 0 || sequence_index == 0
             return [Colors.HSV() for _ in times]
         else
             colors_main = map(s -> color(get_sequence(s[spin_index], sequence_index)), snapshots)
-            return [isfinite(spin_index) ? colors_main[Int(round(time))] : Colors.HSV() for time in times]
+            return [isfinite(time) ? colors_main[Int(round(time))] : Colors.HSV() for time in times]
         end
     end
     plane = ss[1]
