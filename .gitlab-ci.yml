@@ -37,7 +37,7 @@ Julia 1.7:
     - .script
     - .coverage
 pages:
-  image: julia:1.8
+  image: julia:latest
   script:
     - apt-get update
     - apt-get install -y git
@@ -58,7 +58,7 @@ pages:
   only:
     - main
 benchmark-main:
-  image: julia:1.8
+  image: julia:latest
   stage: deploy
   script:
     - apt-get update
@@ -69,7 +69,7 @@ benchmark-main:
   except:
     - main
 benchmark-version:
-  image: julia:1.8
+  image: julia:latest
   stage: deploy
   script:
     - apt-get update
