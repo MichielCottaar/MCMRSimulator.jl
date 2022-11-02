@@ -2,56 +2,21 @@ variables:
   JULIA_DEPOT_PATH: "$CI_PROJECT_DIR/.julia"
   CI: "true"
 
-cache:
-  paths:
-    - .julia
-
-.script:
-  script:
-    - apt-get update
-    - apt-get install -y xvfb
-    - |
-      xvfb-run julia --project=@. -e '
-        using Pkg
-        Pkg.build()
-        Pkg.test(coverage=true)'
-.coverage:
-  coverage: /Test coverage (\d+\.\d+%)/
-  after_script:
-    - |
-      julia -e '
-        using Pkg
-        Pkg.add("Coverage")
-        using Coverage
-        c, t = get_summary(process_folder())
-        using Printf
-        @printf "Test coverage %.2f%%\n" 100c / t'
 Julia latest:
+  coverage: /Test coverage (\d+\.\d+%)/
   image: julia:latest
-  extends:
-    - .script
-    - .coverage
+  script:
+    - .ci/run_test.sh
+  after_script:
+    - .ci/get_coverage.sh
 Julia 1.7:
   image: julia:1.7
-  extends:
-    - .script
-    - .coverage
+  script:
+    - .ci/run_test.sh
 pages:
   image: julia:latest
   script:
-    - apt-get update
-    - apt-get install -y git
-    - |
-      julia --project=docs -e '
-        using Pkg
-        Pkg.develop(PackageSpec(path=pwd()))
-        Pkg.instantiate()
-        using Documenter: doctest
-        using MCMRSimulator
-        doctest(MCMRSimulator)
-        include("docs/make.jl")'
-    - mkdir -p public
-    - mv docs/build public/dev
+    - .ci/gen_docs.sh dev
   artifacts:
     paths:
       - public
