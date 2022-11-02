@@ -60,13 +60,14 @@ or by an array of [`TransformObstruction`](@ref) objects.
 A random set of positions and radii can be created using [`random_positions_radii`](@ref).
 The user in this case sets a target density (70% in the example below) and over which length scale the configuration should repeat itself (20x20 micrometer in the example below).
 ```@example random_distribution
+using MRSimulator # hide
 (positions, outer_radii) = random_positions_radii((20, 20), 0.7, 2)
 nothing # hide
 ```
 
 These can be used to produce randomly distributed cylinders:
-```@example random_distributions
-geometry = cylinders(outer_radii; positions=positions, repeat=(20, 20))
+```@example random_distribution
+geometry = cylinders(outer_radii; positions=positions, repeats=(20, 20))
 using CairoMakie # hide
 f = plot(PlotPlane(size=20), geometry) # hide
 save("random_cylinders.png", f) # hide
@@ -75,9 +76,9 @@ nothing # hide
 ![Illustrating configuration of random cylinders](random_cylinders.png)
 
 When used as initialisation for annuli or spirals, an inner radius will also need to be computed:
-```@example random_distributions
+```@example random_distribution
 inner_radii = 0.8 .* outer_radii
-geometry = annuli(inner_radii, outer_radii; positions=positions, repeat=(20, 20))
+geometry = annuli(inner_radii, outer_radii; positions=positions, repeats=(20, 20))
 using CairoMakie # hide
 f = plot(PlotPlane(size=20), geometry) # hide
 save("random_annuli.png", f) # hide
