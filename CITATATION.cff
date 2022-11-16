@@ -1,0 +1,20 @@
+abstract: "MCMRSimulator.jl aims to model all influences from the tissue microstructure on MRI signal evolution"
+authors:
+  - family-names: Cottaar
+    given-names: Michiel
+    orcid: "https://orcid.org/0000-0003-4679-7724"
+cff-version: 1.2.0
+identifiers:
+  - description: "This is the collection of archived snapshots of all versions of My Research Software"
+    type: doi
+    value: 10.5281/zenodo.123456
+  - description: "This is the archived snapshot of version 0.3 of MCMRSimulator.jl"
+    type: doi
+    value: 10.5281/zenodo.7318657
+keywords:
+  - MRI
+  - simulator
+license: Apache-2.0
+message: "If you use this software, please cite it using the metadata from this file."
+repository-code: "https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl"
+title: "MCMRSimulator.jl"
