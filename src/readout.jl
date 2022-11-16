@@ -183,7 +183,11 @@ function signal(spins, simulation::Simulation{N}, times=nothing) where {N}
     end
     for index in sortperm(times)
         snapshot = evolve_to_time(snapshot, simulation, Float(times[index]))[1]
-        result[index] = SpinOrientation(snapshot)
+        if N == 1
+            result[index] = SpinOrientation(snapshot)
+        else
+            result[index] = SVector{N}([SpinOrientation(get_sequence(snapshot, seq)) for seq in 1:N])
+        end
     end
     result
 end
