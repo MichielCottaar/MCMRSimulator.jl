@@ -20,6 +20,11 @@ Future (potential) features:
 !!! warning "beta"
     This MR simulator is still under very active development and the API might still change substantially at any time!
 
+## Movie of spins moving through cylinders
+```@raw html
+<iframe src="https://ox.cloud.panopto.eu/Panopto/Pages/Embed.aspx?id=b6211751-2743-4bb8-b65a-af5d011a8684&autoplay=true&offerviewer=false&showtitle=false&showbrand=false&captions=false&interactivity=none" style="border: 1px solid #464646;" allowfullscreen allow="autoplay"></iframe>
+```
+
 # [Installation](@id installation)
 1. First install julia (e.g., from the [official website](https://julialang.org/downloads/) or using [juliaup](https://github.com/JuliaLang/juliaup)).
 2. Start julia in the terminal (`$ julia`).
