@@ -2,6 +2,10 @@ variables:
   JULIA_DEPOT_PATH: "$CI_PROJECT_DIR/.julia"
   CI: "true"
 
+cache:
+  paths:
+    - .julia
+
 Julia latest:
   coverage: /Test coverage (\d+\.\d+%)/
   image: julia:latest
