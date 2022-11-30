@@ -1,8 +1,8 @@
 # MCMRSimulator
 
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://open.win.ox.ac.uk/pages/ndcn0236/mrsimulator.jl/dev)
-[![Build Status](https://git.fmrib.ox.ac.uk/ndcn0236/MRSimulator.jl/badges/main/pipeline.svg)](https://git.fmrib.ox.ac.uk/ndcn0236/MRSimulator.jl/pipelines)
-[![Coverage](https://git.fmrib.ox.ac.uk/ndcn0236/MRSimulator.jl/badges/main/coverage.svg)](https://git.fmrib.ox.ac.uk/ndcn0236/MRSimulator.jl/commits/main)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://open.win.ox.ac.uk/pages/ndcn0236/mcmrsimulator.jl/dev)
+[![Build Status](https://git.fmrib.ox.ac.uk/ndcn0236/MRSimulator.jl/badges/main/pipeline.svg)](https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/pipelines)
+[![Coverage](https://git.fmrib.ox.ac.uk/ndcn0236/MRSimulator.jl/badges/main/coverage.svg)](https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/commits/main)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7318657.svg)](https://doi.org/10.5281/zenodo.7318657)
 
 
@@ -11,7 +11,7 @@ Because of these different sensitivities to the tissue, each MRI modality comes 
 This simulator aims to combine all of these models to produce a single unified tool to model the effect of microstructure on the MRI signal evolution.
 
 ## User documentation
-The latest documentation can be found [here](https://open.win.ox.ac.uk/pages/ndcn0236/mrsimulator.jl/dev).
+The latest documentation can be found [here](https://open.win.ox.ac.uk/pages/ndcn0236/mcmrsimulator.jl/dev).
 
 ## Citing MCMRSimulator.jl
 This software can be cited using the information in [CITATION.cff].
