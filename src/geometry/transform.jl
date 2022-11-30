@@ -21,7 +21,7 @@ struct TransformObstruction{N, M, K, O<:BaseObstruction{N}} <: Obstruction{N}
     chi::Float
     lorentz_radius :: Float
     lorentz_repeats :: SVector{N, Int}
-    function TransformObstruction(obstructions::AbstractVector{<:BaseObstruction{N}}, positions, repeats, rotation, lorentz_radius) where {N, M}
+    function TransformObstruction(obstructions::AbstractVector{<:BaseObstruction{N}}, positions, repeats, rotation, lorentz_radius) where {N}
         @assert all(r -> r>0, repeats)
         repeats = SVector{N}(map(Float, repeats))
 
