@@ -45,6 +45,6 @@ export longitudinal, transverse, phase, vector, Spin, Snapshot, SpinOrientation,
 export Simulation, Microstructure, evolve, readout, signal, trajectory, TransformObstruction
 export Annulus, annuli, Spiral, spirals, Cylinder, cylinders, Wall, walls, Sphere, spheres, Mesh, box_mesh
 export random_positions_radii
-export PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d
+export PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d, simulator_movie
 end
 

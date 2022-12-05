@@ -1,4 +1,4 @@
-import Makie: Makie, @lift, on
+using Makie
 
 """
     color(orient::SpinOrientation; saturation=1.)
@@ -15,3 +15,4 @@ include("geometry.jl")
 include("off_resonance.jl")
 include("snapshot.jl")
 include("trajectory.jl")
+include("movie.jl")
