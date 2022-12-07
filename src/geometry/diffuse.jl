@@ -57,7 +57,6 @@ draw_step(current :: Spin, diffusivity :: Float, timestep :: Float, geometry :: 
 draw_step(current :: Spin, diffusivity :: Float, timestep :: Float, geometry :: AbstractVector{<:Obstruction}) = draw_step(current, diffusivity, timestep, Tuple(geometry))
 function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, geometry::Tuple) where {N}
     proposed = draw_step(current, diffusivity, timestep)
-    displacement = norm(current.position .- proposed.position)
     collision = empty_collision
 
     current_pos = current.position
@@ -77,10 +76,11 @@ function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, 
 
             orient = transfer(orient, ObstructionProperties(collision))
 
+            direction = new_pos .- current_pos
+            reflection = - 2 * (collision.normal ⋅ direction) * collision.normal / norm(collision.normal) ^ 2 .+ direction
+
             current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
-            direction = random_on_sphere()
-            displacement = (1 - collision.distance) * displacement
-            new_pos = current_pos .+ (sign(direction ⋅ collision.normal) * displacement) .* direction
+            new_pos = current_pos .+ reflection / norm(reflection) * norm(direction) * (1 - collision.distance)
         end
     end
     if collision !== empty_collision
