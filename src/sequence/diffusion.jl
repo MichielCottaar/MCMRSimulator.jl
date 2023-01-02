@@ -135,36 +135,101 @@ end
 
 
 function dwi_gradients_1D(;
-    TE=80.,
+    TE=nothing, # ask michiel about default TE
     bval=nothing,
     qval=nothing,
-    gradient_strength=nothing,
+    gradient_strength=nothing, # in mT/m
+    gradient_duration=nothing, # gradient_duration defined as the duration where gradient strength equals the gradient_strength, the same as in the equation, ALL TIME ARGS ARE IN MILLISECOND.
+    diffusion_time=nothing,
     readout_time=0.,
     scanner=Scanner(B0=3.)
 )
-    if isinf(scanner.gradient) || isinf(scanner.slew_rate)
-        ramp_time = 0.
+    # if isinf(scanner.gradient) || isinf(scanner.slew_rate)
+    #     ramp_time = 0.
+    # else
+    #     ramp_time = scanner.gradient / scanner.slew_rate
+    # end
+    # total_pulse_time = (TE - readout_time) / 2 # TE - 0.5*readout_time?
+    # pulse_duration = total_pulse_time - ramp_time
+
+    # diffusion_time = TE/2
+    # t1 = 0.
+    # t2 = TE/2
+
+    # if isnothing(gradient_strength)
+    #     if isnothing(qval)
+    #         if isnothing(bval) || iszero(bval)
+    #             # no diffusion weighting
+    #             return [(t1, 0.)]
+    #         end
+    #         qval = sqrt(bval / (diffusion_time - pulse_duration/3))
+    #     end
+    #     gradient_strength = 1e3 * (qval / (gyromagnetic_ratio * pulse_duration))  # in mT/m
+    # end
+    # @assert gradient_strength <= scanner.gradient "Requested gradient strength exceeds scanner limits"
+
+    # determine ramp time, diffusion time and gradient duration and the timing of gradients
+    if isnothing(TE)  # ask michiel about default TE
+        error("No TE provided")
     else
-        ramp_time = scanner.gradient / scanner.slew_rate
-    end
-    total_pulse_time = (TE - readout_time) / 2
-    pulse_duration = total_pulse_time - ramp_time
-
-    diffusion_time = TE/2
-    t1 = 0.
-    t2 = TE/2
-
-    if isnothing(gradient_strength)
-        if isnothing(qval)
-            if isnothing(bval) || iszero(bval)
-                # no diffusion weighting
-                return [(t1, 0.)]
-            end
-            qval = sqrt(bval / (diffusion_time - pulse_duration/3))
+        if isinf(scanner.gradient) || isinf(scanner.slew_rate) # Maybe implement a check for only inf gradient max in scanner()?
+            ramp_time = 0.
+        else
+            ramp_time = scanner.gradient / scanner.slew_rate
         end
-        gradient_strength = 1e3 * (qval / (gyromagnetic_ratio * pulse_duration))  # in mT/m
+
+        if isnothing(diffusion_time)
+            diffusion_time = TE/2
+            if isnothing(gradient_duration)
+                gradient_duration = (TE - readout_time)/2 - ramp_time*2
+            else
+                if gradient_duration == 0
+                    if isnothing(gradient_strength)
+                        # s = perfect_dwi(TE=TE, TR=TR, bval=bval, diffusion_time=diffusion_time, qval=qval, orientation=orientation)
+                        # return s.gradient
+                        error("This case should have been dealt with in dwi, if you see this there's a problem")
+                    else
+                        error("Can't have defined gradient strength when using instantaneous gradients")
+                    end
+                elseif gradient_duration + diffusion_time + ramp_time*2 + readout_time/2 <= TE
+                    t1, t2 = fit_time(gradient_duration=gradient_duration, diffusion_time=diffusion_time, ramp_time=ramp_time, readout_time=readout_time, TE=TE)
+                else
+                    error("The timings specified cannot be fit within the given TE") # Since ramp time here is calculated from (max grad/ max slew rate), there may exist cases where the function will regard realistic sequences as unrealistic.
+                end
+            end
+        else
+            if isnothing(gradient_duration)
+                if diffusion_time + 2*ramp_time + readout_time/2 <= TE
+                    gradient_duration = min(TE - (diffusion_time + 2*ramp_time + readout_time/2), diffusion_time, (TE - readout_time)/2 - 2*ramp_time)
+                    t1, t2 = fit_time(gradient_duration=gradient_duration, diffusion_time=diffusion_time, ramp_time=ramp_time, readout_time=readout_time, TE=TE)
+                else
+                    error("No time is left for applying the gradient")
+                end
+            elseif TE >= gradient_duration + diffusion_time + 2*ramp_time + readout_time
+                t1, t2 = fit_time(gradient_duration=gradient_duration, diffusion_time=diffusion_time, ramp_time=ramp_time, readout_time=readout_time, TE=TE)
+            else
+                error("TE is too short to fit everything in")
+            end
+        end
     end
-    @assert gradient_strength <= scanner.gradient "Requested gradient strength exceeds scanner limits"
+
+    pulse_duration = gradient_duration + ramp_time
+
+    if sum(isnothing.([bval, qval, gradient_strength])) != 2
+        error("One and only one of the bval, qval, grdient_strength has to be defined")
+    elseif !isnothing(bval)
+        gradient_strength = 2*pi*1e6*sqrt(bval/(((diffusion_time - gradient_duration/3)*gradient_duration^2 + (ramp_time^3)/20 - (gradient_duration*ramp_time^2)/6)*(gyromagnetic_ratio^2)))
+    elseif !isnothing(qval)
+        gradient_strength = 1e3*qval/gradient_duration/gyromagnetic_ratio
+    elseif !isnothing(gradient_strength)
+        # just calculate for potential checks
+        qval = gradient_strength*gradient_duration*gyromagnetic_ratio/1000
+        bval = (((diffusion_time - gradient_duration/3)*gradient_duration^2 + (ramp_time^3)/20 - (gradient_duration*ramp_time^2)/6)*(gyromagnetic_ratio^2))*(2*pi*1e6*gradient_strength)^2
+    end
+
+
+
+
     return [
         (t1, 0.),
         (t1 + ramp_time, gradient_strength),
@@ -177,3 +242,14 @@ function dwi_gradients_1D(;
     ]
 end
 
+function fit_time(gradient_duration=nothing, diffusion_time=nothing, ramp_time=nothing, readout_time=nothing, TE=nothing) 
+    # this function is not supposed to be called individually! So no check for the arguments will happen, assuming all have been checked by dwi_gradients_1D and all will not be nothing.
+    if (diffusion_time + gradient_duration)/2 + ramp_time <= (TE - readout_time)/2 # Check the feasibility of symmetric arrangement
+        t1 = TE/2 - ((diffusion_time + gradient_duration)/2 + ramp_time)
+        t2 = (TE + diffusion_time - gradient_duration)/2 - ramp_time # Actually just t1 + diffusion_time
+    else
+        t2 = TE/2
+        t1 = TE/2 - diffusion_time # Actually just t2 - diffusion_time
+    end
+    return [t1, t2]
+end
