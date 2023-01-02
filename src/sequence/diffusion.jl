@@ -120,9 +120,9 @@ function dwi(;
     if !isnothing(gradient_duration) && iszero(gradient_duration)
         return perfect_dwi(TE=TE, TR=TR, bval=bval, diffusion_time=diffusion_time, qval=qval, orientation=orientation)
     end
-    if !isnothing(diffusion_time) || !isnothing(gradient_duration)
-        error("Custom diffusion times not implemented yet for finite gradients. Either set gradient_duration to zero or don't set the diffusion time.")
-    end
+    # if !isnothing(diffusion_time) || !isnothing(gradient_duration)
+    #     error("Custom diffusion times not implemented yet for finite gradients. Either set gradient_duration to zero or don't set the diffusion time.")
+    # end
     grad_1D = dwi_gradients_1D(TE=TE, bval=bval, qval=qval, readout_time=readout_time, scanner=scanner)
     grad = rotate_bvec(grad_1D, orientation)
     pulses = SequenceComponent[
