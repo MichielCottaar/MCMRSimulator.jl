@@ -179,6 +179,13 @@ end
             t2 = [s[1] for s in mr.trajectory(spin, env, 1:5)]
             @test all(t1 .== t2)
         end
+        @testset "Reproducible evolution given bval" begin
+            spin = mr.Spin()
+            env = mr.Simulation(mr.dwi(bval=1.), diffusivity=3.)
+            t1 = [s[1] for s in mr.trajectory(spin, env, 1:5)]
+            t2 = [s[1] for s in mr.trajectory(spin, env, 1:5)]
+            @test all(t1 .== t2)
+        end
     end
     @testset "Bounding boxes" begin
         # single obstruction

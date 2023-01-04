@@ -217,7 +217,7 @@ function dwi_gradients_1D(;
     end
 
     pulse_duration = gradient_duration + ramp_time
-
+    # in previous version, when b|q|G == 0 it just returns [t1,0], is it necessary?
     if sum(isnothing.([bval, qval, gradient_strength])) != 2
         error("One and only one of the bval, qval, grdient_strength has to be defined")
     elseif !isnothing(bval)
