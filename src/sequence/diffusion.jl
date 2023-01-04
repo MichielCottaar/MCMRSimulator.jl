@@ -14,7 +14,7 @@ The strength of the diffusion weighting can be defined in 3 ways:
 If all three are defined an AssertionError is raised if they do not agree with each other.
 
 Assumes equation of ``b = q^2 \\Delta``, where
-- `bval` is the diffusion-weighted strength (b-value) in ``s/mm^2``.
+- `bval` is the diffusion-weighted strength (b-value) in ``s/mm^2``.   ZZY: Apparently b is in ms/um^2?
 - `qval` is the gradient applied due to the diffusion-weighted gradients in the spin phase field (``rad/\\mu m``). 
     For a square pulse this is computed as ``\\gamma G \\delta``.
 - `diffusion_time` (``\\Delta``) is the diffusion time defined for infinitely short pulses as the time between the diffusion-weighted gradients (in ``ms``).
@@ -112,6 +112,7 @@ function dwi(;
     bval=nothing,
     diffusion_time=nothing,
     qval=nothing,
+    gradient_strength=nothing, # in mT/m
     gradient_duration=nothing,
     readout_time=0.,
     orientation=SVector{3, Float}([1., 0., 0.]),
@@ -123,7 +124,7 @@ function dwi(;
     # if !isnothing(diffusion_time) || !isnothing(gradient_duration)
     #     error("Custom diffusion times not implemented yet for finite gradients. Either set gradient_duration to zero or don't set the diffusion time.")
     # end
-    grad_1D = dwi_gradients_1D(TE=TE, bval=bval, qval=qval, readout_time=readout_time, scanner=scanner)
+    grad_1D = dwi_gradients_1D(TE=TE, bval=bval, qval=qval, gradient_strength=gradient_strength, gradient_duration=gradient_duration, diffusion_time=diffusion_time, readout_time=readout_time, scanner=scanner)
     grad = rotate_bvec(grad_1D, orientation)
     pulses = SequenceComponent[
         RFPulse(time=0., flip_angle=90., phase=-90.),
@@ -172,6 +173,8 @@ function dwi_gradients_1D(;
     if isnothing(TE)  # ask michiel about default TE
         error("No TE provided")
     else
+        t1 = 0.
+        t2 = TE/2
         if isinf(scanner.gradient) || isinf(scanner.slew_rate) # Maybe implement a check for only inf gradient max in scanner()?
             ramp_time = 0.
         else
@@ -218,17 +221,15 @@ function dwi_gradients_1D(;
     if sum(isnothing.([bval, qval, gradient_strength])) != 2
         error("One and only one of the bval, qval, grdient_strength has to be defined")
     elseif !isnothing(bval)
-        gradient_strength = 2*pi*1e6*sqrt(bval/(((diffusion_time - gradient_duration/3)*gradient_duration^2 + (ramp_time^3)/20 - (gradient_duration*ramp_time^2)/6)*(gyromagnetic_ratio^2)))
+        # gradient_strength = 2*pi*1e6*sqrt(bval/(((diffusion_time - gradient_duration/3)*gradient_duration^2 + (ramp_time^3)/20 - (gradient_duration*ramp_time^2)/6)*(gyromagnetic_ratio^2))) # Ask michiel what's wrong
+        gradient_strength = 1e3*sqrt(bval/(((diffusion_time - gradient_duration/3)*gradient_duration^2 + (ramp_time^3)/20 - (gradient_duration*ramp_time^2)/6)*(gyromagnetic_ratio^2)))
     elseif !isnothing(qval)
         gradient_strength = 1e3*qval/gradient_duration/gyromagnetic_ratio
     elseif !isnothing(gradient_strength)
         # just calculate for potential checks
         qval = gradient_strength*gradient_duration*gyromagnetic_ratio/1000
-        bval = (((diffusion_time - gradient_duration/3)*gradient_duration^2 + (ramp_time^3)/20 - (gradient_duration*ramp_time^2)/6)*(gyromagnetic_ratio^2))*(2*pi*1e6*gradient_strength)^2
+        bval = (((diffusion_time - gradient_duration/3)*gradient_duration^2 + (ramp_time^3)/20 - (gradient_duration*ramp_time^2)/6)*(gyromagnetic_ratio^2))*(1e3*gradient_strength)^2
     end
-
-
-
 
     return [
         (t1, 0.),
@@ -241,9 +242,22 @@ function dwi_gradients_1D(;
         (t2 + pulse_duration + ramp_time, 0.),
     ]
 end
+""" 
+    fit_time(gradient_duration=nothing, diffusion_time=nothing, ramp_time=nothing, readout_time=nothing, TE=nothing)
 
-function fit_time(gradient_duration=nothing, diffusion_time=nothing, ramp_time=nothing, readout_time=nothing, TE=nothing) 
-    # this function is not supposed to be called individually! So no check for the arguments will happen, assuming all have been checked by dwi_gradients_1D and all will not be nothing.
+Arranges the timing of gradients given the duration of gradient, diffusion time, ramp time, readout time and TE. By default it will try to arrange to gradients symmetrically arround the 180 degree pulse.
+If not feasible, it will make readout right after the rephasing gradient and calculate the dephasing gradient's timing based on the rephasing gradient.
+
+This function is not supposed to be called individually! So no check for the arguments will happen, assuming all have been checked by dwi_gradients_1D and all will not be nothing.
+
+"""
+function fit_time(;
+    gradient_duration=nothing, 
+    diffusion_time=nothing, 
+    ramp_time=nothing, 
+    readout_time=nothing, 
+    TE=nothing
+) 
     if (diffusion_time + gradient_duration)/2 + ramp_time <= (TE - readout_time)/2 # Check the feasibility of symmetric arrangement
         t1 = TE/2 - ((diffusion_time + gradient_duration)/2 + ramp_time)
         t2 = (TE + diffusion_time - gradient_duration)/2 - ramp_time # Actually just t1 + diffusion_time
