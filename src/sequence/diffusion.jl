@@ -208,7 +208,7 @@ function dwi_gradients_1D(;
                 else
                     error("No time is left for applying the gradient")
                 end
-            elseif TE >= gradient_duration + diffusion_time + 2*ramp_time + readout_time
+            elseif TE >= gradient_duration + diffusion_time + 2*ramp_time + readout_time/2
                 t1, t2 = fit_time(gradient_duration=gradient_duration, diffusion_time=diffusion_time, ramp_time=ramp_time, readout_time=readout_time, TE=TE)
             else
                 error("TE is too short to fit everything in")
@@ -230,6 +230,7 @@ function dwi_gradients_1D(;
         qval = gradient_strength*gradient_duration*gyromagnetic_ratio/1000
         bval = (((diffusion_time - gradient_duration/3)*gradient_duration^2 + (ramp_time^3)/20 - (gradient_duration*ramp_time^2)/6)*(gyromagnetic_ratio^2))*(1e3*gradient_strength)^2
     end
+    @assert gradient_strength <= scanner.gradient "Requested gradient strength exceeds scanner limits"
 
     return [
         (t1, 0.),
@@ -260,10 +261,10 @@ function fit_time(;
 ) 
     if (diffusion_time + gradient_duration)/2 + ramp_time <= (TE - readout_time)/2 # Check the feasibility of symmetric arrangement
         t1 = TE/2 - ((diffusion_time + gradient_duration)/2 + ramp_time)
-        t2 = (TE + diffusion_time - gradient_duration)/2 - ramp_time # Actually just t1 + diffusion_time
+        t2 = t1 + diffusion_time
     else
-        t2 = TE/2
-        t1 = TE/2 - diffusion_time # Actually just t2 - diffusion_time
+        t2 = TE - readout_time/2 - 2*ramp_time - gradient_duration
+        t1 = t2 - diffusion_time
     end
     return [t1, t2]
 end
