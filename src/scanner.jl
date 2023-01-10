@@ -10,7 +10,12 @@ struct Scanner
     B0::Float
     gradient::Float
     slew_rate::Float
-    Scanner(;B0=3., gradient=Inf, slew_rate=Inf) = new(Float(B0), Float(gradient), Float(slew_rate))
+    function Scanner(;B0=3., gradient=Inf, slew_rate=Inf)
+        if isinf(gradient) && !isinf(slew_rate)
+            error("Can't have infinite gradient strength with finite slew rate.")
+        end
+        new(Float(B0), Float(gradient), Float(slew_rate))
+    end
 end
 
 

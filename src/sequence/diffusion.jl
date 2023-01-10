@@ -184,7 +184,7 @@ function dwi_gradients_1D(;
         if isnothing(diffusion_time)
             diffusion_time = TE/2
             if isnothing(gradient_duration)
-                gradient_duration = (TE - readout_time)/2 - ramp_time*2
+                gradient_duration = (TE - readout_time)/2 - ramp_time
             else
                 if gradient_duration == 0
                     if isnothing(gradient_strength)
@@ -194,7 +194,7 @@ function dwi_gradients_1D(;
                     else
                         error("Can't have defined gradient strength when using instantaneous gradients")
                     end
-                elseif gradient_duration + diffusion_time + ramp_time*2 + readout_time/2 <= TE
+                elseif gradient_duration + diffusion_time + ramp_time + readout_time/2 <= TE
                     t1, t2 = fit_time(gradient_duration=gradient_duration, diffusion_time=diffusion_time, ramp_time=ramp_time, readout_time=readout_time, TE=TE)
                 else
                     error("The timings specified cannot be fit within the given TE") # Since ramp time here is calculated from (max grad/ max slew rate), there may exist cases where the function will regard realistic sequences as unrealistic.
@@ -202,21 +202,26 @@ function dwi_gradients_1D(;
             end
         else
             if isnothing(gradient_duration)
-                if diffusion_time + 2*ramp_time + readout_time/2 <= TE
-                    gradient_duration = min(TE - (diffusion_time + 2*ramp_time + readout_time/2), diffusion_time, (TE - readout_time)/2 - 2*ramp_time)
+                if diffusion_time + ramp_time + readout_time/2 <= TE
+                    gradient_duration = min(TE - (diffusion_time + ramp_time + readout_time/2), diffusion_time, (TE - readout_time)/2 - ramp_time)
                     t1, t2 = fit_time(gradient_duration=gradient_duration, diffusion_time=diffusion_time, ramp_time=ramp_time, readout_time=readout_time, TE=TE)
                 else
                     error("No time is left for applying the gradient")
                 end
-            elseif TE >= gradient_duration + diffusion_time + 2*ramp_time + readout_time/2
+            elseif TE >= gradient_duration + diffusion_time + ramp_time + readout_time/2
                 t1, t2 = fit_time(gradient_duration=gradient_duration, diffusion_time=diffusion_time, ramp_time=ramp_time, readout_time=readout_time, TE=TE)
             else
                 error("TE is too short to fit everything in")
             end
         end
+        
+        if ramp_time > gradient_duration
+            error("Gradient duration needs to be longer than or equal to the ramp time")
+        end
     end
 
-    pulse_duration = gradient_duration + ramp_time
+
+    pulse_duration = gradient_duration
     # in previous version, when b|q|G == 0 it just returns [t1,0], is it necessary?
     if sum(isnothing.([bval, qval, gradient_strength])) != 2
         error("One and only one of the bval, qval, grdient_strength has to be defined")
@@ -259,11 +264,11 @@ function fit_time(;
     readout_time=nothing, 
     TE=nothing
 ) 
-    if (diffusion_time + gradient_duration)/2 + ramp_time <= (TE - readout_time)/2 # Check the feasibility of symmetric arrangement
-        t1 = TE/2 - ((diffusion_time + gradient_duration)/2 + ramp_time)
+    if (diffusion_time + gradient_duration + ramp_time)/2 <= (TE - readout_time)/2 # Check the feasibility of symmetric arrangement
+        t1 = TE/2 - ((diffusion_time + gradient_duration + ramp_time)/2)
         t2 = t1 + diffusion_time
     else
-        t2 = TE - readout_time/2 - 2*ramp_time - gradient_duration
+        t2 = TE - readout_time/2 - ramp_time - gradient_duration
         t1 = t2 - diffusion_time
     end
     return [t1, t2]
