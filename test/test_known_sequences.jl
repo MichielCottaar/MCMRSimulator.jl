@@ -13,9 +13,18 @@
             @test_throws AssertionError mr.derive_qval_time(80., qval=1., diffusion_time=2., bval=0.)
         end
         @testset "PGSE with various gradient durations and no diffusion" begin
-            for δ in [0., 0.01, 39., nothing]
+            for (δ, Δ) in [
+                (nothing, 0.1),
+                (0.1, 0.1),
+                (0.1, 70.),
+                (nothing, nothing),
+                (0.1, nothing),
+                (0, nothing),
+                (0, 70),
+                (0, 0.1),
+            ]
                 nspins = 300
-                sequence = mr.dwi(bval=2., TE=80., gradient_duration=δ)
+                sequence = mr.dwi(bval=2., TE=80., gradient_duration=δ, diffusion_time=Δ)
                 sim = mr.Simulation([sequence])
                 readout = mr.readout(nspins, sim)
                 @test length(readout[1]) == 1
@@ -25,10 +34,19 @@
             end
         end
         @testset "PGSE with various gradient durations and free diffusion" begin
-            for δ in [0., 0.01, 39., nothing]
+            for (δ, Δ) in [
+                (nothing, 0.1),
+                (0.1, 0.1),
+                (0.1, 70.),
+                (nothing, nothing),
+                (0.1, nothing),
+                (0, nothing),
+                (0, 70),
+                (0, 0.1),
+            ]
                 nspins = 3000
                 TE = 80.
-                sequence = mr.dwi(bval=0.3, TE=TE, gradient_duration=δ)
+                sequence = mr.dwi(bval=0.3, TE=TE, gradient_duration=δ, diffusion_time=Δ)
                 sim = mr.Simulation([sequence], diffusivity=0.5)
                 readout = mr.readout(nspins, sim)
                 snap = readout[1][1]
