@@ -35,14 +35,14 @@
         end
         @testset "PGSE with various gradient durations and free diffusion" begin
             for (δ, Δ) in [
-                (nothing, 0.1),
-                (0.1, 0.1),
-                (0.1, 70.),
+                (nothing, 1),
+                (1, 1),
+                (1, 70.),
                 (nothing, nothing),
-                (0.1, nothing),
+                (1, nothing),
                 (0, nothing),
                 (0, 70),
-                (0, 0.1),
+                (0, 1),
             ]
                 nspins = 3000
                 TE = 80.
