@@ -195,14 +195,12 @@ function dwi_gradients_1D(;
     pulse_duration = gradient_duration
     if sum(isnothing.([bval, qval, gradient_strength])) != 2
         error("One and only one of the bval, qval, grdient_strength has to be defined")
-    elseif !isnothing(bval)
+    end
+    
+    if !isnothing(bval)
         gradient_strength = 1e3*sqrt(bval/(((diffusion_time - gradient_duration/3)*gradient_duration^2 + (ramp_time^3)/20 - (gradient_duration*ramp_time^2)/6)*(gyromagnetic_ratio^2)))
     elseif !isnothing(qval)
         gradient_strength = 1e3*qval/gradient_duration/gyromagnetic_ratio
-    elseif !isnothing(gradient_strength)
-        # just calculate for potential checks
-        qval = gradient_strength*gradient_duration*gyromagnetic_ratio/1000
-        bval = (((diffusion_time - gradient_duration/3)*gradient_duration^2 + (ramp_time^3)/20 - (gradient_duration*ramp_time^2)/6)*(gyromagnetic_ratio^2))*(1e3*gradient_strength)^2
     end
     @assert gradient_strength <= scanner.gradient "Requested gradient strength exceeds scanner limits"
 
