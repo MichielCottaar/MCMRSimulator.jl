@@ -174,7 +174,7 @@ end
         end
         @testset "Reproducible evolution" begin
             spin = mr.Spin()
-            env = mr.Simulation(mr.dwi(), diffusivity=3.)
+            env = mr.Simulation([], diffusivity=3.)
             t1 = [s[1] for s in mr.trajectory(spin, env, 1:5)]
             t2 = [s[1] for s in mr.trajectory(spin, env, 1:5)]
             @test all(t1 .== t2)
