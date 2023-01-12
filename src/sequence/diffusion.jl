@@ -136,7 +136,7 @@ end
 
 
 function dwi_gradients_1D(;
-    TE=nothing, # ask michiel about default TE
+    TE,
     bval=nothing,
     qval=nothing,
     gradient_strength=nothing, # in mT/m
@@ -145,80 +145,53 @@ function dwi_gradients_1D(;
     readout_time=0.,
     scanner=Scanner(B0=3.)
 )
-    # if isinf(scanner.gradient) || isinf(scanner.slew_rate)
-    #     ramp_time = 0.
-    # else
-    #     ramp_time = scanner.gradient / scanner.slew_rate
-    # end
-    # total_pulse_time = (TE - readout_time) / 2 # TE - 0.5*readout_time?
-    # pulse_duration = total_pulse_time - ramp_time
-
-    # diffusion_time = TE/2
-    # t1 = 0.
-    # t2 = TE/2
-
-    # if isnothing(gradient_strength)
-    #     if isnothing(qval)
-    #         if isnothing(bval) || iszero(bval)
-    #             # no diffusion weighting
-    #             return [(t1, 0.)]
-    #         end
-    #         qval = sqrt(bval / (diffusion_time - pulse_duration/3))
-    #     end
-    #     gradient_strength = 1e3 * (qval / (gyromagnetic_ratio * pulse_duration))  # in mT/m
-    # end
-    # @assert gradient_strength <= scanner.gradient "Requested gradient strength exceeds scanner limits"
-
     # determine ramp time, diffusion time and gradient duration and the timing of gradients
-    if isnothing(TE)  # ask michiel about default TE
-        error("No TE provided")
+    t1 = 0.
+    t2 = TE/2
+    if isinf(scanner.gradient) || isinf(scanner.slew_rate) # Maybe implement a check for only inf gradient max in scanner()?
+        ramp_time = 0.
     else
-        t1 = 0.
-        t2 = TE/2
-        if isinf(scanner.gradient) || isinf(scanner.slew_rate) # Maybe implement a check for only inf gradient max in scanner()?
-            ramp_time = 0.
-        else
-            ramp_time = scanner.gradient / scanner.slew_rate
-        end
+        ramp_time = scanner.gradient / scanner.slew_rate
+    end
 
-        if isnothing(diffusion_time)
-            diffusion_time = TE/2
-            if isnothing(gradient_duration)
-                gradient_duration = (TE - readout_time)/2 - ramp_time
-            else
-                if gradient_duration == 0
-                    if isnothing(gradient_strength)
-                        # s = perfect_dwi(TE=TE, TR=TR, bval=bval, diffusion_time=diffusion_time, qval=qval, orientation=orientation)
-                        # return s.gradient
-                        error("This case should have been dealt with in dwi, if you see this there's a problem")
-                    else
-                        error("Can't have defined gradient strength when using instantaneous gradients")
-                    end
-                elseif gradient_duration + diffusion_time + ramp_time + readout_time/2 <= TE
-                    t1, t2 = fit_time(gradient_duration=gradient_duration, diffusion_time=diffusion_time, ramp_time=ramp_time, readout_time=readout_time, TE=TE)
-                else
-                    error("The timings specified cannot be fit within the given TE") # Since ramp time here is calculated from (max grad/ max slew rate), there may exist cases where the function will regard realistic sequences as unrealistic.
-                end
-            end
+    if isnothing(diffusion_time)
+        diffusion_time = TE/2
+        if isnothing(gradient_duration)
+            gradient_duration = (TE - readout_time)/2 - ramp_time
         else
-            if isnothing(gradient_duration)
-                if diffusion_time + ramp_time + readout_time/2 <= TE
-                    gradient_duration = min(TE - (diffusion_time + ramp_time + readout_time/2), diffusion_time, (TE - readout_time)/2 - ramp_time)
-                    t1, t2 = fit_time(gradient_duration=gradient_duration, diffusion_time=diffusion_time, ramp_time=ramp_time, readout_time=readout_time, TE=TE)
+            if gradient_duration == 0
+                if isnothing(gradient_strength)
+                    # s = perfect_dwi(TE=TE, TR=TR, bval=bval, diffusion_time=diffusion_time, qval=qval, orientation=orientation)
+                    # return s.gradient
+                    error("This case should have been dealt with in dwi, if you see this there's a problem")
                 else
-                    error("No time is left for applying the gradient")
+                    error("Can't have defined gradient strength when using instantaneous gradients")
                 end
-            elseif TE >= gradient_duration + diffusion_time + ramp_time + readout_time/2
+            elseif gradient_duration + diffusion_time + ramp_time + readout_time/2 <= TE
                 t1, t2 = fit_time(gradient_duration=gradient_duration, diffusion_time=diffusion_time, ramp_time=ramp_time, readout_time=readout_time, TE=TE)
             else
-                error("TE is too short to fit everything in")
+                error("The timings specified cannot be fit within the given TE") # Since ramp time here is calculated from (max grad/ max slew rate), there may exist cases where the function will regard realistic sequences as unrealistic.
             end
         end
-        
-        if ramp_time > gradient_duration
-            error("Gradient duration needs to be longer than or equal to the ramp time")
+    else
+        if isnothing(gradient_duration)
+            if diffusion_time + ramp_time + readout_time/2 <= TE
+                gradient_duration = min(TE - (diffusion_time + ramp_time + readout_time/2), diffusion_time, (TE - readout_time)/2 - ramp_time)
+                t1, t2 = fit_time(gradient_duration=gradient_duration, diffusion_time=diffusion_time, ramp_time=ramp_time, readout_time=readout_time, TE=TE)
+            else
+                error("No time is left for applying the gradient")
+            end
+        elseif TE >= gradient_duration + diffusion_time + ramp_time + readout_time/2
+            t1, t2 = fit_time(gradient_duration=gradient_duration, diffusion_time=diffusion_time, ramp_time=ramp_time, readout_time=readout_time, TE=TE)
+        else
+            error("TE is too short to fit everything in")
         end
     end
+    
+    if ramp_time > gradient_duration
+        error("Gradient duration needs to be longer than or equal to the ramp time")
+    end
+
 
 
     pulse_duration = gradient_duration
