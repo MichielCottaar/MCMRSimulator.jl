@@ -161,8 +161,6 @@ function dwi_gradients_1D(;
         else
             if gradient_duration == 0
                 if isnothing(gradient_strength)
-                    # s = perfect_dwi(TE=TE, TR=TR, bval=bval, diffusion_time=diffusion_time, qval=qval, orientation=orientation)
-                    # return s.gradient
                     error("This case should have been dealt with in dwi, if you see this there's a problem")
                 else
                     error("Can't have defined gradient strength when using instantaneous gradients")
@@ -195,11 +193,9 @@ function dwi_gradients_1D(;
 
 
     pulse_duration = gradient_duration
-    # in previous version, when b|q|G == 0 it just returns [t1,0], is it necessary?
     if sum(isnothing.([bval, qval, gradient_strength])) != 2
         error("One and only one of the bval, qval, grdient_strength has to be defined")
     elseif !isnothing(bval)
-        # gradient_strength = 2*pi*1e6*sqrt(bval/(((diffusion_time - gradient_duration/3)*gradient_duration^2 + (ramp_time^3)/20 - (gradient_duration*ramp_time^2)/6)*(gyromagnetic_ratio^2))) # Ask michiel what's wrong
         gradient_strength = 1e3*sqrt(bval/(((diffusion_time - gradient_duration/3)*gradient_duration^2 + (ramp_time^3)/20 - (gradient_duration*ramp_time^2)/6)*(gyromagnetic_ratio^2)))
     elseif !isnothing(qval)
         gradient_strength = 1e3*qval/gradient_duration/gyromagnetic_ratio
@@ -221,6 +217,8 @@ function dwi_gradients_1D(;
         (t2 + pulse_duration + ramp_time, 0.),
     ]
 end
+
+
 """ 
     fit_time(gradient_duration=nothing, diffusion_time=nothing, ramp_time=nothing, readout_time=nothing, TE=nothing)
 
