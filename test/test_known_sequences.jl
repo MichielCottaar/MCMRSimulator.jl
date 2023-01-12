@@ -12,8 +12,8 @@
 
             @test_throws AssertionError mr.derive_qval_time(80., qval=1., diffusion_time=2., bval=0.)
         end
-        @testset "PGSE with instanteneous or finite gradients and no diffusion" begin
-            for δ in [nothing, 0.]
+        @testset "PGSE with various gradient durations and no diffusion" begin
+            for δ in [0., 0.01, 39., nothing]
                 nspins = 300
                 sequence = mr.dwi(bval=2., TE=80., gradient_duration=δ)
                 sim = mr.Simulation([sequence])
@@ -24,8 +24,8 @@
                 @test mr.transverse(snap) ≈ nspins rtol=1e-2
             end
         end
-        @testset "PGSE with instanteneous or finite gradients and free diffusion" begin
-            for δ in [nothing, 0.]
+        @testset "PGSE with various gradient durations and free diffusion" begin
+            for δ in [0., 0.01, 39., nothing]
                 nspins = 3000
                 TE = 80.
                 sequence = mr.dwi(bval=0.3, TE=TE, gradient_duration=δ)
