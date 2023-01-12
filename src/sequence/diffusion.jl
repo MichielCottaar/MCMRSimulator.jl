@@ -218,7 +218,7 @@ end
 
 
 """ 
-    fit_time(gradient_duration=nothing, diffusion_time=nothing, ramp_time=nothing, readout_time=nothing, TE=nothing)
+    fit_time(gradient_duration, diffusion_time, ramp_time, readout_time, TE)
 
 Arranges the timing of gradients given the duration of gradient, diffusion time, ramp time, readout time and TE. By default it will try to arrange to gradients symmetrically arround the 180 degree pulse.
 If not feasible, it will make readout right after the rephasing gradient and calculate the dephasing gradient's timing based on the rephasing gradient.
@@ -227,11 +227,11 @@ This function is not supposed to be called individually! So no check for the arg
 
 """
 function fit_time(;
-    gradient_duration=nothing, 
-    diffusion_time=nothing, 
-    ramp_time=nothing, 
-    readout_time=nothing, 
-    TE=nothing
+    gradient_duration, 
+    diffusion_time, 
+    ramp_time, 
+    readout_time, 
+    TE
 ) 
     if (diffusion_time + gradient_duration + ramp_time)/2 <= (TE - readout_time)/2 # Check the feasibility of symmetric arrangement
         t1 = TE/2 - ((diffusion_time + gradient_duration + ramp_time)/2)
