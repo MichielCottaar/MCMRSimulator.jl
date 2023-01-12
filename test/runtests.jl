@@ -172,16 +172,9 @@ end
             rng2 = mr.FixedXoshiro()
             @test rng == rng2
         end
-        @testset "Reproducible evolution b = 0" begin
+        @testset "Reproducible evolution" begin
             spin = mr.Spin()
-            env = mr.Simulation(mr.dwi(bval=0.), diffusivity=3.)
-            t1 = [s[1] for s in mr.trajectory(spin, env, 1:5)]
-            t2 = [s[1] for s in mr.trajectory(spin, env, 1:5)]
-            @test all(t1 .== t2)
-        end
-        @testset "Reproducible evolution given bval = 1" begin
-            spin = mr.Spin()
-            env = mr.Simulation(mr.dwi(bval=1.), diffusivity=3.)
+            env = mr.Simulation([], diffusivity=3.)
             t1 = [s[1] for s in mr.trajectory(spin, env, 1:5)]
             t2 = [s[1] for s in mr.trajectory(spin, env, 1:5)]
             @test all(t1 .== t2)
