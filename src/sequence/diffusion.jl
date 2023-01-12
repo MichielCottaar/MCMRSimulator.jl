@@ -93,16 +93,16 @@ function perfect_dwi(;
 end
 
 """
-    dwi(; TE=80., TR=2000., bval=nothing, diffusion_time=nothing, qval=nothing, gradient_duration=nothing, readout_time=0., scanner=Scanner(B0=3.), orientation = [0, 0, 1.])
+    dwi(; TE=80., TR=2000., bval/qval/gradient_strength, diffusion_time=TE/2, gradient_duration, readout_time=0., scanner=Scanner(B0=3.), orientation = [1., 0, 0])
 
 Creates a diffusion-weighted pulsed gradient spin echo MRI sequence
 
 The timings of the RF pulses is set by `TE` and `TR`. 
-The gradient timings will also be affected by `gradient_duration`, `diffusion_time`, `scanner` and `readout_time`:
+The gradient timings will also be affected by `gradient_duration`, `diffusion_time`, `scanner` (which sets the ramp time) and `readout_time`:
 - By default the gradient durations are set to the maximum value possible within the echo time (`TE`) keeping in mind the time needed for the MR readout (`readout_time`) and the time needed to ramp to the maximum gradient strength (set by the `scanner`).
 - When `gradient_duration` is set to 0, the gradient pulses are assumed to be instanteneous (i.e., using [`InstantGradient`](@ref)). The time between these instant gradients can be set using `diffusion_time` (defaults to `TE`/2).
 
-The strength of the diffusion gradients is set by one of `bval` or `qval`.
+The strength of the diffusion gradients is set by one of `bval`, `qval`, or `gradient_strength`.
 If this strength exceeds the maximum allowed for the `scanner` an AssertionError is raised.
 The gradient orientation is set by `orientation`.
 """
