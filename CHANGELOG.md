@@ -1,6 +1,8 @@
 # Changelog
 ## [Unreleased]
-### Bug fix
+### Added
+- Support for arbitrary gradient durations and diffusion times in `dwi` thanks to Zhiyu
+### Fixed
 - Running `signal` for a `Simulation` with multiple sequences used to crash. This has now been fixed
 - Fix bouncing between repeating walls (used to get escapees)
 ### Documentation
