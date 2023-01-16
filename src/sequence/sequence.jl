@@ -70,4 +70,5 @@ get_gradient(position, seq::Sequence, time1, time2) = get_gradient(position, seq
 get_gradient(seq::Sequence, time) = get_gradient(seq.gradient, mod(time, seq.TR))
 get_gradient(seq::Sequence, time1, time2) = get_gradient(seq.gradient, mod(time1, seq.TR), mod(time2, seq.TR))
 
+include("timestep.jl")
 include("diffusion.jl")
