@@ -26,7 +26,7 @@ pages:
       - public
   only:
     - main
-benchmark-main:
+.benchmark-main:
   image: julia:latest
   stage: deploy
   script:
@@ -37,7 +37,7 @@ benchmark-main:
     - julia benchmark/run_benchmarks.jl origin/main
   except:
     - main
-benchmark-version:
+.benchmark-version:
   image: julia:latest
   stage: deploy
   script:
