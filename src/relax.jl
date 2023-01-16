@@ -66,7 +66,6 @@ function transfer(orientation :: SpinOrientation, fraction::Float)
 end
 
 function transfer(orientations :: SVector{N, SpinOrientation}, obstruction :: ObstructionProperties, timestep :: Float) where {N}
-    fraction_base = obstruction.MT_fraction
-    fraction = 1 - (1 - fraction_base) ^ sqrt(timestep)
+    fraction = 1 - (1 - obstruction.MT_fraction) ^ sqrt(timestep)
     map(o->transfer(o, fraction), orientations)
 end

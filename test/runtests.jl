@@ -5,6 +5,7 @@ using StaticArrays
 using LinearAlgebra
 import Random
 import SpecialFunctions: erf
+using Statistics
 
 if length(ARGS) == 0
     tests = [
