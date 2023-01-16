@@ -2,6 +2,7 @@
 ## [Unreleased]
 ### Bug fix
 - Running `signal` for a `Simulation` with multiple sequences used to crash. This has now been fixed
+- Fix bouncing between repeating walls (used to get escapees)
 ### Documentation
 - Expanded README intro
 - Added citation instructions
