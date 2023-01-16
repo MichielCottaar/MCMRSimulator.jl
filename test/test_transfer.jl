@@ -6,7 +6,8 @@
 
         function test_MT_walls(wall_dist, diffusivity, timestep; nspins=100000, transfer=0.5)
             Random.seed!(1234)
-            geometry = mr.walls(MT_fraction=transfer)
+            actual_transfer = 1 - (1 - transfer) ^ (1/sqrt(timestep))
+            geometry = mr.walls(MT_fraction=actual_transfer)
             spins = [mr.Spin(position=Random.rand(3) .* wall_dist) for _ in 1:nspins]
             sequence = mr.Sequence(pulses=[mr.RFPulse(flip_angle=90)], TR=1e5)
             simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=diffusivity, timestep=timestep)
