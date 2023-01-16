@@ -23,10 +23,10 @@ Additional keyword arguments are available to set generic obstruction settings a
 walls(;kwargs...) = TransformObstruction(Wall; kwargs...)
 
 function detect_collision(movement :: Movement{1}, wall :: Wall, previous=empty_collision)
-    if id(previous) == id(wall)
+    origin = movement.origin[1]
+    if (id(previous) == id(wall)) && (abs(origin) < 1e-12)
         return empty_collision
     end
-    origin = movement.origin[1]
     destination = movement.destination[1]
     if origin * destination > 0
         return empty_collision
