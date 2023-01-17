@@ -13,10 +13,6 @@ Julia latest:
     - .ci/run_test.sh
   after_script:
     - .ci/get_coverage.sh
-Julia 1.7:
-  image: julia:1.7
-  script:
-    - .ci/run_test.sh
 pages:
   image: julia:latest
   script:
