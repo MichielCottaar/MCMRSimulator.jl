@@ -2,19 +2,20 @@ variables:
   JULIA_DEPOT_PATH: "$CI_PROJECT_DIR/.julia"
   CI: "true"
 
+default:
+  image: julia:latest
+
 cache:
   paths:
     - .julia
 
 Julia latest:
   coverage: /Test coverage (\d+\.\d+%)/
-  image: julia:latest
   script:
     - .ci/run_test.sh
   after_script:
     - .ci/get_coverage.sh
 pages:
-  image: julia:latest
   script:
     - .ci/gen_docs.sh dev
   artifacts:
@@ -23,7 +24,6 @@ pages:
   only:
     - main
 .benchmark-main:
-  image: julia:latest
   stage: deploy
   script:
     - apt-get update
@@ -34,7 +34,6 @@ pages:
   except:
     - main
 .benchmark-version:
-  image: julia:latest
   stage: deploy
   script:
     - apt-get update
