@@ -110,7 +110,7 @@
         end
         @testset "Particle remain between reflecting walls" begin
             Random.seed!(1234)
-            geometry = mr.walls(position=0.5, repeats=1)
+            geometry = mr.walls(positions=0.5, repeats=1)
             simulation = mr.Simulation([], geometry=geometry, diffusivity=3., timestep=1.)
             snap = mr.Snapshot(10000)
             snap2 = mr.evolve(snap, simulation, 100)
