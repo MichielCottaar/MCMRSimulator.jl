@@ -12,6 +12,16 @@ Additional timepoints will be added to ensure that:
 - at any time the timestep is larger than `gradient_precision` times ``D^{-1/3} (G \\gamma)^{-2/3}``.
 - between any 2 RF pulses or readouts the timestep is larger than the time between those events divded by the sample_frequency
 """
+function get_times(simulation::Simulation, readout_times::Vector{Float})
+    get_times(
+        simulation.sequences,
+        readout_times,
+        simulation.micro.diffusivity,
+        simulation.gradient_precision,
+        simulation.sample_frequency
+    )
+end
+
 function get_times(sequences::Vector{<:Sequence}, readout_times::Vector{Float}, diffusivity::Float, gradient_precision::Float, sample_frequency::Int)
     timepoints = copy(readout_times)
     tmax = maximum(timepoints)
