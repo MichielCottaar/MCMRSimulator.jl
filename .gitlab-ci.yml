@@ -3,7 +3,7 @@ variables:
   CI: "true"
 
 default:
-  image: julia:latest
+  image: julia:1-bullseye
 
 cache:
   paths:
