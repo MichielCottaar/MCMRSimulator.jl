@@ -26,8 +26,6 @@ pages:
 .benchmark-main:
   stage: deploy
   script:
-    - apt-get update
-    - apt-get install -y git
     - git remote -v
     - git fetch origin main
     - julia benchmark/run_benchmarks.jl origin/main
@@ -36,8 +34,6 @@ pages:
 .benchmark-version:
   stage: deploy
   script:
-    - apt-get update
-    - apt-get install -y git
     - VERSION=`julia -e "using TOML; println(TOML.parsefile(\"Project.toml\")[\"version\"])"`
     - git fetch origin v${VERSION}
     - julia benchmark/run_benchmarks.jl v${VERSION}
