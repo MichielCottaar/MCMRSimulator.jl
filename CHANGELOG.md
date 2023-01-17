@@ -3,6 +3,7 @@
 ### Added
 - Support for arbitrary gradient durations and diffusion times in `dwi` thanks to Zhiyu
 ### Fixed
+- Magnetisation transfer rate is now corrected for the dependence of the collision rate on the timestep
 - Running `signal` for a `Simulation` with multiple sequences used to crash. This has now been fixed
 - Fix bouncing between repeating walls (used to get escapees)
 ### Documentation
