@@ -3,7 +3,7 @@ variables:
   CI: "true"
 
 default:
-  image: julia:1-bullseye
+  image: michielc/mcmr_tester:latest
 
 cache:
   paths:
