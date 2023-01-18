@@ -20,6 +20,12 @@
 
             @test all(mr.get_times(mr.Simulation(s1; kwargs...), 0., 80.) .== [0., 40., 80.])
             @test all(mr.get_times(mr.Simulation(s1; kwargs...), 90., 120.) .== [90., 120.])
+            @test all(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.) .== [0., 40., 80.])
+            @test all(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 90., 120.) .== [90., 120.])
+
+            kwargs[:diffusivity] = 1.
+            @test all(mr.get_times(mr.Simulation(s1; kwargs...), 0., 80.) .== [0., 40., 80.])
+            @test all(mr.get_times(mr.Simulation(s1; kwargs...), 90., 120.) .== [90., 120.])
             @test length(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.)) > 3
             @test length(union(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.), [0., 40., 80.])) == 3.
             @test all(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 90., 120.) .== [90., 120.])
