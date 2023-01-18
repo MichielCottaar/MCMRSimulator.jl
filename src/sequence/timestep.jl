@@ -94,7 +94,7 @@ function get_times(time_controller::TimeController, t_start::Float, t_end::Float
             mt = (
                 control_points[index_control] -
                 control_points[index_control - 1]
-            ) / time_controller.sample_frequency
+            ) / time_controller.sample_displacement
             if mt < max_timestep_displacement
                 max_timestep_displacement = mt
             end
@@ -111,7 +111,7 @@ function get_times(time_controller::TimeController, t_start::Float, t_end::Float
             mt = (
                 min(t_end, time(sequence, next_rf_pulse)) - 
                 time(sequence, next_rf_pulse - 1)
-            )
+            ) / time_controller.sample_off_resonance
             if mt < max_timestep_offresonance
                 max_timestep_offresonance = mt
             end
