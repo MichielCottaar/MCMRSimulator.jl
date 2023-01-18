@@ -33,8 +33,7 @@ Additional timepoints will be added to ensure that:
 - between any control point of the sequence gradient there are at least `time_controller.sample_displacement` timepoints.
 - between an RF pulse and a subsequent RF pulse or t_end there are at least `time_controller.sample_off_resonance` timepoints.
 """
-function get_times(time_controller::TimeController, t_start::Float, t_end::Float, sequences::Vector{<:Sequence}, diffusivity::Float)
-
+function get_times(time_controller::TimeController, t_start::Float, t_end::Float, sequences::AbstractVector{<:Sequence}, diffusivity::Float)
     timepoints = [t_start, t_end]
     for sequence in sequences
         index = 1
