@@ -37,11 +37,11 @@ struct Simulation{N, M<:Microstructure, S<:Sequence}
     # N sequences, datatype T
     sequences :: SVector{N, S}
     micro::M
-    timestep::TimeController
+    time_controller::TimeController
     function Simulation(
         sequences, 
         micro::Microstructure, 
-        timestep::TimeController
+        time_controller::TimeController
     )
         if isa(sequences, Sequence)
             sequences = [sequences]
@@ -53,7 +53,7 @@ struct Simulation{N, M<:Microstructure, S<:Sequence}
         new{nseq, typeof(micro), eltype(sequences)}(
             SVector{nseq}(sequences),
             micro,
-            timestep,
+            time_controller,
         )
     end
 end
@@ -101,7 +101,7 @@ function _to_snapshot(spins::Snapshot{N}, nseq::Int) where {N}
 end
 
 produces_off_resonance(sim::Simulation) = produces_off_resonance(sim.micro)
-get_times(sim::Simulation, t_start, t_end) = get_times(sim.timestep, t_start, t_end, sim.sequences, sim.micro.diffusivity)
+get_times(sim::Simulation, t_start, t_end) = get_times(sim.time_controller, t_start, t_end, sim.sequences, sim.micro.diffusivity)
 
 """
     readout(snapshot, simulation)
