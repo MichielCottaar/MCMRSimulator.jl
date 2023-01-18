@@ -27,7 +27,7 @@
             @test all(mr.get_times(mr.Simulation(s1; kwargs...), 0., 80.) .== [0., 40., 80.])
             @test all(mr.get_times(mr.Simulation(s1; kwargs...), 90., 120.) .== [90., 120.])
             @test length(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.)) > 3
-            @test length(union(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.), [0., 40., 80.])) == 3.
+            @test length(intersect(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.), [0., 40., 80.])) == 3
             @test all(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 90., 120.) .== [90., 120.])
         end
         @testset "Setting sample_displacement" begin
@@ -130,9 +130,9 @@
     end
     @testset "Basic diffusion changes spin orientation in spatially varying field" begin
         sequence = mr.Sequence(pulses=[mr.RFPulse(flip_angle=90)], TR=2.)
-        no_diff = mr.Simulation([sequence], mr.Microstructure(R2=mr.field(0.3)))
-        with_diff = mr.Simulation([sequence], mr.Microstructure(diffusivity=mr.field(1.), R2=mr.field([1., 0., 0.], 0.3)))
-        with_diff_no_grad = mr.Simulation([sequence], mr.Microstructure(diffusivity=mr.field(1.), R2=mr.field(0.3)))
+        no_diff = mr.Simulation([sequence], R2=mr.field(0.3))
+        with_diff = mr.Simulation([sequence], diffusivity=1., R2=mr.field([1., 0., 0.], 0.3))
+        with_diff_no_grad = mr.Simulation([sequence], diffusivity=1., R2=mr.field(0.3))
 
         spin_no_diff = mr.evolve(mr.Spin(), no_diff).spins[1]
         spin_with_diff = mr.evolve(mr.Spin(), with_diff).spins[1]
