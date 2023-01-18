@@ -30,7 +30,7 @@ function evolve_to_time(
 
     spin = _relax_mult(spin, (new_time - current_time) / 2, current_time, simulation)
     spin = draw_step(spin, simulation.micro.diffusivity, new_time - current_time, simulation.micro.geometry)
-    spin = _relax_mult(spin, (new_time - current_time) / 2, new_time, simulation)
+    spin = _relax_mult(spin, (new_time - current_time) / 2, (new_time + current_time) / 2, simulation)
 end
 
 """
@@ -48,6 +48,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     spins::Vector{Spin{N}} = copy(snapshot.spins)
 
     times = get_times(simulation, snapshot.time, new_time)
+
     # define next stopping times due to sequence, readout or times
     sequence_index = MVector{N, Int}(
         [next_pulse(seq, current_time) for seq in simulation.sequences]
@@ -71,7 +72,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
                 for (seq, index, time) in zip(simulation.sequences, sequence_index, sequence_times)
             ])
             spins = apply(components, spins)
-            for (idx, ctime) in enumerate(times[2:end])
+            for (idx, ctime) in enumerate(sequence_times)
                 if ctime == current_time
                     sequence = simulation.sequences[idx]
                     sequence_index[idx] += 1
