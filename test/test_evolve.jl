@@ -1,4 +1,12 @@
 @testset "Evolve a single spin fully" begin
+    @testset "Timings of readouts" begin
+        s1 = mr.dwi(bval=0.)
+        s2 = mr.dwi(bval=1.)
+
+        @test all(get_times(mr.Simulation(s1, time_step=0.5), 0., 80.) .== 0:0.5:80.)
+        @test all(get_times(mr.Simulation(s1, time_step=0.51), 0., 80.) .== 0:0.5:80.)
+        @test all(get_times(mr.Simulation(s1, time_step=0.501), 0., 100.) .== 0:0.5:100.)
+    end
     @testset "Empty environment and sequence" begin
         simulation = mr.Simulation(mr.Sequence(TR=2.8))
         snaps = mr.trajectory(zeros(3), simulation, 0:0.5:2.8)
