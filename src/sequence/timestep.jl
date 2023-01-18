@@ -5,7 +5,7 @@ struct TimeController
     sample_off_resonance :: Int
 end
 
-TimeController(timestep :: Float) = TimeController(timestep, 0., 0, 0)
+TimeController(timestep :: Number) = TimeController(Float(timestep), 0., 0, 0)
 function TimeController(geometry; gradient_precision=0.01, sample_displacement=5, sample_off_resonance=10)
     if length(geometry) == 0
         sample_displacement = 1
@@ -13,7 +13,7 @@ function TimeController(geometry; gradient_precision=0.01, sample_displacement=5
     if !produces_off_resonance(geometry)
         sample_off_resonance = 1
     end
-    TimeController(0., gradient_precision, sample_displacement, sample_off_resonance)
+    TimeController(zero(Float), Float(gradient_precision), Int(sample_displacement), Int(sample_off_resonance))
 end
 
 """
