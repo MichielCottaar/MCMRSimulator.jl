@@ -91,7 +91,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
         end
 
         # apply RF pulses
-        if any(t -> t == current_time, sequence_times)
+        while any(t -> t == current_time, sequence_times)
             components = SVector{N, Union{Nothing, SequenceComponent}}([
                 time == current_time ? seq[index] : nothing 
                 for (seq, index, time) in zip(simulation.sequences, sequence_index, sequence_times)
