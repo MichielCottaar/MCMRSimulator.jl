@@ -25,7 +25,7 @@ struct Sequence{N, P<:SequenceComponent, G<:MRGradients, M}
         sorted = sort(pulses, by=x->x.time)
         pulses = [p for p in sorted if !isa(p, Readout)]
         readout_times = [p.time for p in sorted if isa(p, Readout)]
-        result = new{length(pulses), eltype(pulses), typeof(gradients), length(readout_times)}(scanner, gradients, pulses, Float(TR), radout_times)
+        result = new{length(pulses), eltype(pulses), typeof(gradients), length(readout_times)}(scanner, gradients, pulses, Float(TR), readout_times)
         @assert length(result.pulses) == 0 || result.pulses[end].time <= TR
         result
     end
