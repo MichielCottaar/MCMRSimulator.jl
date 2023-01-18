@@ -40,8 +40,8 @@ struct Simulation{N, M<:Microstructure, S<:Sequence}
     timestep::TimeController
     function Simulation(
         sequences, 
-        micro::Microstructure; 
-        timestep :: TimeController
+        micro::Microstructure, 
+        timestep::TimeController
     )
         if isa(sequences, Sequence)
             sequences = [sequences]
@@ -49,8 +49,6 @@ struct Simulation{N, M<:Microstructure, S<:Sequence}
             sequences = Sequence[]
         end
         nseq = length(sequences)
-
-        timestep = Float(timestep)
 
         new{nseq, typeof(micro), eltype(sequences)}(
             SVector{nseq}(sequences),
