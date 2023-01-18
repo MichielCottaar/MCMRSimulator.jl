@@ -94,7 +94,7 @@ function get_times(time_controller::TimeController, t_start::Float, t_end::Float
             mt = (
                 control_points[index_control] -
                 control_points[index_control - 1]
-            ) / sample_frequency
+            ) / time_controller.sample_frequency
             if mt < max_timestep_displacement
                 max_timestep_displacement = mt
             end
