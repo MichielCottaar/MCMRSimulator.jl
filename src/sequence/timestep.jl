@@ -6,21 +6,21 @@ struct TimeController
 end
 
 TimeController(timestep :: Float) = TimeController(timestep, 0., 0, 0)
-function TimeController(simulation; gradient_prection=0.01, sample_displacement=5, sample_off_resonance=10)
-    if length(simulation.micro.geometry) == 0
+function TimeController(geometry; gradient_precision=0.01, sample_displacement=5, sample_off_resonance=10)
+    if length(geometry) == 0
         sample_displacement = 1
     end
-    if !produces_off_resonance(simulation)
+    if !produces_off_resonance(geometry)
         sample_off_resonance = 1
     end
-    TimeController(0., gradient_prection, sample_displacement, sample_off_resonance)
+    TimeController(0., gradient_precision, sample_displacement, sample_off_resonance)
 end
 
 """
-    get_times(simulation::Simulation, readout_times)
-    get_times(time_controller::TimeController, readout_times, sequences, diffusivity)
+    get_times(simulation::Simulation, t_start, t_end)
+    get_times(time_controller::TimeController, t_start, t_end, sequences, diffusivity)
 
-Computes the timepoints at which the simulation will be evaluated.
+Computes the timepoints at which the simulation will be evaluated when running from `tstart` to `tend`.
 
 The following timepoints will always be included
 - Any multiple of the TR
@@ -28,29 +28,35 @@ The following timepoints will always be included
 - Any change in the gradient strength
 
 Additional timepoints will be added to ensure that:
-- at any time the timestep is larger than `gradient_precision` times ``D^{-1/3} (G \\gamma)^{-2/3}``.
-- between any 2 RF pulses or readouts the timestep is larger than the time between those events divded by the sample_frequency
+- at any time the timestep is larger than `time_controller.gradient_precision` times ``D^{-1/3} (G \\gamma)^{-2/3}``.
+- between `t_start` and `t_end` there are at least `time_controller.sample_displacement` timepoints.
+- between any control point of the sequence gradient there are at least `time_controller.sample_displacement` timepoints.
+- between an RF pulse and a subsequent RF pulse or t_end there are at least `time_controller.sample_off_resonance` timepoints.
 """
-function get_times(time_controller::TimeController, readout_times::Vector{Float}, sequences::Vector{<:Sequence}, diffusivity::Float)
+function get_times(time_controller::TimeController, t_start::Float, t_end::Float, sequences::Vector{<:Sequence}, diffusivity::Float)
 
-    timepoints = sorted(readout_times)
-    tmax = maximum(timepoints)
+    timepoints = [t_start, t_end]
     for sequence in sequences
         index = 1
-        while time(sequence, index) < tmax
+        while time(sequence, index) <= t_start
+            index += 1
+        end
+        while time(sequence, index) < t_end
             push!(timepoints, time(sequence, index))
             index += 1
         end
 
-        index = 1
-        while index * sequence.TR < tmax
-            push!(timepoints, index * sequence.TR)
-            index += 1
+        nTR = div(t_start, sequence.TR, RoundDown)
+        all_control_points = sequence.gradient.times .+ (nTR * sequence.TR)
+        control_points = all_control_points[all_control_points .> t_start]
+        while (nTR + 1) * sequence.TR < t_end
+            # This TR is fully included before `t_end`
+            append!(timepoints, control_points)
+            nTR += 1
+            control_points = sequence.gradient.times .+ (nTR * sequence.TR)
         end
-
-        append!(timepoints, sequence.gradient.times)
+        append!(timepoints, control_points[control_points .< t_end])
     end
-    push!(timepoints, zero(Float))
     timepoints = sort(unique(timepoints))
 
     if !iszero(time_controller.timestep)
@@ -82,11 +88,7 @@ function get_times(time_controller::TimeController, readout_times::Vector{Float}
         end
 
         # sample displacement between any two readouts and any two changes in gradient profile
-        index_readout = searchsortedfirst(readout_times, mean_time)
-        max_timestep_displacement = (
-            readout_times[index_readout] -
-            readout_times == 1 ? 0 : readout_times[index_readout - 1]
-        ) / time_controller.sample_displacement
+        max_timestep_displacement = (t_end - t_start) / time_controller.sample_displacement
         for sequence in sequences
             control_points = sequence.gradient.times
             index_control = searchsortedfirst(control_points, mean_time)
@@ -101,7 +103,6 @@ function get_times(time_controller::TimeController, readout_times::Vector{Float}
 
         # sample off-resonance field between RF pulse and subsequence RF pulse or readout
         max_timestep_offresonance = Inf64
-        next_readout = readout_times[searchsortedfirst(readout_times, mean_time)]
         for sequence in sequences
             next_rf_pulse = next_pulse(sequence, mean_time)
             if next_rf_pulse <= 1
@@ -109,7 +110,7 @@ function get_times(time_controller::TimeController, readout_times::Vector{Float}
             end
 
             mt = (
-                min(next_readout, time(sequence, next_rf_pulse)) - 
+                min(t_end, time(sequence, next_rf_pulse)) - 
                 time(sequence, next_rf_pulse - 1)
             )
             if mt < max_timestep_offresonance
@@ -129,19 +130,4 @@ function get_times(time_controller::TimeController, readout_times::Vector{Float}
     end
     sort!(timepoints)
     return timepoints
-end
-
-
-"""
-Computes the previous or next RF pulse/readout
-"""
-function _get_event(current, sequence, readout_times; previous=false)
-    correction = previous ? -1 : 0
-    index = next_pulse(sequence, current) + correction
-    time_pulse = index == 0 ? zero(Float) : time(sequence, index)
-    index_readout = searchsortedfirst(readout_times, current) + correction
-    time_readout = index_readout == 0 ? zero(Float) : readout_times[index_readout]
-    @show (current, time_pulse, time_readout)
-    @show previous ? max(time_pulse, time_readout) : min(time_pulse, time_readout)
-    return previous ? max(time_pulse, time_readout) : min(time_pulse, time_readout)
 end
