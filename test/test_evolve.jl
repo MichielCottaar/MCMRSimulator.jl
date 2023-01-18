@@ -96,7 +96,7 @@
             mr.Sequence(pulses=[mr.RFPulse(flip_angle=90), mr.Readout(2.)], TR=3.),
             mr.Sequence(pulses=[mr.RFPulse(flip_angle=90), mr.Readout(1.)], TR=2.),
         ]
-        all_snaps = mr.Simulation(sequences, mr.Microstructure(diffusivity=mr.field(1.), R2=mr.field(1.)))
+        all_snaps = mr.Simulation(sequences, mr.Microstructure(diffusivity=1., R2=mr.field(1.)))
 
         readouts = [r[1] for r in mr.readout(mr.Spin(), all_snaps)]
 
