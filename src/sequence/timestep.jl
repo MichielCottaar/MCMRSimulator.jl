@@ -118,7 +118,6 @@ function get_times(time_controller::TimeController, t_start::Float, t_end::Float
         end
 
         max_timestep = min(max_timestep_gradient, max_timestep_displacement, max_timestep_offresonance)
-        @show (max_timestep_gradient, max_timestep_displacement, max_timestep_offresonance)
 
         if ~isinf(max_timestep)
             Ntimesteps = Int(div(t1 - t0, max_timestep, RoundUp))
