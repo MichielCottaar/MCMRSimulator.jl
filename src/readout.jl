@@ -187,7 +187,7 @@ function signal(spins, simulation::Simulation{N}, times=nothing) where {N}
         if time(snapshot) > times
             error("Trajectory final time is lower than the current time of the snapshot.")
         end
-        times = time(snapshot):simulation.timestep:times
+        times = get_times(simulation, snapshot.time, times)
     end
     if N == 1
         result = Array{SpinOrientation}(undef, size(times))
