@@ -36,19 +36,20 @@ function evolve_to_time(
     end
     spin = _relax_mult(spin, time_left, current_time, simulation)
     current_time = (index + 1//2) * simulation.timestep
+    diffusivity = simulation.micro.diffusivity
 
     # We need to move, so get random number generator from spin object
     while new_time > (current_time + simulation.timestep)
         # Take full timesteps for a while
-        if !isa(simulation.micro.diffusivity, ZeroField)
-            spin = draw_step(spin, simulation.micro.diffusivity(spin.position), simulation.timestep, simulation.micro.geometry)
+        if !iszero(diffusivity)
+            spin = draw_step(spin, diffusivity, simulation.timestep, simulation.micro.geometry)
         end
         spin = _relax_mult(spin, simulation.timestep, current_time, simulation)
         current_time += simulation.timestep
     end
 
-    if !isa(simulation.micro.diffusivity, ZeroField)
-        spin = draw_step(spin, simulation.micro.diffusivity(spin.position), simulation.timestep, simulation.micro.geometry)
+    if !iszero(diffusivity)
+        spin = draw_step(spin, diffusivity, simulation.timestep, simulation.micro.geometry)
     end
    _relax_mult(spin, new_time - current_time, current_time, simulation)
 end
