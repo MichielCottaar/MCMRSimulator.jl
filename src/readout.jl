@@ -70,15 +70,16 @@ function Simulation(
     sample_displacement=5,
     sample_off_resonance=10,
 )
+    micro = Microstructure(R1=R1, R2=R2, diffusivity=diffusivity, off_resonance=off_resonance, geometry=geometry),
     if isnothing(timestep)
-        controller = TimeController(geometry; gradient_precision=gradient_precision, sample_displacement=sample_displacement, sample_off_resonance=sample_off_resonance)
+        controller = TimeController(micro.geometry; gradient_precision=gradient_precision, sample_displacement=sample_displacement, sample_off_resonance=sample_off_resonance)
     else
         controller = TimeController(timestep)
     end
     return Simulation(
         sequences, 
-        Microstructure(R1=R1, R2=R2, diffusivity=diffusivity, off_resonance=off_resonance, geometry=geometry),
-        controller
+        micro,
+        controller,
     )
 end
 
