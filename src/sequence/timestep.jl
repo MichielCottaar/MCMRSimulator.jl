@@ -90,7 +90,7 @@ function get_times(time_controller::TimeController, t_start::Float, t_end::Float
         max_timestep_displacement = (t_end - t_start) / time_controller.sample_displacement
         for sequence in sequences
             control_points = sequence.gradient.times
-            index_control = searchsortedfirst(control_points, mean_time)
+            index_control = searchsortedfirst(control_points, mod(mean_time, sequence.TR))
             mt = (
                 control_points[index_control] -
                 control_points[index_control - 1]
