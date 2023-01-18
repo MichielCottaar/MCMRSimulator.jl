@@ -3,7 +3,7 @@
         spin::mr.Spin{N}, current_time::Float, new_time::Float,
         micro::mr.Microstructure, timestep::Float, B0::Float=Float(3.)
     ) where {N}
-        mr.evolve_to_time(spin, mr.Simulation([mr.Sequence(TR=new_time, B0=B0) for _ in 1:N], micro, timestep=timestep), current_time, new_time)
+        mr.evolve_to_time(spin, mr.Simulation([mr.Sequence(TR=new_time, B0=B0) for _ in 1:N], micro, TimeController(timestep)), current_time, new_time)
     end
 
     for step_size in (1., 0.3, 0.123)
