@@ -142,9 +142,6 @@ function readout(spins, simulation::Simulation{N}) where {N}
             end
         end
     end
-    if N == 1
-        return final_snapshots[1]
-    end
     return final_snapshots
 end
 
