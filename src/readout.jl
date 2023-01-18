@@ -161,7 +161,7 @@ function trajectory(spins, simulation::Simulation{N}, times=nothing) where{N}
         if time(snapshot) > times
             error("Trajectory final time is lower than the current time of the snapshot.")
         end
-        times = time(snapshot):simulation.timestep:times
+        times = get_times(simulation, snapshot.time, times)
     end
     result = Array{typeof(snapshot)}(undef, size(times))
     for index in sortperm(times)
