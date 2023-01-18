@@ -67,58 +67,40 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     end
     spins::Vector{Spin{N}} = copy(snapshot.spins)
 
+    times = get_times(simulation, snapshot.time, new_time)
     # define next stopping times due to sequence, readout or times
     sequence_index = MVector{N, Int}(
         [next_pulse(seq, current_time) for seq in simulation.sequences]
     )
-    times = [new_time, time.(simulation.sequences, sequence_index)...]
-
-    readouts = SVector{N, Vector{Snapshot{1}}}([Snapshot{1}[] for _ in 1:N])
+    sequence_times = MVector{N, Float}(
+        [time(seq, index) for (seq, index) in zip(simulation.sequences, sequence_index)]
+    )
 
     nspins = length(spins)
-    while true
-        next = argmin(times)
-        next_time::Float = times[next]
-
+    for next_time in times
         # evolve all spins to next interesting time
         Threads.@threads for idx in 1:nspins
             spins[idx] = evolve_to_time(spins[idx], simulation, current_time, next_time)
         end
         current_time = next_time
 
-        # take care of any readouts
-        if any(t -> t == current_time, times[2:end])
-            for (idx, ctime) in enumerate(times[2:end])
-                if ctime == current_time
-                    sequence = simulation.sequences[idx]
-                    if isa(sequence[sequence_index[idx]], Readout)
-                        while (times[idx + 1] == current_time)
-                            push!(readouts[idx], Snapshot(get_sequence.(spins, idx), current_time))
-                            sequence_index[idx] += 1
-                            times[idx + 1] = time(sequence, sequence_index[idx])
-                        end
-                    end
-                end
-            end
-        end
-
         # return final snapshot state
-        if times[1] == current_time
-            return (Snapshot(spins, current_time), readouts)
+        if current_time == new_time
+            return Snapshot(spins, current_time)
         end
 
         # apply RF pulses
-        if any(t -> t == current_time, times[2:end])
+        if any(t -> t == current_time, sequence_times)
             components = SVector{N, Union{Nothing, SequenceComponent}}([
                 time == current_time ? seq[index] : nothing 
-                for (seq, index, time) in zip(simulation.sequences, sequence_index, times[2:end])
+                for (seq, index, time) in zip(simulation.sequences, sequence_index, sequence_times)
             ])
             spins = apply(components, spins)
             for (idx, ctime) in enumerate(times[2:end])
                 if ctime == current_time
                     sequence = simulation.sequences[idx]
                     sequence_index[idx] += 1
-                    times[idx + 1] = time(sequence, sequence_index[idx])
+                    sequence_times[idx] = time(sequence, sequence_index[idx])
                 end
             end
         end

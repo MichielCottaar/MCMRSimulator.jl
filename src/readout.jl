@@ -37,11 +37,11 @@ struct Simulation{N, M<:Microstructure, S<:Sequence}
     # N sequences, datatype T
     sequences :: SVector{N, S}
     micro::M
-    timestep::Float
+    timestep::TimeController
     function Simulation(
         sequences, 
         micro::Microstructure; 
-        timestep :: Real=0.5
+        timestep :: TimeController
     )
         if isa(sequences, Sequence)
             sequences = [sequences]
@@ -67,10 +67,20 @@ function Simulation(
     diffusivity=0.,
     off_resonance=0.,
     geometry=Obstruction[],
-    kwargs...
+    timestep=nothing,
+    gradient_precision=0.01,
+    sample_displacement=5
+    sample_off_resonance=10,
 )
+    if isnothing(timestep)
+        controller = TimeController(geometry; gradient_precision=gradient_precision, sample_displacement=sample_displacement, sample_off_resonance=sample_off_resonance)
+    else
+        controller = TimeController(timestep)
+    end
     return Simulation(
-        sequences, Microstructure(R1=R1, R2=R2, diffusivity=diffusivity, off_resonance=off_resonance, geometry=geometry); kwargs...
+        sequences, 
+        Microstructure(R1=R1, R2=R2, diffusivity=diffusivity, off_resonance=off_resonance, geometry=geometry),
+        controller
     )
 end
 
@@ -93,6 +103,7 @@ function _to_snapshot(spins::Snapshot{N}, nseq::Int) where {N}
 end
 
 produces_off_resonance(sim::Simulation) = produces_off_resonance(sim.micro)
+get_times(sim::Simulation, t_start, t_end) = get_times(sim.timestep, t_start, t_end, sim.sequences, sim.micro.diffusivity)
 
 """
     readout(snapshot, simulation)
