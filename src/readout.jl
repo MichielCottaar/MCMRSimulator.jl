@@ -137,10 +137,8 @@ function readout(spins, simulation::Simulation{N}) where {N}
     for time in sort(readout_times)
         snapshot = evolve_to_time(snapshot, simulation, time)
         for index in 1:N
-            for (index_readout, readout_time) in enumerate(per_seq_times[index])
-                if time == readout_time
-                    final_snapshots[index][index_readout] = get_sequence(snapshot, index)
-                end
+            if time in per_seq_times[index]
+                push!(final_snapshots[index], get_sequence(snapshot, index))
             end
         end
     end
