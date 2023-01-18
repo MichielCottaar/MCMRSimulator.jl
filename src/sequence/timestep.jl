@@ -47,8 +47,10 @@ function get_times(time_controller::TimeController, readout_times::Vector{Float}
             push!(timepoints, index * sequence.TR)
             index += 1
         end
+
+        append!(timepoints, sequence.gradient.times)
     end
-    append!(timepoints, zero(Float))
+    push!(timepoints, zero(Float))
     timepoints = sort(unique(timepoints))
 
     if !iszero(time_controller.timestep)
@@ -65,32 +67,58 @@ function get_times(time_controller::TimeController, readout_times::Vector{Float}
     end
 
     for (t0, t1) in zip(copy(timepoints[1:end-1]), copy(timepoints[2:end]))
+        mean_time = (t0 + t1) / 2
+
+        # gradient precision
         max_timestep_gradient = Inf64
-        if !iszero(gradient_precision)
+        if !iszero(time_controller.gradient_precision)
             for sequence in sequences
                 grad = norm(get_gradient(sequence, t0, t1)) * gyromagnetic_ratio * Float(1e-3) * sequence.scanner.B0  # frequency gradient in rad / (ms um)
-                mt = gradient_precision * (diffusivity * grad * grad) ^ (-1/3)
+                mt = time_controller.gradient_precision * (diffusivity * grad * grad) ^ (-1/3)
                 if mt < max_timestep_gradient
                     max_timestep_gradient = mt
                 end
             end
         end
 
-        max_timestep_sampling = Inf64
+        # sample displacement between any two readouts and any two changes in gradient profile
+        index_readout = searchsortedfirst(readout_times, mean_time)
+        max_timestep_displacement = (
+            readout_times[index_readout] -
+            readout_times == 1 ? 0 : readout_times[index_readout - 1]
+        ) / time_controller.sample_displacement
         for sequence in sequences
+            control_points = sequence.gradient.times
+            index_control = searchsortedfirst(control_points, mean_time)
             mt = (
-                _get_event((t0 + t1) / 2, sequence, readout_times; previous=false) - 
-                _get_event((t0 + t1) / 2, sequence, readout_times; previous=true)
+                control_points[index_control] -
+                control_points[index_control - 1]
             ) / sample_frequency
-            @show mt
-            if mt < max_timestep_sampling
-                max_timestep_sampling = mt
+            if mt < max_timestep_displacement
+                max_timestep_displacement = mt
             end
         end
 
-        max_timestep = min(max_timestep_gradient, max_timestep_sampling)
-        @show max_timestep_gradient
-        @show max_timestep_sampling
+        # sample off-resonance field between RF pulse and subsequence RF pulse or readout
+        max_timestep_offresonance = Inf64
+        next_readout = readout_times[searchsortedfirst(readout_times, mean_time)]
+        for sequence in sequences
+            next_rf_pulse = next_pulse(sequence, mean_time)
+            if next_rf_pulse <= 1
+                continue
+            end
+
+            mt = (
+                min(next_readout, time(sequence, next_rf_pulse)) - 
+                time(sequence, next_rf_pulse - 1)
+            )
+            if mt < max_timestep_offresonance
+                max_timestep_offresonance = mt
+            end
+        end
+
+        max_timestep = min(max_timestep_gradient, max_timestep_displacement, max_timestep_offresonance)
+        @show (max_timestep_gradient, max_timestep_displacement, max_timestep_offresonance)
 
         if ~isinf(max_timestep)
             Ntimesteps = Int(div(t1 - t0, max_timestep, RoundUp))
