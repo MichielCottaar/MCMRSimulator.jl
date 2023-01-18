@@ -65,12 +65,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
         current_time = next_time
 
         # return final snapshot state
-        if current_time == new_time
-            return Snapshot(spins, current_time)
-        end
-
-        # apply RF pulses
-        while any(t -> t == current_time, sequence_times)
+        if current_time != new_time && any(t -> t == current_time, sequence_times)
             components = SVector{N, Union{Nothing, SequenceComponent}}([
                 time == current_time ? seq[index] : nothing 
                 for (seq, index, time) in zip(simulation.sequences, sequence_index, sequence_times)
@@ -85,4 +80,5 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
             end
         end
     end
+    return Snapshot(spins, current_time)
 end
