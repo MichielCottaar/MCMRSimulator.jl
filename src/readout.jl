@@ -114,33 +114,40 @@ If no `TR` is explicitly selected, it will return the current TR if the snapshot
 function readout(spins, simulation::Simulation{N}) where {N}
     snapshot = _to_snapshot(spins, N)
 
-    min_simulation_time = -1.
-
-    get_times = Vector{Int}[]
+    readout_times = Float[]
+    per_seq_times = Vector{Float}[]
 
     for seq in simulation.sequences
-        current_TR = Int(div(time(snapshot), seq.TR, RoundDown))
-        time_in_TR = time(snapshot) - current_TR * seq.TR
-        times_readout = [time(r) for r in seq.pulses if isa(r, Readout)]
-        if length(times_readout) == 0
-            push!(get_times, Int[])
-            continue
+        if length(seq.readout_times) == 0
+            seq_times = Float[]
+        else
+            current_TR = Int(div(time(snapshot), seq.TR, RoundDown))
+            time_in_TR = time(snapshot) - current_TR * seq.TR
+
+            if minimum(seq.readout_times) < time_in_TR
+                current_TR += 1
+            end
+            seq_times = seq.readout_times .+ (current_TR * seq.TR)
         end
-        nskip = 0
-        proposed_time = maximum(times_readout) + 1. + current_TR * seq.TR
-        if minimum(times_readout) < time_in_TR
-            proposed_time += seq.TR
-            nskip = sum([t >= time_in_TR for t in times_readout])
-        end
-        get_times = push!(get_times, [(nskip + 1):(nskip + length(times_readout))...])
-        if proposed_time > min_simulation_time
-            min_simulation_time = proposed_time
+        append!(readout_times, seq_times)
+        push!(per_seq_times, seq_times)
+    end
+
+    final_snapshots = SVector{N}([Snapshot{1}[] for _ in 1:N])
+    for time in sort(readout_times)
+        snapshot = evolve_to_time(snapshot, simulation, time)
+        for index in 1:N
+            for (index_readout, readout_time) in enumerate(per_seq_times[index])
+                if time == readout_time
+                    final_snapshots[index][index_readout] = get_sequence(snapshot, index)
+                end
+            end
         end
     end
-    readouts = evolve_to_time(snapshot, simulation, Float(min_simulation_time))[2]
-    return SVector{N}([
-        r[indices] for (r, indices) in zip(readouts, get_times)
-    ])
+    if N == 1
+        return final_snapshots[1]
+    end
+    return final_snapshots
 end
 
 """
