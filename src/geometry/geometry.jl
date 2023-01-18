@@ -57,7 +57,7 @@ off_resonance(obstructions::AbstractVector{<:Obstruction}, position::PosVector, 
 Tests whether any aspects of the simulation geometry will produce an off-resonance field.
 """
 produces_off_resonance(obstruction::Obstruction) = false
-produces_off_resonance(geometry::Tuple{}) = false
+produces_off_resonance(geometry::Tuple) = any(produces_off_resonance.(geometry))
 produces_off_resonance(geometry::AbstractVector{<:Obstruction}) = any(produces_off_resonance.(geometry))
 
 """
