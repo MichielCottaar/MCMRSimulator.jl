@@ -163,7 +163,7 @@ function trajectory(spins, simulation::Simulation{N}, times=nothing) where{N}
     end
     result = Array{typeof(snapshot)}(undef, size(times))
     for index in sortperm(times)
-        snapshot = evolve_to_time(snapshot, simulation, Float(times[index]))[1]
+        snapshot = evolve_to_time(snapshot, simulation, Float(times[index]))
         result[index] = snapshot
     end
     result
@@ -193,7 +193,7 @@ function signal(spins, simulation::Simulation{N}, times=nothing) where {N}
         result = Array{SVector{N, SpinOrientation}}(undef, size(times))
     end
     for index in sortperm(times)
-        snapshot = evolve_to_time(snapshot, simulation, Float(times[index]))[1]
+        snapshot = evolve_to_time(snapshot, simulation, Float(times[index]))
         if N == 1
             result[index] = SpinOrientation(snapshot)
         else
@@ -216,5 +216,5 @@ function evolve(spins, simulation::Simulation{N}, new_time=nothing) where {N}
         TR = simulation.sequences[1].TR
         new_time = (div(nextfloat(snapshot.time), TR, RoundDown) + 1) * TR
     end
-    evolve_to_time(snapshot, simulation, Float(new_time))[1]
+    evolve_to_time(snapshot, simulation, Float(new_time))
 end
