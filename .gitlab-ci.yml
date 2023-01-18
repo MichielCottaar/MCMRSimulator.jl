@@ -2,23 +2,20 @@ variables:
   JULIA_DEPOT_PATH: "$CI_PROJECT_DIR/.julia"
   CI: "true"
 
+default:
+  image: michielc/mcmr_tester:latest
+
 cache:
   paths:
     - .julia
 
 Julia latest:
   coverage: /Test coverage (\d+\.\d+%)/
-  image: julia:latest
   script:
     - .ci/run_test.sh
   after_script:
     - .ci/get_coverage.sh
-Julia 1.7:
-  image: julia:1.7
-  script:
-    - .ci/run_test.sh
 pages:
-  image: julia:latest
   script:
     - .ci/gen_docs.sh dev
   artifacts:
@@ -27,22 +24,16 @@ pages:
   only:
     - main
 .benchmark-main:
-  image: julia:latest
   stage: deploy
   script:
-    - apt-get update
-    - apt-get install -y git
     - git remote -v
     - git fetch origin main
     - julia benchmark/run_benchmarks.jl origin/main
   except:
     - main
 .benchmark-version:
-  image: julia:latest
   stage: deploy
   script:
-    - apt-get update
-    - apt-get install -y git
     - VERSION=`julia -e "using TOML; println(TOML.parsefile(\"Project.toml\")[\"version\"])"`
     - git fetch origin v${VERSION}
     - julia benchmark/run_benchmarks.jl v${VERSION}

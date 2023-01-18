@@ -74,7 +74,7 @@ function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, 
                 break
             end
 
-            orient = transfer(orient, ObstructionProperties(collision))
+            orient = transfer(orient, ObstructionProperties(collision), timestep)
 
             direction = new_pos .- current_pos
             reflection = - 2 * (collision.normal ⋅ direction) * collision.normal / norm(collision.normal) ^ 2 .+ direction

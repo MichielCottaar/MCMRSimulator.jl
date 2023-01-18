@@ -108,6 +108,16 @@
             @test res[2].destination ≈ SA[-1, 1, 0]
             @test res[2].timestep ≈ 4.
         end
+        @testset "Particle remain between reflecting walls" begin
+            Random.seed!(1234)
+            geometry = mr.walls(positions=0.5, repeats=1)
+            simulation = mr.Simulation([], geometry=geometry, diffusivity=3., timestep=1.)
+            snap = mr.Snapshot(10000)
+            snap2 = mr.evolve(snap, simulation, 100)
+            
+            get_pos(spin) = round(spin.position[1])
+            @test all(get_pos.(snap) .== get_pos.(snap2))
+        end
     end
     @testset "Sphere reflections" begin
         @testset "Remain within sphere" begin
