@@ -7,17 +7,21 @@ import Random
 import SpecialFunctions: erf
 using Statistics
 
+all_tests = [
+    "collisions",
+    "evolve",
+    "plots",
+    "field",
+    "known_sequences",
+    "meshes",
+    "offresonance",
+    "transfer",
+]
+
 if length(ARGS) == 0
-    tests = [
-        "collisions",
-        "evolve",
-        "plots",
-        "field",
-        "known_sequences",
-        "meshes",
-        "offresonance",
-        "transfer",
-    ]
+    tests = all_tests
+elseif length(ARGS) == 1 && ARGS[1] == "no-plots"
+    tests = symdiff(all_tests, ["plots"])
 else
     tests = ARGS
 end

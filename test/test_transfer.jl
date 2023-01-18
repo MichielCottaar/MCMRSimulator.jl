@@ -30,7 +30,6 @@
         for timestep in (0.01, 0.1, 1)
             simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=1., timestep=timestep)
             signal = mean([mr.transverse(mr.evolve(10000, simulation, 10.)) for _ in 1:Int(timestep/0.01)]) / 10000
-            @show (timestep, log(signal))
             if isnothing(reference)
                 reference = signal
             else
