@@ -3,9 +3,9 @@
         s1 = mr.dwi(bval=0.)
         s2 = mr.dwi(bval=1.)
 
-        @test all(get_times(mr.Simulation(s1, time_step=0.5), 0., 80.) .== 0:0.5:80.)
-        @test all(get_times(mr.Simulation(s1, time_step=0.51), 0., 80.) .== 0:0.5:80.)
-        @test all(get_times(mr.Simulation(s1, time_step=0.501), 0., 100.) .== 0:0.5:100.)
+        @test all(mr.get_times(mr.Simulation(s1, timestep=0.5), 0., 80.) .== 0:0.5:80.)
+        @test all(mr.get_times(mr.Simulation(s1, timestep=0.51), 0., 80.) .== 0:0.5:80.)
+        @test all(mr.get_times(mr.Simulation(s1, timestep=0.501), 0., 100.) .== 0:0.5:100.)
     end
     @testset "Empty environment and sequence" begin
         simulation = mr.Simulation(mr.Sequence(TR=2.8))
@@ -57,8 +57,8 @@
     end
     @testset "Basic diffusion has no effect in constant fields" begin
         sequence = mr.Sequence(pulses=[mr.RFPulse(flip_angle=90)], TR=2.)
-        no_diff = mr.Simulation([sequence], mr.Microstructure(R2=mr.field(0.3)))
-        with_diff = mr.Simulation([sequence], mr.Microstructure(diffusivity=mr.field(1.), R2=mr.field(0.3)))
+        no_diff = mr.Simulation([sequence], R2=mr.field(0.3))
+        with_diff = mr.Simulation([sequence], diffusivity=1., R2=mr.field(0.3))
         spin_no_diff = mr.evolve(mr.Spin(), no_diff).spins[1]
         spin_with_diff = mr.evolve(mr.Spin(), with_diff).spins[1]
         @test spin_no_diff.position == SA[0, 0, 0]
