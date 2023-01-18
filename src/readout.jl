@@ -69,7 +69,7 @@ function Simulation(
     geometry=Obstruction[],
     timestep=nothing,
     gradient_precision=0.01,
-    sample_displacement=5
+    sample_displacement=5,
     sample_off_resonance=10,
 )
     if isnothing(timestep)
