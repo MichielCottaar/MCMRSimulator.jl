@@ -92,6 +92,7 @@ function _to_snapshot(spins::Snapshot{N}, nseq::Int) where {N}
     spins
 end
 
+produces_off_resonance(sim::Simulation) = produces_off_resonance(sim.micro)
 
 """
     readout(snapshot, simulation)

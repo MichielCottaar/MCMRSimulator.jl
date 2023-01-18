@@ -280,6 +280,8 @@ function lorentz_off_resonance(spiral::Spiral, position::SVector{2, Float}, b0_f
     lorentz_off_resonance(spiral.equivalent_annulus, position, b0_field, repeat_dist, radius, nrepeats)
 end
 
+produces_off_resonance(spiral::Spiral) = produces_off_resonance(spiral.equivalent_annulus)
+
 """
     random_spirals(target_density; repeats, g_ratio=0.8, distribution=Distributions.Gamma, mean_radius=1., variance_radius=0.5, max_iter=1000, rotation=I(3))
 
