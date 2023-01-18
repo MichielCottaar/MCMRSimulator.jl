@@ -1,5 +1,24 @@
+struct TimeController
+    timestep :: Float
+    gradient_precision :: Float
+    sample_displacement :: Int
+    sample_off_resonance :: Int
+end
+
+TimeController(timestep :: Float) = TimeController(timestep, 0., 0, 0)
+function TimeController(simulation; gradient_prection=0.01, sample_displacement=5, sample_off_resonance=10)
+    if length(simulation.micro.geometry) == 0
+        sample_displacement = 1
+    end
+    if !produces_off_resonance(simulation)
+        sample_off_resonance = 1
+    end
+    TimeController(0., gradient_prection, sample_displacement, sample_off_resonance)
+end
+
 """
     get_times(simulation::Simulation, readout_times)
+    get_times(time_controller::TimeController, readout_times, sequences, diffusivity)
 
 Computes the timepoints at which the simulation will be evaluated.
 
@@ -12,18 +31,9 @@ Additional timepoints will be added to ensure that:
 - at any time the timestep is larger than `gradient_precision` times ``D^{-1/3} (G \\gamma)^{-2/3}``.
 - between any 2 RF pulses or readouts the timestep is larger than the time between those events divded by the sample_frequency
 """
-function get_times(simulation::Simulation, readout_times::Vector{Float})
-    get_times(
-        simulation.sequences,
-        readout_times,
-        simulation.micro.diffusivity,
-        simulation.gradient_precision,
-        simulation.sample_frequency
-    )
-end
+function get_times(time_controller::TimeController, readout_times::Vector{Float}, sequences::Vector{<:Sequence}, diffusivity::Float)
 
-function get_times(sequences::Vector{<:Sequence}, readout_times::Vector{Float}, diffusivity::Float, gradient_precision::Float, sample_frequency::Int)
-    timepoints = copy(readout_times)
+    timepoints = sorted(readout_times)
     tmax = maximum(timepoints)
     for sequence in sequences
         index = 1
@@ -38,8 +48,21 @@ function get_times(sequences::Vector{<:Sequence}, readout_times::Vector{Float}, 
             index += 1
         end
     end
-    timepoints = unique(timepoints)
-    sort!(timepoints)
+    append!(timepoints, zero(Float))
+    timepoints = sort(unique(timepoints))
+
+    if !iszero(time_controller.timestep)
+        # Use the user-provided timestep
+        for (t0, t1) in zip(copy(timepoints[1:end-1]), copy(timepoints[2:end]))
+            Ntimepoints = div(t1 - t0, time_controller.timestep, RoundUp)
+            if Ntimepoints > 1
+                for new_timestep in range(t0, t1, length=Ntimesteps+1)[2:end-1]
+                    push!(timepoints, new_timestep)
+                end
+            end
+        end
+        return sort(unique(timepoints))
+    end
 
     for (t0, t1) in zip(copy(timepoints[1:end-1]), copy(timepoints[2:end]))
         max_timestep_gradient = Inf64
