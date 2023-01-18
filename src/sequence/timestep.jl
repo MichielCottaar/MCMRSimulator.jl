@@ -61,10 +61,10 @@ function get_times(time_controller::TimeController, t_start::Float, t_end::Float
     if !iszero(time_controller.timestep)
         # Use the user-provided timestep
         for (t0, t1) in zip(copy(timepoints[1:end-1]), copy(timepoints[2:end]))
-            Ntimepoints = div(t1 - t0, time_controller.timestep, RoundUp)
+            Ntimepoints = Int(div(t1 - t0, time_controller.timestep, RoundUp))
             if Ntimepoints > 1
-                for new_timestep in range(t0, t1, length=Ntimesteps+1)[2:end-1]
-                    push!(timepoints, new_timestep)
+                for new_timepoint in range(t0, t1, length=Ntimepoints+1)[2:end-1]
+                    push!(timepoints, new_timepoint)
                 end
             end
         end
@@ -120,9 +120,9 @@ function get_times(time_controller::TimeController, t_start::Float, t_end::Float
         max_timestep = min(max_timestep_gradient, max_timestep_displacement, max_timestep_offresonance)
 
         if ~isinf(max_timestep)
-            Ntimesteps = Int(div(t1 - t0, max_timestep, RoundUp))
-            for new_timestep in range(t0, t1, length=Ntimesteps+1)[2:end-1]
-                push!(timepoints, new_timestep)
+            Ntimepoints = Int(div(t1 - t0, max_timestep, RoundUp))
+            for new_timepoint in range(t0, t1, length=Ntimepoints+1)[2:end-1]
+                push!(timepoints, new_timepoint)
             end
         end
     end
