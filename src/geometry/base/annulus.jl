@@ -112,6 +112,8 @@ function lorentz_off_resonance(annulus::Annulus, position::SVector{2, Float}, b0
     return field
 end
 
+produces_off_resonance(annulus::Annulus) = annulus.myelin
+
 """
     random_annuli(target_density; repeats, g_ratio=0.8, distribution=Distributions.Gamma, mean_radius=1., variance_radius=0.5, max_iter=1000, myelin=false, chi_I=-0.1, chi_A=-0.1, rotation=I(3))
 

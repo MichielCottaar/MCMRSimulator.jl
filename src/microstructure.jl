@@ -18,11 +18,11 @@ The `R1`, `R2`, `off-resonance`, and `diffusivity` parameters can be defined as 
 - `(gradient::PosVector, value::Number)`: gradient across the microstructure.
 - `field::Field`: as generated using [`field`](@ref).
 """
-struct Microstructure{F1 <: Field, F2 <: Field, F3 <: Field, F4 <: Field, G <: Tuple}
+struct Microstructure{F1 <: Field, F2 <: Field, F3 <: Field, G <: Tuple}
     off_resonance :: F1  # in ppm
     R2 :: F2
     R1 :: F3
-    diffusivity :: F4
+    diffusivity :: Float
     geometry :: G
     function Microstructure(;off_resonance=0., R2=0., R1=0., diffusivity=0., geometry=Obstruction[]) 
         if isa(geometry, Obstruction)
@@ -30,17 +30,17 @@ struct Microstructure{F1 <: Field, F2 <: Field, F3 <: Field, F4 <: Field, G <: T
         end
         R1 = field(R1)
         R2 = field(R2)
-        diffusivity = field(diffusivity)
+        diffusivity = Float(diffusivity)
         off_resonance = field(off_resonance)
         if isa(geometry, Obstruction)
             geometry = tuple(geometry)
         else
             geometry = tuple(geometry...)
         end
-        if isa(diffusivity, ZeroField) && length(geometry) > 0
+        if iszero(diffusivity) && length(geometry) > 0
             @warn "Restrictive geometry will have no effect, because the diffusivity is set at zero"
         end
-        new{typeof(off_resonance), typeof(R2), typeof(R1), typeof(diffusivity), typeof(geometry)}(
+        new{typeof(off_resonance), typeof(R2), typeof(R1), typeof(geometry)}(
             off_resonance, R2, R1, diffusivity, geometry)
     end
 end

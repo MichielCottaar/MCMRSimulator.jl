@@ -15,13 +15,17 @@ The index of the next pulse is given by [`next_pulse`](@ref)(sequence, current_t
 The time of this pulse can then be extracted using [`time`](@ref)(sequence, index).
 Note that these indices go on till infinite reflecting the repetitive nature of RF pulses over the `TR` time.
 """
-struct Sequence{N, P<:SequenceComponent, G<:MRGradients}
+struct Sequence{N, P<:SequenceComponent, G<:MRGradients, M}
     scanner :: Scanner
     gradient :: G
     pulses :: SVector{N, P}
     TR :: Float
+    readout_times :: SVector{M, Float}
     function Sequence(scanner::Scanner, gradients::MRGradients, pulses::AbstractVector{<:SequenceComponent}, TR :: Real)
-        result = new{length(pulses), eltype(pulses), typeof(gradients)}(scanner, gradients, sort(pulses, by=x->x.time), Float(TR))
+        sorted = sort(pulses, by=x->x.time)
+        pulses = [p for p in sorted if !isa(p, Readout)]
+        readout_times = [p.time for p in sorted if isa(p, Readout)]
+        result = new{length(pulses), eltype(pulses), typeof(gradients), length(readout_times)}(scanner, gradients, pulses, Float(TR), readout_times)
         @assert length(result.pulses) == 0 || result.pulses[end].time <= TR
         result
     end
@@ -70,4 +74,5 @@ get_gradient(position, seq::Sequence, time1, time2) = get_gradient(position, seq
 get_gradient(seq::Sequence, time) = get_gradient(seq.gradient, mod(time, seq.TR))
 get_gradient(seq::Sequence, time1, time2) = get_gradient(seq.gradient, mod(time1, seq.TR), mod(time2, seq.TR))
 
+include("timestep.jl")
 include("diffusion.jl")

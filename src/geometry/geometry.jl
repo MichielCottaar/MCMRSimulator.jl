@@ -51,6 +51,16 @@ off_resonance(obstructions::Tuple{}, position::PosVector, b0_field=PosVector([0,
 off_resonance(obstructions::AbstractVector{<:Obstruction}, position::PosVector, b0_field=PosVector([0, 0, 1])::PosVector) = sum(o->off_resonance(o, position, b0_field), obstructions)
 
 """
+    produces_off_resonance(simulation)
+    produces_off_resonance(geometry)
+
+Tests whether any aspects of the simulation geometry will produce an off-resonance field.
+"""
+produces_off_resonance(obstruction::Obstruction) = false
+produces_off_resonance(geometry::Tuple) = any(produces_off_resonance.(geometry))
+produces_off_resonance(geometry::AbstractVector{<:Obstruction}) = any(produces_off_resonance.(geometry))
+
+"""
     lorentz_off_resonance(obstructions, position, b0_field, repeat_dist, radius, nrepeats)
 
 Computes the off-resonance field contribution of repeating compartments within a spherical or cylindrical Lorentz cavity.

@@ -260,3 +260,5 @@ function off_resonance(transform::TransformObstruction{N, M}, position::PosVecto
     end
     return total
 end
+
+produces_off_resonance(transform::TransformObstruction) = produces_off_resonance(transform.obstructions)

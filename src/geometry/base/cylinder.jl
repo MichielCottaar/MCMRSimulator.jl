@@ -76,7 +76,7 @@ end
 
 function lorentz_off_resonance(cylinder::Cylinder, position::SVector{2, Float}, b0_field::SVector{2, Float}, repeat_dist::SVector{2, Float}, radius::Float, nrepeats::SVector{2, Int})
     field = zero(Float)
-    if iszero(cylinder.internal_field) && iszero(cylinder.external_field)
+    if !produces_off_resonance(cylinder)
         return field
     end
     lorentz_radius_sq = radius * radius
@@ -104,6 +104,8 @@ function lorentz_off_resonance(cylinder::Cylinder, position::SVector{2, Float}, 
     end
     return field
 end
+
+produces_off_resonance(cylinder::Cylinder) = !(iszero(cylinder.internal_field) && iszero(cylinder.external_field))
 
 """
     random_cylinders(target_density; repeats, distribution=Distributions.Gamma, mean_radius=1., variance_radius=0.5, max_iter=1000, g_ratio=1., chi_I=-0.1, chi_A=-0.1, rotation=I(3))

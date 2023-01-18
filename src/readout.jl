@@ -37,11 +37,11 @@ struct Simulation{N, M<:Microstructure, S<:Sequence}
     # N sequences, datatype T
     sequences :: SVector{N, S}
     micro::M
-    timestep::Float
+    time_controller::TimeController
     function Simulation(
         sequences, 
-        micro::Microstructure; 
-        timestep :: Real=0.5
+        micro::Microstructure, 
+        time_controller::TimeController
     )
         if isa(sequences, Sequence)
             sequences = [sequences]
@@ -50,12 +50,10 @@ struct Simulation{N, M<:Microstructure, S<:Sequence}
         end
         nseq = length(sequences)
 
-        timestep = Float(timestep)
-
         new{nseq, typeof(micro), eltype(sequences)}(
             SVector{nseq}(sequences),
             micro,
-            timestep,
+            time_controller,
         )
     end
 end
@@ -67,10 +65,21 @@ function Simulation(
     diffusivity=0.,
     off_resonance=0.,
     geometry=Obstruction[],
-    kwargs...
+    timestep=nothing,
+    gradient_precision=0.01,
+    sample_displacement=5,
+    sample_off_resonance=10,
 )
+    micro = Microstructure(R1=R1, R2=R2, diffusivity=diffusivity, off_resonance=off_resonance, geometry=geometry)
+    if isnothing(timestep)
+        controller = TimeController(micro.geometry; gradient_precision=gradient_precision, sample_displacement=sample_displacement, sample_off_resonance=sample_off_resonance)
+    else
+        controller = TimeController(timestep)
+    end
     return Simulation(
-        sequences, Microstructure(R1=R1, R2=R2, diffusivity=diffusivity, off_resonance=off_resonance, geometry=geometry); kwargs...
+        sequences, 
+        micro,
+        controller,
     )
 end
 
@@ -92,6 +101,8 @@ function _to_snapshot(spins::Snapshot{N}, nseq::Int) where {N}
     spins
 end
 
+produces_off_resonance(sim::Simulation) = produces_off_resonance(sim.micro)
+get_times(sim::Simulation, t_start, t_end) = get_times(sim.time_controller, t_start, t_end, sim.sequences, sim.micro.diffusivity)
 
 """
     readout(snapshot, simulation)
@@ -103,33 +114,35 @@ If no `TR` is explicitly selected, it will return the current TR if the snapshot
 function readout(spins, simulation::Simulation{N}) where {N}
     snapshot = _to_snapshot(spins, N)
 
-    min_simulation_time = -1.
-
-    get_times = Vector{Int}[]
+    readout_times = Float[]
+    per_seq_times = Vector{Float}[]
 
     for seq in simulation.sequences
-        current_TR = Int(div(time(snapshot), seq.TR, RoundDown))
-        time_in_TR = time(snapshot) - current_TR * seq.TR
-        times_readout = [time(r) for r in seq.pulses if isa(r, Readout)]
-        if length(times_readout) == 0
-            push!(get_times, Int[])
-            continue
+        if length(seq.readout_times) == 0
+            seq_times = Float[]
+        else
+            current_TR = Int(div(time(snapshot), seq.TR, RoundDown))
+            time_in_TR = time(snapshot) - current_TR * seq.TR
+
+            if minimum(seq.readout_times) < time_in_TR
+                current_TR += 1
+            end
+            seq_times = seq.readout_times .+ (current_TR * seq.TR)
         end
-        nskip = 0
-        proposed_time = maximum(times_readout) + 1. + current_TR * seq.TR
-        if minimum(times_readout) < time_in_TR
-            proposed_time += seq.TR
-            nskip = sum([t >= time_in_TR for t in times_readout])
-        end
-        get_times = push!(get_times, [(nskip + 1):(nskip + length(times_readout))...])
-        if proposed_time > min_simulation_time
-            min_simulation_time = proposed_time
+        append!(readout_times, seq_times)
+        push!(per_seq_times, seq_times)
+    end
+
+    final_snapshots = SVector{N}([Snapshot{1}[] for _ in 1:N])
+    for time in sort(readout_times)
+        snapshot = evolve_to_time(snapshot, simulation, time)
+        for index in 1:N
+            if time in per_seq_times[index]
+                push!(final_snapshots[index], get_sequence(snapshot, index))
+            end
         end
     end
-    readouts = evolve_to_time(snapshot, simulation, Float(min_simulation_time))[2]
-    return SVector{N}([
-        r[indices] for (r, indices) in zip(readouts, get_times)
-    ])
+    return final_snapshots
 end
 
 """
@@ -148,11 +161,11 @@ function trajectory(spins, simulation::Simulation{N}, times=nothing) where{N}
         if time(snapshot) > times
             error("Trajectory final time is lower than the current time of the snapshot.")
         end
-        times = time(snapshot):simulation.timestep:times
+        times = get_times(simulation, snapshot.time, times)
     end
     result = Array{typeof(snapshot)}(undef, size(times))
     for index in sortperm(times)
-        snapshot = evolve_to_time(snapshot, simulation, Float(times[index]))[1]
+        snapshot = evolve_to_time(snapshot, simulation, Float(times[index]))
         result[index] = snapshot
     end
     result
@@ -174,7 +187,7 @@ function signal(spins, simulation::Simulation{N}, times=nothing) where {N}
         if time(snapshot) > times
             error("Trajectory final time is lower than the current time of the snapshot.")
         end
-        times = time(snapshot):simulation.timestep:times
+        times = get_times(simulation, snapshot.time, times)
     end
     if N == 1
         result = Array{SpinOrientation}(undef, size(times))
@@ -182,7 +195,7 @@ function signal(spins, simulation::Simulation{N}, times=nothing) where {N}
         result = Array{SVector{N, SpinOrientation}}(undef, size(times))
     end
     for index in sortperm(times)
-        snapshot = evolve_to_time(snapshot, simulation, Float(times[index]))[1]
+        snapshot = evolve_to_time(snapshot, simulation, Float(times[index]))
         if N == 1
             result[index] = SpinOrientation(snapshot)
         else
@@ -205,5 +218,5 @@ function evolve(spins, simulation::Simulation{N}, new_time=nothing) where {N}
         TR = simulation.sequences[1].TR
         new_time = (div(nextfloat(snapshot.time), TR, RoundDown) + 1) * TR
     end
-    evolve_to_time(snapshot, simulation, Float(new_time))[1]
+    evolve_to_time(snapshot, simulation, Float(new_time))
 end

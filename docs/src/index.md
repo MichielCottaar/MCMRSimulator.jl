@@ -84,7 +84,7 @@ nothing # hide
 
 Once we have both a geometry and one or more sequences, we can put them together in a [`Simulation`](@ref) object:
 ```@example tutorial
-simulation = Simulation(sequence, R2=0.012, R1=3e-3, diffusivity=2., off_resonance=0.1, timestep=0.01, geometry=geometry)
+simulation = Simulation(sequence, R2=0.012, R1=3e-3, diffusivity=2., off_resonance=0.1, geometry=geometry)
 nothing # hide
 ```
 Note that we actually have to set the `R2`, `R1`, and `diffusivity` to non-zero values to enable those pieces of physics.
@@ -115,7 +115,7 @@ To plot the trajectory we first need to output the state of the all spins at a h
 which can be done using `trajectory`:
 ```@example tutorial
 # Simulate 2 spins with given starting positions for 3 ms
-snapshots = trajectory([[0, 0, 0], [1, 1, 0]], simulation, 3.)
+snapshots = trajectory([[0, 0, 0], [1, 1, 0]], simulation, 0:0.01:3.)
 
 pp = PlotPlane(size=5.)
 f = plot(pp, geometry)

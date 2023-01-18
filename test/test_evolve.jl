@@ -1,4 +1,73 @@
 @testset "Evolve a single spin fully" begin
+    @testset "Timings of readouts" begin
+        @testset "Explicitly setting timestep" begin
+            s1 = mr.dwi(bval=0.)
+            s2 = mr.dwi(bval=1.)
+
+            @test all(mr.get_times(mr.Simulation([s1, s2], timestep=0.5), 0., 80.) .== 0:0.5:80.)
+            @test all(mr.get_times(mr.Simulation([s1, s2], timestep=0.501), 0., 80.) .== 0:0.5:80.)
+            @test all(mr.get_times(mr.Simulation([s1, s2], timestep=0.501), 0., 100.) .== 0:0.5:100.)
+        end
+        @testset "Setting gradient_precision" begin
+            s1 = mr.dwi(bval=0.)
+            s2 = mr.dwi(bval=1.)
+
+            kwargs = Dict(
+                :gradient_precision => 0.01,
+                :sample_displacement => 0,
+                :sample_off_resonance => 0,
+            )
+
+            @test all(mr.get_times(mr.Simulation(s1; kwargs...), 0., 80.) .== [0., 40., 80.])
+            @test all(mr.get_times(mr.Simulation(s1; kwargs...), 90., 120.) .== [90., 120.])
+            @test all(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.) .== [0., 40., 80.])
+            @test all(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 90., 120.) .== [90., 120.])
+
+            kwargs[:diffusivity] = 1.
+            @test all(mr.get_times(mr.Simulation(s1; kwargs...), 0., 80.) .== [0., 40., 80.])
+            @test all(mr.get_times(mr.Simulation(s1; kwargs...), 90., 120.) .== [90., 120.])
+            @test length(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.)) > 3
+            @test length(intersect(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.), [0., 40., 80.])) == 3
+            @test all(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 90., 120.) .== [90., 120.])
+        end
+        @testset "Setting sample_displacement" begin
+            geometry = mr.Annulus(1., 2., myelin=true)
+            s1 = mr.dwi(bval=0.)
+            s2 = mr.dwi(bval=1., readout_time=40)
+
+            kwargs = Dict(
+                :gradient_precision => 0,
+                :sample_displacement => 4,
+                :sample_off_resonance => 0,
+                :geometry => geometry,
+                :diffusivity => 1.,
+            )
+
+            @test all(mr.get_times(mr.Simulation(s1; kwargs...), 0., 80.) .== 0:10:80)
+            @test all(mr.get_times(mr.Simulation(s1; kwargs...), 90., 130.) .== 90:10:130)
+
+            @test all(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.) .== [0:5:60..., 70, 80])
+            @test all(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 90., 130.) .== 90:10:130)
+        end
+        @testset "Setting sample_off_resonance" begin
+            geometry = mr.Annulus(1., 2., myelin=true)
+            s1 = mr.dwi(bval=0.)
+            s2 = mr.dwi(bval=1., readout_time=40)
+
+            kwargs = Dict(
+                :gradient_precision => 0,
+                :sample_displacement => 0,
+                :sample_off_resonance => 4,
+                :geometry => geometry,
+                :diffusivity => 1.,
+            )
+
+            for sequences in (s1, [s1, s2])
+                @test all(mr.get_times(mr.Simulation(sequences; kwargs...), 0., 80.) .== 0:10:80)
+                @test all(mr.get_times(mr.Simulation(sequences; kwargs...), 85., 125.) .== 85:20:125)
+            end
+        end
+    end
     @testset "Empty environment and sequence" begin
         simulation = mr.Simulation(mr.Sequence(TR=2.8))
         snaps = mr.trajectory(zeros(3), simulation, 0:0.5:2.8)
@@ -49,8 +118,8 @@
     end
     @testset "Basic diffusion has no effect in constant fields" begin
         sequence = mr.Sequence(pulses=[mr.RFPulse(flip_angle=90)], TR=2.)
-        no_diff = mr.Simulation([sequence], mr.Microstructure(R2=mr.field(0.3)))
-        with_diff = mr.Simulation([sequence], mr.Microstructure(diffusivity=mr.field(1.), R2=mr.field(0.3)))
+        no_diff = mr.Simulation([sequence], R2=mr.field(0.3))
+        with_diff = mr.Simulation([sequence], diffusivity=1., R2=mr.field(0.3))
         spin_no_diff = mr.evolve(mr.Spin(), no_diff).spins[1]
         spin_with_diff = mr.evolve(mr.Spin(), with_diff).spins[1]
         @test spin_no_diff.position == SA[0, 0, 0]
@@ -61,9 +130,9 @@
     end
     @testset "Basic diffusion changes spin orientation in spatially varying field" begin
         sequence = mr.Sequence(pulses=[mr.RFPulse(flip_angle=90)], TR=2.)
-        no_diff = mr.Simulation([sequence], mr.Microstructure(R2=mr.field(0.3)))
-        with_diff = mr.Simulation([sequence], mr.Microstructure(diffusivity=mr.field(1.), R2=mr.field([1., 0., 0.], 0.3)))
-        with_diff_no_grad = mr.Simulation([sequence], mr.Microstructure(diffusivity=mr.field(1.), R2=mr.field(0.3)))
+        no_diff = mr.Simulation([sequence], R2=mr.field(0.3))
+        with_diff = mr.Simulation([sequence], diffusivity=1., R2=mr.field([1., 0., 0.], 0.3))
+        with_diff_no_grad = mr.Simulation([sequence], diffusivity=1., R2=mr.field(0.3))
 
         spin_no_diff = mr.evolve(mr.Spin(), no_diff).spins[1]
         spin_with_diff = mr.evolve(mr.Spin(), with_diff).spins[1]
@@ -96,7 +165,7 @@
             mr.Sequence(pulses=[mr.RFPulse(flip_angle=90), mr.Readout(2.)], TR=3.),
             mr.Sequence(pulses=[mr.RFPulse(flip_angle=90), mr.Readout(1.)], TR=2.),
         ]
-        all_snaps = mr.Simulation(sequences, mr.Microstructure(diffusivity=mr.field(1.), R2=mr.field(1.)))
+        all_snaps = mr.Simulation(sequences, diffusivity=1., R2=mr.field(1.))
 
         readouts = [r[1] for r in mr.readout(mr.Spin(), all_snaps)]
 
