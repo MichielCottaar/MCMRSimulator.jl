@@ -10,10 +10,11 @@ end
 
 Describes the microstructure of the tissue.
 
-This describes both the spatial distribution of the `R1`, `R2`, `off-resonance`, and `diffusivity` parameters (as [`Field`](@ref) objects)
+This describes both the spatial distribution of the `R1`, `R2`, and `off-resonance` parameters (as [`Field`](@ref) objects),
+the diffusivity as a float,
 as well as the spatial `geometry` constraining the diffusion (as a sequence of [`Obstruction`](@ref) objects).
 
-The `R1`, `R2`, `off-resonance`, and `diffusivity` parameters can be defined as one of:
+The `R1`, `R2`, and `off-resonance` parameters can be defined as one of:
 - `value::Number`: constant value across the microstructure.
 - `(gradient::PosVector, value::Number)`: gradient across the microstructure.
 - `field::Field`: as generated using [`field`](@ref).
