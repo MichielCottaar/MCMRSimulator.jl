@@ -16,6 +16,7 @@ all_tests = [
     "meshes",
     "offresonance",
     "transfer",
+    "permeability",
 ]
 
 if length(ARGS) == 0

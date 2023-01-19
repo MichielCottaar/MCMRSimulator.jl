@@ -9,8 +9,9 @@ The generic properties of an obstruction that all obstructions have in common. T
 struct ObstructionProperties
     id :: UUID
     MT_fraction :: Float
+    permeability :: Float
 end
-ObstructionProperties(; MT_fraction=0.) = ObstructionProperties(uuid1(), MT_fraction)
+ObstructionProperties(; MT_fraction=zero(Float), permeability=zero(Float)) = ObstructionProperties(uuid1(), MT_fraction, permeability)
 
 for accessor in [:id, :MT_fraction]
     @eval $(accessor)(prop :: ObstructionProperties) = prop.$(accessor)

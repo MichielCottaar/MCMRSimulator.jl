@@ -76,11 +76,17 @@ function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, 
 
             orient = transfer(orient, ObstructionProperties(collision), timestep)
 
-            direction = new_pos .- current_pos
-            reflection = - 2 * (collision.normal ⋅ direction) * collision.normal / norm(collision.normal) ^ 2 .+ direction
+            permeability_prob = 1 - (1 - collision.properties.permeability) ^ sqrt(timestep)
+            if iszero(permeability_prob) || rand() > permeability_prob
+                direction = new_pos .- current_pos
+                reflection = - 2 * (collision.normal ⋅ direction) * collision.normal / norm(collision.normal) ^ 2 .+ direction
 
-            current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
-            new_pos = current_pos .+ reflection / norm(reflection) * norm(direction) * (1 - collision.distance)
+                current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
+                new_pos = current_pos .+ reflection / norm(reflection) * norm(direction) * (1 - collision.distance)
+            else
+                current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
+                collision = Collision(collision.distance, -collision.normal, collision.properties, collision.index, !collision.inside)
+            end
         end
     end
     if collision !== empty_collision

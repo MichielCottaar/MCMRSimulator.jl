@@ -1,0 +1,58 @@
+@testset "Test permeability" begin
+    @testset "Test single sphere" begin
+        Random.seed!(1234)
+        snapshot = mr.Snapshot(zeros(10000, 3))
+
+        function new_pos(permeability; timestep=0.1)
+            cylinder = mr.spheres(1., permeability=permeability)
+            simulation = mr.Simulation([], geometry=cylinder, diffusivity=1., timestep=timestep)
+            mr.position.(mr.evolve(snapshot, simulation, 10.))
+        end
+        pos = new_pos(0)
+        @test maximum(norm.(pos)) < 1.
+
+        pos = new_pos(1)
+        @test maximum(norm.(pos)) > 1.
+        for dim in 1:3
+            @test std([a[dim] for a in pos]) ≈ sqrt(20.) rtol=0.1
+        end
+
+        for permeability in [0.1, 0.5, 0.8]
+            pos = new_pos(permeability, timestep=0.01)
+            @test maximum(norm.(pos)) > 1.
+            for dim in 1:3
+                @test std([a[dim] for a in pos]) < sqrt(20.)
+            end
+
+            pos2 = new_pos(permeability, timestep=0.1)
+            for dim in 1:3
+                @test std([a[dim] for a in pos]) ≈ std([a[dim] for a in pos2]) rtol=0.1
+            end
+        end
+    end
+    @testset "Test repeating wall" begin
+        Random.seed!(1234)
+        snapshot = mr.Snapshot(zeros(10000, 3))
+
+        function new_pos(permeability; timestep=0.1)
+            walls = mr.walls(positions=0.5, permeability=permeability, repeats=1)
+            simulation = mr.Simulation([], geometry=walls, diffusivity=10., timestep=timestep)
+            [p[1] for p in mr.position.(mr.evolve(snapshot, simulation, 10.))]
+        end
+        pos = new_pos(0)
+        @test maximum(abs.(pos)) < 0.5
+
+        pos = new_pos(1)
+        @test maximum(abs.(pos)) > 0.5
+        @test std(pos) ≈ sqrt(200.) rtol=0.1
+
+        for permeability in [0.1, 0.5, 0.8]
+            pos = new_pos(permeability, timestep=0.01)
+            @test maximum(abs.(pos)) > 0.5
+            @test std(pos) < sqrt(200.)
+
+            pos2 = new_pos(permeability, timestep=0.1)
+            @test std(pos) ≈ std(pos2) rtol=0.1
+        end
+    end
+end
