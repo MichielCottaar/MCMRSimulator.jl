@@ -181,7 +181,8 @@ function detect_collision(movement :: Movement{3}, trans :: TransformObstruction
             current_guess.distance,
             trans.rotation * n,
             current_guess.properties,
-            current_guess.index
+            current_guess.index,
+            current_guess.inside
         )
     end
     return empty_collision

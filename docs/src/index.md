@@ -7,9 +7,9 @@ At present, the simulator allows to model
 - MR sequences consisting of RF pulses, gradients, and readouts
 - Off-resonance field generation by myelinated cylinders
 - Magnetisation transfer between liquid spins and membranes
+- Membrane permeability (i.e., exchange)
 
 Future (potential) features:
-- Membrane permeability (i.e., exchange)
 - Surface tension of membranes causing spins to get temporarily "stuck" when they hit a membrane
 - More realistic RF pulsess
 - Keeping track of the membrane longitudinal magnetisation (allowing for more realistic magnetisation transfer)
