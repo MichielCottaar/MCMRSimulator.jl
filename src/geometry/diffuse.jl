@@ -132,7 +132,7 @@ end
 
 
 """
-    Collision(distance, normal, properties[, index])
+    Collision(distance, normal, properties; index=0, inside=false)
 
 A detected collision along the movement.
 
@@ -141,20 +141,22 @@ A detected collision along the movement.
 - `normal`: normal of the obstruction at the collision site. To get correct reflection the normal should point in the direction of the incoming particle.
 - `properties`: [`ObstructionProperties`](@ref) of the obstruction the spin collided with.
 - `index`: Index of which triangle in [`Mesh`](@ref) got hit
+- `inside`: Whether the obstruction was hit on the inside or the outside. For a mesh triangle the outside is considered in the direction of the normal. For a wall the outside is in the positive direction.
 """
 struct Collision
     distance :: Float
     normal :: PosVector
     properties :: ObstructionProperties
     index :: Int
-    Collision(distance, normal, properties, index) = new(iszero(distance) ? distance : prevfloat(distance), normal, properties, index)
+    inside :: Bool
+    Collision(distance, normal, properties, index, inside) = new(iszero(distance) ? distance : prevfloat(distance), normal, properties, index, inside)
 end
 
-Collision(distance, normal, properties; index=0) = Collision(distance, normal, properties, index)
+Collision(distance, normal, properties; index=0, inside=false) = Collision(distance, normal, properties, index, inside)
 ObstructionProperties(c :: Collision) = c.properties
 
 
-const empty_collision = Collision(Inf, SA[0, 0, 0], ObstructionProperties(), 0)
+const empty_collision = Collision(Inf, SA[0, 0, 0], ObstructionProperties(), 0, false)
 
 """
     detect_collision(movement, obstructions[, previous])
