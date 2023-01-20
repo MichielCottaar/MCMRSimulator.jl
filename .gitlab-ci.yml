@@ -32,16 +32,6 @@ build_pages:
     - julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); include("docs/make.jl")'
   only:
     - main
-pages:
-  script:
-    - mkdir .public
-    - mv * .public/
-    - mv .public public
-  artifacts:
-    paths:
-      - public
-  only:
-    - pages
 .benchmark-main:
   stage: deploy
   script:
