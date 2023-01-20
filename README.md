@@ -29,3 +29,29 @@ This software can be cited using the information in [CITATION.cff].
   url          = {https://doi.org/10.5281/zenodo.7318657}
 }
 ```
+
+## Developer documentation
+### Release procedure
+- Update the version number in "Project.toml", "README.md" citation section, and "CITATION.cff"
+- Update the "CHANGELOG.md"
+  - Check `[Unreleased]` link for any missing additions to the Changelog
+  - Add line with `## [v<version number>]` just below `## [Ureleased]`
+  - Add new link at bottom: `[v<version number>]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v<previour version>...v<version_number>`
+  - Update unreleased link at bottom with new version number: `[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v<previour version>...main`
+- Login into [zenodo](https://doi.org/10.5281/zenodo.7318656)
+  - In the MCMRSimulator.jl repository click "New version"
+  - Click "Reserve doi"
+  - Add new citation information to CITATION.cff
+    - 
+    ```
+      - description: "This is the archived snapshot of version <version number> of MCMRSimulator.jl"
+        type: doi
+        value: <reserved doi>
+    ```
+  - Keep this page open
+- Commit changes
+- Add tag "v<version number>"
+- git push
+- Create snapshot on gitlab
+  - Upload spanshot to zenodo
+- Check if documentation updated correctly
