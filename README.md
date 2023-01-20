@@ -32,7 +32,7 @@ This software can be cited using the information in [CITATION.cff].
 
 ## Developer documentation
 ### Release procedure
-- Update the version number in "Project.toml", "README.md" citation section, and "CITATION.cff"
+- Update the version number in "Project.toml" and "README.md" citation section.
 - Update the "CHANGELOG.md"
   - Check `[Unreleased]` link for any missing additions to the Changelog
   - Add line with `## [v<version number>]` just below `## [Ureleased]`
@@ -49,7 +49,7 @@ This software can be cited using the information in [CITATION.cff].
     ```
   - Keep this page open
 - Commit changes
-- Add tag `v<version number>`
+- Add tag `v<version number>
 - git push
 - Create snapshot on gitlab
   - Upload spanshot to zenodo
