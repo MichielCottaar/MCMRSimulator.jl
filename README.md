@@ -42,7 +42,6 @@ This software can be cited using the information in [CITATION.cff].
   - In the MCMRSimulator.jl repository click "New version"
   - Click "Reserve doi"
   - Add new citation information to CITATION.cff
-    - 
     ```
       - description: "This is the archived snapshot of version <version number> of MCMRSimulator.jl"
         type: doi
