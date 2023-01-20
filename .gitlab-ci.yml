@@ -27,6 +27,8 @@ default:
   timeout: 2h
 build_pages:
   script:
+    - apt-get update
+    - apt-get install -y git
     - julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); include("docs/make.jl")'
   artifacts:
     paths:
