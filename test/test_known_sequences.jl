@@ -70,7 +70,7 @@
                         factor = qval * radius
                         expected = 9 * (factor * cos(factor) - sin(factor)) ^2 / factor^6
                         @test readout.time == 101
-                        @test mr.transverse(readout) ≈ length(readout.spins) * expected rtol=0.05
+                        @test log(mr.transverse(readout) / length(readout.spins)) ≈ log(expected) rtol=0.05
                     end
                 end
             end
@@ -91,7 +91,7 @@
                         #factor = 2 * π * qval * distance
                         expected = 2 * (1 - cos(factor)) / factor^2
                         @test readout.time == 101
-                        @test mr.transverse(readout) ≈ length(readout.spins) * expected rtol=0.05
+                        @test log(mr.transverse(readout) / length(readout.spins)) ≈ log(expected) rtol=0.05
                     end
                 end
                 @testset "Mitra approximation at long diffusion times" begin
