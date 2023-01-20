@@ -49,7 +49,7 @@ This software can be cited using the information in [CITATION.cff].
     ```
   - Keep this page open
 - Commit changes
-- Add tag "v<version number>"
+- Add tag `v<version number>`
 - git push
 - Create snapshot on gitlab
   - Upload spanshot to zenodo
