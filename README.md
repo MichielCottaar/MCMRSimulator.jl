@@ -24,7 +24,7 @@ This software can be cited using the information in [CITATION.cff].
   month        = nov,
   year         = 2022,
   publisher    = {Zenodo},
-  version      = {V0.3},
+  version      = {V0.4},
   doi          = {10.5281/zenodo.7318657},
   url          = {https://doi.org/10.5281/zenodo.7318657}
 }
@@ -53,4 +53,5 @@ This software can be cited using the information in [CITATION.cff].
 - git push
 - Create snapshot on gitlab
   - Upload spanshot to zenodo
+  - Update version number
 - Check if documentation updated correctly
