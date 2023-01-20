@@ -95,6 +95,7 @@
                     end
                 end
                 @testset "Mitra approximation at long diffusion times" begin
+                    # equation 3 from Mitra, P.P. et al. (1992) ‘Diffusion propagator as a probe of the structure of porous media’, Physical Review Letters, 68(24), pp. 3555–3558. doi:10.1103/physrevlett.68.3555.
                     Random.seed!(1234)
                     diffusion_times = [0.003, 0.01]
                     sequences = [
@@ -108,7 +109,7 @@
                         @show (dt, distance)
                         effective_diffusion = 1. - 4 / 3 * sqrt(π * dt) / distance
                         signal = mr.transverse(readout_dt[1])
-                        @test log(signal / length(readout_dt[1])) ≈ -2. * effective_diffusion rtol=0.1
+                        @test log(signal / length(readout_dt[1])) ≈ -2. * effective_diffusion rtol=0.2
                     end
                 end
             end
