@@ -19,19 +19,6 @@ To run a [`Snapshot`](@ref) through the simulations you can use one of the follo
 - [`trajectory`](@ref): returns full spin trajectory (recommended only for small number of spins)
 - [`signal`](@ref): returns signal variation over time
 - [`readout`](@ref): returns the snapshots at the sequence readouts.
-
-After creating the `Simulation` object it will not actually run.
-To run the simulation for a given time, you can call:
-
-    append!(simulation::Simulation, duration::Real)
-
-This will run the simulation for `duration` milliseconds. 
-During this time various intermediate states will be stored:
-    - A [`Snapshot`](@ref)(`nsequences`) will be added to `simulation.regular` every `store_every` milliseconds.
-    - A [`Snapshot`](@ref)(1) will be added to `simulation.readout[sequence_index]`, whenever a [`Readout`](@ref) object is encountered in the sequence.
-    - The final state of the simulation will be added as a [`Snapshot`](@ref)(`nsequences`) object to `simulation.latest`, so that `simulation.latest[end]` always contains the final state of the total simulation.
-
-`append!` can be called multiple times to continue the simulation further.
 """
 struct Simulation{N, M<:Microstructure, S<:Sequence}
     # N sequences, datatype T
