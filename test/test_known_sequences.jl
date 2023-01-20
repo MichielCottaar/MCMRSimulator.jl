@@ -106,7 +106,6 @@
                     at_readout = mr.readout(snap, simulation)
 
                     for (dt, readout_dt) in zip(diffusion_times, at_readout)
-                        @show (dt, distance)
                         effective_diffusion = 1. - 4 / 3 * sqrt(π * dt) / distance
                         signal = mr.transverse(readout_dt[1])
                         @test log(signal / length(readout_dt[1])) ≈ -2. * effective_diffusion rtol=0.2
