@@ -7,7 +7,7 @@ default:
   tags:
     - docker
 
-Pre-compile:
+.Pre-compile:
   stage: build
   script:
     - julia --project=@. -e "using Pkg; Pkg.build()"
@@ -17,7 +17,7 @@ Pre-compile:
       - .julia/
     expire_in: 2 hours
 
-Testing:
+.Testing:
   script:
     - apt-get update
     - apt-get install -y xvfb
@@ -25,15 +25,15 @@ Testing:
   after_script:
     - .ci/get_coverage.sh
   timeout: 2h
-pages:
+build_pages:
   script:
-    - .ci/gen_docs.sh dev
+    - julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); include("docs/make.jl")'
   artifacts:
     paths:
       - public
   only:
     - main
-benchmark-main:
+.benchmark-main:
   stage: deploy
   script:
     - apt-get update
@@ -42,7 +42,7 @@ benchmark-main:
     - julia benchmark/run_benchmarks.jl origin/main
   except:
     - main
-benchmark-version:
+.benchmark-version:
   stage: deploy
   script:
     - apt-get update

@@ -25,4 +25,7 @@ makedocs(
         "References" => "references.md",
     ],
     strict=[:example_block],
+    draft=true,
 )
+
+deploydocs(repo="git.fmrib.ox.ac.uk:ndcn0236/mcmrsimulator.jl.git", branch="pages", devbranch="main")
