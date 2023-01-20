@@ -94,6 +94,23 @@
                         @test mr.transverse(readout) ≈ length(readout.spins) * expected rtol=0.05
                     end
                 end
+                @testset "Mitra approximation at long diffusion times" begin
+                    Random.seed!(1234)
+                    diffusion_times = [0.003, 0.01]
+                    sequences = [
+                        mr.dwi(diffusion_time=dt, TE=2, bval=2.)
+                        for dt in diffusion_times
+                    ]
+                    simulation = mr.Simulation(sequences; geometry=walls, diffusivity=1.)
+                    at_readout = mr.readout(snap, simulation)
+
+                    for (dt, readout_dt) in zip(diffusion_times, at_readout)
+                        @show (dt, distance)
+                        effective_diffusion = 1. - 4 / 3 * sqrt(π * dt) / distance
+                        signal = mr.transverse(readout_dt[1])
+                        @test log(signal / length(readout_dt[1])) ≈ -2. * effective_diffusion rtol=0.1
+                    end
+                end
             end
         end
     end
