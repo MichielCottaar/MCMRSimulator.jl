@@ -1,0 +1,10 @@
+pages:
+  script:
+    - mkdir .public
+    - mv * .public/
+    - mv .public public
+  artifacts:
+    paths:
+      - public
+  only:
+    - pages
