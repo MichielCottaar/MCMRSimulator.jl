@@ -5,6 +5,13 @@ They can be moved/rotated/repeated by applying [`TransformObstruction`](@ref).
 
 The dimensionality N indicates the dimensionality of the input data 
 (1 for [`Wall`](@ref), 2 for [`Cylinder`](@ref), 3 for [`Sphere`](@ref) or [`Mesh`](@ref)).
+
+Each obstruction needs to define the following interface:
+- [`detect_collision`](movement, obstruction, previous_collision): returns any interesection between the movement and the obstruction
+- [`produces_off_resonance`](obstruction), optional: whether the obstruction produces an off-resonance field (false by default). If true, the obstruction should also define:
+    - [`lorentz_off_resonance`](obstruction, position, ...): computes the off-resonance due to the obstruction at position
+- [`isinside`](obstruction, position): true if position is inside the obstruction
+- [`BoundingBox`](obstruction): returns a [`BoundingBox`] fully containing the obstruction
 """
 abstract type BaseObstruction{N} <: Obstruction{N} end
 
