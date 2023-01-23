@@ -45,8 +45,8 @@ Base.getindex(s :: Sequence, index :: Integer) = s.pulses[mod(index - 1, length(
 Base.getindex(s :: Sequence{0}, index :: Integer) = error("Can not index an empty sequence")
 
 
-Base.time(sequence :: Sequence{0}, index :: Integer) = Inf
-function Base.time(sequence :: Sequence, index :: Integer)
+get_time(sequence :: Sequence{0}, index :: Integer) = Inf
+function get_time(sequence :: Sequence, index :: Integer)
     nTR = div(index - 1, length(sequence.pulses))
     sequence[index].time + nTR * sequence.TR
 end

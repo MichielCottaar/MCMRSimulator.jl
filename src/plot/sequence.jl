@@ -61,15 +61,15 @@ function Makie.plot!(pp::PulsePlot)
         pulse, max_rf, max_qval = as_tuple
         if isa(pulse, RFPulse)
             height = 0.9 * flip_angle(pulse) / max_rf
-            Makie.arrows!(pp, [time(pulse)], [0.], [0.], [height])
-            Makie.text!(pp, string(Int(round(flip_angle(pulse)))), position=(time(pulse), height + 0.05), align=(:center, :center))
+            Makie.arrows!(pp, [get_time(pulse)], [0.], [0.], [height])
+            Makie.text!(pp, string(Int(round(flip_angle(pulse)))), position=(get_time(pulse), height + 0.05), align=(:center, :center))
         elseif isa(pulse, InstantGradient)
             height = (isnothing(max_qval) ? 1. : qval(pulse) / max_qval) * 0.9
-            Makie.barplot!(pp, [time(pulse)], [height])
-            Makie.text!(pp, string(round(qval(pulse), sigdigits=2)), position=(time(pulse), height + 0.05), align=(:center, :center))
+            Makie.barplot!(pp, [get_time(pulse)], [height])
+            Makie.text!(pp, string(round(qval(pulse), sigdigits=2)), position=(get_time(pulse), height + 0.05), align=(:center, :center))
         elseif isa(pulse, Readout)
-            Makie.arrows!(pp, [time(pulse)], [0.5], [0.], [-0.5])
-            Makie.text!(pp, "readout", position=(time(pulse), 0.55), align=(:center, :center))
+            Makie.arrows!(pp, [get_time(pulse)], [0.5], [0.], [-0.5])
+            Makie.text!(pp, "readout", position=(get_time(pulse), 0.55), align=(:center, :center))
         end
     end
     p[] = p[]
