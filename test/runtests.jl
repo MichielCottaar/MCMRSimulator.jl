@@ -36,6 +36,7 @@ end
             include("test_$test.jl")
         end
     end
+    @test length(detect_ambiguities(mr)) == 0
     @testset "Simple relaxation" begin
         orient = mr.Spin(transverse=1., longitudinal=0.).orientations[1]
         pos = zero(SVector{3, Float})
