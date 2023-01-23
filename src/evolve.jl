@@ -54,7 +54,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
         [next_pulse(seq, current_time) for seq in simulation.sequences]
     )
     sequence_times = MVector{N, Float}(
-        [time(seq, index) for (seq, index) in zip(simulation.sequences, sequence_index)]
+        [get_time(seq, index) for (seq, index) in zip(simulation.sequences, sequence_index)]
     )
 
     nspins = length(spins)
@@ -76,7 +76,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
                 if ctime == current_time
                     sequence = simulation.sequences[idx]
                     sequence_index[idx] += 1
-                    sequence_times[idx] = time(sequence, sequence_index[idx])
+                    sequence_times[idx] = get_time(sequence, sequence_index[idx])
                 end
             end
         end

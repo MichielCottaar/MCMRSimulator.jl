@@ -108,13 +108,13 @@
         @test length(snaps) == 6
 
         snaps = mr.evolve(mr.Spin(), simulation, 2.3)
-        @test time(snaps) == 2.3
+        @test mr.get_time(snaps) == 2.3
 
         snaps = mr.evolve(snaps, simulation)
-        @test time(snaps) == 2.8
+        @test mr.get_time(snaps) == 2.8
 
         snaps = mr.evolve(mr.Spin(), simulation)
-        @test time(snaps) == 2.8
+        @test mr.get_time(snaps) == 2.8
     end
     @testset "Basic diffusion has no effect in constant fields" begin
         sequence = mr.Sequence(pulses=[mr.RFPulse(flip_angle=90)], TR=2.)

@@ -219,13 +219,13 @@ end
 Snapshot(nspins :: Int; kwargs...) = Snapshot(rand(nspins, 3) .* 1000 .- 500; kwargs...)
 
 """
-    time(snapshot)
-    time(sequence_component)
-    time(sequence, sequence_index)
+    get_time(snapshot)
+    get_time(sequence_component)
+    get_time(sequence, sequence_index)
 
 Returns the time in milliseconds that a snapshot was taken or that a sequence component will have effect.
 """
-Base.time(s :: Snapshot) = s.time
+get_time(s :: Snapshot) = s.time
 
 function orientation(s :: Snapshot)
     sum(orientation, s.spins)

@@ -108,8 +108,8 @@ function readout(spins, simulation::Simulation{N}) where {N}
         if length(seq.readout_times) == 0
             seq_times = Float[]
         else
-            current_TR = Int(div(time(snapshot), seq.TR, RoundDown))
-            time_in_TR = time(snapshot) - current_TR * seq.TR
+            current_TR = Int(div(get_time(snapshot), seq.TR, RoundDown))
+            time_in_TR = get_time(snapshot) - current_TR * seq.TR
 
             if minimum(seq.readout_times) < time_in_TR
                 current_TR += 1
@@ -145,7 +145,7 @@ function trajectory(spins, simulation::Simulation{N}, times=nothing) where{N}
         times = simulation.sequences[1].TR
     end
     if isa(times, Real)
-        if time(snapshot) > times
+        if get_time(snapshot) > times
             error("Trajectory final time is lower than the current time of the snapshot.")
         end
         times = get_times(simulation, snapshot.time, times)
@@ -171,7 +171,7 @@ function signal(spins, simulation::Simulation{N}, times=nothing) where {N}
         times = simulation.sequences[1].TR
     end
     if isa(times, Real)
-        if time(snapshot) > times
+        if get_time(snapshot) > times
             error("Trajectory final time is lower than the current time of the snapshot.")
         end
         times = get_times(simulation, snapshot.time, times)

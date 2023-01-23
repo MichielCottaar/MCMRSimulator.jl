@@ -37,11 +37,11 @@ function get_times(time_controller::TimeController, t_start::Float, t_end::Float
     timepoints = [t_start, t_end]
     for sequence in sequences
         index = 1
-        while time(sequence, index) <= t_start
+        while get_time(sequence, index) <= t_start
             index += 1
         end
-        while time(sequence, index) < t_end
-            push!(timepoints, time(sequence, index))
+        while get_time(sequence, index) < t_end
+            push!(timepoints, get_time(sequence, index))
             index += 1
         end
 
@@ -109,8 +109,8 @@ function get_times(time_controller::TimeController, t_start::Float, t_end::Float
             end
 
             mt = (
-                min(t_end, time(sequence, next_rf_pulse)) - 
-                time(sequence, next_rf_pulse - 1)
+                min(t_end, get_time(sequence, next_rf_pulse)) - 
+                get_time(sequence, next_rf_pulse - 1)
             ) / time_controller.sample_off_resonance
             if mt < max_timestep_offresonance
                 max_timestep_offresonance = mt

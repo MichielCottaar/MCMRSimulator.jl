@@ -1,7 +1,7 @@
 # defining the sequence
 "A single component of a longer MR [`Sequence`](@ref)."
 abstract type SequenceComponent end
-Base.time(pulse::SequenceComponent) = pulse.time
+get_time(pulse::SequenceComponent) = pulse.time
 
 """
     RFPulse(;time=0., flip_angle=0., phase=0.)
