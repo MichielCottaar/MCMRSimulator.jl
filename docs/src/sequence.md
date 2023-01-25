@@ -25,7 +25,7 @@ nothing # hide
 In MCMRSimulator.jl an MR [`Sequence`](@ref) describes the RF pulses and gradients applied by the MRI scanner.
 
 This sequence contains:
-- A set of instantaneous RF pulses ([`RFPulse`](@ref)), gradients ([`InstantGradient`](@ref)), or readouts ([`Readout`](@ref)). Each of these changes or reads the spin orientations at a specific timepoint.
+- A set of instantaneous RF pulses ([`InstantRFPulse`](@ref)), gradients ([`InstantGradient`](@ref)), or readouts ([`Readout`](@ref)). Each of these changes or reads the spin orientations at a specific timepoint.
 - A gradient profile from [`create_gradients`](@ref). They can be rotated using [`rotate_bvec`](@ref).
 - TODO: how the RF pulse changes over time
 Each of these sequence components will play identically every repetition time (TR) of the sequence.

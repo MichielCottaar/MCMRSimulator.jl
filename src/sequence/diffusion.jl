@@ -77,9 +77,9 @@ function perfect_dwi(;
 )
     (qval, diffusion_time) = derive_qval_time(bval, diffusion_time, qval, TE)
     @assert diffusion_time < TE
-    base_components = SequenceComponent[
-        RFPulse(time=0., flip_angle=90., phase=-90.),
-        RFPulse(time=TE/2., flip_angle=180.),
+    base_components = [
+        InstantRFPulse(time=0., flip_angle=90., phase=-90.),
+        InstantRFPulse(time=TE/2., flip_angle=180.),
         Readout(time=TE),
     ]
     if !iszero(qval)
@@ -124,9 +124,9 @@ function dwi(;
 
     grad_1D = dwi_gradients_1D(TE=TE, bval=bval, qval=qval, gradient_strength=gradient_strength, gradient_duration=gradient_duration, diffusion_time=diffusion_time, readout_time=readout_time, scanner=scanner)
     grad = rotate_bvec(grad_1D, orientation)
-    pulses = SequenceComponent[
-        RFPulse(time=0., flip_angle=90., phase=-90.),
-        RFPulse(time=TE/2., flip_angle=180.),
+    pulses = [
+        InstantRFPulse(time=0., flip_angle=90., phase=-90.),
+        InstantRFPulse(time=TE/2., flip_angle=180.),
         Readout(time=TE),
     ]
     Sequence(scanner=scanner, pulses=pulses, gradients=grad, TR=TR)

@@ -67,7 +67,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
 
         # return final snapshot state
         if current_time != new_time && any(t -> t == current_time, sequence_times)
-            components = SVector{N, Union{Nothing, SequenceComponent}}([
+            components = SVector{N, Union{Nothing, InstantComponent}}([
                 time == current_time ? seq[index] : nothing 
                 for (seq, index, time) in zip(simulation.sequences, sequence_index, sequence_times)
             ])

@@ -19,17 +19,17 @@ function Makie.plot!(sp::Sequence_Plot)
     seq = sp[1]
     on(@lift ($(sp[1]), $(sp[:max_G]), $(sp[:single_gradient]))) do as_tuple
         (s, max_G, sg) = as_tuple
-        if any(p->isa(p, RFPulse), s.pulses)
-            max_angle = maximum([flip_angle(p) for p in s.pulses if isa(p, RFPulse)])
+        if any(p->isa(p, InstantRFPulse), s.instants)
+            max_angle = maximum([flip_angle(p) for p in s.instants if isa(p, InstantRFPulse)])
         else
             max_angle = nothing
         end
-        if any(p->isa(p, InstantGradient), s.pulses)
-            max_qval = maximum([qval(p) for p in s.pulses if isa(p, InstantGradient)])
+        if any(p->isa(p, InstantGradient), s.instants)
+            max_qval = maximum([qval(p) for p in s.instants if isa(p, InstantGradient)])
         else
             max_qval = nothing
         end
-        for pulse in s.pulses
+        for pulse in s.instants
             pulseplot!(sp, pulse; max_rf_pulse=max_angle, max_qval=max_qval)
         end
         for readout in s.readout_times
@@ -59,7 +59,7 @@ function Makie.plot!(pp::PulsePlot)
     comb = @lift ($p, $r, $q)
     on(comb) do as_tuple
         pulse, max_rf, max_qval = as_tuple
-        if isa(pulse, RFPulse)
+        if isa(pulse, InstantRFPulse)
             height = 0.9 * flip_angle(pulse) / max_rf
             Makie.arrows!(pp, [get_time(pulse)], [0.], [0.], [height])
             Makie.text!(pp, string(Int(round(flip_angle(pulse)))), position=(get_time(pulse), height + 0.05), align=(:center, :center))
@@ -76,7 +76,8 @@ function Makie.plot!(pp::PulsePlot)
     pp
 end
 
-Makie.plottype(::SequenceComponent) = PulsePlot
+Makie.plottype(::InstantComponent) = PulsePlot
+Makie.plottype(::Readout) = PulsePlot
 
 
 @Makie.recipe(GradientPlot, pulse) do scene

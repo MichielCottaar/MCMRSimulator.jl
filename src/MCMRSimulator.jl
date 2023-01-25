@@ -38,7 +38,7 @@ include("readout.jl")
 include("evolve.jl")
 include("plot/plot.jl")
 
-export Sequence, RFPulse, Readout, InstantGradient, create_gradients
+export Sequence, InstantRFPulse, Readout, InstantGradient, create_gradients
 export create_gradients, get_gradient, LinearGradients, StepWiseGradients, rotate_bvec
 export dwi
 export Scanner, Siemens_Connectom, Siemens_Prisma, Siemens_Terra

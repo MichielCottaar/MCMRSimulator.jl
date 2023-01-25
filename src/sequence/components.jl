@@ -1,15 +1,13 @@
 # defining the sequence
-"A single component of a longer MR [`Sequence`](@ref)."
-abstract type SequenceComponent end
-get_time(pulse::SequenceComponent) = pulse.time
+abstract type InstantComponent end
 
 """
-    RFPulse(;time=0., flip_angle=0., phase=0.)
+    InstantRFPulse(;time=0., flip_angle=0., phase=0.)
 
 Instantaneous radio-frequency pulse that flips the spins by `flip_angle` degrees in a plane perpendicular to an axis in the x-y plane with an angle of `phase` degrees with respect to the x-axis at given `time`.
 Angles are in degrees (stored internally as radians) and the `time` is in milliseconds.
 """
-struct RFPulse <: SequenceComponent
+struct InstantRFPulse <: InstantComponent
     time :: Float
     flip_angle :: Float
     cf :: Float
@@ -17,27 +15,27 @@ struct RFPulse <: SequenceComponent
     phase :: Float
     cp :: Float
     sp :: Float
-    RFPulse(time, flip_angle, phase) = begin
+    InstantRFPulse(time, flip_angle, phase) = begin
         f = Float(deg2rad(flip_angle))
         p = Float(deg2rad(phase))
         new(Float(time), f, cos(f), sin(f), p, cos(p), sin(p))
     end
 end
 
-RFPulse(; time=0, flip_angle=0, phase=0) = RFPulse(time, flip_angle, phase)
+InstantRFPulse(; time=0, flip_angle=0, phase=0) = InstantRFPulse(time, flip_angle, phase)
 
 """
     phase(pulse)
 
 Returns the angle in the x-y plane of the axis around with the RF pulse rotates in degrees
 """
-phase(pulse :: RFPulse) = rad2deg(pulse.phase)
+phase(pulse :: InstantRFPulse) = rad2deg(pulse.phase)
 """
     flip_angle(pulse)
 
 Returns the flip angle of the RF pulse in degrees
 """
-flip_angle(pulse :: RFPulse) = rad2deg(pulse.flip_angle)
+flip_angle(pulse :: InstantRFPulse) = rad2deg(pulse.flip_angle)
 
 """
     apply(sequence_component, spin_orientation[, position])
@@ -52,7 +50,7 @@ Some pulses (e.g., [`InstantGradient`](@ref)) require positional information as 
 Apply all sequence components to the spin orientation in the [`Spin`](@ref) or to all the spins in [`Snapshot`](@ref) (the return type matches this input type).
 Sequence components (see [`Sequence`](@ref)) can be `nothing` if there is no sequence component at this time.
 """
-function apply(pulse :: RFPulse, spin :: SpinOrientation)
+function apply(pulse :: InstantRFPulse, spin :: SpinOrientation)
     Bx_init = spin.transverse * cos(spin.phase)
     By_init = spin.transverse * sin(spin.phase)
     Bxy_parallel  = pulse.cp * Bx_init + pulse.sp * By_init
@@ -73,7 +71,7 @@ end
 
 Readout the spins at the given `time` (in milliseconds) each TR
 """
-struct Readout <: SequenceComponent
+struct Readout
     time :: Float
     Readout(time) = new(Float(time))
 end
@@ -91,7 +89,7 @@ The phase offset at every `position` is given by `qvec ⋅ position + q_origin`.
 
 The pulse is applied at given `time` (in milliseconds). every TR.
 """
-struct InstantGradient <: SequenceComponent
+struct InstantGradient <: InstantComponent
     qvec :: PosVector
     q_origin :: Float
     time :: Float
@@ -106,23 +104,27 @@ function apply(pulse :: InstantGradient, orient :: SpinOrientation, pos::PosVect
     SpinOrientation(orient.longitudinal, orient.transverse, orient.phase + adjustment)
 end
 
-apply(pulse :: SequenceComponent, orient :: SpinOrientation, pos::PosVector) = apply(pulse, orient)
-apply(pulse :: SequenceComponent, spin :: Spin{1}) = Spin(spin.position, SVector{1}([apply(pulse, spin.orientations[1], spin.position)]), spin.rng)
+apply(pulse :: InstantComponent, orient :: SpinOrientation, pos::PosVector) = apply(pulse, orient)
+apply(pulse :: InstantComponent, spin :: Spin{1}) = Spin(spin.position, SVector{1}([apply(pulse, spin.orientations[1], spin.position)]), spin.rng)
 apply(pulse :: Nothing, orient :: SpinOrientation) = orient
 apply(pulse :: Nothing, orient :: SpinOrientation, pos :: PosVector) = orient
-apply(pulse :: SequenceComponent, snap :: Snapshot{1}) = Snapshot(apply.(pulse, snap.spins), span.time)
+apply(pulse :: InstantComponent, snap :: Snapshot{1}) = Snapshot(apply.(pulse, snap.spins), span.time)
 
-apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spin :: Spin{N}) where {N} = Spin{N}(
+apply(pulses :: SVector{N, Union{Nothing, <:InstantComponent}}, spin :: Spin{N}) where {N} = Spin{N}(
     spin.position,
     SVector{N, SpinOrientation}(SpinOrientation[apply(p, o, spin.position) for (p, o) in zip(pulses, spin.orientations)]),
     spin.rng
 )
 
-function apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, spins :: AbstractVector{Spin{N}}) where {N}
+function apply(pulses :: SVector{N, Union{Nothing, <:InstantComponent}}, spins :: AbstractVector{Spin{N}}) where {N}
     map(s->apply(pulses, s), spins)
 end
 
-apply(pulses :: SVector{N, Union{Nothing, <:SequenceComponent}}, snap :: Snapshot{N}) where {N} = Snapshot{N}(
+apply(pulses :: SVector{N, Union{Nothing, <:InstantComponent}}, snap :: Snapshot{N}) where {N} = Snapshot{N}(
     apply(pulses, snap.spins),
     snap.time
 )
+
+for cls in (:InstantRFPulse, :Readout, :InstantGradient)
+    @eval get_time(p::$cls) = p.time
+end
