@@ -3,24 +3,25 @@ struct TimeController
     gradient_precision :: Float
     sample_displacement :: Int
     sample_off_resonance :: Int
+    rf_rotation :: Float
 end
 
-TimeController(timestep :: Number) = TimeController(Float(timestep), 0., 0, 0)
-function TimeController(geometry; gradient_precision=0.01, sample_displacement=5, sample_off_resonance=10)
+TimeController(timestep :: Number) = TimeController(Float(timestep), 0., 0, 0, 0.)
+function TimeController(geometry; gradient_precision=0.01, sample_displacement=5, sample_off_resonance=10, rf_rotation=1.)
     if length(geometry) == 0
         sample_displacement = 1
     end
     if !produces_off_resonance(geometry)
         sample_off_resonance = 1
     end
-    TimeController(zero(Float), Float(gradient_precision), Int(sample_displacement), Int(sample_off_resonance))
+    TimeController(zero(Float), Float(gradient_precision), Int(sample_displacement), Int(sample_off_resonance), Float(rf_rotation))
 end
 
 """
-    get_times(simulation::Simulation, t_start, t_end)
-    get_times(time_controller::TimeController, t_start, t_end, sequences, diffusivity)
+    propose_times(simulation::Simulation, t_start, t_end)
+    propose_times(time_controller::TimeController, t_start, t_end, sequences, diffusivity)
 
-Computes the timepoints at which the simulation will be evaluated when running from `tstart` to `tend`.
+Computes the timepoints at which the simulation will be evaluated when running from `t_start` to `t_end`.
 
 The following timepoints will always be included
 - Any multiple of the TR
@@ -32,100 +33,133 @@ Additional timepoints will be added to ensure that:
 - between `t_start` and `t_end` there are at least `time_controller.sample_displacement` timepoints.
 - between any control point of the sequence gradient there are at least `time_controller.sample_displacement` timepoints.
 - between an RF pulse and a subsequent RF pulse or t_end there are at least `time_controller.sample_off_resonance` timepoints.
+- During an RF block the rotation around the maximum magnetic field will be at most `time_controller.rf_rotation` radians. For a specific [`RFBlock`](@ref) these timepoints can be found using `propose_times(rf_block, rf_rotation, B0)`.
 """
-function get_times(time_controller::TimeController, t_start::Float, t_end::Float, sequences::AbstractVector{<:Sequence}, diffusivity::Float)
-    timepoints = [t_start, t_end]
+function propose_times(time_controller::TimeController, t_start::Number, t_end::Number, sequences::AbstractVector{<:Sequence}, diffusivity::Number)
+    timepoints = Float[t_start, t_end]
     for sequence in sequences
-        index = 1
-        while get_time(sequence, index) <= t_start
-            index += 1
-        end
-        while get_time(sequence, index) < t_end
-            push!(timepoints, get_time(sequence, index))
-            index += 1
-        end
+        first_TR = all_control_points(sequence)
 
-        nTR = div(t_start, sequence.TR, RoundDown)
-        all_control_points = sequence.gradient.times .+ (nTR * sequence.TR)
-        control_points = all_control_points[all_control_points .> t_start]
-        while (nTR + 1) * sequence.TR < t_end
-            # This TR is fully included before `t_end`
+        min_nTR = div(t_start, sequence.TR, RoundDown)
+        max_nTR = div(t_end, sequence.TR, RoundUp)
+        for nTR in min_nTR:max_nTR
+            TR_control_points = first_TR .+ (nTR * sequence.TR)
+            control_points = TR_control_points[
+                (TR_control_points .> t_start) .&
+                (TR_control_points .< t_end)
+            ]
             append!(timepoints, control_points)
-            nTR += 1
-            control_points = sequence.gradient.times .+ (nTR * sequence.TR)
         end
-        append!(timepoints, control_points[control_points .< t_end])
     end
     timepoints = sort(unique(timepoints))
 
-    if !iszero(time_controller.timestep)
-        # Use the user-provided timestep
-        for (t0, t1) in zip(copy(timepoints[1:end-1]), copy(timepoints[2:end]))
-            Ntimepoints = Int(div(t1 - t0, time_controller.timestep, RoundUp))
-            if Ntimepoints > 1
-                for new_timepoint in range(t0, t1, length=Ntimepoints+1)[2:end-1]
-                    push!(timepoints, new_timepoint)
-                end
-            end
-        end
-        return sort(unique(timepoints))
-    end
-
     for (t0, t1) in zip(copy(timepoints[1:end-1]), copy(timepoints[2:end]))
-        mean_time = (t0 + t1) / 2
-
-        # gradient precision
-        max_timestep_gradient = Inf64
-        if !iszero(time_controller.gradient_precision)
-            for sequence in sequences
-                grad = norm(get_gradient(sequence, t0, t1)) * gyromagnetic_ratio * Float(1e-3) * sequence.scanner.B0  # frequency gradient in rad / (ms um)
-                mt = time_controller.gradient_precision * (diffusivity * grad * grad) ^ (-1/3)
-                if mt < max_timestep_gradient
-                    max_timestep_gradient = mt
-                end
-            end
-        end
-
-        # sample displacement between any two readouts and any two changes in gradient profile
-        max_timestep_displacement = (t_end - t_start) / time_controller.sample_displacement
-        for sequence in sequences
-            control_points = sequence.gradient.times
-            index_control = searchsortedfirst(control_points, mod(mean_time, sequence.TR))
-            mt = (
-                control_points[index_control] -
-                control_points[index_control - 1]
-            ) / time_controller.sample_displacement
-            if mt < max_timestep_displacement
-                max_timestep_displacement = mt
-            end
-        end
-
-        # sample off-resonance field between RF pulse and subsequence RF pulse or readout
-        max_timestep_offresonance = Inf64
-        for sequence in sequences
-            next_rf_pulse = next_pulse(sequence, mean_time)
-            if next_rf_pulse <= 1
-                continue
-            end
-
-            mt = (
-                min(t_end, get_time(sequence, next_rf_pulse)) - 
-                get_time(sequence, next_rf_pulse - 1)
-            ) / time_controller.sample_off_resonance
-            if mt < max_timestep_offresonance
-                max_timestep_offresonance = mt
-            end
-        end
-
-        max_timestep = min(max_timestep_gradient, max_timestep_displacement, max_timestep_offresonance)
-
-        if ~isinf(max_timestep)
-            Ntimepoints = Int(div(t1 - t0, max_timestep, RoundUp))
+        Ntimepoints = Int(div(t1 - t0, max_timestep(sequences, time_controller, t0, t1, t_end, diffusivity), RoundUp))
+        if Ntimepoints > 1
             for new_timepoint in range(t0, t1, length=Ntimepoints+1)[2:end-1]
                 push!(timepoints, new_timepoint)
             end
         end
     end
-    sort!(timepoints)
-    return timepoints
+    return sort(unique(timepoints))
+end
+
+
+all_control_points(sequence::Sequence) = [
+        0, sequence.TR,
+        [get_time(instant) for instant in sequence.instants]...,
+        control_points(sequence.gradient)...,
+        start_time.(sequence.pulses)...,
+        end_time.(sequence.pulses)...,
+    ]
+
+
+function max_timestep(sequences::AbstractVector{<:Sequence}, time_controller::TimeController, t_start::Number, t_end::Number, next_readout::Number, diffusivity::Number)
+    if !iszero(time_controller.timestep)
+        return time_controller.timestep
+    elseif length(sequences) == 0
+        return max_timestep_displacement_readouts(time_controller.sample_displacement, t_start, t_end)
+    else
+        return min(
+            max_timestep_gradient(sequences, time_controller.gradient_precision, t_start, t_end, diffusivity),
+            max_timestep_displacement(sequences, time_controller.sample_displacement, t_start, t_end),
+            max_timestep_displacement_readouts(time_controller.sample_displacement, t_start, t_end),
+            max_timestep_off_resonance(sequences, time_controller.sample_off_resonance, t_start, t_end, next_readout),
+            max_timestep_pulse(sequences, time_controller.rf_rotation, t_start, t_end),
+        )
+    end
+end
+
+for string in ("gradient", "displacement", "off_resonance", "pulse")
+    symb = Symbol("max_timestep_" * string)
+    @eval $symb(sequences::AbstractVector{<:Sequence}, args...) = minimum([$symb(s, args...) for s in sequences])
+end
+
+
+function max_timestep_gradient(sequence::Sequence, gradient_precision::Number, t_start::Number, t_end::Number, diffusivity::Number)
+    if iszero(gradient_precision)
+        return Inf
+    end
+    grad = norm(gradient(sequence, t_start, t_end)) * gyromagnetic_ratio * Float(1e-3) * sequence.scanner.B0  # frequency gradient in rad / (ms um)
+    return gradient_precision * (diffusivity * grad * grad) ^ (-1/3)
+end
+
+
+max_timestep_displacement_readouts(sample_displacement::Number, t_start::Number, t_end::Number) = iszero(sample_displacement) ? Inf : (t_end - t_start) / sample_displacement
+
+function max_timestep_displacement(sequence::Sequence, sample_displacement::Number, t_start::Number, t_end::Number)
+    if iszero(sample_displacement)
+        return Inf
+    end
+    mean_time = (t_start + t_end) / 2
+    cp = control_points(sequence.gradient)
+    index_control = searchsortedfirst(cp, mod(mean_time, sequence.TR))
+    if index_control <= 1 || (index_control >= length(cp) + 1)
+        return Inf
+    end
+    return (
+        cp[index_control] -
+        cp[index_control - 1]
+    ) / sample_displacement
+end
+    
+function max_timestep_off_resonance(sequence::Sequence, sample_off_resonance::Number, t_start::Number, t_end::Number, next_readout::Number)
+    if iszero(sample_off_resonance)
+        return Inf
+    end
+    mean_time = (t_start + t_end) / 2
+    if !isnothing(current_pulse(sequence, mean_time))
+        # ignore this if we are currently in an RF pulse
+        return Inf
+    end
+    pi = previous_instant(sequence, mean_time)
+    pp = previous_pulse(sequence, mean_time)
+    if isnothing(pi) && isnothing(pp)
+        # We are before the first RF pulse
+        return Inf
+    end
+    start_time_default(n) = isnothing(n) ? Inf : start_time(n)
+    next_timepoint = min(
+        next_readout, 
+        start_time_default(next_instant(sequence, mean_time)),
+        start_time_default(next_pulse(sequence, mean_time)),
+    )
+    end_time_default(n) = isnothing(n) ? 0. : end_time(n)
+    prev_timepoint = max(
+        end_time_default(pi),
+        end_time_default(pp),
+    )
+    return (next_timepoint - prev_timepoint) / sample_off_resonance
+end
+
+
+function max_timestep_pulse(sequence::Sequence, rf_rotation::Number, t_start::Number, t_end::Number)
+    if iszero(rf_rotation)
+        return Inf
+    end
+    current = current_pulse(sequence, (t_start + t_end) / 2)
+    if isnothing(current)
+        return Inf
+    end
+    return deg2rad(rf_rotation) / current.max_amplitude
 end

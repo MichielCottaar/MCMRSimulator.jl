@@ -1,8 +1,10 @@
+_relax_mult(spin::Spin{0}, dt, ct, sim::Simulation{0}) = spin
+
 function _relax_mult(spin::Spin{N}, dt, ct, sim::Simulation{N}) where {N}
     env = sim.micro(spin.position)
 
     function get_rng(sequence, orient)
-        grad = get_gradient(spin.position, sequence, ct, dt + ct)
+        grad = gradient(spin.position, sequence, ct, dt + ct)
         relax(orient, env, dt, grad, sequence.scanner.B0)
     end
 
@@ -19,7 +21,7 @@ and relaxation of the MR spin orientation.
 It is used internally when evolving [`Simulation`](@ref) objects.
 """
 function evolve_to_time(
-    spin::Spin{N}, simulation::Simulation{N}, current_time::Float, new_time::Float
+    spin::Spin{N}, simulation::Simulation{N}, finite_pulse::SVector{N, Tuple{InstantRFPulse, InstantRFPulse}}, current_time::Float, new_time::Float
 ) where {N}
     if current_time > new_time
         throw(DomainError("Spins cannot travel backwards in time"))
@@ -28,9 +30,11 @@ function evolve_to_time(
         return spin
     end
 
+    spin = apply(map(fp -> fp[1], finite_pulse), spin)
     spin = _relax_mult(spin, (new_time - current_time) / 2, current_time, simulation)
     spin = draw_step(spin, simulation.micro.diffusivity, new_time - current_time, simulation.micro.geometry)
     spin = _relax_mult(spin, (new_time - current_time) / 2, (new_time + current_time) / 2, simulation)
+    spin = apply(map(fp -> fp[2], finite_pulse), spin)
 end
 
 """
@@ -47,36 +51,36 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     end
     spins::Vector{Spin{N}} = copy(snapshot.spins)
 
-    times = get_times(simulation, snapshot.time, new_time)
+    times = propose_times(simulation, snapshot.time, new_time)
+    finite_pulses = [
+        SVector{N, Tuple{InstantRFPulse, InstantRFPulse}}([(effective_pulse(seq, t0, (t0 + t1) / 2), effective_pulse(seq, (t0 + t1) / 2, t1)) for seq in simulation.sequences])
+        for (t0, t1) in zip([times[1], times[1:end-1]...], times)
+    ]
 
     # define next stopping times due to sequence, readout or times
-    sequence_index = MVector{N, Int}(
-        [next_pulse(seq, current_time) for seq in simulation.sequences]
-    )
-    sequence_times = MVector{N, Float}(
-        [get_time(seq, index) for (seq, index) in zip(simulation.sequences, sequence_index)]
-    )
+    sequence_instants = Union{Nothing, InstantComponent}[next_instant(seq, current_time) for seq in simulation.sequences]
+    sequence_times = MVector{N, Float}([isnothing(i) ? Inf : get_time(i) for i in sequence_instants])
 
     nspins = length(spins)
-    for next_time in times
+    for (next_time, finite_pulse) in zip(times, finite_pulses)
         # evolve all spins to next interesting time
         Threads.@threads for idx in 1:nspins
-            spins[idx] = evolve_to_time(spins[idx], simulation, current_time, next_time)
+            spins[idx] = evolve_to_time(spins[idx], simulation, finite_pulse, current_time, next_time)
         end
         current_time = next_time
 
         # return final snapshot state
         if current_time != new_time && any(t -> t == current_time, sequence_times)
             components = SVector{N, Union{Nothing, InstantComponent}}([
-                time == current_time ? seq[index] : nothing 
-                for (seq, index, time) in zip(simulation.sequences, sequence_index, sequence_times)
+                time == current_time ? instant : nothing 
+                for (seq, instant, time) in zip(simulation.sequences, sequence_instants, sequence_times)
             ])
             spins = apply(components, spins)
             for (idx, ctime) in enumerate(sequence_times)
                 if ctime == current_time
                     sequence = simulation.sequences[idx]
-                    sequence_index[idx] += 1
-                    sequence_times[idx] = get_time(sequence, sequence_index[idx])
+                    sequence_instants[idx] = next_instant(sequence, nextfloat(ctime))
+                    sequence_times[idx] = get_time(sequence_instants[idx])
                 end
             end
         end

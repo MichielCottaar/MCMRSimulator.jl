@@ -17,6 +17,7 @@ all_tests = [
     "offresonance",
     "transfer",
     "permeability",
+    "radio_frequency",
 ]
 
 if length(ARGS) == 0

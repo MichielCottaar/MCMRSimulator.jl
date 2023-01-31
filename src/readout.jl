@@ -89,7 +89,7 @@ function _to_snapshot(spins::Snapshot{N}, nseq::Int) where {N}
 end
 
 produces_off_resonance(sim::Simulation) = produces_off_resonance(sim.micro)
-get_times(sim::Simulation, t_start, t_end) = get_times(sim.time_controller, t_start, t_end, sim.sequences, sim.micro.diffusivity)
+propose_times(sim::Simulation, t_start, t_end) = propose_times(sim.time_controller, t_start, t_end, sim.sequences, sim.micro.diffusivity)
 
 """
     readout(snapshot, simulation)
@@ -148,7 +148,7 @@ function trajectory(spins, simulation::Simulation{N}, times=nothing) where{N}
         if get_time(snapshot) > times
             error("Trajectory final time is lower than the current time of the snapshot.")
         end
-        times = get_times(simulation, snapshot.time, times)
+        times = propose_times(simulation, snapshot.time, times)
     end
     result = Array{typeof(snapshot)}(undef, size(times))
     for index in sortperm(times)
@@ -174,7 +174,7 @@ function signal(spins, simulation::Simulation{N}, times=nothing) where {N}
         if get_time(snapshot) > times
             error("Trajectory final time is lower than the current time of the snapshot.")
         end
-        times = get_times(simulation, snapshot.time, times)
+        times = propose_times(simulation, snapshot.time, times)
     end
     if N == 1
         result = Array{SpinOrientation}(undef, size(times))

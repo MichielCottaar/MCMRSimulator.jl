@@ -4,9 +4,9 @@
             s1 = mr.dwi(bval=0.)
             s2 = mr.dwi(bval=1.)
 
-            @test all(mr.get_times(mr.Simulation([s1, s2], timestep=0.5), 0., 80.) .== 0:0.5:80.)
-            @test all(mr.get_times(mr.Simulation([s1, s2], timestep=0.501), 0., 80.) .== 0:0.5:80.)
-            @test all(mr.get_times(mr.Simulation([s1, s2], timestep=0.501), 0., 100.) .== 0:0.5:100.)
+            @test all(mr.propose_times(mr.Simulation([s1, s2], timestep=0.5), 0., 80.) .== 0:0.5:80.)
+            @test all(mr.propose_times(mr.Simulation([s1, s2], timestep=0.501), 0., 80.) .== 0:0.5:80.)
+            @test all(mr.propose_times(mr.Simulation([s1, s2], timestep=0.501), 0., 100.) .== 0:0.5:100.)
         end
         @testset "Setting gradient_precision" begin
             s1 = mr.dwi(bval=0.)
@@ -18,17 +18,17 @@
                 :sample_off_resonance => 0,
             )
 
-            @test all(mr.get_times(mr.Simulation(s1; kwargs...), 0., 80.) .== [0., 40., 80.])
-            @test all(mr.get_times(mr.Simulation(s1; kwargs...), 90., 120.) .== [90., 120.])
-            @test all(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.) .== [0., 40., 80.])
-            @test all(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 90., 120.) .== [90., 120.])
+            @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 0., 80.) .== [0., 40., 80.])
+            @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 90., 120.) .== [90., 120.])
+            @test all(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.) .== [0., 40., 80.])
+            @test all(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 90., 120.) .== [90., 120.])
 
             kwargs[:diffusivity] = 1.
-            @test all(mr.get_times(mr.Simulation(s1; kwargs...), 0., 80.) .== [0., 40., 80.])
-            @test all(mr.get_times(mr.Simulation(s1; kwargs...), 90., 120.) .== [90., 120.])
-            @test length(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.)) > 3
-            @test length(intersect(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.), [0., 40., 80.])) == 3
-            @test all(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 90., 120.) .== [90., 120.])
+            @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 0., 80.) .== [0., 40., 80.])
+            @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 90., 120.) .== [90., 120.])
+            @test length(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.)) > 3
+            @test length(intersect(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.), [0., 40., 80.])) == 3
+            @test all(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 90., 120.) .== [90., 120.])
         end
         @testset "Setting sample_displacement" begin
             geometry = mr.Annulus(1., 2., myelin=true)
@@ -43,11 +43,11 @@
                 :diffusivity => 1.,
             )
 
-            @test all(mr.get_times(mr.Simulation(s1; kwargs...), 0., 80.) .== 0:10:80)
-            @test all(mr.get_times(mr.Simulation(s1; kwargs...), 90., 130.) .== 90:10:130)
+            @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 0., 80.) .== 0:10:80)
+            @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 90., 130.) .== 90:10:130)
 
-            @test all(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.) .== [0:5:60..., 70, 80])
-            @test all(mr.get_times(mr.Simulation([s1, s2]; kwargs...), 90., 130.) .== 90:10:130)
+            @test all(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.) .== 0:5:80)
+            @test all(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 90., 130.) .== 90:10:130)
         end
         @testset "Setting sample_off_resonance" begin
             geometry = mr.Annulus(1., 2., myelin=true)
@@ -63,8 +63,8 @@
             )
 
             for sequences in (s1, [s1, s2])
-                @test all(mr.get_times(mr.Simulation(sequences; kwargs...), 0., 80.) .== 0:10:80)
-                @test all(mr.get_times(mr.Simulation(sequences; kwargs...), 85., 125.) .== 85:20:125)
+                @test all(mr.propose_times(mr.Simulation(sequences; kwargs...), 0., 80.) .== 0:10:80)
+                @test all(mr.propose_times(mr.Simulation(sequences; kwargs...), 85., 125.) .== 85:20:125)
             end
         end
     end

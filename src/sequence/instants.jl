@@ -15,11 +15,12 @@ struct InstantRFPulse <: InstantComponent
     phase :: Float
     cp :: Float
     sp :: Float
-    InstantRFPulse(time, flip_angle, phase) = begin
-        f = Float(deg2rad(flip_angle))
-        p = Float(deg2rad(phase))
-        new(Float(time), f, cos(f), sin(f), p, cos(p), sin(p))
-    end
+end
+
+function InstantRFPulse(time, flip_angle, phase)
+    f = Float(deg2rad(flip_angle))
+    p = Float(deg2rad(phase))
+    InstantRFPulse(Float(time), f, cos(f), sin(f), p, cos(p), sin(p))
 end
 
 InstantRFPulse(; time=0, flip_angle=0, phase=0) = InstantRFPulse(time, flip_angle, phase)
@@ -110,17 +111,17 @@ apply(pulse :: Nothing, orient :: SpinOrientation) = orient
 apply(pulse :: Nothing, orient :: SpinOrientation, pos :: PosVector) = orient
 apply(pulse :: InstantComponent, snap :: Snapshot{1}) = Snapshot(apply.(pulse, snap.spins), span.time)
 
-apply(pulses :: SVector{N, Union{Nothing, <:InstantComponent}}, spin :: Spin{N}) where {N} = Spin{N}(
+apply(pulses :: SVector{N, <:Any}, spin :: Spin{N}) where {N} = Spin{N}(
     spin.position,
     SVector{N, SpinOrientation}(SpinOrientation[apply(p, o, spin.position) for (p, o) in zip(pulses, spin.orientations)]),
     spin.rng
 )
 
-function apply(pulses :: SVector{N, Union{Nothing, <:InstantComponent}}, spins :: AbstractVector{Spin{N}}) where {N}
+function apply(pulses :: SVector{N, <:Any}, spins :: AbstractVector{Spin{N}}) where {N}
     map(s->apply(pulses, s), spins)
 end
 
-apply(pulses :: SVector{N, Union{Nothing, <:InstantComponent}}, snap :: Snapshot{N}) where {N} = Snapshot{N}(
+apply(pulses :: SVector{N, <:Any}, snap :: Snapshot{N}) where {N} = Snapshot{N}(
     apply(pulses, snap.spins),
     snap.time
 )

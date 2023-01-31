@@ -24,6 +24,7 @@ import Distributions
 import Accessors: @set
 import Roots
 import PlyIO
+import Optim
 
 
 include("constants.jl")
@@ -38,8 +39,8 @@ include("readout.jl")
 include("evolve.jl")
 include("plot/plot.jl")
 
-export Sequence, InstantRFPulse, Readout, InstantGradient, create_gradients
-export create_gradients, get_gradient, LinearGradients, StepWiseGradients, rotate_bvec
+export Sequence, InstantRFPulse, Readout, InstantGradient
+export MRGradients, gradient, rotate_bvec
 export dwi
 export Scanner, Siemens_Connectom, Siemens_Prisma, Siemens_Terra
 export longitudinal, transverse, phase, vector, Spin, Snapshot, SpinOrientation, isinside, off_resonance
