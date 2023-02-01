@@ -100,7 +100,7 @@ function max_timestep_gradient(sequence::Sequence, gradient_precision::Number, t
     if iszero(gradient_precision)
         return Inf
     end
-    grad = norm(gradient(sequence, t_start, t_end)) * gyromagnetic_ratio * Float(1e-3) * sequence.scanner.B0  # frequency gradient in rad / (ms um)
+    grad = norm(gradient(sequence, t_start, t_end))  # frequency gradient in kHz/um
     return gradient_precision * (diffusivity * grad * grad) ^ (-1/3)
 end
 
@@ -161,5 +161,5 @@ function max_timestep_pulse(sequence::Sequence, rf_rotation::Number, t_start::Nu
     if isnothing(current)
         return Inf
     end
-    return deg2rad(rf_rotation) / current.max_amplitude
+    return rf_rotation / (current.max_amplitude * 360)
 end

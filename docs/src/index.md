@@ -19,6 +19,11 @@ Future (potential) features:
 !!! warning "beta"
     This MR simulator is still under very active development and the API might still change substantially at any time!
 
+We use the following units throughout (unless otherwise noted):
+- Times are in ms. Equivalently, RF pulse amplitudes and off-resonance fields are in kHz (i.e., 1/ms).
+- Positions are in um. So, gradients are in kHz/um (not mT/m).
+- Angles are in degrees (not radians). These are used for phases (of spins and RF pulses) as well as RF pulse flip angles. 
+- Susceptibilities are in ppm.
 ## Movie of spins moving through cylinders
 ```@raw html
 <iframe src="https://ox.cloud.panopto.eu/Panopto/Pages/Embed.aspx?id=b6211751-2743-4bb8-b65a-af5d011a8684&autoplay=true&offerviewer=false&showtitle=false&showbrand=false&captions=false&interactivity=none" style="border: 1px solid #464646;" allowfullscreen allow="autoplay"></iframe>

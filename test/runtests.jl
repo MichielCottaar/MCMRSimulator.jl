@@ -40,14 +40,11 @@ end
     @test length(detect_ambiguities(mr)) == 0
     @testset "Simple relaxation" begin
         orient = mr.Spin(transverse=1., longitudinal=0.).orientations[1]
-        pos = zero(SVector{3, Float})
         @testset "R2 relaxation" begin
-            env = mr.Microstructure(R2=mr.field(2.))(pos)
-            @test mr.relax(orient, env, 0.3).transverse ≈ exp(-0.6)
+            @test mr.transverse(mr.relax(orient, 0.3, 0., 2., 0.)) ≈ exp(-0.6)
         end
         @testset "R1 relaxation" begin
-            env = mr.Microstructure(R1=mr.field(2.))(pos)
-            @test mr.relax(orient, env, 0.3).longitudinal ≈ 1 - exp(-0.6)
+            @test mr.longitudinal(mr.relax(orient, 0.3, 2., 0., 0.)) ≈ 1 - exp(-0.6)
         end
     end
     @testset "Spin conversions" begin
@@ -161,8 +158,8 @@ end
         @testset "Test instant gradient effect away from origin" begin
             spin = mr.Spin(position=SA[2, 2, 2], transverse=1., phase=90.)
             @test mr.phase(spin) ≈ Float(90.)
-            spin2 = mr.apply(mr.InstantGradient(qvec=SA[0.25, 0, 0]), spin)
-            @test mr.phase(spin2) ≈ Float(90. + mr.rad2deg(0.5))
+            spin2 = mr.apply(mr.InstantGradient(qvec=SA[0.01, 0, 0]), spin)
+            @test mr.phase(spin2) ≈ Float(90. + 0.02 * 360)
         end
     end
     @testset "Random generator number control" begin

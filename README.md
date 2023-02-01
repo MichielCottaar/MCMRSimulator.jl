@@ -15,7 +15,7 @@ This simulator aims to combine all of these models to produce a single unified t
 The latest documentation can be found [here](https://open.win.ox.ac.uk/pages/ndcn0236/mcmrsimulator.jl/dev).
 
 ## Citing MCMRSimulator.jl
-This software can be cited using the information in [CITATION.cff].
+This software can be cited using the information in the CITATION.cff file.
 
 ```
 @software{cottaar_michiel_2022_7318657,

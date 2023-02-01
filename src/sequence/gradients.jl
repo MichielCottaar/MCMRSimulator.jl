@@ -4,8 +4,8 @@
     MRGradients([(time0, amplitude0), (time1, amplitude1), ...]; origin=[0, 0, 0])
     MRGradients()
 
-Defines a gradient profile with the gradients linearly interpolated between the given times.
-The gradients are centered on given `origin`.
+Defines a gradient profile with the gradients (unit: kHz/um) linearly interpolated between the given times (unit: ms).
+The gradients are centered on given `origin` (unit: um).
 They can be sampled using `gradient`.
 """
 struct MRGradients{Nx, Ny, Nz}
@@ -95,7 +95,7 @@ end
 
 function gradient(position::PosVector, grad::MRGradients, t1::Float, t2::Float)
     g = gradient(grad, t1, t2)
-    return (g ⋅ (position - grad.origin)) * 1e-3
+    return (g ⋅ (position - grad.origin))
 end
 
 

@@ -1,11 +1,15 @@
 _relax_mult(spin::Spin{0}, dt, ct, sim::Simulation{0}) = spin
 
 function _relax_mult(spin::Spin{N}, dt, ct, sim::Simulation{N}) where {N}
-    env = sim.micro(spin.position)
+    R1 = sim.micro.R1(spin.position)
+    R2 = sim.micro.R2(spin.position)
+    off_resonance_kHz = sim.micro.off_resonance(spin.position)
+    off_resonance_ppm = off_resonance(sim.micro.geometry, spin.position)
 
     function get_rng(sequence, orient)
         grad = gradient(spin.position, sequence, ct, dt + ct)
-        relax(orient, env, dt, grad, sequence.scanner.B0)
+        total_off_resonance = off_resonance_kHz + grad + off_resonance_ppm * 1e-6 * B0(sequence) * gyromagnetic_ratio
+        relax(orient, dt, R1, R2, total_off_resonance)
     end
 
     orient = map(get_rng, sim.sequences, spin.orientations)

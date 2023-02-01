@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Finite RF pulses (`RFPulse`) to more realistically model the effect of these pulses.
 - `run_tests.sh` function which will run the tests and produce a coverage that can be visualised in VS Code by the Coverage Gutters plugin
 ### Changed
+- Made units consistent with angles (i.e., phases and flip angles) in degrees, off-resonance fields in kHz, and gradients in kHz/um.
 - `time` function has been renamed `get_time`, so as not to conflict with `Base.time`
 - Refactored the `Sequence` interface:
     - `RFPulse` -> `InstantRFPulse` (`RFPulse` now refers to finite RF pulses discussed above)

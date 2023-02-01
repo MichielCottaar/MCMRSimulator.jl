@@ -37,7 +37,9 @@ function project end
 """
     off_resonance(obstructions, position[, b0_field])
 
-Computes the off-resonance field at the position due to the obstructions with the magnetic field orientation from `b0_field`.
+Computes the off-resonance field at the position due to the obstructions with the magnetic field orientation from `b0_field` in units of ppm.
+Note that the non-standard units of ppm is used, because this function does not know about the strength of the B0 field.
+By default, the B0 field is assumed to be in the z-direction.
 """
 function off_resonance(obstructions::Tuple, position::PosVector, b0_field=PosVector([0, 0, 1])::PosVector)
     total = zero(Float)

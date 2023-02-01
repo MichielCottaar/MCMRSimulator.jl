@@ -15,7 +15,7 @@ If all three are defined an AssertionError is raised if they do not agree with e
 
 Assumes equation of ``b = q^2 \\Delta``, where
 - `bval` is the diffusion-weighted strength (b-value) in ``ms/um^2``.   
-- `qval` is the gradient applied due to the diffusion-weighted gradients in the spin phase field (``rad/\\mu m``). 
+- `qval` is the gradient applied due to the diffusion-weighted gradients in the spin phase field (``1/\\mu m``). 
     For a square pulse this is computed as ``\\gamma G \\delta``.
 - `diffusion_time` (``\\Delta``) is the diffusion time defined for infinitely short pulses as the time between the diffusion-weighted gradients (in ``ms``).
 """
@@ -83,7 +83,7 @@ function perfect_dwi(;
         Readout(time=TE),
     ]
     if !iszero(qval)
-        qvec = PosVector(orientation .* (qval / norm(orientation)))
+        qvec = PosVector(orientation .* (qval / (2π * norm(orientation))))
         append!(base_components, [
             InstantGradient(time=(TE - diffusion_time) / 2., qvec=qvec),
             InstantGradient(time=(TE + diffusion_time) / 2., qvec=qvec),
@@ -102,7 +102,7 @@ The gradient timings will also be affected by `gradient_duration`, `diffusion_ti
 - By default the gradient durations are set to the maximum value possible within the echo time (`TE`) keeping in mind the time needed for the MR readout (`readout_time`) and the time needed to ramp to the maximum gradient strength (set by the `scanner`).
 - When `gradient_duration` is set to 0, the gradient pulses are assumed to be instanteneous (i.e., using [`InstantGradient`](@ref)). The time between these instant gradients can be set using `diffusion_time` (defaults to `TE`/2).
 
-The strength of the diffusion gradients is set by one of `bval`, `qval`, or `gradient_strength`.
+The strength of the diffusion gradients is set by one of `bval` (units: ms/um^2), `qval` (units: 1/um), or `gradient_strength` (units: kHz/um).
 If this strength exceeds the maximum allowed for the `scanner` an AssertionError is raised.
 The gradient orientation is set by `orientation`.
 """
@@ -135,9 +135,9 @@ end
 
 function dwi_gradients_1D(;
     TE,
-    bval=nothing,
-    qval=nothing,
-    gradient_strength=nothing, # in mT/m
+    bval=nothing, # in ms/um^2
+    qval=nothing, # in 1/um
+    gradient_strength=nothing, # in kHz/um
     gradient_duration=nothing, # gradient_duration defined as the duration where gradient strength equals the gradient_strength, the same as in the equation, ALL TIME ARGS ARE IN MILLISECOND.
     diffusion_time=nothing,
     readout_time=0.,
@@ -146,10 +146,10 @@ function dwi_gradients_1D(;
     # determine ramp time, diffusion time and gradient duration and the timing of gradients
     t1 = 0.
     t2 = TE/2
-    if isinf(scanner.gradient) || isinf(scanner.slew_rate) # Maybe implement a check for only inf gradient max in scanner()?
+    if isinf(max_gradient(scanner)) || isinf(max_slew_rate(scanner)) # Maybe implement a check for only inf gradient max in scanner()?
         ramp_time = 0.
     else
-        ramp_time = scanner.gradient / scanner.slew_rate
+        ramp_time = max_gradient(scanner) / max_slew_rate(scanner)
     end
 
     if isnothing(diffusion_time)
@@ -192,15 +192,15 @@ function dwi_gradients_1D(;
 
     pulse_duration = gradient_duration
     if sum(isnothing.([bval, qval, gradient_strength])) != 2
-        error("One and only one of the bval, qval, grdient_strength has to be defined")
+        error("One and only one of the bval, qval, gradient_strength has to be defined")
     end
     
     if !isnothing(bval)
-        gradient_strength = 1e3*sqrt(bval/(((diffusion_time - gradient_duration/3)*gradient_duration^2 + (ramp_time^3)/20 - (gradient_duration*ramp_time^2)/6)*(gyromagnetic_ratio^2)))
+        gradient_strength = sqrt(bval/((diffusion_time - gradient_duration/3)*gradient_duration^2 + (ramp_time^3)/20 - (gradient_duration*ramp_time^2)/6)) / 2π
     elseif !isnothing(qval)
-        gradient_strength = 1e3*qval/gradient_duration/gyromagnetic_ratio
+        gradient_strength = qval/gradient_duration / 2π
     end
-    @assert gradient_strength <= scanner.gradient "Requested gradient strength exceeds scanner limits"
+    @assert gradient_strength <= max_gradient(scanner) "Requested gradient strength exceeds scanner limits"
 
     return [
         (t1, 0.),

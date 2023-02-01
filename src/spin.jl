@@ -1,3 +1,8 @@
+"""
+    norm_angle(angle)
+
+Normalises an angle in degrees, so that it is between it is in the range (-180, 180]
+"""
 function norm_angle(angle)
     angle = mod(angle, 360)
     if angle > 180
@@ -60,7 +65,7 @@ SpinOrientation(orientation::AbstractVector) = SpinOrientation(PosVector(orienta
 SpinOrientation(vector::PosVector) = SpinOrientation(
     vector[3],
     sqrt(vector[1] * vector[1] + vector[2] * vector[2]),
-    atan(vector[2], vector[1]),
+    rad2deg(atan(vector[2], vector[1])),
 )
 
 """
@@ -94,7 +99,7 @@ function Spin(position::AbstractArray{<:Real}, orientations::AbstractArray{SpinO
     Spin(PosVector(position), SVector{length(orientations)}(orientations), rng)
 end
 
-Spin(;nsequences=1, position=zero(SVector{3,Float}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin{nsequences}(SVector{3, Float}(position), SVector{1}(SpinOrientation(longitudinal, transverse, deg2rad(phase))), rng)
+Spin(;nsequences=1, position=zero(SVector{3,Float}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin{nsequences}(SVector{3, Float}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), rng)
 Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.rng)
 
 macro spin_rng(spin, expr)
@@ -147,10 +152,10 @@ function orientation end
 for param in (:longitudinal, :transverse)
     @eval $param(o :: SpinOrientation) = o.$param
 end
-phase(o :: SpinOrientation) = norm_angle(rad2deg(o.phase))
+phase(o :: SpinOrientation) = norm_angle(o.phase)
 orientation(o :: SpinOrientation) = SA[
-    o.transverse * cos(o.phase),
-    o.transverse * sin(o.phase),
+    o.transverse * cosd(o.phase),
+    o.transverse * sind(o.phase),
     o.longitudinal
 ]
 

@@ -1,19 +1,18 @@
 """
-    relax(spin_orientation, environment, timestep::Real, gradient_off_resonance=0., B0=3.)
+    relax(spin_orientation, timestep, R1, R2, off_resonance)
 
-Relaxes the [`SpinOrientation`](@ref) within the R1, R2, and off-resonance given by the [`LocalEnvironment`](@ref) over given `timestep`
+Returns the relaxed [`SpinOrientation`] after evolving for `timestep` with given `R1` (1/ms), `R2` (1/ms), and off_resonance (kHz).
 """
-function relax(orientation :: SpinOrientation, environment :: LocalEnvironment, timestep :: Real, gradient_off_resonance=0., B0=3.)
+function relax(orientation :: SpinOrientation, timestep :: Real, R1, R2, off_resonance)
     @assert timestep >= 0
     if iszero(timestep)
         return orientation
     end
     timestep = Float(timestep)
-    B0 = Float(B0)
     SpinOrientation(
-        (1 - (1 - orientation.longitudinal) * exp(-environment.R1 * timestep)),
-        orientation.transverse * exp(-environment.R2 * timestep),
-        (environment.off_resonance * B0 + gradient_off_resonance) * timestep * gyromagnetic_ratio + orientation.phase
+        (1 - (1 - longitudinal(orientation)) * exp(-R1 * timestep)),
+        transverse(orientation) * exp(-R2 * timestep),
+        360. * off_resonance * timestep + phase(orientation)
     )
 end
 

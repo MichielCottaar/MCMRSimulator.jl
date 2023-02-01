@@ -1,22 +1,53 @@
 """
-    Scanner(;B0=3., gradient=Inf, slew_rate=Inf)
+    Scanner(;B0=3., max_gradient=Inf, max_slew_rate=Inf, units=:kHz)
 
 Properties of an MRI scanner relevant for the MR signal simulations.
-- `B0`: magnetic field strength (in Tesla)
-- `gradient`: maximum gradient strength (in mT/m) long each axis
-- `slew_rate`: maximum rate of change in the gradient strength (in T/m/s)
+- [`B0`](@ref): magnetic field strength (in Tesla)
+- [`max_gradient`](@ref): maximum gradient strength long each axis.
+- [`max_slew_rate`](@ref): maximum rate of change in the gradient strength
+
+By default `gradient` and `slew_rate` are expected to be provided in units of, respectively, kHz/um and kHz/um/ms.
+However, if the keyword `units=:Tesla` is set, the `gradient` and `slew_rate` can be provided in terms of respectively mT/m and 
 """
 struct Scanner
     B0::Float
     gradient::Float
     slew_rate::Float
-    function Scanner(;B0=3., gradient=Inf, slew_rate=Inf)
+    function Scanner(;B0=3., gradient=Inf, slew_rate=Inf, units=:kHz)
         if isinf(gradient) && !isinf(slew_rate)
             error("Can't have infinite gradient strength with finite slew rate.")
+        end
+        if units == :Tesla
+            gradient *= gyromagnetic_ratio * 1e-9
+            slew_rate *= gyromagnetic_ratio * 1e-9
         end
         new(Float(B0), Float(gradient), Float(slew_rate))
     end
 end
+
+"""
+    B0(scanner)
+    B0(sequence)
+
+Returns the magnetic field strength of the scanner in Tesla.
+"""
+B0(scanner::Scanner) = scanner.B0
+
+"""
+    max_gradient(scanner[, units])
+
+Returns the maximum magnetic field gradient of the scanner in kHz/um.
+By setting `units` to :Tesla, the gradient strength can be returned in mT/m instead.
+"""
+max_gradient(scanner::Scanner, units=:kHz) = units == :kHz ? scanner.gradient : scanner.gradient / (gyromagnetic_ratio * 1e-9)
+
+"""
+    max_slew_rate(scanner[, units])
+
+Returns the maximum magnetic field slew rate of the scanner in kHz/um/ms.
+By setting `units` to :Tesla, the slew rate can be returned in T/m/s instead.
+"""
+max_slew_rate(scanner::Scanner, units=:kHz) = units == :kHz ? scanner.slew_rate : scanner.slew_rate / (gyromagnetic_ratio * 1e-9)
 
 
 """

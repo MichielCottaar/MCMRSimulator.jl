@@ -9,13 +9,16 @@ include("radio_frequency.jl")
 An MR sequence represented by a series of pulses repeated with a given repetition time (`TR`).
 
 Possible sequence components are:
-- [`InstantRFPulse`](@ref): instantaneous radio-frequency pulse flipping the spin orientations.
+- [`RFPulse`](@ref): Radio-frequency pulse with user-provided amplitude and phase profile.
+- [`InstantRFPulse`](@ref): instantaneous approximation of a radio-frequency pulse flipping the spin orientations.
 - [`InstantGradient`](@ref): instantaneous gradients encoding spatial patterns in the spin phase distribution.
 - [`Readout`](@ref): Store the spins at this timepoint.
 
-The index of the next instantaneous pulse is given by [`next_instant`](@ref)(sequence, current_time).
-The time of this pulse can then be extracted using [`time`](@ref)(sequence, index).
-Note that these indices go on till infinite reflecting the repetitive nature of RF pulses over the `TR` time.
+The previous/current/next RF pulse at a specific time is given by [`previous_pulse`](@ref), [`current_pulse`](@ref), or [`next_pulse`](@ref). 
+All of these will return `nothing` if there is no previous/current/next pulse.
+The same functions exist for the previous/current/next instantaneous pulse (i.e., [`InstantRFPulse`](@ref) or [`InstantGradient`](@ref)), 
+    namely [`previous_instant`](@ref), [`current_instant`](@ref), or [`next_instant`](@ref). 
+Note that all gradients/pulses repeat every `TR`.
 """
 struct Sequence{NI, NP, NR, G<:MRGradients}
     scanner :: Scanner
@@ -55,16 +58,24 @@ function Sequence(; scanner=nothing, gradients=nothing, pulses::AbstractVector=[
     Sequence(scanner, gradients, pulses, TR)
 end
 
-function effective_pulse(sequence::Sequence, t0::Number, t1::Number)
-    current = current_pulse(sequence, (t0 + t1) / 2)
+"""
+    effective_pulse(sequence, t1, t2)
+
+Returns the [`InstantRFPulse`](@ref) that has the same effect as the radio-frequency pulses ([`RFPulse`](@ref)) in the provided sequence will have between `t1` and `t2`.
+"""
+function effective_pulse(sequence::Sequence, t1::Number, t2::Number)
+    current = current_pulse(sequence, (t1 + t2) / 2)
     if isnothing(current)
         return InstantRFPulse(0, 0, 0)
     else
-        @assert t0 >= start_time(current)
-        @assert t1 <= end_time(current)
-        return effective_pulse(current, t0, t1)
+        @assert t1 >= start_time(current)
+        @assert t2 <= end_time(current)
+        return effective_pulse(current, t1, t2)
     end
 end
+
+Scanner(sequence::Sequence) = sequence.scanner
+B0(sequence::Sequence) = B0(Scanner(sequence))
 
 start_time(pulse::InstantComponent) = pulse.time
 end_time(pulse::InstantComponent) = pulse.time
@@ -112,6 +123,12 @@ for relative in ("previous", "current", "next")
     end
 end
 
+"""
+    gradient([position, ], sequence, t1[, t2])
+
+Gets the off-resonance field (units: kHz) at given `position` at time `t1` (or integrated between times `t1` and `t2`).
+If position is not supplied the MR gradient is returned as a [`PosVector`](@ref) (units: kHz/um).
+"""
 gradient(position::AbstractVector, seq::Sequence, time::Number) = gradient(position, seq.gradient, mod(time, seq.TR))
 gradient(position::AbstractVector, seq::Sequence, time1::Number, time2::Number) = gradient(position, seq.gradient, mod(time1, seq.TR), iszero(mod(time2, seq.TR)) ? seq.TR : mod(time2, seq.TR))
 gradient(seq::Sequence, time::Number) = gradient(seq.gradient, mod(time, seq.TR))

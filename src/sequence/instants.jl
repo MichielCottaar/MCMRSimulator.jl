@@ -5,7 +5,9 @@ abstract type InstantComponent end
     InstantRFPulse(;time=0., flip_angle=0., phase=0.)
 
 Instantaneous radio-frequency pulse that flips the spins by `flip_angle` degrees in a plane perpendicular to an axis in the x-y plane with an angle of `phase` degrees with respect to the x-axis at given `time`.
-Angles are in degrees (stored internally as radians) and the `time` is in milliseconds.
+Angles are in degrees and the `time` is in milliseconds.
+Angles can be retrieved using [`flip_angle`](@ref) and [`phase`](@ref).
+Time can be retrieved using [`get_time`](@ref).
 """
 struct InstantRFPulse <: InstantComponent
     time :: Float
@@ -18,25 +20,28 @@ struct InstantRFPulse <: InstantComponent
 end
 
 function InstantRFPulse(time, flip_angle, phase)
-    f = Float(deg2rad(flip_angle))
-    p = Float(deg2rad(phase))
-    InstantRFPulse(Float(time), f, cos(f), sin(f), p, cos(p), sin(p))
+    f = Float(flip_angle)
+    p = Float(phase)
+    frad = deg2rad(f)
+    prad = deg2rad(p)
+    InstantRFPulse(Float(time), f, cos(frad), sin(frad), p, cos(prad), sin(prad))
 end
 
 InstantRFPulse(; time=0, flip_angle=0, phase=0) = InstantRFPulse(time, flip_angle, phase)
 
 """
-    phase(pulse)
+    phase(instant_pulse)
 
-Returns the angle in the x-y plane of the axis around with the RF pulse rotates in degrees
+Returns the angle in the x-y plane of the axis around with the [`InstantRFPulse`](@ref) rotates in degrees.
 """
-phase(pulse :: InstantRFPulse) = rad2deg(pulse.phase)
-"""
-    flip_angle(pulse)
+phase(pulse :: InstantRFPulse) = pulse.phase
 
-Returns the flip angle of the RF pulse in degrees
 """
-flip_angle(pulse :: InstantRFPulse) = rad2deg(pulse.flip_angle)
+    flip_angle(instant_pulse)
+
+Returns the flip angle of the [`InstantRFPulse`](@ref) in degrees.
+"""
+flip_angle(pulse :: InstantRFPulse) = pulse.flip_angle
 
 """
     apply(sequence_component, spin_orientation[, position])
@@ -52,8 +57,8 @@ Apply all sequence components to the spin orientation in the [`Spin`](@ref) or t
 Sequence components (see [`Sequence`](@ref)) can be `nothing` if there is no sequence component at this time.
 """
 function apply(pulse :: InstantRFPulse, spin :: SpinOrientation)
-    Bx_init = spin.transverse * cos(spin.phase)
-    By_init = spin.transverse * sin(spin.phase)
+    Bx_init = spin.transverse * cosd(spin.phase)
+    By_init = spin.transverse * sind(spin.phase)
     Bxy_parallel  = pulse.cp * Bx_init + pulse.sp * By_init
     Bxy_perp_init = pulse.cp * By_init - pulse.sp * Bx_init
 
@@ -63,7 +68,7 @@ function apply(pulse :: InstantRFPulse, spin :: SpinOrientation)
     SpinOrientation(
         spin.longitudinal * pulse.cf - Bxy_perp_init * pulse.sf,
         sqrt(Bx * Bx + By * By),
-        atan(By, Bx)
+        rad2deg(atan(By, Bx))
     )
 end
 
@@ -78,17 +83,15 @@ struct Readout
 end
 Readout(;time=0.) = Readout(time)
 
-apply(pulse :: Readout, orient :: SpinOrientation) = orient
-
 
 """
     InstantGradient(; qvec=[0, 0, 0], q_origin=0, time=0.)
 
-Infinitely short gradient pulse that encodes phase information given by `qvec` and `q_origin`.
+Infinitely short gradient pulse that encodes phase information given by `qvec` (units: number of rotations/um) and `q_origin` (units: number of rotations).
 
-The phase offset at every `position` is given by `qvec ⋅ position + q_origin`.
+The number of time a spins at given `position` is rotated is given by `qvec ⋅ position + q_origin`.
 
-The pulse is applied at given `time` (in milliseconds). every TR.
+The pulse is applied at given `time` (in milliseconds). Retrieve this time using [`get_time`](@ref).
 """
 struct InstantGradient <: InstantComponent
     qvec :: PosVector
@@ -98,11 +101,13 @@ struct InstantGradient <: InstantComponent
 end
 
 InstantGradient(; qvec::AbstractVector=[0., 0., 0.], q_origin=0., time :: Real=0.) = InstantGradient(SVector{3}(qvec), q_origin, time)
-qval(pulse::InstantGradient) = norm(pulse.qvec)
+qvec(pulse::InstantGradient) = pulse.qvec
+q_origin(pulse::InstantGradient) = pulse.q_origin
+qval(pulse::InstantGradient) = norm(qvec(pulse))
 
 function apply(pulse :: InstantGradient, orient :: SpinOrientation, pos::PosVector)
     adjustment = (pos ⋅ pulse.qvec) + pulse.q_origin
-    SpinOrientation(orient.longitudinal, orient.transverse, orient.phase + adjustment)
+    SpinOrientation(orient.longitudinal, orient.transverse, orient.phase + 360 * adjustment)
 end
 
 apply(pulse :: InstantComponent, orient :: SpinOrientation, pos::PosVector) = apply(pulse, orient)

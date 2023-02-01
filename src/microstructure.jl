@@ -1,17 +1,10 @@
-"The off-resonance, R2, and R1 values at a single point in space"
-struct LocalEnvironment
-    off_resonance :: Float
-    R2 :: Float
-    R1 :: Float
-end
-
 """
     Microstructure(; off_resonance=0., R2=0., R1=0., diffusivity=0., geometry=Obstruction[])
 
 Describes the microstructure of the tissue.
 
-This describes both the spatial distribution of the `R1`, `R2`, and `off-resonance` parameters (as [`Field`](@ref) objects),
-the diffusivity as a float,
+This describes both the spatial distribution of the `R1` (in 1/ms), `R2` (in 1/ms), and `off-resonance` (in kHz) parameters (as [`Field`](@ref) objects),
+the diffusivity (in um^2/ms) as a number,
 as well as the spatial `geometry` constraining the diffusion (as a sequence of [`Obstruction`](@ref) objects).
 
 The `R1`, `R2`, and `off-resonance` parameters can be defined as one of:
@@ -20,7 +13,7 @@ The `R1`, `R2`, and `off-resonance` parameters can be defined as one of:
 - `field::Field`: as generated using [`field`](@ref).
 """
 struct Microstructure{F1 <: Field, F2 <: Field, F3 <: Field, G <: Tuple}
-    off_resonance :: F1  # in ppm
+    off_resonance :: F1
     R2 :: F2
     R1 :: F3
     diffusivity :: Float
@@ -45,9 +38,3 @@ struct Microstructure{F1 <: Field, F2 <: Field, F3 <: Field, G <: Tuple}
             off_resonance, R2, R1, diffusivity, geometry)
     end
 end
-
-(micro::Microstructure)(position) = LocalEnvironment(
-    micro.off_resonance(position) + off_resonance(micro.geometry, position),
-    micro.R2(position),
-    micro.R1(position),
-)
