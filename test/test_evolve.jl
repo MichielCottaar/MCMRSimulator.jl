@@ -124,7 +124,7 @@
         spin_with_diff = mr.evolve(mr.Spin(), with_diff).spins[1]
         @test spin_no_diff.position == SA[0, 0, 0]
         @test spin_with_diff.position != SA[0, 0, 0]
-        @test spin_with_diff.orientations == spin_no_diff.orientations
+        @test mr.orientation.(spin_with_diff.orientations) == mr.orientation.(spin_no_diff.orientations)
         @test mr.transverse(spin_no_diff) ≈ exp(-0.6)
         @test abs(mr.longitudinal(spin_no_diff)) < Float(1e-6)
     end
@@ -141,8 +141,8 @@
         @test spin_no_diff.position == SA[0, 0, 0]
         @test spin_with_diff.position != SA[0, 0, 0]
         @test spin_with_diff_no_grad.position != SA[0, 0, 0]
-        @test spin_with_diff.orientations != spin_no_diff.orientations
-        @test spin_with_diff_no_grad.orientations == spin_no_diff.orientations
+        @test mr.orientation.(spin_with_diff.orientations) != mr.orientation.(spin_no_diff.orientations)
+        @test mr.orientation.(spin_with_diff_no_grad.orientations) == mr.orientation.(spin_no_diff.orientations)
         @test abs(mr.longitudinal(spin_no_diff)) < 1e-6
     end
     @testset "Basic diffusion run within sphere" begin

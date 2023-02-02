@@ -54,7 +54,7 @@ This information can be extracted using:
 - [`phase`](@ref) to get the spin angle in x-y plane (in degrees)
 - [`orientation`](@ref) to get the spin orientation as a length-3 vector
 """
-struct SpinOrientation
+mutable struct SpinOrientation
     longitudinal :: Float
     transverse :: Float
     phase :: Float
@@ -66,6 +66,12 @@ SpinOrientation(vector::PosVector) = SpinOrientation(
     vector[3],
     sqrt(vector[1] * vector[1] + vector[2] * vector[2]),
     rad2deg(atan(vector[2], vector[1])),
+)
+
+Base.copy(orient::SpinOrientation) = SpinOrientation(
+    orient.longitudinal,
+    orient.transverse,
+    orient.phase,
 )
 
 """
@@ -90,7 +96,7 @@ Create a new spin with the same position as `reference_spin` with the orientatio
 - [`orientation`](@ref) to get a (`nsequences`x3) matrix with the spin orientations in 3D space
 - [`position`](@ref) to get a length-3 vector with spin location
 """
-struct Spin{N}
+mutable struct Spin{N}
     position :: PosVector
     orientations :: SVector{N, SpinOrientation}
     rng :: FixedXoshiro
@@ -99,6 +105,12 @@ function Spin(position::AbstractArray{<:Real}, orientations::AbstractArray{SpinO
     Spin(PosVector(position), SVector{length(orientations)}(orientations), rng)
 end
 
+Base.copy(spin::Spin{N}) where {N} = Spin{N}(
+    spin.position,
+    SVector{N, SpinOrientation}(copy.(spin.orientations)),
+    spin.rng
+)
+
 Spin(;nsequences=1, position=zero(SVector{3,Float}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin{nsequences}(SVector{3, Float}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), rng)
 Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.rng)
 
@@ -106,10 +118,10 @@ macro spin_rng(spin, expr)
     return quote
         local old_rng_state = copy(Random.TaskLocalRNG())
         copy!(Random.TaskLocalRNG(), $(esc(spin)).rng)
-        $(esc(expr))
-        local final_rng_state = FixedXoshiro(copy(Random.TaskLocalRNG()))
+        result = $(esc(expr))
+        $(esc(spin)).rng = FixedXoshiro(copy(Random.TaskLocalRNG()))
         copy!(Random.TaskLocalRNG(), old_rng_state)
-        final_rng_state
+        result
     end
 end
 

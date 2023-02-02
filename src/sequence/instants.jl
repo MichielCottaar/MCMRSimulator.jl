@@ -44,19 +44,19 @@ Returns the flip angle of the [`InstantRFPulse`](@ref) in degrees.
 flip_angle(pulse :: InstantRFPulse) = pulse.flip_angle
 
 """
-    apply(sequence_component, spin_orientation[, position])
+    apply!(sequence_component, spin_orientation[, position])
 
 Applies given sequence component to the spin orientation.
-Returns a new [`SpinOrientation`](@ref).
+This updates the existing spin orientation.
 Some pulses (e.g., [`InstantGradient`](@ref)) require positional information as well.
 
-    apply(sequence_components, spin)
-    apply(sequence_components, snapshot)
+    apply!(sequence_components, spin)
+    apply!(sequence_components, snapshot)
 
-Apply all sequence components to the spin orientation in the [`Spin`](@ref) or to all the spins in [`Snapshot`](@ref) (the return type matches this input type).
+Apply all sequence components to the spin orientation in the [`Spin`](@ref) or to all the spins in [`Snapshot`](@ref).
 Sequence components (see [`Sequence`](@ref)) can be `nothing` if there is no sequence component at this time.
 """
-function apply(pulse :: InstantRFPulse, spin :: SpinOrientation)
+function apply!(pulse :: InstantRFPulse, spin :: SpinOrientation)
     Bx_init = spin.transverse * cosd(spin.phase)
     By_init = spin.transverse * sind(spin.phase)
     Bxy_parallel  = pulse.cp * Bx_init + pulse.sp * By_init
@@ -65,11 +65,9 @@ function apply(pulse :: InstantRFPulse, spin :: SpinOrientation)
     Bxy_perp = Bxy_perp_init * pulse.cf + spin.longitudinal * pulse.sf
     Bx = Bxy_parallel * pulse.cp - Bxy_perp * pulse.sp
     By = Bxy_perp * pulse.cp + Bxy_parallel * pulse.sp
-    SpinOrientation(
-        spin.longitudinal * pulse.cf - Bxy_perp_init * pulse.sf,
-        sqrt(Bx * Bx + By * By),
-        rad2deg(atan(By, Bx))
-    )
+    spin.longitudinal = spin.longitudinal * pulse.cf - Bxy_perp_init * pulse.sf
+    spin.transverse = sqrt(Bx * Bx + By * By)
+    spin.phase = rad2deg(atan(By, Bx))
 end
 
 """
@@ -105,31 +103,31 @@ qvec(pulse::InstantGradient) = pulse.qvec
 q_origin(pulse::InstantGradient) = pulse.q_origin
 qval(pulse::InstantGradient) = norm(qvec(pulse))
 
-function apply(pulse :: InstantGradient, orient :: SpinOrientation, pos::PosVector)
+function apply!(pulse :: InstantGradient, orient :: SpinOrientation, pos::PosVector)
     adjustment = (pos ⋅ pulse.qvec) + pulse.q_origin
-    SpinOrientation(orient.longitudinal, orient.transverse, orient.phase + 360 * adjustment)
+    orient.phase += 360 * adjustment
 end
 
-apply(pulse :: InstantComponent, orient :: SpinOrientation, pos::PosVector) = apply(pulse, orient)
-apply(pulse :: InstantComponent, spin :: Spin{1}) = Spin(spin.position, SVector{1}([apply(pulse, spin.orientations[1], spin.position)]), spin.rng)
-apply(pulse :: Nothing, orient :: SpinOrientation) = orient
-apply(pulse :: Nothing, orient :: SpinOrientation, pos :: PosVector) = orient
-apply(pulse :: InstantComponent, snap :: Snapshot{1}) = Snapshot(apply.(pulse, snap.spins), span.time)
+apply!(pulse :: InstantComponent, orient :: SpinOrientation, pos::PosVector) = apply!(pulse, orient)
+apply!(pulse :: InstantComponent, spin :: Spin{1}) = apply!(pulse, spin.orientations[1], spin.position)
+apply!(pulse :: Nothing, orient :: SpinOrientation) = nothing
+apply!(pulse :: Nothing, orient :: SpinOrientation, pos :: PosVector) = nothing
 
-apply(pulses :: SVector{N, <:Any}, spin :: Spin{N}) where {N} = Spin{N}(
-    spin.position,
-    SVector{N, SpinOrientation}(SpinOrientation[apply(p, o, spin.position) for (p, o) in zip(pulses, spin.orientations)]),
-    spin.rng
-)
-
-function apply(pulses :: SVector{N, <:Any}, spins :: AbstractVector{Spin{N}}) where {N}
-    map(s->apply(pulses, s), spins)
+function apply!(pulses :: SVector{N, <:Any}, spin :: Spin{N}) where {N} 
+    for index in 1:N
+        apply!(
+            pulses[index],
+            spin.orientations[index],
+            spin.position
+        )
+    end
 end
 
-apply(pulses :: SVector{N, <:Any}, snap :: Snapshot{N}) where {N} = Snapshot{N}(
-    apply(pulses, snap.spins),
-    snap.time
-)
+function apply!(pulses :: SVector{N, <:Any}, spins :: AbstractVector{Spin{N}}) where {N}
+    for spin in spins
+        apply!(pulses, spin)
+    end
+end
 
 for cls in (:InstantRFPulse, :Readout, :InstantGradient)
     @eval get_time(p::$cls) = p.time

@@ -1,25 +1,23 @@
 """
-    relax(spin_orientation, timestep, R1, R2, off_resonance)
+    relax!(spin_orientation, timestep, R1, R2, off_resonance)
 
-Returns the relaxed [`SpinOrientation`] after evolving for `timestep` with given `R1` (1/ms), `R2` (1/ms), and off_resonance (kHz).
+Updates [`SpinOrientation`] after evolving for `timestep` with given `R1` (1/ms), `R2` (1/ms), and off_resonance (kHz).
 """
-function relax(orientation :: SpinOrientation, timestep :: Real, R1, R2, off_resonance)
+function relax!(orientation :: SpinOrientation, timestep :: Real, R1, R2, off_resonance)
     @assert timestep >= 0
     if iszero(timestep)
-        return orientation
+        return
     end
     timestep = Float(timestep)
-    SpinOrientation(
-        (1 - (1 - longitudinal(orientation)) * exp(-R1 * timestep)),
-        transverse(orientation) * exp(-R2 * timestep),
-        360. * off_resonance * timestep + phase(orientation)
-    )
+    orientation.longitudinal = (1 - (1 - orientation.longitudinal) * exp(-R1 * timestep))
+    orientation.transverse *= exp(-R2 * timestep)
+    orientation.phase += 360. * off_resonance * timestep
 end
 
 
 """
-    transfer(spin1, spin2, fraction)
-    transfer(orientation, obstruction)
+    transfer!(spin1, spin2, fraction)
+    transfer!(orientation, obstruction)
 
 Transfers `fraction` of the total spin orientation between `spin1` and `spin2`.
 Alternatively transfers spin between spin `orientation` and `obstruction`.
@@ -59,12 +57,15 @@ function transfer(spin1 :: Spin{N}, spin2 :: Spin{N}, fraction :: Real) where {N
 end
 
 
-function transfer(orientation :: SpinOrientation, fraction::Float)
+function transfer!(orientation :: SpinOrientation, fraction::Float)
     inv_fraction = 1 - fraction
-    SpinOrientation((1 - (1 - orientation.longitudinal) * inv_fraction), orientation.transverse * inv_fraction, orientation.phase)
+    orientation.longitudinal = 1 - (1 - orientation.longitudinal) * inv_fraction
+    orientation.transverse *= inv_fraction
 end
 
-function transfer(orientations :: SVector{N, SpinOrientation}, obstruction :: ObstructionProperties, timestep :: Float) where {N}
+function transfer!(orientations :: SVector{N, SpinOrientation}, obstruction :: ObstructionProperties, timestep :: Float) where {N}
     fraction = 1 - (1 - obstruction.MT_fraction) ^ sqrt(timestep)
-    map(o->transfer(o, fraction), orientations)
+    for o in orientations
+        transfer!(o, fraction)
+    end
 end

@@ -41,10 +41,12 @@ end
     @testset "Simple relaxation" begin
         orient = mr.Spin(transverse=1., longitudinal=0.).orientations[1]
         @testset "R2 relaxation" begin
-            @test mr.transverse(mr.relax(orient, 0.3, 0., 2., 0.)) ≈ exp(-0.6)
+            mr.relax!(orient, 0.3, 0., 2., 0.)
+            @test mr.transverse(orient) ≈ exp(-0.6)
         end
         @testset "R1 relaxation" begin
-            @test mr.longitudinal(mr.relax(orient, 0.3, 2., 0., 0.)) ≈ 1 - exp(-0.6)
+            mr.relax!(orient, 0.3, 2., 0., 0.)
+            @test mr.longitudinal(orient) ≈ 1 - exp(-0.6)
         end
     end
     @testset "Spin conversions" begin
@@ -72,7 +74,7 @@ end
                 pulse = mr.InstantRFPulse(0., 0., pulse_phase)
                 for spin_phase in (-90, -45, 0., 30., 90., 170, 22.123789)
                     spin = mr.Spin(phase=spin_phase, transverse=1.)
-                    spin = mr.apply(pulse, spin)
+                    mr.apply!(pulse, spin)
                     @test mr.phase(spin) ≈ spin_phase
                     @test mr.longitudinal(spin) ≈ 1.
                     @test mr.transverse(spin) ≈ 1.
@@ -84,7 +86,7 @@ end
                 pulse = mr.InstantRFPulse(0., 180., pulse_phase)
                 spin = mr.Spin()
                 @test mr.longitudinal(spin) == 1.
-                spin = mr.apply(pulse, spin)
+                mr.apply!(pulse, spin)
                 @test mr.longitudinal(spin) ≈ -1.
             end
         end
@@ -93,7 +95,7 @@ end
                 pulse = mr.InstantRFPulse(0., 90., pulse_phase)
                 spin = mr.Spin()
                 @test mr.longitudinal(spin) == 1.
-                spin = mr.apply(pulse, spin)
+                mr.apply!(pulse, spin)
                 @test mr.longitudinal(spin) ≈ 0. atol=1e-7
             end
         end
@@ -103,7 +105,7 @@ end
                     pulse = mr.InstantRFPulse(0., flip_angle, pulse_phase)
 
                     spin = mr.Spin(longitudinal=0., transverse=1., phase=pulse_phase)
-                    spin = mr.apply(pulse, spin)
+                    mr.apply!(pulse, spin)
                     @test mr.longitudinal(spin) ≈ zero(Float) atol=1e-7
                     @test mr.transverse(spin) ≈ one(Float)
                     @test mr.phase(spin) ≈ Float(pulse_phase)
@@ -115,7 +117,7 @@ end
                 pulse = mr.InstantRFPulse(0., 180, 0.)
 
                 spin = mr.Spin(longitudinal=0., transverse=1., phase=spin_phase)
-                spin = mr.apply(pulse, spin)
+                mr.apply!(pulse, spin)
                 @test mr.longitudinal(spin) ≈ 0. atol=1e-7
                 @test mr.transverse(spin) ≈ 1.
                 @test mr.phase(spin) ≈ -spin_phase
@@ -124,7 +126,7 @@ end
                 pulse = mr.InstantRFPulse(0., 180, pulse_phase)
 
                 spin = mr.Spin(longitudinal=0., transverse=1., phase=0.)
-                spin = mr.apply(pulse, spin)
+                mr.apply!(pulse, spin)
                 @test mr.longitudinal(spin) ≈ 0. atol=1e-7
                 @test mr.transverse(spin) ≈ 1.
                 @test mr.phase(spin) ≈ 2 * pulse_phase
@@ -133,7 +135,8 @@ end
         @testset "90 pulses flips longitudinal spin into transverse plane" begin
             for pulse_phase in (0., 22., 30., 80.)
                 pulse = mr.InstantRFPulse(0., 90, pulse_phase)
-                spin = mr.apply(pulse, mr.Spin())
+                spin = mr.Spin()
+                mr.apply!(pulse, spin)
                 @test mr.longitudinal(spin) ≈ 0. atol=1e-7
                 @test mr.transverse(spin) ≈ 1.
                 @test mr.phase(spin) ≈ pulse_phase + 90
@@ -144,7 +147,7 @@ end
                 pulse = mr.InstantRFPulse(0., 90, pulse_phase)
                 spin_phase = (pulse_phase + 90)
                 spin = mr.Spin(longitudinal=0., transverse=1., phase=spin_phase)
-                spin = mr.apply(pulse, spin)
+                mr.apply!(pulse, spin)
                 @test mr.longitudinal(spin) ≈ -1.
                 @test mr.transverse(spin) ≈ 0. atol=1e-7
             end
@@ -152,14 +155,14 @@ end
         @testset "Gradient should do nothing at origin" begin
             spin = mr.Spin(position=SA[0, 2, 2], transverse=1., phase=90.)
             @test mr.phase(spin) ≈ Float(90.)
-            spin2 = mr.apply(mr.InstantGradient(qvec=SA[4, 0, 0]), spin)
-            @test mr.phase(spin2) ≈ Float(90.)
+            mr.apply!(mr.InstantGradient(qvec=SA[4, 0, 0]), spin)
+            @test mr.phase(spin) ≈ Float(90.)
         end
         @testset "Test instant gradient effect away from origin" begin
             spin = mr.Spin(position=SA[2, 2, 2], transverse=1., phase=90.)
             @test mr.phase(spin) ≈ Float(90.)
-            spin2 = mr.apply(mr.InstantGradient(qvec=SA[0.01, 0, 0]), spin)
-            @test mr.phase(spin2) ≈ Float(90. + 0.02 * 360)
+            mr.apply!(mr.InstantGradient(qvec=SA[0.01, 0, 0]), spin)
+            @test mr.phase(spin) ≈ Float(90. + 0.02 * 360)
         end
     end
     @testset "Random generator number control" begin
@@ -182,7 +185,9 @@ end
             env = mr.Simulation([], diffusivity=3.)
             t1 = [s[1] for s in mr.trajectory(spin, env, 1:5)]
             t2 = [s[1] for s in mr.trajectory(spin, env, 1:5)]
-            @test all(t1 .== t2)
+            @test all(@. mr.position(t1) == mr.position(t2))
+            get_rng(spin) = spin.rng
+            @test all(@. get_rng(t1) == get_rng(t2))
         end
     end
     @testset "Bounding boxes" begin

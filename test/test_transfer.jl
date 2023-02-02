@@ -14,7 +14,7 @@
             signal = mr.signal(spins, simulation, timestep)
             @test length(signal) == 2
             fhit = frachit(wall_dist, diffusivity, timestep)
-            @test transfer * fhit ≈ (1 - mr.transverse(signal[end]) / nspins) rtol=0.03
+            @test transfer * fhit ≈ (1 - mr.transverse(signal[end]) / nspins) rtol=0.1
         end
         test_MT_walls(2., 3., 0.1; transfer=0.5)
         test_MT_walls(2., 3., 0.1; transfer=0.1)

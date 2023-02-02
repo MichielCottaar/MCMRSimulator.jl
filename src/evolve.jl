@@ -1,19 +1,18 @@
-_relax_mult(spin::Spin{0}, dt, ct, sim::Simulation{0}) = spin
+_relax_mult!(spin::Spin{0}, dt, ct, sim::Simulation{0}) = nothing
 
-function _relax_mult(spin::Spin{N}, dt, ct, sim::Simulation{N}) where {N}
+function _relax_mult!(spin::Spin{N}, dt, ct, sim::Simulation{N}) where {N}
     R1 = sim.micro.R1(spin.position)
     R2 = sim.micro.R2(spin.position)
     off_resonance_kHz = sim.micro.off_resonance(spin.position)
     off_resonance_ppm = off_resonance(sim.micro.geometry, spin.position)
 
-    function get_rng(sequence, orient)
+    for index in 1:N
+        sequence = sim.sequences[index]
+        orient = spin.orientations[index]
         grad = gradient(spin.position, sequence, ct, dt + ct)
         total_off_resonance = off_resonance_kHz + grad + off_resonance_ppm * 1e-6 * B0(sequence) * gyromagnetic_ratio
-        relax(orient, dt, R1, R2, total_off_resonance)
+        relax!(orient, dt, R1, R2, total_off_resonance)
     end
-
-    orient = map(get_rng, sim.sequences, spin.orientations)
-    Spin(spin.position, orient, spin.rng)
 end
 
 """
@@ -24,7 +23,7 @@ This takes into account both random diffusion of the spin's position
 and relaxation of the MR spin orientation.
 It is used internally when evolving [`Simulation`](@ref) objects.
 """
-function evolve_to_time(
+function evolve_to_time!(
     spin::Spin{N}, simulation::Simulation{N}, finite_pulse::SVector{N, Tuple{InstantRFPulse, InstantRFPulse}}, current_time::Float, new_time::Float
 ) where {N}
     if current_time > new_time
@@ -34,11 +33,11 @@ function evolve_to_time(
         return spin
     end
 
-    spin = apply(map(fp -> fp[1], finite_pulse), spin)
-    spin = _relax_mult(spin, (new_time - current_time) / 2, current_time, simulation)
-    spin = draw_step(spin, simulation.micro.diffusivity, new_time - current_time, simulation.micro.geometry)
-    spin = _relax_mult(spin, (new_time - current_time) / 2, (new_time + current_time) / 2, simulation)
-    spin = apply(map(fp -> fp[2], finite_pulse), spin)
+    apply!(map(fp -> fp[1], finite_pulse), spin)
+    _relax_mult!(spin, (new_time - current_time) / 2, current_time, simulation)
+    draw_step!(spin, simulation.micro.diffusivity, new_time - current_time, simulation.micro.geometry)
+    _relax_mult!(spin, (new_time - current_time) / 2, (new_time + current_time) / 2, simulation)
+    apply!(map(fp -> fp[2], finite_pulse), spin)
 end
 
 """
@@ -53,7 +52,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     if new_time < current_time
         error("New requested time ($(new_time)) is less than current time ($(snapshot.time)). Simulator does not work backwards in time.")
     end
-    spins::Vector{Spin{N}} = copy(snapshot.spins)
+    spins::Vector{Spin{N}} = copy.(snapshot.spins)
 
     times = propose_times(simulation, snapshot.time, new_time)
     finite_pulses = [
@@ -69,7 +68,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     for (next_time, finite_pulse) in zip(times, finite_pulses)
         # evolve all spins to next interesting time
         Threads.@threads for idx in 1:nspins
-            spins[idx] = evolve_to_time(spins[idx], simulation, finite_pulse, current_time, next_time)
+            evolve_to_time!(spins[idx], simulation, finite_pulse, current_time, next_time)
         end
         current_time = next_time
 
@@ -79,7 +78,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
                 time == current_time ? instant : nothing 
                 for (seq, instant, time) in zip(simulation.sequences, sequence_instants, sequence_times)
             ])
-            spins = apply(components, spins)
+            apply!(components, spins)
             for (idx, ctime) in enumerate(sequence_times)
                 if ctime == current_time
                     sequence = simulation.sequences[idx]

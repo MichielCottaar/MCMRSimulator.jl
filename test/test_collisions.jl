@@ -194,7 +194,7 @@
             @test mr.isinside(geometry, spin)
             inside = true
             for _ in 1:100
-                spin = mr.draw_step(spin, Float(3.), Float(0.5), tuple(geometry))
+                mr.draw_step!(spin, Float(3.), Float(0.5), tuple(geometry))
                 inside &= mr.isinside(geometry, spin)
             end
             @test inside
@@ -344,7 +344,7 @@
             theta = mr.spiral_theta(spiral.obstructions[1], SVector{2}(spin.position[1:2]))
             for _ in 1:100000
                 prev_theta = theta
-                spin = mr.draw_step(spin, 1., 0.01, [spiral])
+                mr.draw_step!(spin, 1., 0.01, [spiral])
                 theta = mr.spiral_theta(spiral.obstructions[1], SVector{2}(spin.position[1:2]))
                 if abs(theta - prev_theta) > π
                     error("Leaked through spiral!")

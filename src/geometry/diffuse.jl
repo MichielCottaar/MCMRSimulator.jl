@@ -40,30 +40,26 @@ Draws a random step from a Gaussian distribution with a variance of 2 * diffusiv
 random_gauss(diffusivity :: Float, timestep :: Float) = sqrt(2 * timestep * diffusivity) * randn(PosVector)
 
 """
-    draw_step(current::Spin, diffusivity::Float, timestep::Float[, geometry::Obstructions])
+    draw_step!(spin::Spin, diffusivity::Float, timestep::Float[, geometry::Obstructions])
 
-Returns a new spin with the state of the particle after `timestep`:
+Updates the spin based on a random movement through the given geometry for a given `timestep`:
 - draws the next location of the particle after `timestep` with given `diffusivity`.  
   If provided, this displacement will take into account the obstructions in `geometry`.
 - the spin orientation might be affected by collisions with the obstructions in `geometry`.
 """
-function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float) where {N}
-    new_rng = @spin_rng current begin
-        new_pos = current.position .+ random_gauss(diffusivity, timestep)
+function draw_step!(spin :: Spin{N}, diffusivity :: Float, timestep :: Float) where {N}
+    @spin_rng spin begin
+        spin.position += random_gauss(diffusivity, timestep)
     end
-    Spin{N}(new_pos, current.orientations, new_rng)
 end
-draw_step(current :: Spin, diffusivity :: Float, timestep :: Float, geometry :: Tuple{}) = draw_step(current, diffusivity, timestep)
-draw_step(current :: Spin, diffusivity :: Float, timestep :: Float, geometry :: AbstractVector{<:Obstruction}) = draw_step(current, diffusivity, timestep, Tuple(geometry))
-function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, geometry::Tuple) where {N}
-    proposed = draw_step(current, diffusivity, timestep)
+draw_step!(spin :: Spin, diffusivity :: Float, timestep :: Float, geometry :: Tuple{}) = draw_step!(spin, diffusivity, timestep)
+draw_step!(spin :: Spin, diffusivity :: Float, timestep :: Float, geometry :: AbstractVector{<:Obstruction}) = draw_step!(spin, diffusivity, timestep, Tuple(geometry))
+function draw_step!(spin :: Spin{N}, diffusivity :: Float, timestep :: Float, geometry::Tuple) where {N}
+    current_pos = spin.position
+    new_pos = random_gauss(diffusivity, timestep) + current_pos
     collision = empty_collision
 
-    current_pos = current.position
-    new_pos = proposed.position
-    orient = proposed.orientations
-
-    final_rng = @spin_rng proposed begin
+    @spin_rng spin begin
         for _ in 1:10000
             collision = detect_collision(
                 Movement(current_pos, new_pos, one(Float)),
@@ -74,7 +70,7 @@ function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, 
                 break
             end
 
-            orient = transfer(orient, ObstructionProperties(collision), timestep)
+            transfer!(spin.orientations, ObstructionProperties(collision), timestep)
 
             permeability_prob = 1 - (1 - collision.properties.permeability) ^ sqrt(timestep)
             if iszero(permeability_prob) || rand() > permeability_prob
@@ -92,7 +88,7 @@ function draw_step(current :: Spin{N}, diffusivity :: Float, timestep :: Float, 
     if collision !== empty_collision
         error("Bounced single particle for 10000 times in single step; terminating!")
     end
-    Spin(new_pos, orient, final_rng)
+    spin.position = new_pos
 end
 
 """
