@@ -13,7 +13,8 @@ end
 
 function Makie.plot!(pg::Plot_Geometry)
     plot_plane = pg[1]
-    geometry = pg[2]
+    raw_geometry = pg[2]
+    geometry = @lift Geometry($raw_geometry)
 
     to_plot = @lift project_geometry($plot_plane, $geometry)
 
@@ -26,13 +27,16 @@ function Makie.plot!(pg::Plot_Geometry)
     pg
 end
 
+Makie.plottype(::PlotPlane, ::Obstruction) = Plot_Geometry
+Makie.plottype(::PlotPlane, ::AbstractVector{<:Obstruction}) = Plot_Geometry
 Makie.plottype(::PlotPlane, ::TransformObstruction) = Plot_Geometry
 Makie.plottype(::PlotPlane, ::AbstractVector{<:TransformObstruction}) = Plot_Geometry
+Makie.plottype(::PlotPlane, ::Geometry) = Plot_Geometry
 
 
-function project_geometry(plot_plane::PlotPlane, transforms::AbstractVector{<:TransformObstruction})
+function project_geometry(plot_plane::PlotPlane, geometry::Geometry)
     projections = []
-    for t in transforms
+    for t in geometry.obstructions
         append!(projections, project_geometry(plot_plane, t))
     end
     projections

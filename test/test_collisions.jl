@@ -194,7 +194,7 @@
             @test mr.isinside(geometry, spin)
             inside = true
             for _ in 1:100
-                mr.draw_step!(spin, Float(3.), Float(0.5), tuple(geometry))
+                mr.draw_step!(spin, Float(3.), Float(0.5), mr.Geometry(geometry))
                 inside &= mr.isinside(geometry, spin)
             end
             @test inside

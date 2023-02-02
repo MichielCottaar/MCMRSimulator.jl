@@ -13,7 +13,8 @@ end
 
 function Makie.plot!(por::Plot_Off_Resonance)
     plot_plane = por[1]
-    geometry = por[2]
+    raw_geometry = por[2]
+    geometry = @lift Geometry($raw_geometry)
 
     dims = @lift -0.5:(1/$(por[:ngrid])):0.5
     xx_1d = @lift $dims * $plot_plane.sizex
