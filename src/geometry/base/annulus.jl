@@ -25,7 +25,6 @@ struct Annulus <: BaseObstruction{2}
     end
 end
 
-Base.copy(a::Annulus) = Annulus(a.inner.radius, a.outer.radius; chi_I=a.chi_I, chi_A=a.chi_A, myelin=a.myelin)
 isinside(a::Annulus, pos::SVector{2, Float}) = isinside(a.inner, pos) + isinside(a.outer, pos)
 BoundingBox(a::Annulus) = BoundingBox(a.outer)
 
@@ -54,16 +53,16 @@ end
 
 function detect_collision(movement :: Movement{2}, annulus :: Annulus, previous)
     if previous !== empty_collision
-        if id(previous) == id(annulus.inner)
-            if previous.index == 1
+        if collided(annulus.inner, previous)
+            if previous.inside
                 # we are inside the inner sphere
                 return detect_collision(movement, annulus.inner, previous)
             else
                 # we just bounced on the outside of the inner sphere. Let's not do that again
                 return detect_collision(movement, annulus.outer, previous)
             end
-        elseif id(previous) == id(annulus.outer)
-            if previous.index == 0
+        elseif collided(annulus.outer, previous)
+            if !previous.inside
                 # We just bounced on the outside of the outer cylinder. Let's check if we hit it again (could be due to repeats).
                 return detect_collision(movement, annulus.outer, previous)
             end
@@ -130,3 +129,7 @@ function random_annuli(target_density; repeats, g_ratio=0.8, distribution=nothin
     inner = g_ratio .* outer
     annuli(inner, outer; positions=positions, repeats=repeats, kwargs...)
 end
+
+
+# Placeholder until the inner and outer cylinders of the annulus can have different MRI properties
+inside_MRI_properties(annulus::Annulus, position::SVector{2, Float}) = inside_MRI_properties(annulus.outer, position)

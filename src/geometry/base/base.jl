@@ -18,8 +18,26 @@ abstract type BaseObstruction{N} <: Obstruction{N} end
 
 ObstructionProperties(obstruction :: BaseObstruction) = obstruction.properties
 
-Base.copy(o::BaseObstruction) = @set o.properties.id = uuid1()
+"""
+    collided(o::BaseObstruction, c::Collision)
 
+Returns true if the collision `c` hit the obstruction `o`.
+"""
+collided(o::BaseObstruction, c::Collision) = ObstructionProperties(o) == ObstructionProperties(c)
+
+"""
+    inside_MRI_properties(obstruction, position)
+
+Returns the inside MRI properties of the obstruction only if the position is within the property.
+For positions outside of the MRI properties an empty [`MRIProperties`](@ref) is returned.
+"""
+function inside_MRI_properties(obstruction::BaseObstruction{N}, position::SVector{N, Float}) where{N}
+    if empty_mri_properties(obstruction.properties.inside) || isinside(obstruction, position)
+        return obstruction.properties.inside
+    else
+        return MRIProperties()
+    end
+end
 
 # Base obstruction API
 """
@@ -55,6 +73,7 @@ function lorentz_off_resonance end
 
 Test whether the particles are inside a [`BaseObstruction`](@ref), [`TransformObstruction`](@ref), [`Geometry`](@ref) or [`BoundingBox`](@ref) object.
 """
+isinside(something, pos::AbstractVector) = isinside(something, SVector{length(pos)}(pos))
 isinside(something, spin::Spin) = isinside(something, spin.position)
 isinside(something, snapshot::Snapshot) = [isinside(something, spin) for spin in snapshot]
 

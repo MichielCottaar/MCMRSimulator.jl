@@ -179,7 +179,7 @@ function detect_collision(movement::Movement{3}, mesh::Mesh{N}, previous=empty_c
             tri_solution = detect_collision(movement, mesh, to_check)
             if (
                 (tri_solution.distance < collision.distance) &&
-                ((id(previous) !== id(mesh)) || (previous.index != tri_solution.index))
+                (!collided(mesh, previous) || (previous.index != tri_solution.index))
             )
                 collision = tri_solution
             end

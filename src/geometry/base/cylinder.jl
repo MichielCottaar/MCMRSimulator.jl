@@ -49,7 +49,7 @@ function cylinders(args...; kwargs...)
 end
 
 function detect_collision(movement :: Movement{2}, cylinder :: Cylinder, previous::Collision)
-    inside = id(previous) != id(cylinder) ? -1 : Int(previous.inside)
+    inside = !collided(cylinder, previous) ? -1 : Int(previous.inside)
     sphere_collision(movement, cylinder, inside)
 end
 

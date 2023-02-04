@@ -26,7 +26,7 @@ isinside(sphere::Sphere, pos::PosVector) = norm(pos) <= sphere.radius
 BoundingBox(s::Sphere) = BoundingBox([-s.radius, -s.radius, -s.radius], [s.radius, s.radius, s.radius])
 
 function detect_collision(movement :: Movement, sphere :: Sphere, previous=empty_collision) 
-    inside = id(previous) != id(sphere) ? -1 : Int(previous.inside)
+    inside = !collided(sphere, previous) ? -1 : Int(previous.inside)
     sphere_collision(movement, sphere, inside)
 end
 

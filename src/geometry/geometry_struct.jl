@@ -17,7 +17,7 @@ Geometry(obstructions::AbstractVector) = Geometry(obstructions...)
 Geometry(g::Geometry) = g
 
 
-isinside(geom::Geometry, pos::PosVector) = any(isinside.(geom.obstructions, pos))
+isinside(geom::Geometry, pos::PosVector) = maximum([isinside(o, pos) for o in geom.obstructions])
 
 Base.length(geom::Geometry{N}) where {N} = N
     
@@ -61,3 +61,15 @@ function off_resonance(geom::Geometry{N}, position::PosVector) where {N}
     end
     total
 end
+
+"""
+    inside_MRI_properties(geometry, spin/position, global_props)
+
+Computes the MRI parameters for the spin based on some global settings (`global_props`) and any overriding of those settings in the `geometry`.
+"""
+function inside_MRI_properties(geom::Geometry, position::PosVector, global_props::MRIProperties)
+    return merge_mri_parameters([inside_MRI_properties(o, position) for o in geom.obstructions], global_props)
+end
+
+inside_MRI_properties(geom::Geometry, spin::Spin, global_props::MRIProperties) = inside_MRI_properties(geom, spin.position, global_props)
+inside_MRI_properties(geom::Geometry, position::AbstractVector, global_props::MRIProperties) = inside_MRI_properties(geom, PosVector(position), global_props)

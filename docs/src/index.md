@@ -86,7 +86,7 @@ nothing # hide
 ```
 ![](tutorial_sequence.png)
 
-Once we have both a geometry and one or more sequences, we can put them together in a [`Simulation`](@ref) object:
+Once we have both a geometry and one or more sequences, we can put them together in a [`Simulation`](@ref) object (click on this object for more details on the many options available when setting up a simulation):
 ```@example tutorial
 simulation = Simulation(sequence, R2=0.012, R1=3e-3, diffusivity=2., off_resonance=0.1, geometry=geometry)
 nothing # hide

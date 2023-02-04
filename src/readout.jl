@@ -1,33 +1,56 @@
 """
-    Simulation(sequences, [microstructure]; R1=0., R2=0., off_resonance=0., diffusivity=0., geometry=Obstruction[], store_every=5., timestep=0.5)
+    Simulation(
+        sequences; geometry=Obstruction[], diffusivity=0.,
+        R1=0, T1=Inf, R2=0, T2=Inf, off_resonance=0, MT_fraction=0, permeability=0,, 
+        timestep=nothing, gradient_precision=0.01, sample_displacement=5, sample_off_resonance=10,
+    )
 
 Defines the setup of the simulation and stores the output of the run.
 
-Note the use of units:
-- all positions are in micrometers
-- all times are in milliseconds
-- magnetic fields are in Tesla
+# Argument
+## General parameters:
+- `sequences`: Vector of [`Sequence`](@ref) objects. During the spin random walk the simulation will keep track of the spin magnetisations for all of the provided sequences.
+- `geometry`: Set of obstructions, which can be used to restrict the diffusion, produce off-resonance fields, alter the local T1/T2 relaxation, and as sources of magnetisation transfer.
+- `diffusivity`: Rate of the random motion of the spins in um^2/ms.
 
-# Arguments
-- `sequences::AbstractVector{Sequence}`: MR sequences to simulate. See [`Sequence`](@ref).
-- `microstructure::Microstructure`: Description the tissue microstructure. A [`Microstructure`](@ref) object can be obtained directly or created using the `R1`, `R2`, `off_resonance`, `diffusivity`, and `geometry` flags.
-- `timestep::Real`: Timestep of the spin random walk through the tissue in milliseconds (default: 0.5).
+## MRI properties
+These parameters determine the evolution and relaxation of the spin magnetisation.
+- `R1`/`T1`: sets the longitudinal relaxation rate (R1 in kHz) or relaxation time (T1=1/R1 in ms). This determines how fast the longitudinal magnetisation returns to its equilibrium value of 1.
+- `R2`/`T2`: sets the transverse relaxation rate (R2 in kHz) or relaxation time (T2=1/R2 in ms). This determines how fast the transverse magnetisation is lost.
+- `off_resonance`: Size of the off-resonance field in this voxel in kHz.
+These MRI properties can be overriden for spins inside the [`BaseObstruction`](@ref) objects of the `geoemtry`.
+
+## Collision parameters
+These parameters determine how parameters behave when hitting the [`BaseObstruction`](@ref) objects of the `geoemtry`.
+They can be overriden for individual [`BaseObstruction`] objects.
+- `MT_fraction`: the fraction of magnetisation transfered between the obstruction and the water spin at each collision.
+- `permeability`: the probability that the spin will pass through the obstruction.
+Note that `MT_fraction` and `permeability` are internally adjusted to make their effect independent of the timestep (see [`correct_for_timestep`](@ref)).
+
+## Timestep parameters
+These parameters (`timestep`, `gradient_precision`, `sample_displacement`, `sample_off_resonance`) control the timepoints at which the simulation is evaluated.
+The default values should work well.
+For more details on how to adjust them, see [`TimeController`](@ref).
 
 # Running the simulation
-To run a [`Snapshot`](@ref) through the simulations you can use one of the following functions:
+To run a [`Snapshot`](@ref) of spins through the simulations you can use one of the following functions:
 - [`evolve`](@ref): evolves the spins in the snapshot until a single given time and returns that state in a new [`Snapshot`](@ref).
-- [`trajectory`](@ref): returns full spin trajectory (recommended only for small number of spins)
-- [`signal`](@ref): returns signal variation over time
+- [`trajectory`](@ref): returns full spin trajectory (recommended only for small number of spins).
+- [`signal`](@ref): returns signal variation over time.
 - [`readout`](@ref): returns the snapshots at the sequence readouts.
 """
-struct Simulation{N, M<:Microstructure, S<:Sequence}
+struct Simulation{N, G<:Geometry, S<:Sequence}
     # N sequences, datatype T
     sequences :: SVector{N, S}
-    micro::M
+    diffusivity :: Float
+    properties :: GlobalProperties
+    geometry :: G
     time_controller::TimeController
     function Simulation(
         sequences, 
-        micro::Microstructure, 
+        diffusivity::Float,
+        properties::GlobalProperties,
+        geometry::Geometry,
         time_controller::TimeController
     )
         if isa(sequences, Sequence)
@@ -36,10 +59,13 @@ struct Simulation{N, M<:Microstructure, S<:Sequence}
             sequences = Sequence[]
         end
         nseq = length(sequences)
+        geometry = Geometry(geometry)
 
-        new{nseq, typeof(micro), eltype(sequences)}(
+        new{nseq, typeof(geometry), eltype(sequences)}(
             SVector{nseq}(sequences),
-            micro,
+            diffusivity,
+            properties,
+            geometry,
             time_controller,
         )
     end
@@ -47,25 +73,34 @@ end
 
 function Simulation(
     sequences;
-    R1=0.,
-    R2=0.,
-    diffusivity=0.,
+    R1=NaN,
+    T1=NaN,
+    R2=NaN,
+    T2=NaN,
     off_resonance=0.,
+    MT_fraction=0.,
+    permeability=0.,
+    diffusivity=0.,
     geometry=Obstruction[],
     timestep=nothing,
     gradient_precision=0.01,
     sample_displacement=5,
     sample_off_resonance=10,
 )
-    micro = Microstructure(R1=R1, R2=R2, diffusivity=diffusivity, off_resonance=off_resonance, geometry=geometry)
+    geometry = Geometry(geometry)
     if isnothing(timestep)
-        controller = TimeController(micro.geometry; gradient_precision=gradient_precision, sample_displacement=sample_displacement, sample_off_resonance=sample_off_resonance)
+        controller = TimeController(geometry; gradient_precision=gradient_precision, sample_displacement=sample_displacement, sample_off_resonance=sample_off_resonance)
     else
         controller = TimeController(timestep)
     end
+    if iszero(diffusivity) && length(geometry) > 0
+        @warn "Restrictive geometry will have no effect, because the diffusivity is set at zero"
+    end
     return Simulation(
         sequences, 
-        micro,
+        diffusivity,
+        GlobalProperties(; R1=R1, T1=T1, R2=R2, T2=T2, off_resonance=off_resonance, MT_fraction=MT_fraction, permeability=permeability),
+        geometry,
         controller,
     )
 end
@@ -88,8 +123,8 @@ function _to_snapshot(spins::Snapshot{N}, nseq::Int) where {N}
     spins
 end
 
-produces_off_resonance(sim::Simulation) = produces_off_resonance(sim.micro)
-propose_times(sim::Simulation, t_start, t_end) = propose_times(sim.time_controller, t_start, t_end, sim.sequences, sim.micro.diffusivity)
+produces_off_resonance(sim::Simulation) = produces_off_resonance(sim.geometry)
+propose_times(sim::Simulation, t_start, t_end) = propose_times(sim.time_controller, t_start, t_end, sim.sequences, sim.diffusivity)
 
 """
     readout(snapshot, simulation)

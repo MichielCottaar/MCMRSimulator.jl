@@ -118,8 +118,8 @@
     end
     @testset "Basic diffusion has no effect in constant fields" begin
         sequence = mr.Sequence(pulses=[mr.InstantRFPulse(flip_angle=90)], TR=2.)
-        no_diff = mr.Simulation([sequence], R2=mr.field(0.3))
-        with_diff = mr.Simulation([sequence], diffusivity=1., R2=mr.field(0.3))
+        no_diff = mr.Simulation([sequence], R2=0.3)
+        with_diff = mr.Simulation([sequence], diffusivity=1., R2=0.3)
         spin_no_diff = mr.evolve(mr.Spin(), no_diff).spins[1]
         spin_with_diff = mr.evolve(mr.Spin(), with_diff).spins[1]
         @test spin_no_diff.position == SA[0, 0, 0]
@@ -127,23 +127,6 @@
         @test mr.orientation.(spin_with_diff.orientations) == mr.orientation.(spin_no_diff.orientations)
         @test mr.transverse(spin_no_diff) ≈ exp(-0.6)
         @test abs(mr.longitudinal(spin_no_diff)) < Float(1e-6)
-    end
-    @testset "Basic diffusion changes spin orientation in spatially varying field" begin
-        sequence = mr.Sequence(pulses=[mr.InstantRFPulse(flip_angle=90)], TR=2.)
-        no_diff = mr.Simulation([sequence], R2=mr.field(0.3))
-        with_diff = mr.Simulation([sequence], diffusivity=1., R2=mr.field([1., 0., 0.], 0.3))
-        with_diff_no_grad = mr.Simulation([sequence], diffusivity=1., R2=mr.field(0.3))
-
-        spin_no_diff = mr.evolve(mr.Spin(), no_diff).spins[1]
-        spin_with_diff = mr.evolve(mr.Spin(), with_diff).spins[1]
-        spin_with_diff_no_grad = mr.evolve(mr.Spin(), with_diff_no_grad).spins[1]
-
-        @test spin_no_diff.position == SA[0, 0, 0]
-        @test spin_with_diff.position != SA[0, 0, 0]
-        @test spin_with_diff_no_grad.position != SA[0, 0, 0]
-        @test mr.orientation.(spin_with_diff.orientations) != mr.orientation.(spin_no_diff.orientations)
-        @test mr.orientation.(spin_with_diff_no_grad.orientations) == mr.orientation.(spin_no_diff.orientations)
-        @test abs(mr.longitudinal(spin_no_diff)) < 1e-6
     end
     @testset "Basic diffusion run within sphere" begin
         sequence = mr.Sequence(pulses=[mr.InstantRFPulse(flip_angle=90)], TR=2.)
@@ -165,7 +148,7 @@
             mr.Sequence(pulses=[mr.InstantRFPulse(flip_angle=90), mr.Readout(2.)], TR=3.),
             mr.Sequence(pulses=[mr.InstantRFPulse(flip_angle=90), mr.Readout(1.)], TR=2.),
         ]
-        all_snaps = mr.Simulation(sequences, diffusivity=1., R2=mr.field(1.))
+        all_snaps = mr.Simulation(sequences, diffusivity=1., R2=1.)
 
         readouts = [r[1] for r in mr.readout(mr.Spin(), all_snaps)]
 

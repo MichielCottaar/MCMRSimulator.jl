@@ -52,7 +52,7 @@ function TransformObstruction(obstruction::BaseObstruction{N}; positions=nothing
         @assert length(positions) == N
         return TransformObstruction([obstruction]; positions=[positions], kwargs...)
     else
-        return TransformObstruction([copy(obstruction) for _ in 1:length(positions)]; positions=positions, kwargs...)
+        return TransformObstruction([deepcopy(obstruction) for _ in 1:length(positions)]; positions=positions, kwargs...)
     end
 end
 
@@ -263,3 +263,8 @@ function off_resonance(transform::TransformObstruction{N, M}, position::PosVecto
 end
 
 produces_off_resonance(transform::TransformObstruction) = any(produces_off_resonance.(transform.obstructions))
+
+
+function inside_MRI_properties(transform::TransformObstruction, position::PosVector)
+    return merge_mri_parameters(inside_MRI_properties.(transform.obstructions, project(transform, position)))
+end

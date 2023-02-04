@@ -1,17 +1,15 @@
 _relax_mult!(spin::Spin{0}, dt, ct, sim::Simulation{0}) = nothing
 
 function _relax_mult!(spin::Spin{N}, dt, ct, sim::Simulation{N}) where {N}
-    R1 = sim.micro.R1(spin.position)
-    R2 = sim.micro.R2(spin.position)
-    off_resonance_kHz = sim.micro.off_resonance(spin.position)
-    off_resonance_ppm = off_resonance(sim.micro.geometry, spin.position)
+    use_mri = inside_MRI_properties(sim.geometry, spin, sim.properties.mri)
+    off_resonance_ppm = off_resonance(sim.geometry, spin.position)
 
     for index in 1:N
         sequence = sim.sequences[index]
         orient = spin.orientations[index]
         grad = gradient(spin.position, sequence, ct, dt + ct)
-        total_off_resonance = off_resonance_kHz + grad + off_resonance_ppm * 1e-6 * B0(sequence) * gyromagnetic_ratio
-        relax!(orient, dt, R1, R2, total_off_resonance)
+        additional_off_resonance = grad + off_resonance_ppm * 1e-6 * B0(sequence) * gyromagnetic_ratio
+        relax!(orient, dt, use_mri, additional_off_resonance)
     end
 end
 
@@ -35,7 +33,7 @@ function evolve_to_time!(
 
     apply!(map(fp -> fp[1], finite_pulse), spin)
     _relax_mult!(spin, (new_time - current_time) / 2, current_time, simulation)
-    draw_step!(spin, simulation.micro.diffusivity, new_time - current_time, simulation.micro.geometry)
+    draw_step!(spin, simulation.diffusivity, new_time - current_time, simulation.properties, simulation.geometry)
     _relax_mult!(spin, (new_time - current_time) / 2, (new_time + current_time) / 2, simulation)
     apply!(map(fp -> fp[2], finite_pulse), spin)
 end
@@ -52,7 +50,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     if new_time < current_time
         error("New requested time ($(new_time)) is less than current time ($(snapshot.time)). Simulator does not work backwards in time.")
     end
-    spins::Vector{Spin{N}} = copy.(snapshot.spins)
+    spins::Vector{Spin{N}} = deepcopy.(snapshot.spins)
 
     times = propose_times(simulation, snapshot.time, new_time)
     finite_pulses = [

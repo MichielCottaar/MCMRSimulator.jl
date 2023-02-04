@@ -25,3 +25,14 @@ ObstructionProperties(c :: Collision) = c.properties
 
 const empty_collision = Collision(Inf, SA[0, 0, 0], ObstructionProperties(), 0, false)
 
+for accessor in (:MT_fraction, :permeability)
+    @eval function $(accessor)(c::Collision, defaults) 
+        value = $(accessor)(c.properties)
+        if isnan(value)
+            value = $(accessor)(defaults)
+        end
+        @assert !isnan(value)
+        return value
+    end
+end
+

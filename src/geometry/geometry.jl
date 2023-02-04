@@ -9,7 +9,6 @@ abstract type Obstruction{N} end
 
 include("movement.jl")  # Bounding boxes
 include("bounding_box.jl")  # Bounding boxes
-include("properties.jl")    # Obstruction properties
 include("collision.jl")     # Collision object returned by detect_collision
 include("grid.jl")          # Repeating grids
 include("base/base.jl")     # Base obstructions

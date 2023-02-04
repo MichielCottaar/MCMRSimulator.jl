@@ -97,7 +97,7 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
     c_cylinders = c_inner.distance < c_outer.distance ? c_inner : c_outer
 
 
-    assume_inner = id(previous) != id(spiral) ? nothing : previous.index == 1
+    assume_inner = !collided(spiral, previous) ? nothing : previous.index == 1
     for dim in 1:2
         if (
             (movement.origin[dim] > spiral.outer && movement.destination[dim] > spiral.outer) ||
@@ -181,7 +181,7 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
 
     function get_zero_solution()
         t1, t2 = get_theta(movement.origin, rsq_origin, ignore_toskip=false), get_theta(movement.destination, rsq_destination, ignore_toskip=true)
-        if id(previous) == id(spiral)
+        if collided(spiral, previous)
             index = previous.index
             normal = previous.normal
         else

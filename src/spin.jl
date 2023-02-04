@@ -68,11 +68,6 @@ SpinOrientation(vector::PosVector) = SpinOrientation(
     rad2deg(atan(vector[2], vector[1])),
 )
 
-Base.copy(orient::SpinOrientation) = SpinOrientation(
-    orient.longitudinal,
-    orient.transverse,
-    orient.phase,
-)
 
 """
 Spin particle with a position and `nsequences` spin orientations (stored as [`SpinOrientation`](@ref)).
@@ -100,18 +95,12 @@ mutable struct Spin{N}
     position :: PosVector
     orientations :: SVector{N, SpinOrientation}
     rng :: FixedXoshiro
-end
-function Spin(position::AbstractArray{<:Real}, orientations::AbstractArray{SpinOrientation}, rng::FixedXoshiro=FixedXoshiro()) 
-    Spin(PosVector(position), SVector{length(orientations)}(orientations), rng)
+    function Spin(position::AbstractArray{<:Real}, orientations::AbstractArray{SpinOrientation}, rng::FixedXoshiro=FixedXoshiro()) 
+        new{length(orientations)}(PosVector(position), SVector{length(orientations)}(deepcopy.(orientations)), rng)
+    end
 end
 
-Base.copy(spin::Spin{N}) where {N} = Spin{N}(
-    spin.position,
-    SVector{N, SpinOrientation}(copy.(spin.orientations)),
-    spin.rng
-)
-
-Spin(;nsequences=1, position=zero(SVector{3,Float}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin{nsequences}(SVector{3, Float}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), rng)
+Spin(;nsequences=1, position=zero(SVector{3,Float}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin(SVector{3, Float}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), rng)
 Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.rng)
 
 macro spin_rng(spin, expr)

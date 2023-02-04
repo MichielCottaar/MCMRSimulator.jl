@@ -10,7 +10,7 @@
     @testset "Wall reflections" begin
         @testset "Hitting vertical wall directly" begin
             res = mr.correct_collisions(
-                mr.Movement(SA[0, 0, 0], SA[3, 0, 0], 3.),
+                mr.Movement([0, 0, 0], [3, 0, 0], 3.),
                 mr.walls(rotation=:x, positions=[1])
             )
             @test length(res) == 2
@@ -23,7 +23,7 @@
         end
         @testset "Hitting vertical wall under angle" begin
             res = mr.correct_collisions(
-                mr.Movement(SA[0, 0, 0], SA[3, 6, 0], Float(3.)),
+                mr.Movement([0, 0, 0], [3, 6, 0], Float(3.)),
                 mr.walls(rotation=:x, positions=[1])
             )
             @test length(res) == 2
@@ -36,7 +36,7 @@
         end
         @testset "Missing vertical wall" begin
             res = mr.correct_collisions(
-                mr.Movement(SA[0, 0, 0], SA[0, 2, 0], Float(4.)),
+                mr.Movement([0, 0, 0], [0, 2, 0], Float(4.)),
                 mr.walls(rotation=:x, positions=[1])
             )
             @test length(res) == 1
@@ -46,7 +46,7 @@
         end
         @testset "Hitting two vertical walls" begin
             res = mr.correct_collisions(
-                mr.Movement(SA[0, 0, 0], SA[6, 0, 12], Float(30.)),
+                mr.Movement([0, 0, 0], [6, 0, 12], Float(30.)),
                 mr.walls(rotation=:x, positions=[-1, 1])
             )
             @test length(res) == 4
@@ -175,10 +175,10 @@
             ])
         end
         @testset "Remain within angled cylinder" begin
-            orient = SA[1, 2, sqrt(3)]
+            orient = [1, 2, sqrt(3)]
             cylinder = mr.cylinders(2.3, rotation=orient)
             res = mr.correct_collisions(
-                mr.Movement(SA[0, 0.5, 0.3], SA[-30, 50, 10], 40.),
+                mr.Movement([0, 0.5, 0.3], [-30, 50, 10], 40.),
                 [cylinder]
             )
             final = res[end].destination
@@ -194,7 +194,7 @@
             @test mr.isinside(geometry, spin)
             inside = true
             for _ in 1:100
-                mr.draw_step!(spin, Float(3.), Float(0.5), mr.Geometry(geometry))
+                mr.draw_step!(spin, Float(3.), Float(0.5), mr.GlobalProperties(), mr.Geometry(geometry))
                 inside &= mr.isinside(geometry, spin)
             end
             @test inside

@@ -19,6 +19,8 @@ function random_on_sphere()
     ]
 end
 
+correct_for_timestep(probability, timestep) = 1 - (1 - probability)^sqrt(timestep)
+
 """
     random_gauss(diffusivity, timestep)
 
@@ -27,20 +29,20 @@ Draws a random step from a Gaussian distribution with a variance of 2 * diffusiv
 random_gauss(diffusivity :: Float, timestep :: Float) = sqrt(2 * timestep * diffusivity) * randn(PosVector)
 
 """
-    draw_step!(spin::Spin, diffusivity::Float, timestep::Float[, geometry::Obstructions])
+    draw_step!(spin::Spin, diffusivity, timestept, default_properties, [, geometry])
 
 Updates the spin based on a random movement through the given geometry for a given `timestep`:
 - draws the next location of the particle after `timestep` with given `diffusivity`.  
   If provided, this displacement will take into account the obstructions in `geometry`.
 - the spin orientation might be affected by collisions with the obstructions in `geometry`.
 """
-function draw_step!(spin :: Spin{N}, diffusivity :: Float, timestep :: Float) where {N}
+function draw_step!(spin :: Spin, diffusivity :: Float, timestep :: Float, default_properties::GlobalProperties)
     @spin_rng spin begin
         spin.position += random_gauss(diffusivity, timestep)
     end
 end
-draw_step!(spin :: Spin, diffusivity :: Float, timestep :: Float, geometry :: Geometry{0}) = draw_step!(spin, diffusivity, timestep)
-function draw_step!(spin :: Spin{N}, diffusivity :: Float, timestep :: Float, geometry::Geometry) where {N}
+draw_step!(spin :: Spin, diffusivity :: Float, timestep :: Float, default_properties::GlobalProperties, geometry :: Geometry{0}) = draw_step!(spin, diffusivity, timestep, default_properties)
+function draw_step!(spin :: Spin{N}, diffusivity :: Float, timestep :: Float, default_properties::GlobalProperties, geometry::Geometry) where {N}
     current_pos = spin.position
     new_pos = random_gauss(diffusivity, timestep) + current_pos
     collision = empty_collision
@@ -56,9 +58,9 @@ function draw_step!(spin :: Spin{N}, diffusivity :: Float, timestep :: Float, ge
                 break
             end
 
-            transfer!(spin.orientations, ObstructionProperties(collision), timestep)
+            transfer!.(spin.orientations, correct_for_timestep(MT_fraction(collision, default_properties), timestep))
 
-            permeability_prob = 1 - (1 - collision.properties.permeability) ^ sqrt(timestep)
+            permeability_prob = correct_for_timestep(permeability(collision, default_properties), timestep)
             if iszero(permeability_prob) || rand() > permeability_prob
                 direction = new_pos .- current_pos
                 reflection = - 2 * (collision.normal ⋅ direction) * collision.normal / norm(collision.normal) ^ 2 .+ direction

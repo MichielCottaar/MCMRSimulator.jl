@@ -24,7 +24,7 @@ walls(;kwargs...) = TransformObstruction(Wall; kwargs...)
 
 function detect_collision(movement :: Movement{1}, wall :: Wall, previous=empty_collision)
     origin = movement.origin[1]
-    if (id(previous) == id(wall)) && (abs(origin) < 1e-12)
+    if collided(wall, previous) && (abs(origin) < 1e-12)
         return empty_collision
     end
     destination = movement.destination[1]

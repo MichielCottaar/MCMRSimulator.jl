@@ -11,13 +11,13 @@ all_tests = [
     "collisions",
     "evolve",
     "plots",
-    "field",
     "known_sequences",
     "meshes",
     "offresonance",
     "transfer",
     "permeability",
     "radio_frequency",
+    "hierarchical_mri"
 ]
 
 if length(ARGS) == 0
@@ -41,11 +41,11 @@ end
     @testset "Simple relaxation" begin
         orient = mr.Spin(transverse=1., longitudinal=0.).orientations[1]
         @testset "R2 relaxation" begin
-            mr.relax!(orient, 0.3, 0., 2., 0.)
+            mr.relax!(orient, 0.3, mr.GlobalProperties(R2=2).mri)
             @test mr.transverse(orient) ≈ exp(-0.6)
         end
         @testset "R1 relaxation" begin
-            mr.relax!(orient, 0.3, 2., 0., 0.)
+            mr.relax!(orient, 0.3, mr.GlobalProperties(R1=2).mri)
             @test mr.longitudinal(orient) ≈ 1 - exp(-0.6)
         end
     end

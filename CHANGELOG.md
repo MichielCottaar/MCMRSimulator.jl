@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Finite RF pulses (`RFPulse`) to more realistically model the effect of these pulses.
+- Hierchical properties: MRI relaxation parameters and collision parameters (e.g., permeability) can now set at both the global level and for each obstruction.
 - `run_tests.sh` function which will run the tests and produce a coverage that can be visualised in VS Code by the Coverage Gutters plugin
 ### Changed
 - Made units consistent with angles (i.e., phases and flip angles) in degrees, off-resonance fields in kHz, and gradients in kHz/um.
@@ -13,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored the `Sequence` interface:
     - `RFPulse` -> `InstantRFPulse` (`RFPulse` now refers to finite RF pulses discussed above)
     - `SequenceComponent` -> `InstantComponent` (`Readout` is no longer a sub-type of this abstract type)
+- Relaxation parameters can now be set as relaxation times (T1/T2) in addition to as relaxation rates (R1/R2)
 ## [v0.4.0]
 ### Added
 - Support for arbitrary gradient durations and diffusion times in `dwi` thanks to Zhiyu

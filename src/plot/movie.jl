@@ -15,7 +15,7 @@ function simulator_movie(filename, simulator::Simulation{N}, times, repeats; res
     time = @lift times[$index]
     fig = Figure(resolution=resolution)
     ax_walk = Axis(fig[1, 1], title=(@lift("time = $(round($time, digits=1)) ms")))
-    for geometry in simulator.micro.geometry
+    for geometry in simulator.geometry.obstructions
         plot!(ax_walk, pp, geometry)
     end
     xlims!(ax_walk, -repeats[1]/2, repeats[1]/2)
