@@ -62,11 +62,10 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     sequence_instants = Union{Nothing, InstantComponent}[next_instant(seq, current_time) for seq in simulation.sequences]
     sequence_times = MVector{N, Float}([isnothing(i) ? Inf : get_time(i) for i in sequence_instants])
 
-    nspins = length(spins)
     for (next_time, finite_pulse) in zip(times, finite_pulses)
         # evolve all spins to next interesting time
-        Threads.@threads for idx in 1:nspins
-            evolve_to_time!(spins[idx], simulation, finite_pulse, current_time, next_time)
+        Threads.@threads for spin in spins
+            evolve_to_time!(spin, simulation, finite_pulse, current_time, next_time)
         end
         current_time = next_time
 
