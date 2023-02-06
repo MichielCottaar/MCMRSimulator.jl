@@ -1,4 +1,8 @@
 # [MR sequences](@id sequence)
+## Pulseseq sequences
+The recommended way to define sequences is to use pulseq sequence format (http://pulseq.github.io/).
+Pulseq sequences can be generated using matlab (http://pulseq.github.io/) or python (https://pypulseq.readthedocs.io/en/master/).
+They can be loaded into MCMRSimulator using [`read_pulseq`](@ref).
 ## Built-in MR sequences
 ### Diffusion-weighted MRI
 A pulsed-gradient spin-echo can be created using [`dwi`](@ref)

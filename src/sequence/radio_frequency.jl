@@ -31,7 +31,7 @@ function RFPulse(times::AbstractVector, amplitudes::AbstractVector, phases=nothi
 end
 
 start_time(pulse::RFPulse) = min(start_time(pulse.amplitude), start_time(pulse.phase))
-end_time(pulse::RFPulse) = min(end_time(pulse.amplitude), end_time(pulse.phase))
+end_time(pulse::RFPulse) = max(end_time(pulse.amplitude), end_time(pulse.phase))
 
 """
     amplitude(rf_pulse, t1[, t2])

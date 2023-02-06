@@ -135,8 +135,9 @@ struct ConcreteShape{N}
     t0::Float
     t1::Float
     max_amplitude::Float
+    shift::Float
     shape::Shape{N}
-    ConcreteShape(t0::Number, t1::Number, max_amplitude::Number, shape::Shape{N}) where {N} = new{N}(Float(t0), Float(t1), Float(max_amplitude), shape)
+    ConcreteShape(t0::Number, t1::Number, max_amplitude::Number, shift::Number, shape::Shape{N}) where {N} = new{N}(Float(t0), Float(t1), Float(max_amplitude), Float(shift), shape)
 end
 
 """
@@ -156,7 +157,7 @@ function ConcreteShape(times::AbstractVector{<:Number}, amplitudes::AbstractVect
     t1 = times[end]
     max_amplitude = maximum(abs.(amplitudes))
     ConcreteShape(
-        t0, t1, max_amplitude,
+        t0, t1, max_amplitude, 0,
         Shape(
             (times .- t0) ./ (t1 - t0),
             iszero(max_amplitude) ? amplitudes : (amplitudes ./ max_amplitude)
@@ -172,14 +173,14 @@ Produces a ConcreteShape with only zero amplitude.
 ConcreteShape() = ConcreteShape(Float[], Float[])
 
 convert_time(concrete::ConcreteShape, time::Number) = (time - concrete.t0) / (concrete.t1 - concrete.t0)
-amplitude(concrete::ConcreteShape, time::Number) = amplitude(concrete.shape, convert_time(concrete, time)) * concrete.max_amplitude
+amplitude(concrete::ConcreteShape, time::Number) = amplitude(concrete.shape, convert_time(concrete, time)) * concrete.max_amplitude + concrete.shift
 amplitude_derivative(concrete::ConcreteShape, time::Number) = amplitude_derivative(concrete.shape, convert_time(concrete, time)) * concrete.max_amplitude / (concrete.t1 - concrete.t0)
-amplitude_integral(concrete::ConcreteShape, t0::Number, t1::Number) = amplitude_integral(concrete.shape, convert_time(concrete, t0), convert_time(concrete, t1)) * concrete.max_amplitude * (concrete.t1 - concrete.t0)
-amplitude_integral(concrete::ConcreteShape, t0::T, times::AbstractVector{T}) where {T<:Number} = amplitude_integral(concrete.shape, convert_time(concrete, t0), convert_time.(concrete, times)) .* (concrete.max_amplitude * (concrete.t1 - concrete.t0))
-amplitude_integral(concrete::ConcreteShape, t0::T, times::AbstractRange{T}) where {T<:Number} = amplitude_integral(concrete.shape, convert_time(concrete, t0), convert_time(concrete, times)) .* (concrete.max_amplitude * (concrete.t1 - concrete.t0))
+amplitude_integral(concrete::ConcreteShape, t0::Number, t1::Number) = (amplitude_integral(concrete.shape, convert_time(concrete, t0), convert_time(concrete, t1)) * concrete.max_amplitude + concrete.shift) * (concrete.t1 - concrete.t0)
+amplitude_integral(concrete::ConcreteShape, t0::T, times::AbstractVector{T}) where {T<:Number} = amplitude_integral(concrete.shape, convert_time(concrete, t0), convert_time.(concrete, times)) .* (concrete.max_amplitude * (concrete.t1 - concrete.t0)) .+ (concrete.shift * (concrete.t1 - concrete.t0))
+amplitude_integral(concrete::ConcreteShape, t0::T, times::AbstractRange{T}) where {T<:Number} = amplitude_integral(concrete.shape, convert_time(concrete, t0), convert_time(concrete, times)) .* (concrete.max_amplitude * (concrete.t1 - concrete.t0)) .+ (concrete.shift * (concrete.t1 - concrete.t0))
 control_points(concrete::ConcreteShape) = control_points(concrete.shape) .* (concrete.t1 - concrete.t0) .+ concrete.t0
 
-add_TR(concrete::ConcreteShape, TR::Number) = ConcreteShape(concrete.t0 + TR, concrete.t1 + TR, concrete.max_amplitude, concrete.shape)
+add_TR(concrete::ConcreteShape, TR::Number) = ConcreteShape(concrete.t0 + TR, concrete.t1 + TR, concrete.max_amplitude, concrete.shift, concrete.shape)
 
 start_time(concrete::ConcreteShape) = concrete.t0
 end_time(concrete::ConcreteShape) = concrete.t1

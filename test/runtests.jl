@@ -17,7 +17,8 @@ all_tests = [
     "transfer",
     "permeability",
     "radio_frequency",
-    "hierarchical_mri"
+    "hierarchical_mri",
+    "pulseseq",
 ]
 
 if length(ARGS) == 0

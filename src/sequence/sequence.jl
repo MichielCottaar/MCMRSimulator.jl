@@ -4,7 +4,7 @@ include("gradients.jl")
 include("radio_frequency.jl")
 
 """
-    Sequence(;TR, gradients=nothing, pulses=nothing, B0=3., interplate_gradients=:step)
+    Sequence(;TR, gradients=nothing, pulses=nothing, scanner=Scanner(B0), B0=3., interplate_gradients=:step)
 
 An MR sequence represented by a series of pulses repeated with a given repetition time (`TR`).
 
@@ -136,3 +136,4 @@ gradient(seq::Sequence, time1::Number, time2::Number) = gradient(seq.gradient, m
 
 include("timestep.jl")
 include("diffusion.jl")
+include("pulseseq.jl")

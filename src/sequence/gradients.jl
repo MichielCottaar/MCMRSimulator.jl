@@ -49,11 +49,11 @@ function MRGradients(times::AbstractVector{<:Number}, amplitudes::AbstractVector
 end
 
 add_TR(g::MRGradients, TR::Number) = MRGradients(add_TR(g.Gx, Tr),add_TR(g.Gy, TR), add_TR(g.Gz, TR), g.origin)
-control_points(g::MRGradients) = [
+control_points(g::MRGradients) = sort(unique([
     control_points(g.Gx)...,
     control_points(g.Gy)...,
     control_points(g.Gz)...,
-]
+]))
 
 
 """

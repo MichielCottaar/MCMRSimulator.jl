@@ -25,6 +25,7 @@ import Accessors: @set
 import Roots
 import PlyIO
 import Optim
+import DataStructures: OrderedDict
 
 
 include("constants.jl")
@@ -40,7 +41,7 @@ include("plot/plot.jl")
 
 export Sequence, InstantRFPulse, Readout, InstantGradient
 export MRGradients, gradient, rotate_bvec
-export dwi
+export dwi, read_pulseseq
 export Scanner, B0, max_gradient, max_slew_rate
 export Siemens_Connectom, Siemens_Prisma, Siemens_Terra
 export longitudinal, transverse, phase, vector, Spin, Snapshot, SpinOrientation, isinside, off_resonance

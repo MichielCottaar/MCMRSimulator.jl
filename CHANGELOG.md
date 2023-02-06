@@ -7,7 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Finite RF pulses (`RFPulse`) to more realistically model the effect of these pulses.
 - Hierchical properties: MRI relaxation parameters and collision parameters (e.g., permeability) can now set at both the global level and for each obstruction.
-- `run_tests.sh` function which will run the tests and produce a coverage that can be visualised in VS Code by the Coverage Gutters plugin
+- Sequences can now be read from the pulseq format (http://pulseq.github.io/) using `read_pulseq`.
+- `run_tests.sh` function which will run the tests and produce a coverage that can be visualised in VS Code by the Coverage Gutters plugin.
 ### Changed
 - Made units consistent with angles (i.e., phases and flip angles) in degrees, off-resonance fields in kHz, and gradients in kHz/um.
 - `time` function has been renamed `get_time`, so as not to conflict with `Base.time`
