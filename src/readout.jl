@@ -46,6 +46,7 @@ struct Simulation{N, G<:Geometry, S<:Sequence}
     properties :: GlobalProperties
     geometry :: G
     time_controller::TimeController
+    flatten::Bool
     function Simulation(
         sequences, 
         diffusivity::Float,
@@ -53,8 +54,10 @@ struct Simulation{N, G<:Geometry, S<:Sequence}
         geometry::Geometry,
         time_controller::TimeController
     )
+        flatten = false
         if isa(sequences, Sequence)
             sequences = [sequences]
+            flatten = true
         elseif length(sequences) == 0
             sequences = Sequence[]
         end
@@ -67,6 +70,7 @@ struct Simulation{N, G<:Geometry, S<:Sequence}
             properties,
             geometry,
             time_controller,
+            flatten
         )
     end
 end
@@ -132,6 +136,10 @@ propose_times(sim::Simulation, t_start, t_end) = propose_times(sim.time_controll
 Evolves the spins in the [`Snapshot`](@ref) through the [`Simulation`](@ref).
 Returns the [`Snapshot`](@ref) at every [`Readout`](@ref) in the simulated sequences during a single TR.
 If no `TR` is explicitly selected, it will return the current TR if the snapshot has not passed any readouts and the next TR otherwise.
+
+The return object depends on whether the simulation was created with a single sequence object or with a vector of sequences.
+- For a single sequence object a vector of [`Snapshot`](@ref) objects is returned with a single snapshot for each [`Readout`](@ref) in the sequence.
+- For a vector of sequences a vector of vectors of [`Snapshot`](@ref) objects is returned. Each element in the outer vector contains the result for a single sequence.
 """
 function readout(spins, simulation::Simulation{N}) where {N}
     snapshot = _to_snapshot(spins, N)
@@ -156,7 +164,7 @@ function readout(spins, simulation::Simulation{N}) where {N}
     end
 
     final_snapshots = SVector{N}([Snapshot{1}[] for _ in 1:N])
-    for time in sort(readout_times)
+    for time in sort(unique(readout_times))
         snapshot = evolve_to_time(snapshot, simulation, time)
         for index in 1:N
             if time in per_seq_times[index]
@@ -164,7 +172,11 @@ function readout(spins, simulation::Simulation{N}) where {N}
             end
         end
     end
-    return final_snapshots
+    if simulation.flatten
+        return final_snapshots[1]
+    else
+        return final_snapshots
+    end
 end
 
 """
@@ -174,17 +186,8 @@ Evolves the [`Snapshot`](@ref) through the [`Simulation`](@ref) and outputs at t
 Returns a vector of [`Snapshot`](@ref) objects with the current state of each time in times.
 When you are only interested in the signal at each timepoint, use [`signal`](@ref) instead.
 """
-function trajectory(spins, simulation::Simulation{N}, times=nothing) where{N}
+function trajectory(spins, simulation::Simulation{N}, times) where{N}
     snapshot = _to_snapshot(spins, N)
-    if isnothing(times)
-        times = simulation.sequences[1].TR
-    end
-    if isa(times, Real)
-        if get_time(snapshot) > times
-            error("Trajectory final time is lower than the current time of the snapshot.")
-        end
-        times = propose_times(simulation, snapshot.time, times)
-    end
     result = Array{typeof(snapshot)}(undef, size(times))
     for index in sortperm(times)
         snapshot = evolve_to_time(snapshot, simulation, Float(times[index]))
@@ -198,30 +201,26 @@ end
 
 Evolves the [`Snapshot`](@ref) through the [`Simulation`](@ref) and outputs the total signal at the requested times.
 To get the full snapshot at each timepoint use [`trajectory`](@ref).
-Returns a vector of [`SpinOrientation`](@ref) object with the total signal at each time in `times`.
+
+The return object depends on whether the simulation was created with a single sequence object or with a vector of sequences.
+- For a single sequence object a vector of [`SpinOrientation`](@ref) object with the total signal at each time is returned.
+- For a vector of sequences the return type is a (Nt, Ns) matrix of [`SpinOrientation`](@ref) objects for `Nt` timepoints and `Ns` sequences.
 """
-function signal(spins, simulation::Simulation{N}, times=nothing) where {N}
+function signal(spins, simulation::Simulation{N}, times) where {N}
     snapshot = _to_snapshot(spins, N)
-    if isnothing(times)
-        times = simulation.sequences[1].TR
-    end
-    if isa(times, Real)
-        if get_time(snapshot) > times
-            error("Trajectory final time is lower than the current time of the snapshot.")
-        end
-        times = propose_times(simulation, snapshot.time, times)
-    end
-    if N == 1
+    if simulation.flatten
         result = Array{SpinOrientation}(undef, size(times))
     else
-        result = Array{SVector{N, SpinOrientation}}(undef, size(times))
+        result = Array{SpinOrientation}(undef, (length(times), N))
     end
     for index in sortperm(times)
         snapshot = evolve_to_time(snapshot, simulation, Float(times[index]))
-        if N == 1
+        if simulation.flatten
             result[index] = SpinOrientation(snapshot)
         else
-            result[index] = SVector{N}([SpinOrientation(get_sequence(snapshot, seq)) for seq in 1:N])
+            for seq in 1:N
+                result[index, seq] = SpinOrientation(get_sequence(snapshot, seq))
+            end
         end
     end
     result
