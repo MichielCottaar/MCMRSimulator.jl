@@ -19,6 +19,10 @@ struct InstantRFPulse <: InstantComponent
     sp :: Float
 end
 
+function Base.show(io::IO, pulse::InstantRFPulse)
+    print(io, "InstantRFPulse: t=$(start_time(pulse))ms, θ=$(flip_angle(pulse))°, ϕ=$(phase(pulse))°;")
+end
+
 function InstantRFPulse(time, flip_angle, phase)
     f = Float(flip_angle)
     p = Float(phase)
@@ -96,6 +100,10 @@ struct InstantGradient <: InstantComponent
     q_origin :: Float
     time :: Float
     InstantGradient(qvec, q_origin, time) = new(PosVector(qvec), Float(q_origin), Float(time))
+end
+
+function Base.show(io::IO, pulse::InstantGradient)
+    print(io, "InstantGradient: t=$(start_time(pulse))ms, q=$(qvec(pulse))/um;")
 end
 
 InstantGradient(; qvec::AbstractVector=[0., 0., 0.], q_origin=0., time :: Real=0.) = InstantGradient(SVector{3}(qvec), q_origin, time)

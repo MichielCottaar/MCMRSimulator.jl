@@ -184,6 +184,23 @@ struct GlobalProperties
     end
 end
 
+function Base.show(io::IO, prop::GlobalProperties)
+    print(io, "GlobalProperties(")
+    for (func, units) in [
+        (T1, "ms"),
+        (T2, "ms"),
+        (off_resonance, "kHz"),
+        (MT_fraction, ""),
+        (permeability, ""),
+    ]
+        value = func(prop)
+        if !iszero(value) && !isinf(value)
+            print(io, "$(nameof(func))=$(value)$(units), ")
+        end
+    end
+    print(io, ")")
+end
+
 
 function setproperty!(props::GlobalProperties, symbol, value)
     if hasfield(CollisionProperties, symbol)

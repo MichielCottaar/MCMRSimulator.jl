@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `SequenceComponent` -> `InstantComponent` (`Readout` is no longer a sub-type of this abstract type)
 - Relaxation parameters can now be set as relaxation times (T1/T2) in addition to as relaxation rates (R1/R2)
 - You will no longer have to iterate over sequences in the output of `signal` and `readout` if the simulation is created with a singular sequence object (e.g., `Simulation(sequence, ...)`). Note that this will not affect simulations with a vector of sequence objects, even if the length of that vector is one (e.g., `Simulation([sequence])`).
+- Pretty printing for simulations and sequences is much improved.
 
 ### Fixed
 - In the `readout` output, snapshots were included multiple times for the same timepoint if the same readout time was present across the sequences. This has now been fixed, so that for each sequence there will only be a single snapshot per readout time.

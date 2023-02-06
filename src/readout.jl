@@ -102,11 +102,24 @@ function Simulation(
     end
     return Simulation(
         sequences, 
-        diffusivity,
+        Float(diffusivity),
         GlobalProperties(; R1=R1, T1=T1, R2=R2, T2=T2, off_resonance=off_resonance, MT_fraction=MT_fraction, permeability=permeability),
         geometry,
         controller,
     )
+end
+
+function Base.show(io::IO, sim::Simulation{N}) where {N}
+    if get(io, :compact, false)
+        seq_text = sim.flatten ? "single sequence" : "$N sequences"
+        print(io, "Simulation($seq_text, $(sim.geometry), D=$(sim.diffusivity)um^2/ms, $(sim.properties))")
+    else
+        print(io, "Simulation($(sim.geometry), D=$(sim.diffusivity)um^2/ms, $(sim.properties)):\n")
+        print(io, "$N sequences:\n")
+        for seq in sim.sequences
+            print(io, seq)
+        end
+    end
 end
 
 _to_snapshot(spins::Int, nseq) = _to_snapshot(Snapshot(spins), nseq)

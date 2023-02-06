@@ -30,6 +30,12 @@ function RFPulse(times::AbstractVector, amplitudes::AbstractVector, phases=nothi
     )
 end
 
+function Base.show(io::IO, pulse::RFPulse)
+    print(io, "RFPulse: t=$(start_time(pulse)) to $(end_time(pulse))ms, θ=$(flip_angle(pulse))°, ϕ=$(phase(pulse, start_time(pulse)))°;")
+end
+
+flip_angle(pulse::RFPulse) = amplitude_integral(pulse.amplitude, pulse.amplitude.t0, pulse.amplitude.t1) * 360
+
 start_time(pulse::RFPulse) = min(start_time(pulse.amplitude), start_time(pulse.phase))
 end_time(pulse::RFPulse) = max(end_time(pulse.amplitude), end_time(pulse.phase))
 

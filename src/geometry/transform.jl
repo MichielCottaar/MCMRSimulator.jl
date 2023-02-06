@@ -35,6 +35,13 @@ struct TransformObstruction{N, M, K, O<:BaseObstruction{N}} <: Obstruction{N}
     end
 end
 
+function Base.show(io::IO, geom::TransformObstruction{N, M, K, O}) where {N, M, K, O}
+    print(io, "$(length(geom.obstructions)) ")
+    if any(isfinite.(geom.repeats))
+        print(io, "repeating ")
+    end
+    print(io, O)
+end
 get_shift_quadrants(shift::SVector{N, Float}, repeats::SVector{N, Float}) where {N} = map((s, r) -> isfinite(r) && s > r/4., shift, repeats)
 
 function TransformObstruction(Obstruction::Type{<:BaseObstruction{N}}, args...; positions=nothing, repeats=0., rotation=one(Rotations.RotMatrix{3}), lorentz_radius=10., kwargs...) where {N}

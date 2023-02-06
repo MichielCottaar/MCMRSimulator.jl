@@ -21,6 +21,14 @@ isinside(geom::Geometry, pos::PosVector) = maximum([isinside(o, pos) for o in ge
 
 Base.length(geom::Geometry{N}) where {N} = N
     
+function Base.show(io::IO, geom::Geometry{N}) where {N}
+    print(io, "Geometry(")
+    for obstruction in geom.obstructions
+        print(io, obstruction)
+        print(io, ", ")
+    end
+    print(io, ")")
+end
 
 """
     detect_collision(movement, geometry[, previous])

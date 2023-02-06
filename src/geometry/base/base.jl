@@ -17,6 +17,10 @@ Each obstruction needs to define the following interface:
 abstract type BaseObstruction{N} <: Obstruction{N} end
 
 ObstructionProperties(obstruction :: BaseObstruction) = obstruction.properties
+function Base.show(io::IO, ::Type{T}) where {T<:BaseObstruction}
+    print(io, lowercase(String(nameof(T))))
+    print(io, "s")
+end
 
 """
     collided(o::BaseObstruction, c::Collision)

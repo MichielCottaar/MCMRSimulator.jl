@@ -58,6 +58,22 @@ function Sequence(; scanner=nothing, gradients=nothing, pulses::AbstractVector=[
     Sequence(scanner, gradients, pulses, TR)
 end
 
+function Base.show(io::IO, seq::Sequence)
+    if get(io, :compact, false)
+        print(io, "Sequence($(length(seq.instants)) instants; $(length(seq.pulses)) RF pulses; $(length(seq.readouts)) readouts; TR=$(seq.TR)ms)")
+    else
+        text = "Sequence (TR=$(seq.TR)ms):\n"
+        for pulse in sort([seq.pulses..., seq.instants..., seq.readout_times...], by=start_time)
+            if pulse isa Float
+                text *= "    - Readout at $(pulse)ms\n"
+            else
+                text *= "    - $(pulse)\n"
+            end
+        end
+        print(io, text)
+    end
+end
+
 """
     effective_pulse(sequence, t1, t2)
 
