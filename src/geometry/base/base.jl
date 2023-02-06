@@ -77,8 +77,6 @@ isinside(something, pos::AbstractVector) = isinside(something, SVector{length(po
 isinside(something, spin::Spin) = isinside(something, spin.position)
 isinside(something, snapshot::Snapshot) = [isinside(something, spin) for spin in snapshot]
 
-produces_off_resonance(obstruction::BaseObstruction) = false
-
 """
     total_susceptibility(obstruction)
 
