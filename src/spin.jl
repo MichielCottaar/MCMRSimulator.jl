@@ -101,7 +101,10 @@ mutable struct Spin{N}
     end
 end
 
-Spin(;nsequences=1, position=zero(SVector{3,Float}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin(SVector{3, Float}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), rng)
+function Spin(;nsequences=1, position=zero(SVector{3,Float}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) 
+    base = Spin(SVector{3, Float}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), rng)
+    return nsequences == 1 ? base : Spin(base, nsequences)
+end
 Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.rng)
 
 Base.show(io::IO, spin::Spin{0}) = print(io, "Spin(position=$(spin.position) with no magnetisation information)")
