@@ -7,20 +7,18 @@ The dimensionality N indicates the dimensionality of the input data
 (1 for [`Wall`](@ref), 2 for [`Cylinder`](@ref), 3 for [`Sphere`](@ref) or [`Mesh`](@ref)).
 
 Each obstruction needs to define the following interface:
-- [`detect_collision`](movement, obstruction, previous_collision): returns any interesection between the movement and the obstruction
-- [`produces_off_resonance`](obstruction), optional: whether the obstruction produces an off-resonance field (false by default). If true, the obstruction should also define:
-    - [`lorentz_off_resonance`](obstruction, position, ...): computes the off-resonance due to the obstruction at position
-    - [`total_susceptibility`](obstruction): computes total susceptibility caused by this obstruction
-- [`isinside`](obstruction, position): true if position is inside the obstruction
-- [`BoundingBox`](obstruction): returns a [`BoundingBox`] fully containing the obstruction
+- [`detect_collision`](@ref)(movement, obstruction, previous_collision): returns any interesection between the movement and the obstruction
+- [`produces_off_resonance`](@ref)(obstruction), optional: whether the obstruction produces an off-resonance field (false by default). If true, the obstruction should also define:
+    - [`lorentz_off_resonance`](@ref)(obstruction, position, ...): computes the off-resonance due to the obstruction at position
+    - [`total_susceptibility`](@ref)(obstruction): computes total susceptibility caused by this obstruction
+    - [`off_resonance_gradient`](@ref)(obstruction): computes the maximum off-resonance gradient induced by this obstruction
+- [`isinside`](@ref)(obstruction, position): true if position is inside the obstruction
+- [`BoundingBox`](@ref)(obstruction): returns a [`BoundingBox`] fully containing the obstruction
+- [`size_scale`](@ref)(obstruction): returns a scale of the size of the object; used to estimate a maximum size step in the simulation
 """
 abstract type BaseObstruction{N} <: Obstruction{N} end
 
 ObstructionProperties(obstruction :: BaseObstruction) = obstruction.properties
-function Base.show(io::IO, ::Type{T}) where {T<:BaseObstruction}
-    print(io, lowercase(String(nameof(T))))
-    print(io, "s")
-end
 
 """
     collided(o::BaseObstruction, c::Collision)
@@ -88,6 +86,30 @@ Computes total surface (for 2D) or volume (for 3D) susceptibility of a base obst
 """
 total_susceptibility(o::BaseObstruction) = zero(Float)
 
+"""
+    off_resonance_gradient(obstruction[, B0])
+    off_resonance_gradient(geometry[, B0])
+
+Computes the maximum off-resonance gradient produced by this obstruction.
+For a geometry with multiple obstructions, the maximum value is returned.
+If a B0 field is provided the result is returned in kHz/um, otherwise in ppm/um.
+"""
+off_resonance_gradient(obstruction::BaseObstruction) = zero(Float)
+off_resonance_gradient(obstruction_or_geometry, B0::Number) = off_resonance_gradient(obstruction_or_geometry) * 1e-6 * B0 * gyromagnetic_ratio
+
+
+"""
+    size_scale(geometry)
+    size_scale(obstruction)
+
+Computes the minimum size scale of the obstructions in the geometry.
+
+The size scale for each obstruction is defined as:
+- [`cylinders`](@ref)/[`spheres`](@ref): minimum radius
+- [`annuli`](@ref): minimum inner radius
+- [`mesh`](@ref): square root of median triangle size
+- [`wall`](@ref): distance between closest walls (infinite for single, non-repeating walls)
+"""
 
 include("random_draws.jl")
 include("cylinder.jl")

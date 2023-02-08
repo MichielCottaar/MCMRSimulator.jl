@@ -111,6 +111,10 @@ function lorentz_off_resonance(annulus::Annulus, position::SVector{2, Float}, b0
     return field
 end
 
+function off_resonance_gradient(annulus::Annulus) 
+    return abs(annulus.external_field / annulus.outer.radius^3)
+end
+
 produces_off_resonance(annulus::Annulus) = annulus.myelin
 
 """
@@ -133,3 +137,5 @@ end
 
 # Placeholder until the inner and outer cylinders of the annulus can have different MRI properties
 inside_MRI_properties(annulus::Annulus, position::SVector{2, Float}) = inside_MRI_properties(annulus.outer, position)
+
+size_scale(annulus::Annulus) = size_scale(annulus.inner)

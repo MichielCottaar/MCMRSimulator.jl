@@ -298,3 +298,5 @@ function random_spirals(target_density; repeats, g_ratio=0.8, distribution=nothi
     inner = g_ratio .* outer
     spirals(inner, outer; positions=positions, repeats=repeats, kwargs...)
 end
+
+size_scale(spiral::Spiral) = spiral.thickness

@@ -104,6 +104,8 @@ function lorentz_off_resonance(cylinder::Cylinder, position::SVector{2, Float}, 
     end
     return field
 end
+``
+off_resonance_gradient(c::Cylinder) = abs(c.external_field / c.radius^3)
 
 produces_off_resonance(cylinder::Cylinder) = !(iszero(cylinder.internal_field) && iszero(cylinder.external_field))
 
@@ -121,3 +123,5 @@ function random_cylinders(target_density; repeats, distribution=nothing, mean_ra
     (positions, radii) = random_positions_radii(repeats, target_density, 2; distribution=distribution, mean=mean_radius, variance=variance_radius, max_iter=max_iter)
     cylinders(radii; positions=positions, repeats=repeats, kwargs...)
 end
+
+size_scale(cylinder::Cylinder) = cylinder.radius

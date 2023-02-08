@@ -40,3 +40,5 @@ function detect_collision(movement :: Movement{1}, wall :: Wall, previous=empty_
     )
 end
 
+size_scale(wall::Wall) = Inf
+

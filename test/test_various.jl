@@ -212,8 +212,8 @@ end
 
 @testset "Test simulation pretty printing" begin
     sim = mr.Simulation([mr.dwi(bval=1), mr.dwi(bval=2)], geometry=mr.spheres([1, 2.], repeats=[5, 5, 5]), R1=0.1, MT_fraction=0.3)
-    @test repr(sim, context=:compact => true) == "Simulation(2 sequences, Geometry(2 repeating spheres, ), D=0.0um^2/ms, GlobalProperties(T1=10.0ms, MT_fraction=0.3, ))" 
-    @test repr(sim, context=:compact => false) == "Simulation(Geometry(2 repeating spheres, ), D=0.0um^2/ms, GlobalProperties(T1=10.0ms, MT_fraction=0.3, )):
+    @test repr(sim, context=:compact => true) == "Simulation(2 sequences, Geometry(2 repeating Sphere objects, ), D=0.0um^2/ms, GlobalProperties(T1=10.0ms, MT_fraction=0.3, ))" 
+    @test repr(sim, context=:compact => false) == "Simulation(Geometry(2 repeating Sphere objects, ), D=0.0um^2/ms, GlobalProperties(T1=10.0ms, MT_fraction=0.3, )):
 2 sequences:
 Sequence (TR=2000.0ms):
     - InstantRFPulse: t=0.0ms, θ=90.0°, ϕ=-90.0°;
@@ -224,4 +224,20 @@ Sequence (TR=2000.0ms):
     - InstantRFPulse: t=40.0ms, θ=180.0°, ϕ=0.0°;
     - Readout at 80.0ms
 " 
+end
+
+@testset "Test size scale calculations" begin
+    @testset "Test special size scale calculations of walls" begin
+        @test isinf(mr.size_scale(mr.walls(positions=0)))
+        @test mr.size_scale(mr.walls(positions=[0, 2])) == 2
+        @test mr.size_scale(mr.walls(repeats=5)) == 5
+        @test mr.size_scale(mr.walls(positions=[0, 2], repeats=5)) == 2
+        @test mr.size_scale(mr.walls(positions=[0, 4], repeats=5)) == 1
+    end
+
+    @test mr.size_scale(mr.cylinders([0.3, 0.8], repeats=[2, 3])) == 0.3
+    @test mr.size_scale(mr.spheres([0.3, 0.8])) == 0.3
+    @test mr.size_scale(mr.annuli([0.5, 0.7], [0.6, 0.8])) == 0.5
+    @test mr.size_scale(mr.box_mesh()) ≈ sqrt(0.5)
+
 end

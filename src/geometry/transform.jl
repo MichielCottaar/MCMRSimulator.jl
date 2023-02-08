@@ -40,7 +40,7 @@ function Base.show(io::IO, geom::TransformObstruction{N, M, K, O}) where {N, M, 
     if any(isfinite.(geom.repeats))
         print(io, "repeating ")
     end
-    print(io, O)
+    print(io, String(nameof(O)) * " objects")
 end
 get_shift_quadrants(shift::SVector{N, Float}, repeats::SVector{N, Float}) where {N} = map((s, r) -> isfinite(r) && s > r/4., shift, repeats)
 
@@ -275,3 +275,26 @@ produces_off_resonance(transform::TransformObstruction) = any(produces_off_reson
 function inside_MRI_properties(transform::TransformObstruction, position::PosVector)
     return merge_mri_parameters(inside_MRI_properties.(transform.obstructions, project(transform, position)))
 end
+
+
+size_scale(t::TransformObstruction) = minimum(size_scale.(t.obstructions))
+function size_scale(t::TransformObstruction{N, M, K, Wall}) where {N, M, K}
+    min_dist = t.repeats[1]
+    for pos1 in t.positions
+        for pos2 in t.positions
+            dist = abs(pos1[1] - pos2[1])
+            if iszero(dist)
+                continue
+            end
+            if dist > (t.repeats[1] / 2)
+                dist = t.repeats[1] - dist
+            end
+            if dist < min_dist
+                min_dist = dist
+            end
+        end
+    end
+    return min_dist
+end
+
+off_resonance_gradient(t::TransformObstruction) = maximum(off_resonance_gradient.(t.obstructions))

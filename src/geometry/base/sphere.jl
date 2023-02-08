@@ -90,3 +90,5 @@ function random_spheres(target_density; repeats, distribution=nothing, mean_radi
     (positions, radii) = random_positions_radii(repeats, target_density, 3; distribution=distribution, mean=mean_radius, variance=variance_radius, max_iter=max_iter)
     spheres(radii; positions=positions, repeats=repeats, kwargs...)
 end
+
+size_scale(sphere::Sphere) = sphere.radius

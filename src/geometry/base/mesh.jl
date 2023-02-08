@@ -78,6 +78,17 @@ function normal(p1 :: PosVector, p2 :: PosVector, p3 :: PosVector)
     return tonorm ./ norm(tonorm)
 end
 
+"""
+    triangle_size(p1, p2, p3)
+
+Computes the size of a triangle formed by three points
+"""
+function triangle_size(p1, p2, p3)
+    e1 = p2 - p1
+    e2 = p3 - p1
+    sz = cross(e1, e2)
+    return norm(sz) / 2
+end
 
 """
     mesh_grid_intersection(shape, vertices, triangles)
@@ -273,4 +284,8 @@ function load_mesh(file_name::AbstractString)
     open(file_name, "r") do fid
         load_mesh(fid)
     end
+end
+
+function size_scale(mesh::Mesh)
+    return sqrt(median(map(t -> triangle_size(mesh.vertices[t[1]], mesh.vertices[t[2]], mesh.vertices[t[3]]), mesh.triangles)))
 end

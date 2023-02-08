@@ -10,7 +10,7 @@
             geometry = mr.walls(MT_fraction=actual_transfer)
             spins = [mr.Spin(position=Random.rand(3) .* wall_dist) for _ in 1:nspins]
             sequence = mr.Sequence(pulses=[mr.InstantRFPulse(flip_angle=90)], TR=1e5)
-            simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=diffusivity, timestep=timestep)
+            simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=diffusivity, max_timestep=timestep)
             signal = mr.signal(spins, simulation, [timestep])
             @test length(signal) == 1
             fhit = frachit(wall_dist, diffusivity, timestep)
@@ -28,7 +28,7 @@
 
         reference = nothing
         for timestep in (0.01, 0.1, 1)
-            simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=1., timestep=timestep)
+            simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=1., max_timestep=timestep)
             signal = mean([mr.transverse(mr.evolve(10000, simulation, 10.)) for _ in 1:Int(timestep/0.01)]) / 10000
             if isnothing(reference)
                 reference = signal

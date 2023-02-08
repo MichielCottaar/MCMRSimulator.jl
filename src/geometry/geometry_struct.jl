@@ -81,3 +81,9 @@ end
 
 inside_MRI_properties(geom::Geometry, spin::Spin, global_props::MRIProperties) = inside_MRI_properties(geom, spin.position, global_props)
 inside_MRI_properties(geom::Geometry, position::AbstractVector, global_props::MRIProperties) = inside_MRI_properties(geom, PosVector(position), global_props)
+
+size_scale(geom::Geometry) = minimum(size_scale.(geom.obstructions))
+size_scale(geom::Geometry{0}) = Inf
+
+off_resonance_gradient(geom::Geometry) = maximum(off_resonance_gradient.(geom.obstructions))
+off_resonance_gradient(geom::Geometry{0}) = zero(Float)

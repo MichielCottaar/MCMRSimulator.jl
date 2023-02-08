@@ -7,10 +7,10 @@
             function new_pos(permeability; timestep=0.1)
                 if set_global
                     cylinder = mr.spheres(1.)
-                    simulation = mr.Simulation([], geometry=cylinder, diffusivity=1., timestep=timestep, permeability=permeability)
+                    simulation = mr.Simulation([], geometry=cylinder, diffusivity=1., max_timestep=timestep, permeability=permeability)
                 else
                     cylinder = mr.spheres(1., permeability=permeability)
-                    simulation = mr.Simulation([], geometry=cylinder, diffusivity=1., timestep=timestep)
+                    simulation = mr.Simulation([], geometry=cylinder, diffusivity=1., max_timestep=timestep)
                 end
                 mr.position.(mr.evolve(snapshot, simulation, 10.))
             end
@@ -43,10 +43,10 @@
             function new_pos(permeability; timestep=0.1)
                 if set_global
                     walls = mr.walls(positions=0.5, repeats=1)
-                    simulation = mr.Simulation([], geometry=walls, diffusivity=10., timestep=timestep, permeability=permeability)
+                    simulation = mr.Simulation([], geometry=walls, diffusivity=10., max_timestep=timestep, permeability=permeability)
                 else
                     walls = mr.walls(positions=0.5, permeability=permeability, repeats=1)
-                    simulation = mr.Simulation([], geometry=walls, diffusivity=10., timestep=timestep)
+                    simulation = mr.Simulation([], geometry=walls, diffusivity=10., max_timestep=timestep)
                 end
                 [p[1] for p in mr.position.(mr.evolve(snapshot, simulation, 10.))]
             end

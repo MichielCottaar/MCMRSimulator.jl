@@ -2,7 +2,7 @@
     Simulation(
         sequences; geometry=Obstruction[], diffusivity=0.,
         R1=0, T1=Inf, R2=0, T2=Inf, off_resonance=0, MT_fraction=0, permeability=0,, 
-        timestep=nothing, gradient_precision=0.01, sample_displacement=5, sample_off_resonance=10,
+        max_timestep=<geometry-based default>, gradient_precision=1, rf_rotation=1.,
     )
 
 Defines the setup of the simulation and stores the output of the run.
@@ -28,7 +28,7 @@ They can be overriden for individual [`BaseObstruction`] objects.
 Note that `MT_fraction` and `permeability` are internally adjusted to make their effect independent of the timestep (see [`correct_for_timestep`](@ref)).
 
 ## Timestep parameters
-These parameters (`timestep`, `gradient_precision`, `sample_displacement`, `sample_off_resonance`) control the timepoints at which the simulation is evaluated.
+These parameters (`max_timestep`, `gradient_precision`, and `rf_rotation`) control the timepoints at which the simulation is evaluated.
 The default values should work well.
 For more details on how to adjust them, see [`TimeController`](@ref).
 
@@ -52,17 +52,10 @@ struct Simulation{N, G<:Geometry, S<:Sequence}
         diffusivity::Float,
         properties::GlobalProperties,
         geometry::Geometry,
-        time_controller::TimeController
+        time_controller::TimeController,
+        flatten::Bool,
     )
-        flatten = false
-        if isa(sequences, Sequence)
-            sequences = [sequences]
-            flatten = true
-        elseif length(sequences) == 0
-            sequences = Sequence[]
-        end
         nseq = length(sequences)
-        geometry = Geometry(geometry)
 
         new{nseq, typeof(geometry), eltype(sequences)}(
             SVector{nseq}(sequences),
@@ -86,17 +79,20 @@ function Simulation(
     permeability=0.,
     diffusivity=0.,
     geometry=Obstruction[],
-    timestep=nothing,
-    gradient_precision=0.01,
-    sample_displacement=5,
-    sample_off_resonance=10,
+    max_timestep=nothing,
+    gradient_precision=1.,
+    rf_rotation=1.,
 )
-    geometry = Geometry(geometry)
-    if isnothing(timestep)
-        controller = TimeController(geometry; gradient_precision=gradient_precision, sample_displacement=sample_displacement, sample_off_resonance=sample_off_resonance)
-    else
-        controller = TimeController(timestep)
+    flatten = false
+    if isa(sequences, Sequence)
+        sequences = [sequences]
+        flatten = true
+    elseif length(sequences) == 0
+        sequences = Sequence[]
     end
+    geometry = Geometry(geometry)
+    max_B0 = iszero(length(sequences)) ? 0 : maximum(B0.(sequences))
+    controller = TimeController(geometry, max_B0, diffusivity; max_timestep=max_timestep, gradient_precision=gradient_precision, rf_rotation=rf_rotation)
     if iszero(diffusivity) && length(geometry) > 0
         @warn "Restrictive geometry will have no effect, because the diffusivity is set at zero"
     end
@@ -106,6 +102,7 @@ function Simulation(
         GlobalProperties(; R1=R1, T1=T1, R2=R2, T2=T2, off_resonance=off_resonance, MT_fraction=MT_fraction, permeability=permeability),
         geometry,
         controller,
+        flatten,
     )
 end
 

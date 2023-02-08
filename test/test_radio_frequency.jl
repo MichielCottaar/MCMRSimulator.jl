@@ -7,6 +7,7 @@
             sim = mr.Simulation(seq)
             signal = mr.signal(100, sim, 0:0.1:10)
             @test all(mr.propose_times(sim, 0, 9) .== 0:0.1:9)
+            @test all(mr.propose_times(mr.Simulation(seq, rf_rotation=10), 0, 9) .== 0:1:9)
             increasing = signal[1:90]
             constant = signal[91:end]
             @test all(abs.(mr.longitudinal.(constant)) .<= 1e-8)
