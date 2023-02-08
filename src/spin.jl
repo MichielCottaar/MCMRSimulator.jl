@@ -68,6 +68,7 @@ SpinOrientation(vector::PosVector) = SpinOrientation(
     rad2deg(atan(vector[2], vector[1])),
 )
 
+Base.show(io::IO, orient::SpinOrientation) = print(io, "SpinOrientation(longitudinal=$(longitudinal(orient)), transverse=$(transverse(orient)), phase=$(phase(orient))°)")
 
 """
 Spin particle with a position and `nsequences` spin orientations (stored as [`SpinOrientation`](@ref)).
@@ -102,6 +103,10 @@ end
 
 Spin(;nsequences=1, position=zero(SVector{3,Float}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) = Spin(SVector{3, Float}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), rng)
 Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.rng)
+
+Base.show(io::IO, spin::Spin{0}) = print(io, "Spin(position=$(spin.position) with no magnetisation information)")
+Base.show(io::IO, spin::Spin{1}) = print(io, "Spin(position=$(spin.position) with $(repr(spin.orientations[1], context=io)))")
+Base.show(io::IO, spin::Spin{N}) where {N} = print(io, "Spin(position=$(spin.position) with magnetisations for $N sequences)")
 
 macro spin_rng(spin, expr)
     return quote
@@ -223,6 +228,9 @@ function Snapshot(positions :: AbstractVector{<:AbstractVector{<:Real}}; time ::
     Snapshot(map(p -> Spin(; position=p, kwargs...), positions), time)
 end
 Snapshot(nspins :: Int; kwargs...) = Snapshot(rand(nspins, 3) .* 1000 .- 500; kwargs...)
+
+Base.show(io::IO, snap::Snapshot{1}) = print(io, "Snapshot($(length(snap)) spins with total magnetisation of $(repr(SpinOrientation(snap), context=io)) at t=$(get_time(snap))ms)")
+Base.show(io::IO, snap::Snapshot{N}) where {N} = print(io, "Snapshot($(length(snap)) spins with magnetisations for $N sequences at t=$(get_time(snap))ms)")
 
 """
     get_time(snapshot)
