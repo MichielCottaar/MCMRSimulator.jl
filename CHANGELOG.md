@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sequences can now be read from the pulseq format (http://pulseq.github.io/) using `read_pulseq`.
 - `run_tests.sh` function which will run the tests and produce a coverage that can be visualised in VS Code by the Coverage Gutters plugin.
 ### Changed
+- Timestep calculation has been simplified to only three parts (see `TimeController` or `propose_times` for details), namely (1) Geometry size scale, (2) Gradient size (whether internal due to myelin/iron off-resonance fields or external), and (3) RF pulse maximum rotation. These can be controlled using:
+    - `maximum_timestep`: overrides the maximum timestep set by the geometry size scale and the internal gradient size
+    - `gradient_size`: sets the error allowed when evaluating the phase evolution due to internal or external gradients (default: 1 degree). This sets an additional constraint on top of the `maximum_timestep` while there are strong gradients.
+    - `rf_rotation`: maximum rotation due to RF pulses that can occur in a single timestep (defualt: 1 degree). This will shorten the timestep while RF pulses are active.
 - Made units consistent with angles (i.e., phases and flip angles) in degrees, off-resonance fields in kHz, and gradients in kHz/um.
 - `time` function has been renamed `get_time`, so as not to conflict with `Base.time`
 - Refactored the `Sequence` interface:
