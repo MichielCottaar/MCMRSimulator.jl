@@ -29,23 +29,32 @@ Draws a random step from a Gaussian distribution with a variance of 2 * diffusiv
 random_gauss(diffusivity :: Float, timestep :: Float) = sqrt(2 * timestep * diffusivity) * randn(PosVector)
 
 """
-    draw_step!(spin::Spin, diffusivity, timestept, default_properties, [, geometry])
+    draw_step!(spin, sequence_parts, diffusivity, timestep, default_properties, geometry])
 
 Updates the spin based on a random movement through the given geometry for a given `timestep`:
 - draws the next location of the particle after `timestep` with given `diffusivity`.  
-  If provided, this displacement will take into account the obstructions in `geometry`.
-- the spin orientation might be affected by collisions with the obstructions in `geometry`.
+  This displacement will take into account the obstructions in `geometry`.
+- The spin orientation will be affected by relaxation (see [`relax!`](@ref)) and potentially by magnetisation transfer during collisions.
 """
-function draw_step!(spin :: Spin, diffusivity :: Float, timestep :: Float, default_properties::GlobalProperties)
+function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivity :: Float, timestep :: Float, default_properties::GlobalProperties, geometry :: Geometry{0}) where {N}
+    if iszero(timestep)
+        return
+    end
+    relax!(spin, parts, geometry, 0, 1//2, default_properties.mri)
     @spin_rng spin begin
         spin.position += random_gauss(diffusivity, timestep)
     end
+    relax!(spin, parts, geometry, 1//2, 1, default_properties.mri)
 end
-draw_step!(spin :: Spin, diffusivity :: Float, timestep :: Float, default_properties::GlobalProperties, geometry :: Geometry{0}) = draw_step!(spin, diffusivity, timestep, default_properties)
-function draw_step!(spin :: Spin{N}, diffusivity :: Float, timestep :: Float, default_properties::GlobalProperties, geometry::Geometry) where {N}
+
+function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivity :: Float, timestep :: Float, default_properties::GlobalProperties, geometry::Geometry) where {N}
+    if iszero(timestep)
+        return
+    end
     current_pos = spin.position
     new_pos = random_gauss(diffusivity, timestep) + current_pos
     collision = empty_collision
+    current_time = zero(Float)
 
     @spin_rng spin begin
         for _ in 1:10000
@@ -54,6 +63,13 @@ function draw_step!(spin :: Spin{N}, diffusivity :: Float, timestep :: Float, de
                 geometry,
                 collision
             )
+
+            use_distance = collision === empty_collision ? 1 : collision.distance
+            next_time = current_time + (1 - current_time) * use_distance
+            relax_pos_dist = rand() * use_distance
+            spin.position = relax_pos_dist .* new_pos .+ (1 - relax_pos_dist) .* current_pos
+            relax!(spin, parts, geometry, current_time, next_time, default_properties.mri)
+
             if collision === empty_collision
                 break
             end
@@ -71,6 +87,7 @@ function draw_step!(spin :: Spin{N}, diffusivity :: Float, timestep :: Float, de
                 current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
                 collision = Collision(collision.distance, -collision.normal, collision.properties, collision.index, !collision.inside)
             end
+            current_time = next_time
         end
     end
     if collision !== empty_collision

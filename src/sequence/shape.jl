@@ -184,3 +184,30 @@ add_TR(concrete::ConcreteShape, TR::Number) = ConcreteShape(concrete.t0 + TR, co
 
 start_time(concrete::ConcreteShape) = concrete.t0
 end_time(concrete::ConcreteShape) = concrete.t1
+
+
+"""
+    ShapePart(concrete_shape, t0, t1)
+
+Represents a small part of a [`ConcreteShape`](@ref) between `t0` and `t1` during which the amplitude varies linearly.
+This object is used to store the relevant part of the RF and gradient profiles within a single timestep (see [`SequencePart`](@ref)).
+"""
+struct ShapePart
+    start :: Float
+    final :: Float
+    slope :: Float
+end
+
+function ShapePart(concrete_shape::ConcreteShape, t0::Number, t1::Number)
+    tmean = (t0 + t1) / 2
+    mean_value = amplitude(concrete_shape, tmean)
+    slope = amplitude_derivative(concrete_shape, tmean)
+    return ShapePart(
+        (t0 - tmean) * slope + mean_value,
+        (t1 - tmean) * slope + mean_value,
+        slope * (t1 - t0),
+    )
+end
+
+amplitude(part::ShapePart, time) = part.start + time * part.slope
+amplitude(part::ShapePart, t1, t2) = amplitude(part, (t1 + t2) / 2)

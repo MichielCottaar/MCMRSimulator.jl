@@ -150,6 +150,55 @@ gradient(position::AbstractVector, seq::Sequence, time1::Number, time2::Number) 
 gradient(seq::Sequence, time::Number) = gradient(seq.gradient, mod(time, seq.TR))
 gradient(seq::Sequence, time1::Number, time2::Number) = gradient(seq.gradient, mod(time1, seq.TR), iszero(mod(time2, seq.TR)) ? seq.TR : mod(time2, seq.TR))
 
-include("timestep.jl")
+"""
+    SequencePart(sequence, t1, t2)
+
+Represents a small part of a [`Sequence`](@ref) between times `t1` and `t2`.
+During this time the RF pulse and gradients are assumed to change linearly and hence can be represented as [`ShapePart`](@ref) objects.
+This is used to guide the spin evolution during the timestep between times `t1` and `t2` during the simulation.
+"""
+struct SequencePart
+    rf_amplitude::ShapePart
+    rf_phase::ShapePart
+    Gx::ShapePart
+    Gy::ShapePart
+    Gz::ShapePart
+    origin::PosVector
+    total_time::Number
+    B0::Number
+end
+
+function SequencePart(sequence::Sequence, t1::Number, t2::Number)
+    t1_norm = mod(t1, sequence.TR)
+    t2_norm = mod(t2, sequence.TR)
+    pulse = current_pulse(sequence, (t1_norm + t2_norm) / 2)
+    if isnothing(pulse)
+        amp = phase = ShapePart(zero(Float), zero(Float), zero(Float))
+    else
+        amp = ShapePart(pulse.amplitude, t1_norm, t2_norm)
+        phase = ShapePart(pulse.phase, t1_norm, t2_norm)
+    end
+    SequencePart(
+        amp, phase,
+        ShapePart(sequence.gradient.Gx, t1_norm, t2_norm),
+        ShapePart(sequence.gradient.Gy, t1_norm, t2_norm),
+        ShapePart(sequence.gradient.Gz, t1_norm, t2_norm),
+        sequence.gradient.origin,
+        t2 - t1,
+        B0(sequence)
+    )
+end
+
+function gradient(position, part::SequencePart, t1, t2)
+    grad = zero(Float)
+    for (index, shape_part) in zip(1:3, [part.Gx, part.Gy, part.Gz])
+        grad += amplitude(shape_part, t1, t2) * (position[index] - part.origin[index])
+    end
+    grad
+end
+
+effective_pulse(part::SequencePart, t0::Number, t1::Number) = InstantRFPulse(flip_angle=amplitude(part.rf_amplitude, t0, t1) * (t1 - t0) * part.total_time * 360., phase=amplitude(part.rf_phase, t0, t1))
+B0(part::SequencePart) = part.B0
+
 include("diffusion.jl")
 include("pulseseq.jl")

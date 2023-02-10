@@ -193,8 +193,9 @@
             spin = mr.Spin(position=SA[200., 200., 0.])
             @test mr.isinside(geometry, spin)
             inside = true
+            seq_part = SVector{1}([mr.SequencePart(mr.Sequence(TR=10), 0, 1)])
             for _ in 1:100
-                mr.draw_step!(spin, Float(3.), Float(0.5), mr.GlobalProperties(), mr.Geometry(geometry))
+                mr.draw_step!(spin, seq_part, Float(3.), Float(0.5), mr.GlobalProperties(), mr.Geometry(geometry))
                 inside &= mr.isinside(geometry, spin)
             end
             @test inside

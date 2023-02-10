@@ -53,7 +53,7 @@ amplitude(pulse::RFPulse, time::Number) = amplitude(pulse.amplitude, time)
 Computes the phase of the [`RFPulse`](@ref) at time `t1` in degrees.
 If `t2` is also provided, the average phase between times `t1` and `t2` is returned.
 """
-phase(pulse::RFPulse, time::Number) = amplitude(pulse.phase, time)
+phase(pulse::RFPulse, time::Number) = norm_angle(amplitude(pulse.phase, time))
 
 """
     off_resonance(rf_pulse, t1[, t2])
@@ -64,7 +64,7 @@ If `t2` is also provided, the average off_resonance between times `t1` and `t2` 
 off_resonance(pulse::RFPulse, time::Number) = amplitude_derivative(pulse.phase, time) / 360
 
 amplitude(pulse::RFPulse, t1::Number, t2::Number) = amplitude_integral(pulse.amplitude, t1, t2) / (t2 - t1)
-phase(pulse::RFPulse, t1::Number, t2::Number) = amplitude_integral(pulse.phase, t1, t2) / (t2 - t1)
+phase(pulse::RFPulse, t1::Number, t2::Number) = norm_angle(amplitude_integral(pulse.phase, t1, t2) / (t2 - t1))
 off_resonance(pulse::RFPulse, t1::Number, t2::Number) = (amplitude(pulse.phase, t2) - amplitude(pulse.phase, t1)) / ((t2 - t1) * 360)
 
 function add_TR(pulse::RFPulse, delta_time::Number) 

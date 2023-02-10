@@ -22,7 +22,7 @@ and relaxation of the MR spin orientation.
 It is used internally when evolving [`Simulation`](@ref) objects.
 """
 function evolve_to_time!(
-    spin::Spin{N}, simulation::Simulation{N}, finite_pulse::SVector{N, Tuple{InstantRFPulse, InstantRFPulse}}, current_time::Float, new_time::Float
+    spin::Spin{N}, simulation::Simulation{N}, parts::SVector{N, SequencePart}, current_time::Float, new_time::Float
 ) where {N}
     if current_time > new_time
         throw(DomainError("Spins cannot travel backwards in time"))
@@ -31,11 +31,7 @@ function evolve_to_time!(
         return spin
     end
 
-    apply!(map(fp -> fp[1], finite_pulse), spin)
-    _relax_mult!(spin, (new_time - current_time) / 2, current_time, simulation)
-    draw_step!(spin, simulation.diffusivity, new_time - current_time, simulation.properties, simulation.geometry)
-    _relax_mult!(spin, (new_time - current_time) / 2, (new_time + current_time) / 2, simulation)
-    apply!(map(fp -> fp[2], finite_pulse), spin)
+    draw_step!(spin, parts, simulation.diffusivity, new_time - current_time, simulation.properties, simulation.geometry)
 end
 
 """
@@ -53,19 +49,16 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     spins::Vector{Spin{N}} = deepcopy.(snapshot.spins)
 
     times = propose_times(simulation, snapshot.time, new_time)
-    finite_pulses = [
-        SVector{N, Tuple{InstantRFPulse, InstantRFPulse}}([(effective_pulse(seq, t0, (t0 + t1) / 2), effective_pulse(seq, (t0 + t1) / 2, t1)) for seq in simulation.sequences])
-        for (t0, t1) in zip([times[1], times[1:end-1]...], times)
-    ]
 
     # define next stopping times due to sequence, readout or times
     sequence_instants = Union{Nothing, InstantComponent}[next_instant(seq, current_time) for seq in simulation.sequences]
     sequence_times = MVector{N, Float}([isnothing(i) ? Inf : get_time(i) for i in sequence_instants])
 
-    for (next_time, finite_pulse) in zip(times, finite_pulses)
+    for next_time in times
         # evolve all spins to next interesting time
+        parts = SequencePart.(simulation.sequences, current_time, next_time)
         Threads.@threads for spin in spins
-            evolve_to_time!(spin, simulation, finite_pulse, current_time, next_time)
+            draw_step!(spin, parts, simulation.diffusivity, next_time - current_time, simulation.properties, simulation.geometry)
         end
         current_time = next_time
 

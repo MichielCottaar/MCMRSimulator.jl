@@ -15,6 +15,23 @@ function relax!(orientation :: SpinOrientation, timestep :: Real, mri::MRIProper
 end
 
 
+function relax!(spin::Spin{N}, parts::SVector{N, SequencePart}, geometry::Geometry, t1::Number, t2::Number, props::MRIProperties) where {N}
+    use_mri = inside_MRI_properties(geometry, spin.position, props)
+    off_resonance_unscaled = off_resonance(geometry, spin.position) * 1e-6 * gyromagnetic_ratio
+    tmean = (t1 + t2) / 2
+    for (orient, part) in zip(spin.orientations, parts)
+        pulse = effective_pulse(part, t1, t2)
+        off_resonance_kHz = off_resonance_unscaled * B0(part)
+
+        grad = gradient(spin.position, part, t1, tmean)
+        relax!(orient, (t2 - t1) * part.total_time/2, use_mri, grad + off_resonance_kHz)
+        apply!(pulse, orient)
+        grad = gradient(spin.position, part, tmean, t2)
+        relax!(orient, (t2 - t1) * part.total_time/2, use_mri, grad + off_resonance_kHz)
+    end
+end
+
+
 """
     transfer!(orientation, MT_fraction)
 
