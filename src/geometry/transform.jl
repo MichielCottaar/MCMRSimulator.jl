@@ -273,7 +273,11 @@ produces_off_resonance(transform::TransformObstruction) = any(produces_off_reson
 
 
 function inside_MRI_properties(transform::TransformObstruction, position::PosVector)
-    return merge_mri_parameters(inside_MRI_properties.(transform.obstructions, project(transform, position)))
+    base_pos = project_rotation(transform, position)
+    return merge_mri_parameters((
+        inside_MRI_properties(obstruction, base_pos - pos) 
+        for (obstruction, pos) in zip(transform.obstructions, transform.positions)
+    ))
 end
 
 

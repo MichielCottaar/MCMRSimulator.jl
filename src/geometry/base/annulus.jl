@@ -70,6 +70,9 @@ function detect_collision(movement :: Movement{2}, annulus :: Annulus, previous)
     end
     # Not sure where we are...
     c_inner = detect_collision(movement, annulus.inner, previous)
+    if c_inner !== empty_collision && c_inner.inside
+        return c_inner
+    end
     c_outer = detect_collision(movement, annulus.outer, previous)
     c_inner.distance < c_outer.distance ? c_inner : c_outer
 end
@@ -137,5 +140,6 @@ end
 
 # Placeholder until the inner and outer cylinders of the annulus can have different MRI properties
 inside_MRI_properties(annulus::Annulus, position::SVector{2, Float}) = inside_MRI_properties(annulus.outer, position)
+empty_mri_properties(annulus::Annulus) = empty_mri_properties(annulus.outer)
 
 size_scale(annulus::Annulus) = size_scale(annulus.inner)

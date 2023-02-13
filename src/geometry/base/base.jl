@@ -25,7 +25,7 @@ ObstructionProperties(obstruction :: BaseObstruction) = obstruction.properties
 
 Returns true if the collision `c` hit the obstruction `o`.
 """
-collided(o::BaseObstruction, c::Collision) = ObstructionProperties(o) == ObstructionProperties(c)
+collided(o::BaseObstruction, c::Collision) = ObstructionProperties(o).id == ObstructionProperties(c).id
 
 """
     inside_MRI_properties(obstruction, position)

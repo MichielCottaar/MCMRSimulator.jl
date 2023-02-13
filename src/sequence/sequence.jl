@@ -164,8 +164,8 @@ struct SequencePart
     Gy::ShapePart
     Gz::ShapePart
     origin::PosVector
-    total_time::Number
-    B0::Number
+    total_time::Float
+    B0::Float
 end
 
 function SequencePart(sequence::Sequence, t1::Number, t2::Number)

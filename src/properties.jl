@@ -13,7 +13,7 @@ These relaxation variables can be retrieved using:
 - [`R2`](@ref)
 - [`off_resonance`](@ref)
 """
-mutable struct MRIProperties
+struct MRIProperties
     R1 :: Float
     R2 :: Float
     off_resonance :: Float
@@ -54,34 +54,40 @@ Merges multiple MRI properties into one.
 An error is raised if they are inconsistent with each other
 """
 function merge_mri_parameters(properties, default_values=nothing)
-    result = isnothing(default_values) ? MRIProperties() : deepcopy(default_values)
+    if isnothing(default_values)
+        R1_val = R2_val = off_resonance_val = NaN
+    else
+        R1_val = default_values.R1
+        R2_val = default_values.R2
+        off_resonance_val = default_values.off_resonance
+    end
     set_R1 = false
     set_R2 = false
     set_off_resonance = false
     for prop in properties
         if !isnan(prop.R1)
-            if set_R1 && !(R1(result) ≈ R1(prop))
+            if set_R1 && !(R1_val ≈ R1(prop))
                 error("Inconsistent values found for R1 when mergine MRI properties")
             end
-            result.R1 = R1(prop)
+            R1_val = R1(prop)
             set_R1 = true
         end
         if !isnan(prop.R2)
-            if set_R2 && !(R2(result) ≈ R2(prop))
+            if set_R2 && !(R2_val ≈ R2(prop))
                 error("Inconsistent values found for R2 when mergine MRI properties")
             end
-            result.R2 = R2(prop)
+            R2_val = R2(prop)
             set_R2 = true
         end
         if !isnan(prop.off_resonance)
-            if set_off_resonance && !(off_resonance(result) ≈ off_resonance(prop))
+            if set_off_resonance && !(off_resonance_val ≈ off_resonance(prop))
                 error("Inconsistent values found for off_resonance when mergine MRI properties")
             end
-            result.off_resonance = off_resonance(prop)
+            off_resonance_val = off_resonance(prop)
             set_off_resonance = true
         end
     end
-    return result
+    return MRIProperties(R1_val, R2_val, off_resonance_val)
 end
 
 function setproperty!(props::MRIProperties, symbol, value)
@@ -106,7 +112,7 @@ These properties can be retrieved using:
 - [`MT_fraction`](@ref)
 - [`permeability`](@ref)
 """
-mutable struct CollisionProperties
+struct CollisionProperties
     MT_fraction :: Float
     permeability :: Float
 end
@@ -128,6 +134,7 @@ struct ObstructionProperties
     # In future add MRIProperties for particles stuck on the surface
     collision :: CollisionProperties
     inside :: MRIProperties
+    id :: UUID
 end
 
 function ObstructionProperties(;
@@ -140,6 +147,7 @@ function ObstructionProperties(;
     ObstructionProperties(
         CollisionProperties(Float(MT_fraction), Float(permeability)),
         MRIProperties(; R1=R1_inside, T1=T1_inside, R2=R2_inside, T2=T2_inside, off_resonance=off_resonance_inside),
+        uuid1()
     )
 end
 
@@ -157,8 +165,6 @@ Parameters can be accessed using their accessors:
 - [`T2`](@ref)
 - [`R2`](@ref)
 - [`off_resonance`](@ref)
-
-They can be set using `global_properites.<property> = <value>`.
 """
 struct GlobalProperties
     collision :: CollisionProperties
@@ -170,16 +176,16 @@ struct GlobalProperties
         R2::Number=NaN, T2::Number=NaN,
         off_resonance::Number=0,
     )
+        if isnan(R1) & isnan(T1)
+            R1 = 0
+        end
+        if isnan(R2) & isnan(T2)
+            R2 = 0
+        end
         res = new(
             CollisionProperties(Float(MT_fraction), Float(permeability)),
             MRIProperties(; R1=R1, T1=T1, R2=R2, T2=T2, off_resonance=off_resonance),
         )
-        if isnan(res.mri.R1)
-            res.mri.R1 = 0
-        end
-        if isnan(res.mri.R2)
-            res.mri.R2 = 0
-        end
         return res
     end
 end
@@ -199,15 +205,6 @@ function Base.show(io::IO, prop::GlobalProperties)
         end
     end
     print(io, ")")
-end
-
-
-function setproperty!(props::GlobalProperties, symbol, value)
-    if hasfield(CollisionProperties, symbol)
-        setproperty!(props.collision, symbol, value)
-    else
-        setproperty!(props.mri, symbol, value)
-    end
 end
 
 for symbol in (:permeability, :MT_fraction)

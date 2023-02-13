@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `gradient_size`: sets the error allowed when evaluating the phase evolution due to internal or external gradients (default: 1 degree). This sets an additional constraint on top of the `maximum_timestep` while there are strong gradients.
     - `rf_rotation`: maximum rotation due to RF pulses that can occur in a single timestep (defualt: 1 degree). This will shorten the timestep while RF pulses are active.
 - Made units consistent with angles (i.e., phases and flip angles) in degrees, off-resonance fields in kHz, and gradients in kHz/um.
+- `random_positions_radii` now allows a minimum and maximum radius to be set. The minimum radius is set to 0.1 by default.
 - `time` function has been renamed `get_time`, so as not to conflict with `Base.time`
 - Refactored the `Sequence` interface:
     - `RFPulse` -> `InstantRFPulse` (`RFPulse` now refers to finite RF pulses discussed above)
