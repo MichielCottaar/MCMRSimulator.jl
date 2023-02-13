@@ -68,6 +68,19 @@ function detect_collision(movement :: Movement{2}, annulus :: Annulus, previous)
             end
         end
     end
+    radius = annulus.outer.radius
+    if (
+        (movement.origin[1] > radius && movement.destination[1] > radius) ||
+        (movement.origin[1] < -radius && movement.destination[1] < -radius)
+    )
+        return empty_collision
+    end
+    if (
+        (movement.origin[2] > radius && movement.destination[2] > radius) ||
+        (movement.origin[2] < -radius && movement.destination[2] < -radius)
+    )
+        return empty_collision
+    end
     # Not sure where we are...
     c_inner = detect_collision(movement, annulus.inner, previous)
     if c_inner !== empty_collision && c_inner.inside

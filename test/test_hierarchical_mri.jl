@@ -2,11 +2,12 @@
     defaults = mr.GlobalProperties(R2=1.).mri
     for (obstruction, pos_in, pos_out) in [
         (mr.spheres(1., T1_inside=10., R2_inside=0.5), [0., 0, 0], [1, 2, 1.]),
+        (mr.spheres(1., T1_inside=10., R2_inside=0.5, repeats=(5, 5, 5)), [5., 5, 0], [1, 2, 1.]),
         (mr.cylinders(1., T1_inside=10., R2_inside=0.5), [0., 0, 0], [1, 2, 1.]),
         (mr.annuli(0.5, 1., T1_inside=10., R2_inside=0.5), [0., 0, 0], [1, 2, 1.]),
     ]
         geom = mr.Geometry(obstruction)
-        @testset "Test correct values in $(typeof(obstruction.obstructions[1]))" begin
+        @testset "Test correct values in $(obstruction)" begin
             @test mr.isinside(geom, pos_in) > 0
             @test mr.isinside(geom, pos_out) == 0
             within = mr.inside_MRI_properties(geom, pos_in, defaults)
@@ -22,7 +23,7 @@
             @test mr.T2(outside) == 1.
             @test iszero(mr.off_resonance(outside))
         end
-        @testset "Test simulation in $(typeof(obstruction.obstructions[1]))" begin
+        @testset "Test simulation in $(obstruction)" begin
             sequence = mr.Sequence(pulses=[mr.InstantRFPulse(flip_angle=90., time=0.)], TR=100.)
             sim = mr.Simulation(sequence, R2=1., geometry=geom, diffusivity=1.)
             snap = mr.evolve([pos_in, pos_out], sim, 10.)

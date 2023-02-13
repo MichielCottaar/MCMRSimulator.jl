@@ -75,8 +75,8 @@ end
 
 Computes the MRI parameters for the spin based on some global settings (`global_props`) and any overriding of those settings in the `geometry`.
 """
-function inside_MRI_properties(geom::Geometry, position::PosVector, global_props::MRIProperties)
-    return merge_mri_parameters((inside_MRI_properties(o, position) for o in geom.obstructions), global_props)
+function inside_MRI_properties(geom::Geometry{N}, position::PosVector, global_props::MRIProperties) where {N}
+    return merge_mri_parameters(SVector{N, MRIProperties}(inside_MRI_properties(o, position) for o in geom.obstructions), global_props)
 end
 inside_MRI_properties(geom::Geometry{0}, position::PosVector, global_props::MRIProperties) = global_props
 
