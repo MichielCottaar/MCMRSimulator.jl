@@ -40,7 +40,7 @@ This software can be cited using the information in the CITATION.cff file.
   - Update unreleased link at bottom with new version number: `[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v<previous version>...main`
 - Login into [zenodo](https://doi.org/10.5281/zenodo.7318656)
   - In the MCMRSimulator.jl repository click "New version"
-  - Click "Reserve doi"
+  - Click "Reserve doi" (should already be clicked)
   - Add new citation information to CITATION.cff
     ```
       - description: "This is the archived snapshot of version <version number> of MCMRSimulator.jl"
@@ -51,7 +51,9 @@ This software can be cited using the information in the CITATION.cff file.
 - Commit changes
 - Add tag `v<version number>`
 - git push
-- Create snapshot on gitlab
-  - Upload spanshot to zenodo
-  - Update version number
+- Create release on gitlab (https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl/-/releases)
+  - title: `v<version number>`; Release notes: "See CHANGELOG.md for list of changes.";
+  - Upload spanshot (.zip) to zenodo
+  - Update version number in zenodo
+  - Press "Save" and then "Process" buttons at the bottom of the zenodo page.
 - Check if documentation updated correctly
