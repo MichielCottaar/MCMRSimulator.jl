@@ -4,6 +4,7 @@ All notable changes to MCMRSimulator.jl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+## [0.5.0]
 ### Added
 - Finite RF pulses (`RFPulse`) to more realistically model the effect of these pulses.
 - Hierchical properties: MRI relaxation parameters and collision parameters (e.g., permeability) can now set at both the global level and for each obstruction.
@@ -23,9 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Relaxation parameters can now be set as relaxation times (T1/T2) in addition to as relaxation rates (R1/R2)
 - You will no longer have to iterate over sequences in the output of `signal` and `readout` if the simulation is created with a singular sequence object (e.g., `Simulation(sequence, ...)`). Note that this will not affect simulations with a vector of sequence objects, even if the length of that vector is one (e.g., `Simulation([sequence])`).
 - Pretty printing for simulations, sequences, spins, and snapshots is much improved.
+- Spin magnetisations are now updated between collisions during the movement rather than only between timesteps.
 
 ### Fixed
 - In the `readout` output, snapshots were included multiple times for the same timepoint if the same readout time was present across the sequences. This has now been fixed, so that for each sequence there will only be a single snapshot per readout time.
+- The `nsequenes` flag in the `Spin` constructor now works.
 ## [v0.4.0]
 ### Added
 - Support for arbitrary gradient durations and diffusion times in `dwi` thanks to Zhiyu
@@ -40,5 +43,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added citation instructions
 
 
-[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.4.0...main
+[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.5.0...main
+[v0.5.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.4.0...v0.5.0
 [v0.4.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.3.0...v0.4.0

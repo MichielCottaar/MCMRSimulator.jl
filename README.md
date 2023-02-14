@@ -24,7 +24,7 @@ This software can be cited using the information in the CITATION.cff file.
   month        = nov,
   year         = 2022,
   publisher    = {Zenodo},
-  version      = {V0.4},
+  version      = {V0.5},
   doi          = {10.5281/zenodo.7318657},
   url          = {https://doi.org/10.5281/zenodo.7318657}
 }
@@ -36,8 +36,8 @@ This software can be cited using the information in the CITATION.cff file.
 - Update the "CHANGELOG.md"
   - Check `[Unreleased]` link for any missing additions to the Changelog
   - Add line with `## [v<version number>]` just below `## [Ureleased]`
-  - Add new link at bottom: `[v<version number>]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v<previour version>...v<version_number>`
-  - Update unreleased link at bottom with new version number: `[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v<previour version>...main`
+  - Add new link at bottom: `[v<version number>]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v<previous version>...v<version_number>`
+  - Update unreleased link at bottom with new version number: `[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v<previous version>...main`
 - Login into [zenodo](https://doi.org/10.5281/zenodo.7318656)
   - In the MCMRSimulator.jl repository click "New version"
   - Click "Reserve doi"
@@ -49,7 +49,7 @@ This software can be cited using the information in the CITATION.cff file.
     ```
   - Keep this page open
 - Commit changes
-- Add tag `v<version number>
+- Add tag `v<version number>`
 - git push
 - Create snapshot on gitlab
   - Upload spanshot to zenodo
