@@ -6,16 +6,15 @@ struct SingleTransform{N, B<:BoundingBox{N}}
 end
 
 """
-    TransformObstruction(base_type, args...; positions=nothing, repeats=0., rotation=I(3), lorentz_radius=10., kwargs...)
     TransformObstruction(base; positions=nothing, repeats=0., rotation=I(3), lorentz_radius=10.)
+    TransformObstruction(base_type, args...; positions=nothing, repeats=0., rotation=I(3), lorentz_radius=10., kwargs...)
 
 Transforms the [`BaseObstruction`](@ref) objects in `base` in one of several ways:
 - Apply the shifts defined by `positions` (none applied by default).
 - Infinitely repeat the base obstruction every `repeats`.
 - Rotate the base obstructions by `rotation`.
 
-The [`BaseObstruction`](@ref) objects an already be initialised.
-If a [`BaseObstruction`](@ref) type is given instead it will be initialised using `args` and `kwargs` not used by `TransformObstruction`.
+If a [`BaseObstruction`](@ref) type is given instead it will be initialised using any `args` and `kwargs` not used by `TransformObstruction`.
 """
 struct TransformObstruction{N, M, K, B<:BoundingBox{N}, O<:BaseObstruction{N}} <: Obstruction{N}
     transforms::Vector{SingleTransform{N, B}}
@@ -37,6 +36,20 @@ struct TransformObstruction{N, M, K, B<:BoundingBox{N}, O<:BaseObstruction{N}} <
         lorentz_repeats = map(r -> isfinite(r) ? Int(div(lorentz_radius, r, RoundUp)) : 0, repeats)
         @assert length(obstructions) == length(positions)
         bounding_boxes = BoundingBox.(obstructions)
+        for (pos, bb, qq) in zip(positions, bounding_boxes, shift_quadrants)
+            u = upper(bb)
+            l = lower(bb)
+            for dim in 1:N
+                upper_limit = qq[dim] ? repeats[dim] : (repeats[dim] / 2)
+                lower_limit = qq[dim] ? zero(Float) : -(repeats[dim] / 2)
+                if (
+                    (u[dim] + pos[dim]) > upper_limit ||
+                    (l[dim] + pos[dim]) < lower_limit
+                )
+                    throw(DomainError("$(eltype(obstructions)) object at position $(pos) is too large along dimension $(dim) to fit within repeats of $(repeats[dim])um."))
+                end
+            end
+        end
         transforms = SingleTransform{N, eltype(bounding_boxes)}.(positions, shift_quadrants, bounding_boxes)
         new{N, length(obstructions), 3 * N, eltype(bounding_boxes), eltype(obstructions)}(transforms, obstructions, repeats, rotation, transpose(rotation), chi, lorentz_radius, lorentz_repeats)
     end

@@ -160,7 +160,7 @@ end
     @test mr.BoundingBox(mr.cylinders(1., positions=[2., 2.])) == mr.BoundingBox([1., 1.], [3, 3])
 
     # repeated obstructions
-    @test mr.BoundingBox(mr.cylinders(1., repeats=[1., 3.])) == mr.BoundingBox([-1, -1], [1, 1])
+    @test mr.BoundingBox(mr.cylinders(1., repeats=[2., 3.])) == mr.BoundingBox([-1, -1], [1, 1])
 
     # shifted spheres
     @test mr.BoundingBox(mr.spheres(1., positions=[[1, 0, 0], [0, 1, 0]])) == mr.BoundingBox([-1, -1, -1.], [2., 2., 1.])
@@ -240,4 +240,26 @@ end
     @test mr.size_scale(mr.annuli([0.5, 0.7], [0.6, 0.8])) == 0.5
     @test mr.size_scale(mr.box_mesh()) ≈ sqrt(0.5)
 
+end
+
+@testset "Test cutoff errors" begin
+    @testset "Cylinder at center, edge or corner" begin
+        @test_throws DomainError mr.cylinders(1., repeats=[1.5, 3.])
+        @test_throws DomainError mr.cylinders(1., repeats=[3, 1.5])
+
+        @test_throws DomainError mr.cylinders(1., repeats=[1.5, 3.], positions=[0.75, 0.])
+        @test_throws DomainError mr.cylinders(1., repeats=[1.5, 3.], positions=[0.75, 1.5])
+    end
+    @testset "Cylinder at intermediate positions" begin
+        mr.cylinders(1., repeats=[2.5, 3.], positions=[0., 0.])
+        mr.cylinders(1., repeats=[2.5, 3.], positions=[2.5, 0.])
+        mr.cylinders(1., repeats=[2.5, 3.], positions=[2.5, 3.])
+
+        @test_throws DomainError mr.cylinders(1., repeats=[2.5, 3.], positions=[0.6, 0.])
+        @test_throws DomainError mr.cylinders(1., repeats=[2.5, 3.], positions=[0.625, 0.])
+        @test_throws DomainError mr.cylinders(1., repeats=[2.5, 3.], positions=[0.65, 0.])
+        mr.cylinders(1., repeats=[2.5, 4.], positions=[2.5, 0.9])
+        mr.cylinders(1., repeats=[2.5, 4.], positions=[2.5, 1.])
+        mr.cylinders(1., repeats=[2.5, 4.], positions=[2.5, 1.1])
+    end
 end

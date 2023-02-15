@@ -4,6 +4,8 @@ All notable changes to MCMRSimulator.jl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+### Fixed
+- A `DomainError` is now thrown when obstructions are cut off by the repeats.
 ## [0.5.0]
 ### Added
 - Finite RF pulses (`RFPulse`) to more realistically model the effect of these pulses.
