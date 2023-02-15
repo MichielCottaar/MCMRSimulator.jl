@@ -10,7 +10,7 @@ end
 Wall(; kwargs...) = Wall(ObstructionProperties(; kwargs...))
 
 isinside(wall::Wall, pos::PosVector) = false
-BoundingBox(wall::Wall) = BoundingBox(SA[0], SA[0])
+BoundingBox(wall::Wall) = BoundingBox{1}(0)
 
 """
     walls(positions=0, repeats=Inf, rotation=I(3))

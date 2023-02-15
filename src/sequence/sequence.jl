@@ -191,9 +191,9 @@ end
 
 function gradient(position, part::SequencePart, t1, t2)
     grad = zero(Float)
-    for (index, shape_part) in zip(1:3, [part.Gx, part.Gy, part.Gz])
-        grad += amplitude(shape_part, t1, t2) * (position[index] - part.origin[index])
-    end
+    grad += amplitude(part.Gx, t1, t2) * (position[1] - part.origin[1])
+    grad += amplitude(part.Gy, t1, t2) * (position[2] - part.origin[2])
+    grad += amplitude(part.Gz, t1, t2) * (position[3] - part.origin[3])
     grad
 end
 

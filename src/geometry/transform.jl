@@ -1,8 +1,8 @@
 using StaticArrays
-struct SingleTransform{N, O}
+struct SingleTransform{N, B<:BoundingBox{N}}
     shift::SVector{N, Float}
     quadrant::SVector{N, Bool}
-    obstruction::O
+    bounding_box::B
 end
 
 """
@@ -17,8 +17,9 @@ Transforms the [`BaseObstruction`](@ref) objects in `base` in one of several way
 The [`BaseObstruction`](@ref) objects an already be initialised.
 If a [`BaseObstruction`](@ref) type is given instead it will be initialised using `args` and `kwargs` not used by `TransformObstruction`.
 """
-struct TransformObstruction{N, M, K, O<:BaseObstruction{N}} <: Obstruction{N}
-    obstructions::Vector{SingleTransform{N, O}}
+struct TransformObstruction{N, M, K, B<:BoundingBox{N}, O<:BaseObstruction{N}} <: Obstruction{N}
+    transforms::Vector{SingleTransform{N, B}}
+    obstructions::Vector{O}
     repeats::SVector{N, Float}
     rotation::SMatrix{3, N, Float, K}
     inv_rotation::SMatrix{N, 3, Float, K}
@@ -35,12 +36,13 @@ struct TransformObstruction{N, M, K, O<:BaseObstruction{N}} <: Obstruction{N}
         chi = sum(total_susceptibility, obstructions) / prod(repeats)
         lorentz_repeats = map(r -> isfinite(r) ? Int(div(lorentz_radius, r, RoundUp)) : 0, repeats)
         @assert length(obstructions) == length(positions)
-        singles = SingleTransform{N, eltype(obstructions)}.(positions, shift_quadrants, obstructions)
-        new{N, length(obstructions), 3 * N, eltype(obstructions)}(singles, repeats, rotation, transpose(rotation), chi, lorentz_radius, lorentz_repeats)
+        bounding_boxes = BoundingBox.(obstructions)
+        transforms = SingleTransform{N, eltype(bounding_boxes)}.(positions, shift_quadrants, bounding_boxes)
+        new{N, length(obstructions), 3 * N, eltype(bounding_boxes), eltype(obstructions)}(transforms, obstructions, repeats, rotation, transpose(rotation), chi, lorentz_radius, lorentz_repeats)
     end
 end
 
-function Base.show(io::IO, geom::TransformObstruction{N, M, K, O}) where {N, M, K, O}
+function Base.show(io::IO, geom::TransformObstruction{N, M, K, B, O}) where {N, M, K, B, O}
     print(io, "$(length(geom.obstructions)) ")
     if any(isfinite.(geom.repeats))
         print(io, "repeating ")
@@ -165,14 +167,18 @@ function detect_collision(movement :: Movement{3}, trans :: TransformObstruction
     if !any(isfinite, trans.repeats)
         current_guess = empty_collision
 
-        for single in trans.obstructions
-            ctest = detect_collision(
-                Movement{N}(projected_origin - single.shift, projected_destination - single.shift, Float(1)),
-                single.obstruction,
-                previous
-            )
-            if ctest.distance < current_guess.distance
-                current_guess = ctest
+        for (index, single) in enumerate(trans.transforms)
+            shifted_origin = projected_origin - single.shift
+            shifted_destination = projected_destination - single.shift
+            if possible_intersection(single.bounding_box, shifted_origin, shifted_destination)
+                ctest = detect_collision(
+                    Movement{N}(shifted_origin, shifted_destination, Float(1)),
+                    trans.obstructions[index],
+                    previous
+                )
+                if ctest.distance < current_guess.distance
+                    current_guess = ctest
+                end
             end
         end
     elseif all(isfinite, trans.repeats)
@@ -209,7 +215,7 @@ function detect_collision_repeats(
     # project onto 1x1x1 grid
     grid_origin = map(/, origin, half_repeats)
     grid_destination = map(/, destination, half_repeats)
-    if all(floor(o) == floor(d) for (o, d) in zip(grid_origin, grid_destination))
+    if all(floor.(grid_origin) .== floor.(grid_destination))
         voxel = map(i->Int(floor(i)), grid_origin)
         return _detect_collision_repeats_helper(trans, voxel, half_repeats, origin, destination, previous)
     end
@@ -224,7 +230,7 @@ function detect_collision_repeats(
     return empty_collision
 end
 
-function _detect_collision_repeats_helper(trans::TransformObstruction{N, M}, voxel, half_repeats, origin, destination, previous) where {N, M}
+@inline function _detect_collision_repeats_helper(trans::TransformObstruction{N, M}, voxel::SVector{N, Int}, half_repeats::SVector{N, Float}, origin::SVector{N, Float}, destination::SVector{N, Float}, previous::Collision) where {N, M}
     lower = map(v -> mod(v, 2), voxel)
         
     voxel_orig = map(*, voxel + lower, half_repeats)
@@ -234,15 +240,19 @@ function _detect_collision_repeats_helper(trans::TransformObstruction{N, M}, vox
 
     current_guess = empty_collision
     for index in 1:M
-        t = trans.obstructions[index]
+        t = trans.transforms[index]
         to_shift = map((s, q, t) -> s - q * t, t.shift, t.quadrant, to_correct)
-        ctest = detect_collision(
-            Movement{N}(p1 - to_shift, p2 - to_shift, Float(1)),
-            t.obstruction,
-            previous
-        )
-        if ctest.distance < current_guess.distance
-            current_guess = ctest
+        shift1 = p1 - to_shift
+        shift2 = p2 - to_shift
+        if possible_intersection(t.bounding_box, shift1, shift2)
+            ctest = detect_collision(
+                Movement{N}(p1 - to_shift, p2 - to_shift, Float(1)),
+                trans.obstructions[index],
+                previous
+            )
+            if ctest.distance < current_guess.distance
+                current_guess = ctest
+            end
         end
     end
     return current_guess
@@ -250,14 +260,23 @@ end
 
 function isinside(trans::TransformObstruction, pos::PosVector) 
     pos_func = project_repeat(trans, project_rotation(trans, pos))
-    return maximum(o -> isinside(o.obstruction, pos_func(o)), trans.obstructions)
+    inside = 0
+    for (index, t) in enumerate(trans.transforms)
+        p = pos_func(t)
+        if isinside(t.bounding_box, p)
+            value = isinside(trans.obstructions[index], p)
+            if value > inside
+                inside = value
+            end
+        end
+    end
+    return inside
 end
 
 function BoundingBox(trans::TransformObstruction{N}) where {N}
-    bbs = [BoundingBox(s.obstruction) for s in trans.obstructions]
-    lower_bounds = [bb.lower + o.shift for (bb, o) in zip(bbs, trans.obstructions)]
-    upper_bounds = [bb.upper + o.shift for (bb, o) in zip(bbs, trans.obstructions)]
-    bb = BoundingBox(
+    lower_bounds = [lower(t.bounding_box) + t.shift for t in trans.transforms]
+    upper_bounds = [upper(t.bounding_box) + t.shift for t in trans.transforms]
+    return BoundingBox(
         SVector{N, Float}([minimum(b -> b[dim], lower_bounds) for dim in 1:N]),
         SVector{N, Float}([maximum(b -> b[dim], upper_bounds) for dim in 1:N]),
     )
@@ -273,10 +292,9 @@ function off_resonance(transform::TransformObstruction{N, M}, position::PosVecto
     positions_func = project_repeat(transform, project_rotation(transform, position))
     total = zero(Float)
     for index in 1:M
-        s = transform.obstructions[index]
         total += lorentz_off_resonance(
-            s.obstruction,
-            positions_func(s),
+            transform.obstructions[index],
+            positions_func(transform.transforms[index]),
             b0, finite_repeats, transform.lorentz_radius,
             transform.lorentz_repeats
         )
@@ -285,8 +303,8 @@ function off_resonance(transform::TransformObstruction{N, M}, position::PosVecto
 end
 
 function produces_off_resonance(transform::TransformObstruction)
-    for s in transform.obstructions
-        if produces_off_resonance(s.obstruction)
+    for o in transform.obstructions
+        if produces_off_resonance(o)
             return true
         end
     end
@@ -297,21 +315,20 @@ end
 function inside_MRI_properties(transform::TransformObstruction, position::PosVector)
     positions_func = project_repeat(transform, project_rotation(transform, position))
     return merge_mri_parameters((
-        inside_MRI_properties(single.obstruction, positions_func(single)) 
-        for single in transform.obstructions
+        inside_MRI_properties(obstruction, positions_func(single)) 
+        for (obstruction, single) in zip(transform.obstructions, transform.transforms)
     ))
 end
 
 
-size_scale(s::SingleTransform) = size_scale(s.obstruction)
 size_scale(t::TransformObstruction) = minimum(size_scale.(t.obstructions))
-function size_scale(t::TransformObstruction{N, M, K, Wall}) where {N, M, K}
+function size_scale(t::TransformObstruction{N, M, K, B, Wall}) where {N, M, K, B<:MCMRSimulator.BoundingBox{N}}
     min_dist = t.repeats[1]
-    for s1 in t.obstructions
-        pos1 = s1.shift
-        for s2 in t.obstructions
-            pos2 = s2.shift
-            dist = abs(pos1[1] - pos2[1])
+    for s1 in t.transforms
+        pos1 = s1.shift[1]
+        for s2 in t.transforms
+            pos2 = s2.shift[1]
+            dist = abs(pos1 - pos2)
             if iszero(dist)
                 continue
             end
@@ -327,4 +344,3 @@ function size_scale(t::TransformObstruction{N, M, K, Wall}) where {N, M, K}
 end
 
 off_resonance_gradient(t::TransformObstruction) = maximum(off_resonance_gradient.(t.obstructions))
-off_resonance_gradient(s::SingleTransform) = off_resonance_gradient(s.obstruction)

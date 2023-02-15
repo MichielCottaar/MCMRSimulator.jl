@@ -54,6 +54,8 @@ function spiral_theta(spiral::Spiral, pos::SVector{2, Float}; assume_inner=nothi
     theta + nwrap * 2π
 end
 
+BoundingBox(s::Spiral) = BoundingBox{2}(s.outer)
+
 """
     spirals(inner, outer; theta0=0., thickness=0.014, myelin=false, chi_I=-0.1, chi_A=-0.1, positions=[0, 0], repeats=[Inf, Inf], rotation=I(3)
 

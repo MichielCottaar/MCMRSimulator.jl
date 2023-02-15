@@ -25,7 +25,7 @@ function Cylinder(radius; chi_I=-0.1, chi_A=-0.1, g_ratio=1., kwargs...)
 end
 
 isinside(cyl::Cylinder, pos::SVector{2, Float}) = (pos[1] * pos[1] + pos[2] * pos[2]) <= (cyl.radius * cyl.radius)
-BoundingBox(c::Cylinder) = BoundingBox([-c.radius, -c.radius], [c.radius, c.radius])
+BoundingBox(c::Cylinder) = BoundingBox{2}(c.radius)
 
 function total_susceptibility(c::Cylinder)
     r_outer = 2 * c.radius / (1 + c.g_ratio)
@@ -104,7 +104,7 @@ function lorentz_off_resonance(cylinder::Cylinder, position::SVector{2, Float}, 
     end
     return field
 end
-``
+
 off_resonance_gradient(c::Cylinder) = abs(c.external_field / c.radius^3)
 
 produces_off_resonance(cylinder::Cylinder) = !(iszero(cylinder.internal_field) && iszero(cylinder.external_field))

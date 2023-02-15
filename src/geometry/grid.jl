@@ -78,7 +78,7 @@ Setting `size` to a single integer will set that number along each dimension
 (except dimensions of infinite size, which are always just one voxel wide).
 """
 struct GridShape{N}
-    bounding_box :: BoundingBox{N}
+    bounding_box :: GenericBoundingBox{N}
     size :: SVector{N, Int}
     voxel_size :: SVector{N, Float}
     inverse_voxel_size :: SVector{N, Float}

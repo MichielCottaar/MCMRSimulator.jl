@@ -154,7 +154,7 @@ end
 end
 @testset "Bounding boxes" begin
     # single obstruction
-    @test mr.BoundingBox(mr.Cylinder(1)) == mr.BoundingBox([-1, -1], [1, 1])
+    @test mr.BoundingBox(mr.Cylinder(1)) == mr.BoundingBox{2}(1)
 
     # shifted cylinder
     @test mr.BoundingBox(mr.cylinders(1., positions=[2., 2.])) == mr.BoundingBox([1., 1.], [3, 3])

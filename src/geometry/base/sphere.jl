@@ -23,7 +23,7 @@ function spheres(args...; kwargs...)
 end
 
 isinside(sphere::Sphere, pos::PosVector) = norm(pos) <= sphere.radius
-BoundingBox(s::Sphere) = BoundingBox([-s.radius, -s.radius, -s.radius], [s.radius, s.radius, s.radius])
+BoundingBox(s::Sphere) = BoundingBox{3}(s.radius)
 
 function detect_collision(movement :: Movement, sphere :: Sphere, previous=empty_collision) 
     inside = !collided(sphere, previous) ? -1 : Int(previous.inside)
@@ -35,14 +35,6 @@ function sphere_collision(movement :: Movement{N}, obstruction::Obstruction, ins
     origin = movement.origin
     destination = movement.destination
 
-    for dim in 1:N
-        if (
-            (origin[dim] > radius && destination[dim] > radius) ||
-            (origin[dim] < -radius && destination[dim] < -radius)
-        )
-            return empty_collision
-        end
-    end
     rsq_origin = sum(origin .* origin)
     inside = inside_index == -1 ? rsq_origin < radius * radius : Bool(inside_index)
     diff = destination - origin
