@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Fixed
 - A `DomainError` is now thrown when obstructions are cut off by the repeats.
+- The example `Scanner` objects were created with the wrong units. Their maximum gradient strengths and slew rates have now been fixed.
 ## [0.5.0]
 ### Added
 - Finite RF pulses (`RFPulse`) to more realistically model the effect of these pulses.

@@ -7,7 +7,7 @@ Properties of an MRI scanner relevant for the MR signal simulations.
 - [`max_slew_rate`](@ref): maximum rate of change in the gradient strength
 
 By default `gradient` and `slew_rate` are expected to be provided in units of, respectively, kHz/um and kHz/um/ms.
-However, if the keyword `units=:Tesla` is set, the `gradient` and `slew_rate` can be provided in terms of respectively mT/m and 
+However, if the keyword `units=:Tesla` is set, the `gradient` and `slew_rate` should be provided in units of, respectively, mT/m and T/m/s.
 """
 struct Scanner
     B0::Float
@@ -53,14 +53,14 @@ max_slew_rate(scanner::Scanner, units=:kHz) = units == :kHz ? scanner.slew_rate 
 """
 Siemens MAGNETOM 3T Prisma MRI scanner (https://www.siemens-healthineers.com/en-uk/magnetic-resonance-imaging/3t-mri-scanner/magnetom-prisma).
 """
-Siemens_Prisma = Scanner(B0=3., gradient=80, slew_rate=200)
+Siemens_Prisma = Scanner(B0=3., gradient=80, slew_rate=200, units=:Tesla)
 
 """
 Siemens MAGNETOM 7T Terra MRI scanner (https://www.siemens-healthineers.com/en-uk/magnetic-resonance-imaging/7t-mri-scanner/magnetom-terra)
 """
-Siemens_Terra = Scanner(B0=7., gradient=80, slew_rate=200)
+Siemens_Terra = Scanner(B0=7., gradient=80, slew_rate=200, units=:Tesla)
 
 """
 Siemens 3T Connectom MRI scanner ([fan22_MappingHumanConnectome](@cite)).
 """
-Siemens_Connectom = Scanner(B0=3., gradient=300, slew_rate=200)
+Siemens_Connectom = Scanner(B0=3., gradient=300, slew_rate=200, units=:Tesla)
