@@ -258,3 +258,5 @@ end
 function stick_probability(properties, diffusivity::Number, timestep::Number)
     return stick_probability(surface_density(properties), dwell_time(properties), diffusivity, timestep)
 end
+
+correct_for_timestep(probability, timestep) = 1 - (1 - probability)^sqrt(timestep)

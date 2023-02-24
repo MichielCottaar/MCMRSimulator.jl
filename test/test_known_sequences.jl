@@ -1,4 +1,4 @@
-@testset "Validate expected output from known sequences" begin
+@testset "test_known_sequences.jl: Validate expected output from known sequences" begin
     @testset "Diffusion MRI sequences" begin
         @testset "Relation between b-value, q-value and diffusion time" begin
             @test all(mr.derive_qval_time(80.) .≈ (0., 40.))

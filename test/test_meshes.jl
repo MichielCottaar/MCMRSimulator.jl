@@ -1,4 +1,4 @@
-@testset "Creating and using meshes" begin
+@testset "test_meshes.jl: Creating and using meshes" begin
     @testset "Computing normals" begin
         @test mr.normal(SA[0, 0, 0], SA[1, 0, 0], SA[0, 1, 0]) ≈ SA[0, 0, 1]
         @test mr.normal(SA[0, 0, 0], SA[2, 0, 0], SA[0, 1, 0]) ≈ SA[0, 0, 1]
@@ -57,7 +57,7 @@
         end
         @testset "Bounce on outside of box" begin
             mesh = mr.box_mesh()
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement(SA[0.1, 0.1, 1], SA[0.1, 0.1, -1], 2),
                 mesh
             )
@@ -68,7 +68,7 @@
         end
         @testset "Miss the box" begin
             mesh = mr.box_mesh()
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement(SA[0, 0, 1.1], SA[0, 1.1, 0], 2),
                 mesh
             )
@@ -78,7 +78,7 @@
         end
         @testset "Straight bounce within the box" begin
             mesh = mr.box_mesh()
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement(SA[0, 0, 0], SA[0, 0, 4], 4),
                 mesh
             )

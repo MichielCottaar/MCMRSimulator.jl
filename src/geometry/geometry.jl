@@ -15,7 +15,6 @@ include("grid.jl")          # Repeating grids
 include("base/base.jl")     # Base obstructions
 include("transform.jl")     # Transformations of base obstructions
 include("geometry_struct.jl")     # Transformations of base obstructions
-include("diffuse.jl")       # Actual diffusion algorithm
 
 
 """

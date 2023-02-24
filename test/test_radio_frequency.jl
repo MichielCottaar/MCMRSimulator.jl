@@ -1,4 +1,4 @@
-@testset "Using finite RF pulses (test_radio_frequency.jl)" begin
+@testset "test_radio_frequency.jl: Using finite RF pulses" begin
     @testset "Constant RF pulse without off-resonance" begin
         for phase in (0, 30)
             rf = mr.constant_pulse(0, 9, 90, phase0=phase)

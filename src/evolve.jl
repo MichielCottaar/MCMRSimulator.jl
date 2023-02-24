@@ -12,7 +12,7 @@ function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivit
     end
     relax!(spin, parts, geometry, 0, 1//2, default_properties.mri)
     @spin_rng spin begin
-        spin.position += random_gauss(diffusivity, timestep)
+        spin.position += randn(PosVector) .* sqrt(2 * diffusivity * timestep)
     end
     relax!(spin, parts, geometry, 1//2, 1, default_properties.mri)
 end
@@ -48,10 +48,10 @@ function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivit
                     if displacement ⋅ Collision(spin).normal < 0
                         displacement = -displacement
                     end
-                    new_pos = current_pos + displacement
                 else
-                    new_pos = final_position(Reflection(spin), (1 - current_time) * timestep)
+                    displacement = direction(Reflection(spin), (1 - current_time) * timestep)
                 end
+                new_pos = current_pos + displacement
 
                 reflection = spin.stuck_to
                 spin.stuck_to = empty_reflection
@@ -81,14 +81,14 @@ function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivit
             permeability_prob = correct_for_timestep(permeability(collision.properties, default_properties), timestep)
             passes_through = isone(permeability_prob) || !(iszero(permeability_prob) || rand() > permeability_prob)
             reflection = Reflection(collision, movement, timestep, next_time, passes_through)
-            current_pos = spin.position = reflection.surface_pos
+            current_pos = spin.position = @. (movement.origin * (1 - collision.distance) + movement.destination * collision.distance)
 
             sd = surface_density(collision.properties, default_properties)
             if !iszero(sd) && rand() < stick_probability(sd, dwell_time(collision.properties, default_properties), diffusivity, timestep)
                 spin.stuck_to = reflection
                 is_stuck = true
             else
-                new_pos = final_position(reflection)
+                new_pos = current_pos .+ direction(reflection)
             end
 
             current_time = next_time

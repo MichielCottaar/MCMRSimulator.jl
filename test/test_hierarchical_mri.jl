@@ -1,4 +1,4 @@
-@testset "Test hierarchal MRI" begin
+@testset "test_hierarchical_mri.jl" begin
     defaults = mr.GlobalProperties(R2=1.).mri
     for (obstruction, pos_in, pos_out) in [
         (mr.spheres(1., T1_inside=10., R2_inside=0.5), [0., 0, 0], [1, 2, 1.]),

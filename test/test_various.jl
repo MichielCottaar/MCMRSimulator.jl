@@ -1,4 +1,5 @@
 
+@testset "test_various.jl" begin
 @test length(detect_ambiguities(mr)) == 0
 @testset "Simple relaxation" begin
     orient = mr.Spin(transverse=1., longitudinal=0.).orientations[1]
@@ -262,4 +263,5 @@ end
         mr.cylinders(1., repeats=[2.5, 4.], positions=[2.5, 1.])
         mr.cylinders(1., repeats=[2.5, 4.], positions=[2.5, 1.1])
     end
+end
 end

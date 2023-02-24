@@ -1,3 +1,4 @@
+@testset "test_transfer.jl" begin
 @testset "Generate stuck particles" begin
     nspins = Int(1e5)
     @testset "Particles on repeating wall" begin
@@ -160,4 +161,5 @@ end
             end
         end
     end
+end
 end

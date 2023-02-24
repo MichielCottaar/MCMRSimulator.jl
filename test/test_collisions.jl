@@ -1,4 +1,5 @@
-@testset "Collision tests" begin
+@testset "test_collisions.jl" begin
+
     function compare(ms1 :: AbstractVector{<:mr.Movement}, ms2 :: AbstractVector{<:mr.Movement})
         @test length(ms1) == length(ms2)
         for (m1, m2) in zip(ms1, ms2)
@@ -9,7 +10,7 @@
     end
     @testset "Wall reflections" begin
         @testset "Hitting vertical wall directly" begin
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement([0, 0, 0], [3, 0, 0], 3.),
                 mr.walls(rotation=:x, positions=[1])
             )
@@ -22,7 +23,7 @@
             @test res[2].timestep ≈ 2.
         end
         @testset "Hitting vertical wall under angle" begin
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement([0, 0, 0], [3, 6, 0], Float(3.)),
                 mr.walls(rotation=:x, positions=[1])
             )
@@ -35,7 +36,7 @@
             @test res[2].timestep ≈ 2.
         end
         @testset "Missing vertical wall" begin
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement([0, 0, 0], [0, 2, 0], Float(4.)),
                 mr.walls(rotation=:x, positions=[1])
             )
@@ -45,7 +46,7 @@
             @test res[1].timestep == 4.
         end
         @testset "Hitting two vertical walls" begin
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement([0, 0, 0], [6, 0, 12], Float(30.)),
                 mr.walls(rotation=:x, positions=[-1, 1])
             )
@@ -64,7 +65,7 @@
             @test res[4].timestep ≈ 5.
         end
         @testset "Hitting vertical and horizontal walls" begin
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement([-1, 0, 0], [2, 3, 3], 3.),
                 [mr.walls(rotation=:x, positions=1.), mr.walls(rotation=:y, positions=1.)]
             )
@@ -80,7 +81,7 @@
             @test res[3].timestep ≈ 1.
         end
         @testset "Hitting a corner" begin
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement(SA[0, 0, 0], SA[3, 3, 3], Float(3.)),
                 [mr.walls(rotation=:x, positions=1.), mr.walls(rotation=:y, positions=1.)]
             )
@@ -96,7 +97,7 @@
             @test res[3].timestep ≈ 2.
         end
         @testset "Hitting diagonal wall" begin
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement([1, 0, 0], [1, 3, 0], 6.),
                 mr.walls(rotation=[1, 1, 0], positions=sqrt(2)),
             )
@@ -121,7 +122,7 @@
     end
     @testset "Sphere reflections" begin
         @testset "Remain within sphere" begin
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement([0, 0, 1.5], [6, 8, 6], 6.),
                 mr.spheres(1., positions=[0, 0, 2])
             )
@@ -132,7 +133,7 @@
     end
     @testset "Cylinder reflections" begin
         @testset "Within cylinder along radial line" begin
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement(SA[0, 0, 0], SA[6, 0, 6], 6.),
                 [mr.cylinders(1., rotation=:z)]
             )
@@ -151,7 +152,7 @@
             @test res[4].timestep ≈ 1.
         end
         @testset "90 degree bounces within vertical cylinder" begin
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement(SA[0, 1, 0], SA[10, 1, 0], 10.),
                 mr.cylinders(sqrt(2), rotation=:z, positions=[0, 0])
             )
@@ -165,7 +166,7 @@
             ])
         end
         @testset "90 degree bounces from outside vertical cylinder" begin
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement(SA[-2, 1, 0], SA[2, 1, 0], 4.),
                 [mr.cylinders(sqrt(2), rotation=:z, positions=[0, 0])]
             )
@@ -177,7 +178,7 @@
         @testset "Remain within angled cylinder" begin
             orient = [1, 2, sqrt(3)]
             cylinder = mr.cylinders(2.3, rotation=orient)
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement([0, 0.5, 0.3], [-30, 50, 10], 40.),
                 [cylinder]
             )
@@ -258,7 +259,7 @@
             cylinders = mr.cylinders(
                 sqrt(2), repeats=[3, 4]
             )
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement(SA[1, 2, 0], SA[1, 11, 9], 9.),
                 [cylinders]
             )
@@ -276,7 +277,7 @@
             cylinders = mr.cylinders(
                 1, repeats=[2, 4]
             )
-            res = mr.correct_collisions(
+            res = correct_collisions(
                 mr.Movement([1, 2, 0], [13, 6, 4], 12.),
                 [cylinders]
             )

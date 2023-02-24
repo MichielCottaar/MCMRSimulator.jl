@@ -1,4 +1,4 @@
-@testset "Test permeability" begin
+@testset "test_permeability.jl" begin
     for set_global in (false, true)
         @testset "Test single sphere for set_global=$set_global" begin
             Random.seed!(1234)

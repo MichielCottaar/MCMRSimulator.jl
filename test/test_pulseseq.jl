@@ -1,4 +1,4 @@
-@testset "Test pulseseq input" begin
+@testset "test_pulseseq.jl" begin
     directory = joinpath(pwd(), "example_pulseseq")
     @testset "read fiddisp.seq" begin
         keywords = open(mr.read_pulseseq_sections, joinpath(directory, "fiddisp.seq"))

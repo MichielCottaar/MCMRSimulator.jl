@@ -1,4 +1,4 @@
-@testset "Evolve a single spin fully" begin
+@testset "test_evolve.jl" begin
     @testset "Timings of readouts" begin
         @testset "Explicitly setting timestep" begin
             s1 = mr.dwi(bval=0.)

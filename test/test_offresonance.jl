@@ -1,5 +1,5 @@
 
-@testset "Off-resonance field estimation" begin
+@testset "test_offresonance.jl" begin
     @testset "Cylinder off-resonance field" begin
         @testset "Unmyelinated cylinder produces no field" begin
             cylinders = mr.cylinders(1.)
