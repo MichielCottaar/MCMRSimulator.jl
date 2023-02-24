@@ -14,7 +14,7 @@ MCMRSimulator.jl comes with a variety of basic components that can be used to re
 The constructors for these components all have a similar interface.
 Some expect certain component-specific arguments (e.g., radii for [`spheres`](@ref) and [`cylinders`](@ref).
 Some also have component-specific keyword argumetns (e.g., the keywords regarding the off-resonance produces by [Myelinated cylinders](@ref Myelinated_cylinders)).
-MRI relaxation properties within the obstruction and collision parameters (magnetisation transfer rate & permeability) can be set using keyword arguments as described in [`ObstructionProperties`](ref).
+MRI relaxation properties within the obstruction and collision parameters (magnetisation transfer rate & permeability) can be set using keyword arguments as described in [`ObstructionProperties`](@ref).
 Finally, they expect a set of keyword arguments that control their location.
 These arguments are identicaly across all constructors (although the expected input depends on the dimensionality of the component as listed in the table above):
 - `positions`: Set the positions for each generated components

@@ -65,7 +65,15 @@ end
 get_shift_quadrants(shift::SVector{N, Float}, repeats::SVector{N, Float}) where {N} = map((s, r) -> isfinite(r) && s > r/4., shift, repeats)
 
 function TransformObstruction(Obstruction::Type{<:BaseObstruction{N}}, args...; positions=nothing, repeats=0., rotation=one(Rotations.RotMatrix{3}), lorentz_radius=10., kwargs...) where {N}
-    o = Obstruction.(args...; kwargs...)
+    n_args = length(args)
+    keywords = keys(kwargs)
+    function call_constructor(arguments...)
+        args = arguments[1:n_args]
+        keyword_values = arguments[n_args+1:end]
+        kwargs = Dict(symbol => value for (symbol, value) in zip(keywords, keyword_values))
+        Obstruction(args...; kwargs...)
+    end
+    o = call_constructor.(args..., values(kwargs)...)
     TransformObstruction(o; positions=positions, repeats=repeats, rotation=rotation, lorentz_radius=lorentz_radius)
 end
 
@@ -130,6 +138,28 @@ function get_rotation(rotation::Symbol, ndim::Int)
         end
     end
     SMatrix{3, ndim, Float}(target)
+end
+
+full_rotation_mat(transform::TransformObstruction{3}) = transform.rotation
+function full_rotation_mat(transform::TransformObstruction{2})
+    v1 = transform.rotation[:, 1]
+    v2 = transform.rotation[:, 2]
+    v3 = cross(v1, v2)
+    return SMatrix{3, 3, Float, 9}(hcat(v1, v2, v3))
+end
+function full_rotation_mat(transform::TransformObstruction{1})
+    v1 = transform.rotation[:, 1]
+    v2 = v1
+    for try_v2 in ([1, 0, 0], [0, 1, 0])
+        v2_unnorm = cross(v1, try_v2)
+        v2_norm = norm(v2_unnorm)
+        if iszero(v2_norm)
+            continue
+        end
+        v2 = v2_unnorm / v2_norm
+    end
+    v3 = cross(v1, v2)
+    return SMatrix{3, 3, Float, 9}(hcat(v1, v2, v3))
 end
 
 function TransformObstruction(obstructions::AbstractVector{<:BaseObstruction{N}}; positions=nothing, repeats=0., rotation=one(Rotations.RotMatrix{3}), lorentz_radius=10) where {N}
@@ -271,16 +301,13 @@ end
     return current_guess
 end
 
-function isinside(trans::TransformObstruction, pos::PosVector) 
+function isinside(trans::TransformObstruction, pos::PosVector, stuck_to::Collision=empty_collision) 
     pos_func = project_repeat(trans, project_rotation(trans, pos))
     inside = 0
     for (index, t) in enumerate(trans.transforms)
         p = pos_func(t)
         if isinside(t.bounding_box, p)
-            value = isinside(trans.obstructions[index], p)
-            if value > inside
-                inside = value
-            end
+            inside += isinside(trans.obstructions[index], p, stuck_to)
         end
     end
     return inside
@@ -357,3 +384,15 @@ function size_scale(t::TransformObstruction{N, M, K, B, Wall}) where {N, M, K, B
 end
 
 off_resonance_gradient(t::TransformObstruction) = maximum(off_resonance_gradient.(t.obstructions))
+max_timestep_sticking(container::TransformObstruction, default_properties::GlobalProperties, diffusivity::Number) = maximum([max_timestep_sticking(o, default_properties, diffusivity) for o in container.obstructions])
+
+function random_surface_spins(transform::TransformObstruction{N}, bounding_box::BoundingBox, volume_density::Number, default_surface_density; nsequences=1, kwargs...) where {N}
+    rot_mat = full_rotation_mat(transform)
+    inv_rot_mat = inv(rot_mat)
+    rotated_bb = rotate(bounding_box, inv_rot_mat)
+    all_spins = vcat([random_surface_spins(o, rotated_bb, volume_density, transform.repeats, default_surface_density, s.shift; kwargs...) for (o, s) in zip(transform.obstructions, transform.transforms)]...)
+    for spin in all_spins
+        spin.position = rot_mat * spin.position
+    end
+    return filter(spin->isinside(bounding_box, spin), all_spins)
+end

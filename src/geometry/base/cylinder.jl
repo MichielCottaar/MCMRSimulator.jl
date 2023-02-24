@@ -24,7 +24,7 @@ function Cylinder(radius; chi_I=-0.1, chi_A=-0.1, g_ratio=1., kwargs...)
     Cylinder(Float(radius), ObstructionProperties(; kwargs...), g_ratio, chi_I, chi_A, internal_field, external_field)
 end
 
-isinside(cyl::Cylinder, pos::SVector{2, Float}) = (pos[1] * pos[1] + pos[2] * pos[2]) <= (cyl.radius * cyl.radius)
+isinside(cyl::Cylinder, pos::SVector{2, Float}, stuck_to::Collision) = Int(collided(cyl, stuck_to) ? stuck_to.inside : (pos[1] * pos[1] + pos[2] * pos[2]) <= (cyl.radius * cyl.radius))
 BoundingBox(c::Cylinder) = BoundingBox{2}(c.radius)
 
 function total_susceptibility(c::Cylinder)
@@ -125,3 +125,14 @@ function random_cylinders(target_density; repeats, distribution=nothing, mean_ra
 end
 
 size_scale(cylinder::Cylinder) = cylinder.radius
+
+function random_surface_positions(cylinder::Cylinder, total_density::Number)
+    nspins = Int(floor(total_density * 2π * cylinder.radius + rand()))
+    theta = rand(nspins) .* 2π
+    positions = SVector{2, Float}.(zip(
+        cos.(theta) .* cylinder.radius,
+        sin.(theta) .* cylinder.radius,
+    ))
+    normals = -positions ./ cylinder.radius
+    return (positions, normals, zeros(Int, nspins))
+end

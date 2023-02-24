@@ -20,6 +20,7 @@ struct SymmetricBoundingBox{N} <: BoundingBox{N}
 end
 
 BoundingBox{N}(radius::Number) where {N} = SymmetricBoundingBox{N}(radius)
+BoundingBox(radius::Number) = SymmetricBoundingBox{3}(radius)
 
 lower(bb::SymmetricBoundingBox{N}) where {N} = SVector{N, Float}(fill(-bb.radius, N))
 upper(bb::SymmetricBoundingBox{N}) where {N} = SVector{N, Float}(fill(bb.radius, N))
@@ -121,4 +122,17 @@ function expand(bb::BoundingBox, ratio=1.)
     sz = upper(bb) - lower(bb)
     shift = (sz .* ratio .- 1) ./ 2
     BoundingBox(lower(bb) - shift, upper(bb) + shift)
+end
+
+"""
+    rotate(bounding_box, rot_mat)
+
+Rotate the bounding box given a (NxM) rotation matrix.
+A new bounding box is returned that contains the old one.
+"""
+function rotate(bb::BoundingBox{N}, rotation_matrix::SMatrix{M, N}) where {N, M}
+    all_corners = [rotation_matrix * c for c in corners(bb)]
+    lower = SVector{M}([minimum([c[index] for c in all_corners]) for index in 1:M])
+    upper = SVector{M}([maximum([c[index] for c in all_corners]) for index in 1:M])
+    return BoundingBox(lower, upper)
 end

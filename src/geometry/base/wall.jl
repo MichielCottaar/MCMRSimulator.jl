@@ -9,7 +9,7 @@ struct Wall <: BaseObstruction{1}
 end
 Wall(; kwargs...) = Wall(ObstructionProperties(; kwargs...))
 
-isinside(wall::Wall, pos::PosVector) = false
+isinside(wall::Wall, pos::SVector{1, Float}, stuck_to::Collision) = 0
 BoundingBox(wall::Wall) = BoundingBox{1}(0)
 
 """
@@ -42,3 +42,7 @@ end
 
 size_scale(wall::Wall) = Inf
 
+function random_surface_positions(wall::Wall, total_density::Number)
+    nspins = Int(floor(total_density + rand()))
+    return (zeros(SVector{1, Float}, nspins), ones(SVector{1, Float}), zeros(Int, nspins))
+end

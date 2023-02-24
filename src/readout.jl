@@ -25,6 +25,8 @@ These parameters determine how parameters behave when hitting the [`BaseObstruct
 They can be overriden for individual [`BaseObstruction`] objects.
 - `MT_fraction`: the fraction of magnetisation transfered between the obstruction and the water spin at each collision.
 - `permeability`: the probability that the spin will pass through the obstruction.
+- `surface_density`: Density of spins stuck on the surface relative to the volume density of hte free water.
+- `dwell_time`: Typical time that spins will stay at the surface after getting stuck.
 Note that `MT_fraction` and `permeability` are internally adjusted to make their effect independent of the timestep (see [`correct_for_timestep`](@ref)).
 
 ## Timestep parameters
@@ -74,10 +76,12 @@ function Simulation(
     T1=NaN,
     R2=NaN,
     T2=NaN,
-    off_resonance=0.,
-    MT_fraction=0.,
-    permeability=0.,
-    diffusivity=0.,
+    off_resonance=0,
+    MT_fraction=0,
+    permeability=0,
+    diffusivity=0,
+    surface_density=0,
+    dwell_time=NaN,
     geometry=Obstruction[],
     max_timestep=nothing,
     gradient_precision=1.,
@@ -91,15 +95,19 @@ function Simulation(
         sequences = Sequence[]
     end
     geometry = Geometry(geometry)
+    default_properties = GlobalProperties(; 
+        R1=R1, T1=T1, R2=R2, T2=T2, off_resonance=off_resonance, 
+        MT_fraction=MT_fraction, permeability=permeability, surface_density=surface_density, dwell_time=dwell_time
+    )
     max_B0 = iszero(length(sequences)) ? 0 : maximum(B0.(sequences))
-    controller = TimeController(geometry, max_B0, diffusivity; max_timestep=max_timestep, gradient_precision=gradient_precision, rf_rotation=rf_rotation)
+    controller = TimeController(geometry, max_B0, diffusivity, default_properties; max_timestep=max_timestep, gradient_precision=gradient_precision, rf_rotation=rf_rotation)
     if iszero(diffusivity) && length(geometry) > 0
         @warn "Restrictive geometry will have no effect, because the diffusivity is set at zero"
     end
     return Simulation(
         sequences, 
         Float(diffusivity),
-        GlobalProperties(; R1=R1, T1=T1, R2=R2, T2=T2, off_resonance=off_resonance, MT_fraction=MT_fraction, permeability=permeability),
+        default_properties,
         geometry,
         controller,
         flatten,
@@ -119,29 +127,29 @@ function Base.show(io::IO, sim::Simulation{N}) where {N}
     end
 end
 
-_to_snapshot(spins::Int, nseq) = _to_snapshot(Snapshot(spins), nseq)
-_to_snapshot(spins::AbstractVector{<:Real}, nseq) = _to_snapshot(Spin(position=spins), nseq)
-_to_snapshot(spins::AbstractVector{<:AbstractVector{<:Real}}, nseq) = _to_snapshot([Spin(position=pos) for pos in spins], nseq)
-function _to_snapshot(spins::AbstractMatrix{<:Real}, nseq) 
+function Snapshot(nspins::Integer, simulation::Simulation, bounding_box=500; kwargs...)
+    Snapshot(nspins, bounding_box, simulation.geometry, surface_density(simulation.properties); kwargs...)
+end
+_to_snapshot(spins::Int, simulation::Simulation, bounding_box) = _to_snapshot(Snapshot(spins, simulation, bounding_box), simulation, bounding_box)
+_to_snapshot(spins::AbstractVector{<:Real}, simulation::Simulation, bounding_box) = _to_snapshot(Spin(position=spins), simulation, bounding_box)
+_to_snapshot(spins::AbstractVector{<:AbstractVector{<:Real}}, simulation::Simulation, bounding_box) = _to_snapshot([Spin(position=pos) for pos in spins], simulation, bounding_box)
+function _to_snapshot(spins::AbstractMatrix{<:Real}, simulation::Simulation, bounding_box) 
     if size(spins, 2) != 3
         spins = transpose(spins)
     end
     @assert size(spins, 2) == 3
-    _to_snapshot(Spin.(spins), nseq)
+    _to_snapshot([spins[i, :] for i in 1:size(spins, 1)], simulation, bounding_box)
 end
-_to_snapshot(spins::Spin, nseq) = _to_snapshot([spins], nseq)
-_to_snapshot(spins::AbstractVector{<:Spin}, nseq) = _to_snapshot(Snapshot(spins), nseq)
-_to_snapshot(spins::Snapshot{1}, nseq::Int) = nseq == 1 ? spins : Snapshot(spins, nseq)
-function _to_snapshot(spins::Snapshot{N}, nseq::Int) where {N}
-    @assert nseq == N
-    spins
-end
+_to_snapshot(spins::Spin, simulation::Simulation, bounding_box) = _to_snapshot([spins], simulation, bounding_box)
+_to_snapshot(spins::AbstractVector{<:Spin}, simulation::Simulation, bounding_box) = _to_snapshot(Snapshot(spins), simulation, bounding_box)
+_to_snapshot(spins::Snapshot{1}, simulation::Simulation{nseq}, bounding_box) where {nseq} = nseq == 1 ? spins : Snapshot(spins, nseq)
+_to_snapshot(spins::Snapshot{N}, simulation::Simulation{N}, bounding_box) where {N} = spins
 
 produces_off_resonance(sim::Simulation) = produces_off_resonance(sim.geometry)
 propose_times(sim::Simulation, t_start, t_end) = propose_times(sim.time_controller, t_start, t_end, sim.sequences, sim.diffusivity)
 
 """
-    readout(snapshot, simulation)
+    readout(snapshot, simulation; bounding_box=<1x1x1 mm box>)
 
 Evolves the spins in the [`Snapshot`](@ref) through the [`Simulation`](@ref).
 Returns the [`Snapshot`](@ref) at every [`Readout`](@ref) in the simulated sequences during a single TR.
@@ -151,8 +159,8 @@ The return object depends on whether the simulation was created with a single se
 - For a single sequence object a vector of [`Snapshot`](@ref) objects is returned with a single snapshot for each [`Readout`](@ref) in the sequence.
 - For a vector of sequences a vector of vectors of [`Snapshot`](@ref) objects is returned. Each element in the outer vector contains the result for a single sequence.
 """
-function readout(spins, simulation::Simulation{N}) where {N}
-    snapshot = _to_snapshot(spins, N)
+function readout(spins, simulation::Simulation{N}; bounding_box=500) where {N}
+    snapshot = _to_snapshot(spins, simulation, bounding_box)
 
     readout_times = Float[]
     per_seq_times = Vector{Float}[]
@@ -190,14 +198,14 @@ function readout(spins, simulation::Simulation{N}) where {N}
 end
 
 """
-    trajectory(snapshot, simulation, times=[TR])
+    trajectory(snapshot, simulation, times=[TR]; bounding_box=<1x1x1 mm box>)
 
 Evolves the [`Snapshot`](@ref) through the [`Simulation`](@ref) and outputs at the requested times.
 Returns a vector of [`Snapshot`](@ref) objects with the current state of each time in times.
 When you are only interested in the signal at each timepoint, use [`signal`](@ref) instead.
 """
-function trajectory(spins, simulation::Simulation{N}, times) where{N}
-    snapshot = _to_snapshot(spins, N)
+function trajectory(spins, simulation::Simulation{N}, times; bounding_box=500) where {N}
+    snapshot = _to_snapshot(spins, simulation, bounding_box)
     result = Array{typeof(snapshot)}(undef, size(times))
     for index in sortperm(times)
         snapshot = evolve_to_time(snapshot, simulation, Float(times[index]))
@@ -207,7 +215,7 @@ function trajectory(spins, simulation::Simulation{N}, times) where{N}
 end
 
 """
-    signal(snapshot, simulation, times=[TR])
+    signal(snapshot, simulation, times=[TR]; bounding_box=<1x1x1 mm box>)
 
 Evolves the [`Snapshot`](@ref) through the [`Simulation`](@ref) and outputs the total signal at the requested times.
 To get the full snapshot at each timepoint use [`trajectory`](@ref).
@@ -216,8 +224,8 @@ The return object depends on whether the simulation was created with a single se
 - For a single sequence object a vector of [`SpinOrientation`](@ref) object with the total signal at each time is returned.
 - For a vector of sequences the return type is a (Nt, Ns) matrix of [`SpinOrientation`](@ref) objects for `Nt` timepoints and `Ns` sequences.
 """
-function signal(spins, simulation::Simulation{N}, times) where {N}
-    snapshot = _to_snapshot(spins, N)
+function signal(spins, simulation::Simulation{N}, times; bounding_box=500) where {N}
+    snapshot = _to_snapshot(spins, simulation, bounding_box)
     if simulation.flatten
         result = Array{SpinOrientation}(undef, size(times))
     else
@@ -237,14 +245,14 @@ function signal(spins, simulation::Simulation{N}, times) where {N}
 end
 
 """
-    evolve(snapshot, simulation[, new_time])
+    evolve(snapshot, simulation[, new_time]; bounding_box=<1x1x1 mm box>)
 
 Evolves the [`Snapshot`](@ref) through the [`Simulation`](@ref) to a new time.
 Returns a [`Snapshot`](@ref) at the new time, which can be used as a basis for further simulation.
 By default it will simulate till the start of the next TR.
 """
-function evolve(spins, simulation::Simulation{N}, new_time=nothing) where {N}
-    snapshot = _to_snapshot(spins, N)
+function evolve(spins, simulation::Simulation{N}, new_time=nothing; bounding_box=500) where {N}
+    snapshot = _to_snapshot(spins, simulation, bounding_box)
     if isnothing(new_time)
         TR = simulation.sequences[1].TR
         new_time = (div(nextfloat(snapshot.time), TR, RoundDown) + 1) * TR

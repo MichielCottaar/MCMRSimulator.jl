@@ -2,9 +2,10 @@
     TimeController(geometry, B0, diffusivity; max_stepsize=<see docs>, gradient_precision=1, rf_rotation=1)
 
 Stores the settings controlling the maximum timestep during the simulation, namely:
-- `max_timestep`: Generic maximum timestep that is considered throughout the simulation. By default this is set by the minimum of the following two options:
+- `max_timestep`: Generic maximum timestep that is considered throughout the simulation. By default this is set by the minimum of the following three options:
     1. ``\\Delta t_1 = l^2/(2 D)``, where `l` is the [`size_scale`](@ref) of the geometry, and ``D`` is the `diffusivity`.
     2. ``\\Delta t_2 = D^{-1/3} (360 * G)^{-2/3} / p``, where ``p`` is the `gradient_precision`, and ``G`` is the maximum off-resonance gradient due to the geometry (see [`off_resonance_gradient`](@ref)).
+    3. The timestep required to keep the probability of the spins getting stuck on the surface at a collision below 1.
 - `gradient_precision`: maximum error in the phase that a spin should incur while a gradient is active in any of the sequences (units: degrees). 
     If `max_stepsize` is not set by the user, it is also applied to any geometry-applied gradients (see point 2 above).
 - `rf_rotation`: Maximum amount of rotation that an RF pulse should be able to apply in a single timestep (units: degrees).
@@ -18,12 +19,16 @@ struct TimeController
     rf_rotation :: Float
 end
 
-function TimeController(geometry::Geometry, B0::Number, diffusivity::Number; max_timestep=nothing, gradient_precision=1., rf_rotation=1.)
+function TimeController(geometry::Geometry, B0::Number, diffusivity::Number, default_properties::GlobalProperties; max_timestep=nothing, gradient_precision=1., rf_rotation=1.)
+    mt_stick = max_timestep_sticking(geometry, default_properties, diffusivity)
     if isnothing(max_timestep)
         max_timestep = min(
             size_scale(geometry),
-            max_timestep_internal_gradient(geometry, gradient_precision, diffusivity, B0)
+            max_timestep_internal_gradient(geometry, gradient_precision, diffusivity, B0),
+            mt_stick
         )
+    elseif max_timestep > mt_stick
+        throw(DomainError("Maximum timestep is set by the user to $(max_timestep)ms. However, it can not be longer than $(mt_stick)ms, because the probability of particles sticking to the surface would be larger than 1."))
     end
     TimeController(Float(max_timestep), Float(gradient_precision), Float(rf_rotation))
 end

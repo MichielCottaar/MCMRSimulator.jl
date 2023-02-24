@@ -31,10 +31,10 @@ using Statistics
 
 include("constants.jl")
 include("scanner.jl")
-include("spin.jl")
 include("properties.jl")
-include("sequence/sequence.jl")
 include("geometry/geometry.jl")
+include("spin.jl")
+include("sequence/sequence.jl")
 include("timestep.jl")
 include("relax.jl")
 include("readout.jl")

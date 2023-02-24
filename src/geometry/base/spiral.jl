@@ -25,7 +25,10 @@ function Spiral(inner, outer; theta0=zero(Float), thickness=0.014, myelin=false,
     Spiral(Float(inner), Float(outer), Float(theta0), Float(theta_end), Float(thickness), closed, inner_cylinder, outer_cylinder, Annulus(inner, outer, myelin=myelin, chi_I=chi_I, chi_A=chi_A), ObstructionProperties(; kwargs...))
 end
 
-function isinside(s::Spiral, pos::SVector{2, Float})
+function isinside(s::Spiral, pos::SVector{2, Float}, stuck_to::Collision)
+    if collided(s, pos)
+        return 1
+    end
     return isinside(s.equivalent_annulus, pos)
 end
 

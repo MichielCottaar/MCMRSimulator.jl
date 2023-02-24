@@ -17,7 +17,7 @@ Geometry(obstructions::AbstractVector) = Geometry(obstructions...)
 Geometry(g::Geometry) = g
 
 
-isinside(geom::Geometry, pos::PosVector) = maximum([isinside(o, pos) for o in geom.obstructions])
+isinside(geom::Geometry, pos::PosVector, stuck_to::Collision) = sum([isinside(o, pos, stuck_to) for o in geom.obstructions])
 
 Base.length(geom::Geometry{N}) where {N} = N
     
@@ -80,7 +80,6 @@ function inside_MRI_properties(geom::Geometry{N}, position::PosVector, global_pr
 end
 inside_MRI_properties(geom::Geometry{0}, position::PosVector, global_props::MRIProperties) = global_props
 
-inside_MRI_properties(geom::Geometry, spin::Spin, global_props::MRIProperties) = inside_MRI_properties(geom, spin.position, global_props)
 inside_MRI_properties(geom::Geometry, position::AbstractVector, global_props::MRIProperties) = inside_MRI_properties(geom, PosVector(position), global_props)
 
 size_scale(geom::Geometry) = minimum(size_scale.(geom.obstructions))
@@ -88,3 +87,10 @@ size_scale(geom::Geometry{0}) = Inf
 
 off_resonance_gradient(geom::Geometry) = maximum(off_resonance_gradient.(geom.obstructions))
 off_resonance_gradient(geom::Geometry{0}) = zero(Float)
+
+max_timestep_sticking(container::Geometry, default_properties::GlobalProperties, diffusivity::Number) = maximum([max_timestep_sticking(o, default_properties, diffusivity) for o in container.obstructions])
+max_timestep_sticking(container::Geometry{0}, default_properties::GlobalProperties, diffusivity::Number) = Inf
+
+function random_surface_spins(geometry::Geometry, bounding_box::BoundingBox, volume_density::Number, default_surface_density::Number; kwargs...)
+    vcat([random_surface_spins(o, bounding_box, volume_density, default_surface_density; kwargs...) for o in geometry.obstructions]...)
+end

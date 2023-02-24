@@ -22,7 +22,7 @@ function spheres(args...; kwargs...)
     TransformObstruction(Sphere, args...; kwargs...)
 end
 
-isinside(sphere::Sphere, pos::PosVector) = norm(pos) <= sphere.radius
+isinside(sphere::Sphere, pos::PosVector, stuck_to::Collision) = Int(collided(sphere, stuck_to) ? stuck_to.inside : norm(pos) <= sphere.radius)
 BoundingBox(s::Sphere) = BoundingBox{3}(s.radius)
 
 function detect_collision(movement :: Movement, sphere :: Sphere, previous=empty_collision) 
@@ -84,3 +84,31 @@ function random_spheres(target_density; repeats, distribution=nothing, mean_radi
 end
 
 size_scale(sphere::Sphere) = sphere.radius
+
+"""
+    random_on_sphere()
+
+Draws a random orientation on the unit sphere as a length-3 vector
+
+The z-orientation is drawn a random number between -1 and 1.
+The angle in the x-y plane is drawn as a random number between 0 and 2π.
+This results in an unbiased random distribution across the sphere.
+"""
+function random_on_sphere()
+    z = rand(Float) * 2 - 1
+    r = sqrt(1 - z*z)
+    theta = rand(Float) * Float(2 * π)
+    (s, c) = sincos(theta)
+    return SA[
+        r * s,
+        r * c,
+        z
+    ]
+end
+
+function random_surface_positions(sphere::Sphere, total_density::Number)
+    nspins = Int(floor(total_density * 4π * sphere.radius^2 + rand()))
+    normals = [random_on_sphere() for _ in 1:nspins]
+    positions = -normals .* sphere.radius
+    return (positions, normals, zeros(Int, nspins))
+end

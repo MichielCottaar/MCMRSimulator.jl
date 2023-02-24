@@ -184,21 +184,28 @@
             final = res[end].destination
             radius = norm(final .- (orient ⋅ final) * orient / norm(orient) ^ 2)
             @test radius <= 2.3
-            @test mr.isinside(cylinder, final)
+            @test mr.isinside(cylinder, final) == 1
         end
         @testset "Remain within distant cylinder" begin
             Random.seed!(1234)
             geometry = mr.cylinders([0.8, 0.9], repeats=[2., 2.])
             c2 = mr.Cylinder(0.8)
             spin = mr.Spin(position=SA[200., 200., 0.])
-            @test mr.isinside(geometry, spin)
+            @test mr.isinside(geometry, spin) > 0
             inside = true
             seq_part = SVector{1}([mr.SequencePart(mr.Sequence(TR=10), 0, 1)])
             for _ in 1:100
                 mr.draw_step!(spin, seq_part, Float(3.), Float(0.5), mr.GlobalProperties(), mr.Geometry(geometry))
-                inside &= mr.isinside(geometry, spin)
+                inside &= mr.isinside(geometry, spin) > 0
             end
             @test inside
+        end
+        @testset "Test variance of parallel displacement within cylinder" begin
+            Random.seed!(1234)
+            sim = mr.Simulation([], geometry=mr.cylinders(0.8), diffusivity=3.)
+            snap = mr.evolve(zeros(100000, 3), sim, 10)
+            zval = map(spin -> spin.position[3], snap)
+            @test var(zval) ≈ 60. rtol=0.05
         end
     end
     @testset "Ray-grid intersections with undefined grid" begin
@@ -290,8 +297,8 @@
 
                 simulation = mr.Simulation([sequence], diffusivity=3., geometry=geometry);
 
-                before = mr.isinside(geometry, snap);
-                after = mr.isinside(geometry, mr.evolve(snap, simulation, 200.))
+                before = mr.isinside(geometry, snap) .> 0
+                after = mr.isinside(geometry, mr.evolve(snap, simulation, 200.)) .> 0
                 switched = sum(xor.(before, after))
                 @test switched == 0
             end

@@ -22,17 +22,11 @@ end
 Collision(distance, normal, properties; index=0, inside=false) = Collision(distance, normal, properties, index, inside)
 ObstructionProperties(c :: Collision) = c.properties
 
+"""
+    surface_MRI_properties(collision, defaults::MRIProperties)
+
+Computes the MRI properties at the surface for spins stuck at the given collision.
+"""
+surface_MRI_properties(c::Collision, defaults::MRIProperties) = merge_mri_parameters(SVector{1}([c.properties.surface]), defaults)
 
 const empty_collision = Collision(Inf, SA[0, 0, 0], ObstructionProperties(), 0, false)
-
-for accessor in (:MT_fraction, :permeability)
-    @eval function $(accessor)(c::Collision, defaults) 
-        value = $(accessor)(c.properties)
-        if isnan(value)
-            value = $(accessor)(defaults)
-        end
-        @assert !isnan(value)
-        return value
-    end
-end
-

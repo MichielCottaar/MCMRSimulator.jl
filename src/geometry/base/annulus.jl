@@ -25,7 +25,7 @@ struct Annulus <: BaseObstruction{2}
     end
 end
 
-isinside(a::Annulus, pos::SVector{2, Float}) = isinside(a.inner, pos) + isinside(a.outer, pos)
+isinside(a::Annulus, pos::SVector{2, Float}, stuck_to::Collision) = isinside(a.inner, pos, stuck_to) + isinside(a.outer, pos, stuck_to)
 BoundingBox(a::Annulus) = BoundingBox(a.outer)
 
 function total_susceptibility(a::Annulus)
@@ -144,3 +144,14 @@ inside_MRI_properties(annulus::Annulus, position::SVector{2, Float}) = inside_MR
 empty_mri_properties(annulus::Annulus) = empty_mri_properties(annulus.outer)
 
 size_scale(annulus::Annulus) = size_scale(annulus.inner)
+
+for accessor in (:MT_fraction, :permeability, :surface_density, :dwell_time)
+    @eval $(accessor)(o::Annulus, defaults) = $(accessor)(o.outer, defaults)
+end
+
+function random_surface_spins(annulus::Annulus, bounding_box::BoundingBox{3}, volume_density::Number, repeats::SVector{2, Float}, default_surface_density::Number, shifts::SVector{2, Float}; kwargs...)
+    vcat(
+        random_surface_spins(annulus.inner, bounding_box, volume_density, repeats, default_surface_density, shifts; kwargs...),
+        random_surface_spins(annulus.outer, bounding_box, volume_density, repeats, default_surface_density, shifts; kwargs...)
+    )
+end

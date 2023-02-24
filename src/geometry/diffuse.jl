@@ -1,23 +1,4 @@
-"""
-    random_on_sphere()
 
-Draws a random orientation on the unit sphere as a length-3 vector
-
-The z-orientation is drawn a random number between -1 and 1.
-The angle in the x-y plane is drawn as a random number between 0 and 2π.
-This results in an unbiased random distribution across the sphere.
-"""
-function random_on_sphere()
-    z = rand(Float) * 2 - 1
-    r = sqrt(1 - z*z)
-    theta = rand(Float) * Float(2 * π)
-    (s, c) = sincos(theta)
-    return SA[
-        r * s,
-        r * c,
-        z
-    ]
-end
 
 correct_for_timestep(probability, timestep) = 1 - (1 - probability)^sqrt(timestep)
 
@@ -27,74 +8,6 @@ correct_for_timestep(probability, timestep) = 1 - (1 - probability)^sqrt(timeste
 Draws a random step from a Gaussian distribution with a variance of 2 * diffusivity * timestep.
 """
 random_gauss(diffusivity :: Float, timestep :: Float) = sqrt(2 * timestep * diffusivity) * randn(PosVector)
-
-"""
-    draw_step!(spin, sequence_parts, diffusivity, timestep, default_properties, geometry])
-
-Updates the spin based on a random movement through the given geometry for a given `timestep`:
-- draws the next location of the particle after `timestep` with given `diffusivity`.  
-  This displacement will take into account the obstructions in `geometry`.
-- The spin orientation will be affected by relaxation (see [`relax!`](@ref)) and potentially by magnetisation transfer during collisions.
-"""
-function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivity :: Float, timestep :: Float, default_properties::GlobalProperties, geometry :: Geometry{0}) where {N}
-    if iszero(timestep)
-        return
-    end
-    relax!(spin, parts, geometry, 0, 1//2, default_properties.mri)
-    @spin_rng spin begin
-        spin.position += random_gauss(diffusivity, timestep)
-    end
-    relax!(spin, parts, geometry, 1//2, 1, default_properties.mri)
-end
-
-function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivity :: Float, timestep :: Float, default_properties::GlobalProperties, geometry::Geometry) where {N}
-    if iszero(timestep)
-        return
-    end
-    current_pos = spin.position
-    new_pos = random_gauss(diffusivity, timestep) + current_pos
-    collision = empty_collision
-    current_time = zero(Float)
-
-    @spin_rng spin begin
-        for _ in 1:10000
-            collision = detect_collision(
-                Movement(current_pos, new_pos, one(Float)),
-                geometry,
-                collision
-            )
-
-            use_distance = collision === empty_collision ? 1 : collision.distance
-            next_time = current_time + (1 - current_time) * use_distance
-            relax_pos_dist = rand() * use_distance
-            spin.position = relax_pos_dist .* new_pos .+ (1 - relax_pos_dist) .* current_pos
-            relax!(spin, parts, geometry, current_time, next_time, default_properties.mri)
-
-            if collision === empty_collision
-                break
-            end
-
-            transfer!.(spin.orientations, correct_for_timestep(MT_fraction(collision, default_properties), timestep))
-
-            permeability_prob = correct_for_timestep(permeability(collision, default_properties), timestep)
-            if iszero(permeability_prob) || rand() > permeability_prob
-                direction = new_pos .- current_pos
-                reflection = - 2 * (collision.normal ⋅ direction) * collision.normal / norm(collision.normal) ^ 2 .+ direction
-
-                current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
-                new_pos = current_pos .+ reflection / norm(reflection) * norm(direction) * (1 - collision.distance)
-            else
-                current_pos = collision.distance .* new_pos .+ (1 - collision.distance) .* current_pos
-                collision = Collision(collision.distance, -collision.normal, collision.properties, collision.index, !collision.inside)
-            end
-            current_time = next_time
-        end
-    end
-    if collision !== empty_collision
-        error("Bounced single particle for 10000 times in single step; terminating!")
-    end
-    spin.position = new_pos
-end
 
 """
     correct_collision(movement, geometry)

@@ -95,21 +95,33 @@ Create a new spin with the same position as `reference_spin` with the orientatio
 mutable struct Spin{N}
     position :: PosVector
     orientations :: SVector{N, SpinOrientation}
+    stuck_to :: Reflection
     rng :: FixedXoshiro
-    function Spin(position::AbstractArray{<:Real}, orientations::AbstractArray{SpinOrientation}, rng::FixedXoshiro=FixedXoshiro()) 
-        new{length(orientations)}(PosVector(position), SVector{length(orientations)}(deepcopy.(orientations)), rng)
+    function Spin(position::AbstractArray{<:Real}, orientations::AbstractArray{SpinOrientation}, stuck_to=empty_reflection, rng::FixedXoshiro=FixedXoshiro()) 
+        new{length(orientations)}(PosVector(position), SVector{length(orientations)}(deepcopy.(orientations)), stuck_to, rng)
     end
 end
 
-function Spin(;nsequences=1, position=zero(SVector{3,Float}), longitudinal=1., transverse=0., phase=0., rng=FixedXoshiro()) 
-    base = Spin(SVector{3, Float}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), rng)
+function Spin(;nsequences=1, position=zero(SVector{3,Float}), longitudinal=1., transverse=0., phase=0., stuck_to=empty_reflection, rng=FixedXoshiro()) 
+    base = Spin(SVector{3, Float}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), stuck_to, rng)
     return nsequences == 1 ? base : Spin(base, nsequences)
 end
-Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.rng)
+Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.stuck_to, reference_spin.rng)
 
-Base.show(io::IO, spin::Spin{0}) = print(io, "Spin(position=$(spin.position) with no magnetisation information)")
-Base.show(io::IO, spin::Spin{1}) = print(io, "Spin(position=$(spin.position) with $(repr(spin.orientations[1], context=io)))")
-Base.show(io::IO, spin::Spin{N}) where {N} = print(io, "Spin(position=$(spin.position) with magnetisations for $N sequences)")
+show_helper(io::IO, spin::Spin{0}) = print(io, "with no magnetisation information)")
+show_helper(io::IO, spin::Spin{1}) = print(io, "with $(repr(spin.orientations[1], context=io)))")
+show_helper(io::IO, spin::Spin{N}) where {N} = print(io, "with magnetisations for $N sequences)")
+function Base.show(io::IO, spin::Spin) 
+    if stuck(spin)
+        print(io, "stuck ")
+    end
+    print(io, "Spin(position=$(spin.position) ")
+    show_helper(io, spin)
+end
+stuck(spin::Spin) = Reflection(spin) !== empty_reflection
+Reflection(spin) = spin.stuck_to
+Collision(spin) = Reflection(spin).collision
+stuck_to(spin) = Collision(spin).properties
 
 macro spin_rng(spin, expr)
     return quote
@@ -179,7 +191,7 @@ end
 
 Extracts the spin orientation corresponding to a specific sequence, where the sequence index uses the order in which the sequences where provided in the [`Simulation`](@ref).
 """
-get_sequence(spin::Spin, index) = Spin(spin.position, SVector{1}([spin.orientations[index]]), spin.rng)
+get_sequence(spin::Spin, index) = Spin(spin.position, SVector{1}([spin.orientations[index]]), spin.stuck_to, spin.rng)
 
 
 """
@@ -189,6 +201,10 @@ Returns the position of the spin particle as a vector of length 3.
 """
 position(s :: Spin) = s.position
 
+isinside(bb::BoundingBox, spin::Spin) = isinside(bb, position(spin))
+isinside(other, spin::Spin) = isinside(other, position(spin), Collision(spin))
+inside_MRI_properties(geom::Geometry, spin::Spin, global_props::MRIProperties) = inside_MRI_properties(geom, position(spin), global_props)
+
 """
 Represents the positions and orientations of multiple [`Spin`](@ref) objects at a specific `time`.
 
@@ -197,11 +213,14 @@ The equilibrium longitudinal spin (after T1 relaxation) is always 1.
 
 # Useful constructors
     Snapshot(positions; time=0., longitudinal=1., transverse=0., phase=0., nsequences=1)
-    Snapshot(nspins::Integer; time=0., longitudinal=1., transverse=0., phase=0., nsequences=1)
+    Snapshot(nspins[, bounding_box[, geometry, default_surface_density]]; time=0., longitudinal=1., transverse=0., phase=0., nsequences=1)
+    Snapshot(nspins, simulation[, bounding_box; time=0., longitudinal=1., transverse=0., phase=0., nsequences=1)
 
-Creates a new Snapshot at the given `time` with perfectly longitudinal spins initialised for simulating `nsequences` sequences.
+Creates a new Snapshot at the given `time` with spins initialised for simulating `nsequences` sequences.
+All spins will start out in equilibrium, but that can be changed using the `longitudinal`, `transverse`, and/or `phase` flags.
 This initial spin locations are given by `positions` (Nx3 matrix or sequence of vectors of size 3).
-Alternatively the number of spins can be given in which case the spins are randomly distributed in a 1x1x1 mm box centered on the origin.
+Alternatively the number of spins can be given in which case the spins are randomly distributed in the given `bounding_box` (default: 1x1x1 mm box centered on origin).
+The bounding_box can be a [`BoundingBox`](@ref) object, a tuple with the lower and upper bounds (i.e., two vectors of length 3) or a number `r` (resulting in spins filling a cube from `-r` to `+r`)
 
     Snapshot(snap::Snapshot{1}, nsequences)
 
@@ -217,7 +236,7 @@ Replicates the positions and orientations for a single sequence in the input sna
 
 Information for a single sequence can be extracted by calling [`get_sequence`](@ref) first.
 """
-struct Snapshot{N}
+struct Snapshot{N} <: AbstractVector{Spin{N}}
     spins :: AbstractVector{Spin{N}}
     time :: Float
     Snapshot(spins :: AbstractVector{Spin{N}}, time=0.) where {N} = new{N}(spins, Float(time))
@@ -230,6 +249,26 @@ end
 function Snapshot(positions :: AbstractVector{<:AbstractVector{<:Real}}; time :: Real=0., kwargs...) 
     Snapshot(map(p -> Spin(; position=p, kwargs...), positions), time)
 end
+
+function Snapshot(nspins::Integer, bounding_box=500, geometry=nothing, default_surface_density=zero(Float); time::Real=0., kwargs...)
+    bounding_box = BoundingBox(bounding_box)
+    sz = (upper(bounding_box) - lower(bounding_box))
+    free_spins = map(i->Spin(; position=rand(PosVector) .* sz .+ lower(bounding_box), kwargs...), 1:nspins)
+    if isnothing(geometry)
+        return Snapshot(free_spins, time)
+    end
+    geometry = Geometry(geometry)
+    volume = prod(sz)
+    density = nspins / volume
+    stuck_spins = random_surface_spins(geometry, bounding_box, density, default_surface_density; kwargs...)
+    if length(stuck_spins) == 0
+        spins = free_spins
+    else
+        spins = Random.shuffle(vcat(free_spins, stuck_spins))[1:nspins]
+    end
+    return Snapshot(spins, time)
+end
+
 Snapshot(nspins :: Int; kwargs...) = Snapshot(rand(nspins, 3) .* 1000 .- 500; kwargs...)
 
 Base.show(io::IO, snap::Snapshot{1}) = print(io, "Snapshot($(length(snap)) spins with total magnetisation of $(repr(SpinOrientation(snap), context=io)) at t=$(get_time(snap))ms)")
@@ -252,11 +291,15 @@ SpinOrientation(s :: Snapshot) = SpinOrientation(orientation(s))
 for param in (:longitudinal, :transverse, :phase)
     @eval $param(s :: Snapshot) = $param(SpinOrientation(s))
 end
+
+# Abstract Vector interface (following https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-array)
+Base.size(s::Snapshot) = size(s.spins)
 Base.getindex(s::Snapshot, index::Int) = s.spins[index]
 Base.getindex(s::Snapshot, index) = Snapshot(s.spins[index], s.time)
 Base.length(s::Snapshot) = length(s.spins)
 Base.iterate(s::Snapshot) = iterate(s.spins)
 Base.iterate(s::Snapshot, state) = iterate(s.spins, state)
+Base.IndexStyle(::Type{Snapshot}) = IndexLinear()
 
 """
     position.(s::Snapshot)
@@ -267,3 +310,6 @@ position(s::Snapshot) = position.(s.spins)
 
 Snapshot(snap :: Snapshot{1}, nsequences::Integer) = Snapshot([Spin(spin, nsequences) for spin in snap.spins], snap.time)
 get_sequence(snap::Snapshot, index) = Snapshot(get_sequence.(snap.spins, index), snap.time)
+isinside(something, snapshot::Snapshot) = [isinside(something, spin) for spin in snapshot]
+
+

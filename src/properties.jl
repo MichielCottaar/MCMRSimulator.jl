@@ -103,7 +103,7 @@ end
 
 
 """
-    CollisionProperties(MT_fraction, permeability)
+    CollisionProperties(MT_fraction, permeability, surface_density, dwell_time)
 
 Object used to define the collision properties within a [`ObstructionProperties`](@ref) or a [`GlobalProperties`] object.
 Values of NaN are used in [`ObstructionProperties`] to indicate that the default collision parameter should be used.
@@ -111,29 +111,34 @@ Values of NaN are used in [`ObstructionProperties`] to indicate that the default
 These properties can be retrieved using:
 - [`MT_fraction`](@ref)
 - [`permeability`](@ref)
+- [`surface_density`](@ref)
+- [`dwell_time`](@ref)
 """
 struct CollisionProperties
     MT_fraction :: Float
     permeability :: Float
+    surface_density :: Float
+    dwell_time :: Float
 end
 
 """
-    ObstructionProperties(; MT_fraction=NaN, permeability=NaN, R1_inside=NaN, T1_inside=NaN, R2_inside=NaN, T2_inside=NaN, off_resonance_inside=NaN)
+    ObstructionProperties(; MT_fraction, permeability, relative_density, dwell_time, R1_inside, T1_inside, R2_inside, T2_inside, off_resonance_inside, R1_surface, T1_surface, R2_surface, T2_surface, off_resonance_surface)
 
 Defines the collision and relaxation properties for an obstruction.
 Either the relaxation rate (R1/R2) or the relaxation time (T1/T2) should be set (or neither).
 
-Collision parameters can be retreived using their accessors: [`MT_fraction`](@ref), and [`permeability`](@ref).
+Collision parameters can be retreived using their accessors: [`MT_fraction`](@ref), [`permeability`](@ref), [`surface_density`](@ref), and [`dwell_time`](@ref).
 
-MRI relaxation parameters within the obstruction can be retrieved by calling their accessor on `obstruction_properties.inside`.
+MRI relaxation parameters within the obstruction can be retrieved by calling their accessor on `obstruction_properties.inside` (for spins inside the obstruction) or `obstruction_properties.surface` (for spins stuck at the surface of the obstruction).
 The accessors are [`T1`](@ref), [`R1`](@ref), [`T2`](@ref), [`R2`](@ref), and [`off_resonance`](@ref).
 
-Values of NaN are used internally to indicate that the default parameters (from [`GlobalProperties`](@ref)) should be used.
+For any property not set (or set to NaN) the default values will be used (i.e., from the [`GlobalProperties`](@ref), which is set during the creation of the [`Simulation`](@ref)).
 """
 struct ObstructionProperties
     # In future add MRIProperties for particles stuck on the surface
     collision :: CollisionProperties
     inside :: MRIProperties
+    surface :: MRIProperties
     id :: UUID
 end
 
@@ -143,10 +148,16 @@ function ObstructionProperties(;
     R1_inside::Number=NaN, T1_inside::Number=NaN,
     R2_inside::Number=NaN, T2_inside::Number=NaN,
     off_resonance_inside::Number=NaN,
+    R1_surface::Number=NaN, T1_surface::Number=NaN,
+    R2_surface::Number=NaN, T2_surface::Number=NaN,
+    off_resonance_surface::Number=NaN,
+    surface_density::Number=NaN,
+    dwell_time::Number=NaN,
 )
     ObstructionProperties(
-        CollisionProperties(Float(MT_fraction), Float(permeability)),
+        CollisionProperties(Float(MT_fraction), Float(permeability), Float(surface_density), Float(dwell_time)),
         MRIProperties(; R1=R1_inside, T1=T1_inside, R2=R2_inside, T2=T2_inside, off_resonance=off_resonance_inside),
+        MRIProperties(; R1=R1_surface, T1=T1_surface, R2=R2_surface, T2=T2_surface, off_resonance=off_resonance_surface),
         uuid1()
     )
 end
@@ -160,6 +171,8 @@ These parameters can be locally overriden by [`ObstructionProperties`](@ref).
 Parameters can be accessed using their accessors:
 - [`MT_fraction`](@ref)
 - [`permeability`](@ref)
+- [`surface_density`](@ref)
+- [`dwell_time`](@ref)
 - [`T1`](@ref)
 - [`R1`](@ref)
 - [`T2`](@ref)
@@ -172,6 +185,8 @@ struct GlobalProperties
     function GlobalProperties(;
         MT_fraction::Number=0,
         permeability::Number=0,
+        surface_density::Number=0,
+        dwell_time::Number=NaN,
         R1::Number=NaN, T1::Number=NaN,
         R2::Number=NaN, T2::Number=NaN,
         off_resonance::Number=0,
@@ -183,7 +198,7 @@ struct GlobalProperties
             R2 = 0
         end
         res = new(
-            CollisionProperties(Float(MT_fraction), Float(permeability)),
+            CollisionProperties(Float(MT_fraction), Float(permeability), Float(surface_density), Float(dwell_time)),
             MRIProperties(; R1=R1, T1=T1, R2=R2, T2=T2, off_resonance=off_resonance),
         )
         return res
@@ -198,21 +213,48 @@ function Base.show(io::IO, prop::GlobalProperties)
         (off_resonance, "kHz"),
         (MT_fraction, ""),
         (permeability, ""),
+        (surface_density, "um"),
+        (dwell_time, "ms"),
     ]
         value = func(prop)
-        if !iszero(value) && !isinf(value)
+        if !iszero(value) && !isinf(value) && !isnan(value)
             print(io, "$(nameof(func))=$(value)$(units), ")
         end
     end
     print(io, ")")
 end
 
-for symbol in (:permeability, :MT_fraction)
+for symbol in (:permeability, :MT_fraction, :surface_density, :dwell_time)
     @eval $(symbol)(c::CollisionProperties) = c.$(symbol)
     @eval $(symbol)(o::ObstructionProperties) = $(symbol)(o.collision)
     @eval $(symbol)(g::GlobalProperties) = $(symbol)(g.collision)
+
+    @eval function $(symbol)(o::ObstructionProperties, defaults) 
+        value = $(symbol)(o)
+        if isnan(value)
+            value = $(symbol)(defaults)
+        end
+        @assert !isnan(value)
+        return value
+    end
 end
 
 for symbol in (:R1, :T1, :R2, :T2, :off_resonance)
     @eval $(symbol)(g::GlobalProperties) = $(symbol)(g.mri)
+end
+
+"""
+    stick_probability(surface_density, dwell_time, diffusivity, timestep)
+    stick_probability(properties, diffusivity, timestep)
+
+Computes the probability of a spin getting stuck at the surface given
+a [`surface_density`](@ref) and [`dwell_time`](@ref) from a [`CollisionProperties`](@ref)
+as well as the diffusivity (in um^2/ms) and the timestep (in ms).
+"""
+function stick_probability(surface_density::Number, dwell_time::Number, diffusivity::Number, timestep::Number)
+    return sqrt(π * timestep / diffusivity) * surface_density/ dwell_time / 2
+end
+
+function stick_probability(properties, diffusivity::Number, timestep::Number)
+    return stick_probability(surface_density(properties), dwell_time(properties), diffusivity, timestep)
 end

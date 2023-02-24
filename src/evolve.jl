@@ -1,17 +1,104 @@
-_relax_mult!(spin::Spin{0}, dt, ct, sim::Simulation{0}) = nothing
+"""
+    draw_step!(spin, sequence_parts, diffusivity, timestep, default_properties, geometry])
 
-function _relax_mult!(spin::Spin{N}, dt, ct, sim::Simulation{N}) where {N}
-    use_mri = inside_MRI_properties(sim.geometry, spin, sim.properties.mri)
-    off_resonance_ppm = off_resonance(sim.geometry, spin.position)
+Updates the spin based on a random movement through the given geometry for a given `timestep`:
+- draws the next location of the particle after `timestep` with given `diffusivity`.  
+  This displacement will take into account the obstructions in `geometry`.
+- The spin orientation will be affected by relaxation (see [`relax!`](@ref)) and potentially by magnetisation transfer during collisions.
+"""
+function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivity :: Float, timestep :: Float, default_properties::GlobalProperties, geometry :: Geometry{0}) where {N}
+    if iszero(timestep)
+        return
+    end
+    relax!(spin, parts, geometry, 0, 1//2, default_properties.mri)
+    @spin_rng spin begin
+        spin.position += random_gauss(diffusivity, timestep)
+    end
+    relax!(spin, parts, geometry, 1//2, 1, default_properties.mri)
+end
 
-    for index in 1:N
-        sequence = sim.sequences[index]
-        orient = spin.orientations[index]
-        grad = gradient(spin.position, sequence, ct, dt + ct)
-        additional_off_resonance = grad + off_resonance_ppm * 1e-6 * B0(sequence) * gyromagnetic_ratio
-        relax!(orient, dt, use_mri, additional_off_resonance)
+function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivity :: Float, timestep :: Float, default_properties::GlobalProperties, geometry::Geometry) where {N}
+    if iszero(timestep)
+        return
+    end
+    current_pos = spin.position
+    reflection = spin.stuck_to
+    is_stuck = stuck(spin)
+    current_time = zero(Float)
+
+    found_solution = false
+    @spin_rng spin begin
+        if !stuck(spin)
+            displacement = randn(PosVector) .* sqrt(2 * diffusivity * timestep)
+            new_pos = current_pos + displacement
+        end
+        for _ in 1:10000
+            if is_stuck
+                td = dwell_time(stuck_to(spin), default_properties)
+                time_stuck = -log(rand()) * td / timestep
+                relax!(spin, parts, geometry, current_time, min(one(Float), current_time + time_stuck), default_properties.mri)
+                current_time += time_stuck
+                if current_time >= 1
+                    found_solution = true
+                    break
+                end
+                if iszero(Reflection(spin).timestep)
+                    # special case where spin was generated as stuck on the surface
+                    displacement = randn(PosVector) .* sqrt(2 * diffusivity * timestep * (1 - current_time))
+                    if displacement ⋅ Collision(spin).normal < 0
+                        displacement = -displacement
+                    end
+                    new_pos = current_pos + displacement
+                else
+                    new_pos = final_position(Reflection(spin), (1 - current_time) * timestep)
+                end
+
+                reflection = spin.stuck_to
+                spin.stuck_to = empty_reflection
+                is_stuck = false
+            end
+
+            movement = Movement(current_pos, new_pos, one(Float))
+            collision = detect_collision(
+                movement,
+                geometry,
+                reflection.collision
+            )
+
+            use_distance = collision === empty_collision ? 1 : collision.distance
+            next_time = current_time + (1 - current_time) * use_distance
+            relax_pos_dist = rand() * use_distance
+            spin.position = relax_pos_dist .* new_pos .+ (1 - relax_pos_dist) .* current_pos
+            relax!(spin, parts, geometry, current_time, next_time, default_properties.mri)
+
+            if collision === empty_collision
+                spin.position = new_pos
+                found_solution = true
+                break
+            end
+            transfer!.(spin.orientations, correct_for_timestep(MT_fraction(collision.properties, default_properties), timestep))
+
+            permeability_prob = correct_for_timestep(permeability(collision.properties, default_properties), timestep)
+            passes_through = isone(permeability_prob) || !(iszero(permeability_prob) || rand() > permeability_prob)
+            reflection = Reflection(collision, movement, timestep, next_time, passes_through)
+            current_pos = spin.position = reflection.surface_pos
+
+            sd = surface_density(collision.properties, default_properties)
+            if !iszero(sd) && rand() < stick_probability(sd, dwell_time(collision.properties, default_properties), diffusivity, timestep)
+                spin.stuck_to = reflection
+                is_stuck = true
+            else
+                new_pos = final_position(reflection)
+            end
+
+            current_time = next_time
+        end
+    end
+    if !found_solution
+        error("Bounced single particle for 10000 times in single step; terminating!")
     end
 end
+
 
 """
     evolve_to_time(spin, simulation, current_time, new_time)

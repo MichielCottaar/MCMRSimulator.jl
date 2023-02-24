@@ -16,7 +16,11 @@ end
 
 
 function relax!(spin::Spin{N}, parts::SVector{N, SequencePart}, geometry::Geometry, t1::Number, t2::Number, props::MRIProperties) where {N}
-    use_mri = inside_MRI_properties(geometry, spin.position, props)
+    if stuck(spin)
+        use_mri = surface_MRI_properties(Collision(spin), props)
+    else
+        use_mri = inside_MRI_properties(geometry, spin.position, props)
+    end
     off_resonance_unscaled = off_resonance(geometry, spin.position) * 1e-6 * gyromagnetic_ratio
     tmean = (t1 + t2) / 2
     for (orient, part) in zip(spin.orientations, parts)
