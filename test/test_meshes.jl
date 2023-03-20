@@ -1,18 +1,18 @@
 @testset "test_meshes.jl: Creating and using meshes" begin
     @testset "Computing normals" begin
-        @test mr.normal(SA[0, 0, 0], SA[1, 0, 0], SA[0, 1, 0]) ≈ SA[0, 0, 1]
-        @test mr.normal(SA[0, 0, 0], SA[2, 0, 0], SA[0, 1, 0]) ≈ SA[0, 0, 1]
-        @test mr.normal(SA[0, 0, 0], SA[2, 1, 0], SA[-1, 1, 0]) ≈ SA[0, 0, 1]
-        @test mr.normal(SA[0, 0, 1], SA[0, 1, 0], SA[1, 0, 0]) ≈ -SA[sqrt(1/3), sqrt(1/3), sqrt(1/3)]
-        (p1, p2, p3) = SA[1, 4, 2], SA[0, 15.23, 3.1], SA[-213, 801.28380, 1]
+        @test mr.normal([0, 0, 0], [1, 0, 0], [0, 1, 0]) ≈ [0, 0, 1]
+        @test mr.normal([0, 0, 0], [2, 0, 0], [0, 1, 0]) ≈ [0, 0, 1]
+        @test mr.normal([0, 0, 0], [2, 1, 0], [-1, 1, 0]) ≈ [0, 0, 1]
+        @test mr.normal([0, 0, 1], [0, 1, 0], [1, 0, 0]) ≈ -[sqrt(1/3), sqrt(1/3), sqrt(1/3)]
+        (p1, p2, p3) = [1., 4, 2], [0, 15.23, 3.1], [-213, 801.28380, 1]
         @test mr.normal(p1, p2, p3) ≈ mr.normal(p2, p3, p1)
         @test mr.normal(p1, p2, p3) ≈ mr.normal(p3, p1, p2)
         @test mr.normal(p1, p2, p3) ≈ -mr.normal(p1, p3, p2)
     end
     @testset "Bounding box calculation" begin
         bb = mr.BoundingBox(mr.box_mesh(grid_size=1))
-        @test all(bb.lower < SA[-0.5, -0.5, -0.5])
-        @test all(bb.upper > SA[0.5, 0.5, 0.5])
+        @test all(bb.lower < [-0.5, -0.5, -0.5])
+        @test all(bb.upper > [0.5, 0.5, 0.5])
     end
     @testset "1x1x1 grid mesh intersection" begin
         mesh = mr.box_mesh(grid_size=1)
@@ -47,47 +47,38 @@
         end
     end
     @testset "Simple bounces against mesh box" begin
-        function compare(ms1 :: AbstractVector{<:mr.Movement}, ms2 :: AbstractVector{<:mr.Movement})
+        function compare(ms1 :: AbstractVector, ms2 :: AbstractVector)
             @test length(ms1) == length(ms2)
             for (m1, m2) in zip(ms1, ms2)
-                @test m1.origin ≈ m2.origin atol=1e-4 rtol=1e-3
-                @test m1.destination ≈ m2.destination atol=1e-4 rtol=1e-3
-                @test m1.timestep ≈ m2.timestep atol=1e-4 rtol=1e-3
+                @test m1 ≈ m2 atol=1e-4 rtol=1e-3
             end
         end
         @testset "Bounce on outside of box" begin
             mesh = mr.box_mesh()
             res = correct_collisions(
-                mr.Movement(SA[0.1, 0.1, 1], SA[0.1, 0.1, -1], 2),
+                mr.Movement([0.1, 0.1, 1], [0.1, 0.1, -1]),
                 mesh
             )
-            compare(res, [
-                mr.Movement(SA[0.1, 0.1, 1], SA[0.1, 0.1, 0.5], 0.5)
-                mr.Movement(SA[0.1, 0.1, 0.5], SA[0.1, 0.1, 2], 1.5)
-            ])
+            compare(res, [[0.1, 0.1, 1], [0.1, 0.1, 0.5], [0.1, 0.1, 2]])
         end
         @testset "Miss the box" begin
             mesh = mr.box_mesh()
             res = correct_collisions(
-                mr.Movement(SA[0, 0, 1.1], SA[0, 1.1, 0], 2),
+                mr.Movement([0, 0, 1.1], [0, 1.1, 0]),
                 mesh
             )
-            compare(res, [
-                mr.Movement(SA[0, 0, 1.1], SA[0, 1.1, 0], 2)
-            ])
+            compare(res, [[0, 0, 1.1], [0, 1.1, 0]])
         end
         @testset "Straight bounce within the box" begin
             mesh = mr.box_mesh()
             res = correct_collisions(
-                mr.Movement(SA[0, 0, 0], SA[0, 0, 4], 4),
+                mr.Movement([0, 0, 0], [0, 0, 4]),
                 mesh
             )
             compare(res, [
-                mr.Movement(SA[0, 0, 0], SA[0, 0, 0.5], 0.5),
-                mr.Movement(SA[0, 0, 0.5], SA[0, 0, -0.5], 1),
-                mr.Movement(SA[0, 0, -0.5], SA[0, 0, 0.5], 1),
-                mr.Movement(SA[0, 0, 0.5], SA[0, 0, -0.5], 1),
-                mr.Movement(SA[0, 0, -0.5], SA[0, 0, 0], 0.5),
+                [0, 0, 0], [0, 0, 0.5],
+                [0, 0, -0.5], [0, 0, 0.5],
+                [0, 0, -0.5], [0, 0, 0],
             ])
         end
     end

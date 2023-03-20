@@ -25,7 +25,7 @@ function Mesh(vertices, triangles, grid_size=20; kwargs...)
     Mesh{length(triangles)}(vertices, triangles, normals, dist_planes, shape, grid, ObstructionProperties(; kwargs...), Int[])
 end
 
-function box_mesh(;center=SA[0, 0, 0], size=[1, 1, 1], grid_size=10)
+function box_mesh(;center=[0, 0, 0], size=[1, 1, 1], grid_size=10)
     center = PosVector(center)
     size = PosVector(size)
     vertices = [
@@ -78,6 +78,8 @@ function normal(p1 :: PosVector, p2 :: PosVector, p3 :: PosVector)
     return tonorm ./ norm(tonorm)
 end
 
+normal(p1 :: AbstractVector, p2 :: AbstractVector, p3 :: AbstractVector) = normal(PosVector(p1), PosVector(p2), PosVector(p3))
+
 """
     triangle_size(p1, p2, p3)
 
@@ -110,7 +112,7 @@ function mesh_grid_intersection(shape::GridShape, vertices::Vector{PosVector}, t
     sz = shape.size
     grid = [Int[] for _ in 1:sz[1], _ in 1:sz[2], _ in 1:sz[3]]
     hit = fill(true, sz...)
-    vertices_voxel = map(v->project(v, shape), vertices)
+    vertices_voxel = map(v->project(shape, v), vertices)
     for (store_index, index_triangle) in enumerate(triangles)
         fill!(hit, true)
         triangle = map(idx -> vertices_voxel[idx], index_triangle)

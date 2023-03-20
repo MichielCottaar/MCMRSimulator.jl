@@ -178,7 +178,7 @@ function detect_collision(movement :: Movement{2}, spiral :: Spiral, previous ::
         end
         return Collision(
             dist,
-            iszero(index) ? SA[x, y, 0] : SA[-x, -y, 0],  # TODO: include spiralling in normal calculation
+            PosVector(iszero(index) ? [x, y, 0] : [-x, -y, 0]),  # TODO: include spiralling in normal calculation
             ObstructionProperties(spiral),
             index=index
         )

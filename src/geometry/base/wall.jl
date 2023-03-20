@@ -34,7 +34,7 @@ function detect_collision(movement :: Movement{1}, wall :: Wall, previous=empty_
     total_length = abs(origin - destination)
     Collision(
         abs(origin) / total_length,
-        origin < 0 ? SA[-1, 0, 0] : SA[1, 0, 0],
+        PosVector(origin < 0 ? [-1, 0, 0] : [1, 0, 0]),
         wall.properties,
         inside=origin > 0
     )

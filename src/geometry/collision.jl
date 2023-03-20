@@ -29,4 +29,4 @@ Computes the MRI properties at the surface for spins stuck at the given collisio
 """
 surface_MRI_properties(c::Collision, defaults::MRIProperties) = merge_mri_parameters(SVector{1}([c.properties.surface]), defaults)
 
-const empty_collision = Collision(Inf, SA[0, 0, 0], ObstructionProperties(), 0, false)
+const empty_collision = Collision(Inf, [0, 0, 0], ObstructionProperties(), 0, false)

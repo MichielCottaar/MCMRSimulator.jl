@@ -48,7 +48,7 @@ end
 Projects the plane on the intrinsic plane of the obstructions deformed by `transform`.
 """
 function project_geometry(plot_plane::PlotPlane, transform::TransformObstruction{N}) where {N}
-    center_obstruction_space = plot_plane.transformation(SA[0, 0, 0])
+    center_obstruction_space = plot_plane.transformation(zero(PosVector))
 
     obstruction_coordinates_in_plot_plane = SVector{N}(map(p->PosVector(plot_plane.transformation(p)) - center_obstruction_space, eachcol(transform.rotation)))
 

@@ -56,7 +56,7 @@ function sphere_collision(movement :: Movement{N}, obstruction::Obstruction, ins
     end
     point_hit = solution * destination + (1 - solution) * origin
     if N == 2
-        normal = SA[point_hit[1], point_hit[2], 0.]
+        normal = PosVector(point_hit[1], point_hit[2], 0.)
     else
         normal = point_hit
     end
@@ -99,11 +99,11 @@ function random_on_sphere()
     r = sqrt(1 - z*z)
     theta = rand(Float) * Float(2 * π)
     (s, c) = sincos(theta)
-    return SA[
+    return PosVector(
         r * s,
         r * c,
         z
-    ]
+    )
 end
 
 function random_surface_positions(sphere::Sphere, total_density::Number)

@@ -60,12 +60,12 @@ function corners(bb::BoundingBox{3})
     u = upper(bb)
     return [
         l,
-        SA[l[1], l[2], u[3]],
-        SA[l[1], u[2], u[3]],
-        SA[l[1], u[2], l[3]],
-        SA[u[1], l[2], u[3]],
-        SA[u[1], u[2], l[3]],
-        SA[u[1], l[2], l[3]],
+        PosVector([l[1], l[2], u[3]]),
+        PosVector([l[1], u[2], u[3]]),
+        PosVector([l[1], u[2], l[3]]),
+        PosVector([u[1], l[2], u[3]]),
+        PosVector([u[1], u[2], l[3]]),
+        PosVector([u[1], l[2], l[3]]),
         u,
     ]
 end
@@ -75,8 +75,8 @@ function corners(bb::BoundingBox{2})
     u = upper(bb)
     return [
         l,
-        SA[l[1], u[2]],
-        SA[u[1], l[2]],
+        SVector{2}([l[1], u[2]]),
+        SVector{2}([u[1], l[2]]),
         u,
     ]
 end

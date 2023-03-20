@@ -174,11 +174,11 @@ for param in (:longitudinal, :transverse)
     @eval $param(o :: SpinOrientation) = o.$param
 end
 phase(o :: SpinOrientation) = norm_angle(o.phase)
-orientation(o :: SpinOrientation) = SA[
+orientation(o :: SpinOrientation) = PosVector(
     o.transverse * cosd(o.phase),
     o.transverse * sind(o.phase),
     o.longitudinal
-]
+)
 
 for param in (:longitudinal, :transverse, :phase, :orientation)
     @eval $param(s :: Spin{1}) = $param(s.orientations[1])
@@ -313,3 +313,12 @@ get_sequence(snap::Snapshot, index) = Snapshot(get_sequence.(snap.spins, index),
 isinside(something, snapshot::Snapshot) = [isinside(something, spin) for spin in snapshot]
 
 
+project(something, v::AbstractVector) = project(something, SVector{length(v)}(v))
+project(something, spin::Spin) = project(something, position(spin))
+
+function project(something, snap::Snapshot)
+    Snapshot(
+        [Spin(project(something, s), s.orientations) for s in snap.spins],
+        snap.time
+    )
+end

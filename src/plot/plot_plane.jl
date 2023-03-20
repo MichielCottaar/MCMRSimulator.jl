@@ -24,7 +24,7 @@ end
 
 function PlotPlane(
     normal=:z, 
-    position :: AbstractVector{<:Real}=SA[0, 0, 0];
+    position :: AbstractVector{<:Real}=zero(PosVector);
     sizex=nothing, sizey=nothing, size=10.,
 )
     if isnothing(sizex)
@@ -52,23 +52,13 @@ function project(pp::PlotPlane, pos::PosVector)
     mod.(base .+ correct, (sizex, sizey, Inf)) .- correct
 end
 
-project(pp::PlotPlane, spin::Spin) = project(pp, position(spin))
-
-function project(pp::PlotPlane, snap::Snapshot)
-    Snapshot(
-        [Spin(project(pp, s), s.orientations) for s in snap.spins],
-        snap.time
-    )
-end
-
-
 function project_trajectory(pp::PlotPlane, pos::AbstractVector{<:PosVector})
     transformed = pp.transformation.(pos)
-    pos2D = map(p -> SA[
+    pos2D = map(p -> PosVector(
         isfinite(pp.sizex) ? p[1] / pp.sizex + 0.5 : 0.5,
         isfinite(pp.sizey) ? p[2] / pp.sizey + 0.5 : 0.5,
         0.5
-    ], transformed)
+    ), transformed)
     function to_pos!(time::Float, position::PosVector)
         idx1 = Int(floor(time))
         idx2 = Int(ceil(time))
@@ -77,13 +67,13 @@ function project_trajectory(pp::PlotPlane, pos::AbstractVector{<:PosVector})
         else
             pos_ref = pos2D[idx2] .* (time - idx1) .+ pos2D[idx1] .* (idx2 - time)
         end
-        push!(all_pos, SA[
+        push!(all_pos, SVector{2}(
             isfinite(pp.sizex) ? pp.sizex * (position[1] - 0.5) : pos_ref[1],
             isfinite(pp.sizey) ? pp.sizey * (position[2] - 0.5) : pos_ref[2],
-        ])
+        ))
         push!(times, time)
     end
-    empty = SA[NaN, NaN]
+    empty = SVector{2, Float}(NaN, NaN)
     all_pos = SVector{2, Float}[]
     times = Float[]
     for (pos_index, origin, destination) in zip(1:length(pos2D)-1, pos2D[1:end-1], pos2D[2:end])

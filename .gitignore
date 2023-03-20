@@ -6,3 +6,4 @@ Manifest.toml
 /lcov.info
 /.julia
 /local
+/examples/annulus.jl

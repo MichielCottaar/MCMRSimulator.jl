@@ -17,14 +17,3 @@ include("transform.jl")     # Transformations of base obstructions
 include("geometry_struct.jl")     # Transformations of base obstructions
 
 
-"""
-    project(position, transform::TransformObstruction)
-
-Computes the position in the space of the obstructions wrapped by the [`TransformObstruction`](@ref).
-
-    project(position, grid::GridShape)
-
-Computes the voxel index for the position on the [`GridShape`](@ref). 
-This will return a result even if the point is outside of the grid. Use [`isinside`](@ref)(position, grid) to check that.
-"""
-function project end

@@ -22,6 +22,11 @@ function ray_grid_intersections(origin :: SVector{N, Float}, destination :: SVec
     RayGridIntersections(origin, destination, direction, map(d -> Float(1/abs(d)), direction))
 end
 
+function ray_grid_intersections(origin :: AbstractVector, destination :: AbstractVector)
+    N = length(origin)
+    ray_grid_intersections(SVector{N, Float}(origin), SVector{N, Float}(destination))
+end
+
 Base.iterate(rgi::RayGridIntersections) = Base.iterate(rgi, (rgi.origin, zero(Float), map(o -> Int(floor(o)), rgi.origin)))
 function Base.iterate(rgi::RayGridIntersections{N}, state::Tuple{SVector{N, Float}, Float, SVector{N, Int}}) where {N}
     (prev_pos::SVector{N, Float}, prev_time::Float, current_voxel::SVector{N, Int}) = state
@@ -97,12 +102,19 @@ end
 BoundingBox(g::GridShape) = g.bounding_box
 Base.size(g::GridShape) = tuple(g.size)
 isinside(pos::SVector{N, Float}, g::GridShape{N}) where {N} = isinside(pos, BoundingBox(g))
-function project(pos::SVector{N, Float}, g::GridShape{N}) where {N}
-    bb = BoundingBox(g)
-    map((p, l, is) -> iszero(is) ? Float(1.5) : is * (p - l) + 1, pos, bb.lower, g.inverse_voxel_size)
+
+"""
+    project(grid, position)
+
+Computes the voxel index for the position on the [`GridShape`](@ref). 
+This will return a result even if the point is outside of the grid. Use [`isinside`](@ref)(position, grid) to check that.
+"""
+function project(grid::GridShape{N}, pos::SVector{N, Float}) where {N}
+    bb = BoundingBox(grid)
+    map((p, l, is) -> iszero(is) ? Float(1.5) : is * (p - l) + 1, pos, bb.lower, grid.inverse_voxel_size)
 end
 
 
-function ray_grid_intersections(grid :: GridShape{N}, origin :: SVector{N, Float}, destination :: SVector{N, Float}) where {N}
-    ray_grid_intersections(project(origin, grid), project(destination, grid))
+function ray_grid_intersections(grid :: GridShape{N}, origin :: AbstractVector, destination :: AbstractVector) where {N}
+    ray_grid_intersections(project(grid, origin), project(grid, destination))
 end

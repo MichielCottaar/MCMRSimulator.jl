@@ -199,6 +199,12 @@ function project_repeat(trans::TransformObstruction{N, M}, pos::SVector{N, Float
     return shifted
 end
 
+"""
+    project(transform_obstruction, position)
+
+Computes the position in the space of the obstructions wrapped by the [`TransformObstruction`](@ref).
+Uses [`project_rotation`](@ref) and [`project_repeat`](@ref) under the hood.
+"""
 function project(trans::TransformObstruction{N, M}, pos::PosVector) where {N, M}
     [project_repeat(trans, project_rotation(trans, pos))(trans.obstructions[index]) for index in 1:M]
 end
@@ -215,7 +221,7 @@ function detect_collision(movement :: Movement{3}, trans :: TransformObstruction
             shifted_destination = projected_destination - single.shift
             if possible_intersection(single.bounding_box, shifted_origin, shifted_destination)
                 ctest = detect_collision(
-                    Movement{N}(shifted_origin, shifted_destination, Float(1)),
+                    Movement{N}(shifted_origin, shifted_destination),
                     trans.obstructions[index],
                     previous
                 )
@@ -289,7 +295,7 @@ end
         shift2 = p2 - to_shift
         if possible_intersection(t.bounding_box, shift1, shift2)
             ctest = detect_collision(
-                Movement{N}(p1 - to_shift, p2 - to_shift, Float(1)),
+                Movement{N}(shift1, shift2),
                 trans.obstructions[index],
                 previous
             )

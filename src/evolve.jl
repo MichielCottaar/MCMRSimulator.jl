@@ -58,7 +58,7 @@ function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivit
                 is_stuck = false
             end
 
-            movement = Movement(current_pos, new_pos, one(Float))
+            movement = Movement(current_pos, new_pos)
             collision = detect_collision(
                 movement,
                 geometry,
