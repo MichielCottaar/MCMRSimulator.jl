@@ -1,46 +1,62 @@
 """
     Shape(times, amplitudes; normalise=false)
 
-Defines a 1D [`Shape`](@ref) for an RF pulse or gradient profile.
-Times should be between 0 and 1 (inclusive).
-Amplitudes should start and end at 0 and range between 0 and 1 (for RF pulses) and -1 and 1 (for gradients).
-Errors are ranged if times/amplitudes are outside of these ranges (although normalise=true can be used to simply adjust the shape to match these constraints).
+Defines a [`Shape`](@ref) profile for an RF pulse or gradient profile.
+The `Shape` is parametrised by the number of control points `N` and the type of the amplitude object `T`.
+This amplitude type will be `Float` for the amplitude and phase of the [`RFPulse`](@ref).
+It will be `SVector{3, Float}` for [`MRGradients`](@ref).
 """
-struct Shape{N}
+struct Shape{N, T}
     times :: SVector{N, Float}
-    amplitudes :: SVector{N, Float}
-    function Shape(times, amplitudes; normalise=false)
-        if !normalise
-            @assert isapprox(minimum(times), 0., atol=1e-8)
-            @assert isapprox(maximum(times), 1., atol=1e-8)
-            @assert maximum(abs.(amplitudes)) == 1 || all(iszero.(amplitudes))
+    amplitudes :: SVector{N, T}
+    function Shape(times::AbstractVector{<:Number}, amplitudes::AbstractVector{T}) where {T}
+        N = length(times)
+        @assert N == length(amplitudes)
+        if N == 0 || times[1] == times[end]
+            return new{0, T}(Float[], T[])
         end
-        times = [times...]
-        times .-= times[1]
-        times ./= times[end]
-        if !all(iszero.(amplitudes))
-            amplitudes ./= maximum(abs.(amplitudes))
+
+        # removing duplicate times
+        prev_matched = false
+        to_remove = Int[]
+        for index in 1:N-1
+            if times[index] == times[index + 1]
+                if prev_matched
+                    push!(to_remove, index)
+                elseif index != 1
+                    times[index] = prevfloat(times[index])
+                end
+                prev_matched = true
+            elseif prev_matched
+                times[index] = nextfloat(times[index])
+                prev_matched = false
+            end
         end
-        @assert length(times) == length(amplitudes)
-        @assert all(times[2:end] .>= times[1:end-1])
-        new{length(times)}(times, amplitudes)
+        to_keep = [i for i in 1:N if !(i in to_remove)]
+        times = times[to_keep]
+        amplitudes = amplitudes[to_keep]
+
+        @assert all(times[2:end] .> times[1:end-1])
+        new{length(times), T}(times, amplitudes)
     end
 end
 
-get_index(shape::Shape, time::Number) = time > 1 ? 0 : searchsortedlast(shape.times, time)
+get_index(shape::Shape, time::Number) = time > end_time(shape) ? 0 : searchsortedlast(shape.times, time)
 control_points(shape::Shape) = shape.times
+
+Shape{T}() where {T} = Shape(Float[], T[])
 
 Base.length(shape::Shape{N}) where {N} = N
 
 """
-    amplitude(shape, time)
+    sample(shape, time)
 
-Returns the amplitude of the shape at the given time using linear interpolation.
+Returns the value of the shape at a given time using linear interpolation.
 """
-function amplitude(shape::Shape, time::Number)
+function sample(shape::Shape{N, T}, time::Number) where {N, T}
     index = get_index(shape, time)
     if iszero(index)
-        return zero(Float)
+        return zero(T)
     end
     dt0 = time - shape.times[index]
     if iszero(dt0)
@@ -51,28 +67,40 @@ function amplitude(shape::Shape, time::Number)
 end
 
 """
-    amplitude_derivative(shape, time)
+    sample(shape, t1, t2)
 
-Returns the derivative of the shape at the specific time.
-At control points the derivative is always assumed to be the one of the next block.
+Returns the average value of the shape between `t1` and `t2`. 
+See [`sample_integral`](@ref) to get the full integral.
 """
-function amplitude_derivative(shape::Shape{N}, time::Number) where {N}
+sample(shape::Shape, t1::Number, t2::Number) = sample_integral(shape, t1, t2) / (t2 - t1)
+
+"""
+    sample_derivative(shape, time[, later_time])
+
+Returns the derivative of the shape value at the specific time.
+At control points the derivative is always assumed to be the slope of the next block.
+
+If `later_time` is provided the average derivative between both timepoints is computed.
+"""
+function sample_derivative(shape::Shape{N, T}, time::Number) where {N, T}
     index = get_index(shape, time)
-    if iszero(index) || (index == N)
-        return zero(Float)
+    if iszero(index) || index == N
+        return zero(T)
     end
     return (shape.amplitudes[index + 1] - shape.amplitudes[index]) / (shape.times[index + 1] - shape.times[index])
 end
 
-"""
-    amplitude_integral_step(shape, index, t0, t1)
+sample_derivative(shape::Shape, t1::Number, t2::Number) = (sample(shape, t2) - sample(shape, t1)) / (t2 - t1)
 
-Integrate the amplitude from t0 to t1 assuming that both are within the single step (given by `index`).
-This is a helper function for [`amplitude_integral`](@ref).
 """
-function amplitude_integral_step(shape::Shape, index::Int, t0=nothing, t1=nothing)
-    a0 = isnothing(t0) ? shape.amplitudes[index] : amplitude(shape, t0)
-    a1 = isnothing(t1) ? shape.amplitudes[index] : amplitude(shape, t1)
+    sample_integral_step(shape, index, t0=`start of block`, t1=`end of block`)
+
+Integrate the shape value from t0 to t1 assuming that both are within the single step (given by `index`).
+This is a helper function for [`sample_integral`](@ref).
+"""
+function sample_integral_step(shape::Shape, index::Int, t0=nothing, t1=nothing)
+    a0 = isnothing(t0) ? shape.amplitudes[index] : sample(shape, t0)
+    a1 = isnothing(t1) ? shape.amplitudes[index+1] : sample(shape, t1)
     t0_real = isnothing(t0) ? shape.times[index] : t0
     t1_real = isnothing(t1) ? shape.times[index+1] : t1
     mean_amplitude = (a0 + a1) / 2
@@ -80,134 +108,86 @@ function amplitude_integral_step(shape::Shape, index::Int, t0=nothing, t1=nothin
 end
 
 """
-    amplitude_integral(shape, t0, t1)
+    sample_integral(shape, t0, t1)
 
-Integrate the amplitude from t0 to t1.
+Integrate the shape value from t0 to t1.
 """
-function amplitude_integral(shape::Shape, t0::Number, t1::Number)
+function sample_integral(shape::Shape{N, T}, t0::Number=-Inf, t1::Number=Inf) where {N, T}
     @assert t1 >= t0
-    if (t0 > 1) || (t1 < 0)
-        return zero(Float)
+    if (t0 > end_time(shape)) || (t1 < start_time(shape))
+        return zero(T)
     end
-    if t0 < 0
-        t0 = zero(Float)
-    end
-    if t1 > 1
-        t1 = one(Float)
-    end
+    t0 = max(t0, start_time(shape))
+    t1 = min(t1, end_time(shape))
     index0 = get_index(shape, t0)
     index1 = get_index(shape, t1)
     if index0 == index1
-        return amplitude_integral_step(shape, index0, t0, t1)
+        return sample_integral_step(shape, index0, t0, t1)
     end
-    total = amplitude_integral_step(shape, index0, t0, nothing)
+    total = sample_integral_step(shape, index0, t0, nothing)
     for index in index0+1:index1-1
-        total += amplitude_integral_step(shape, index)
+        total += sample_integral_step(shape, index)
     end
-    total += amplitude_integral_step(shape, index1, nothing, t1)
+    total += sample_integral_step(shape, index1, nothing, t1)
     return total
 end
 
 """
-    amplitude_integral(shape, t0, times)
+    sample_integral(shape, t0, times)
 
-Integrate the amplitude from t0 to all the times in `times` (all assumed to be larger than `t0` and strictly increasing).
+Integrate the shape value from t0 to all the times in `times` (all assumed to be larger than `t0` and strictly increasing).
 """
-function amplitude_integral(shape::Shape, t0::T, times::AbstractVector{T}) where {T <: Number}
+function sample_integral(shape::Shape, t0::T, times::AbstractVector{T}) where {T <: Number}
     totals = zeros(Float, length(times))
     current = zero(Float)
     prev_time = t0
     for (index, t) in enumerate(times)
-        current += amplitude_integral(shape, prev_time, t)
+        current += sample_integral(shape, prev_time, t)
         totals[index] = current
     end
     return totals
 end
 
-
 """
-    ConcreteShape(t0, t1, max_amplitude, shape)
+    add_TR(shape/gradient/rf_pulse, TR)
 
-A 1-dimensional amplitude profile extending from `t0` to `t1` with maximum amplitude of `max_amplitude`.
-The amplitude profile is defined by a [`Shape`](@ref).
+Shifts the generic [`Shape`], [`MRGradients`], or [`RFPulse`] by a time `TR`.
 """
-struct ConcreteShape{N}
-    t0::Float
-    t1::Float
-    max_amplitude::Float
-    shift::Float
-    shape::Shape{N}
-    ConcreteShape(t0::Number, t1::Number, max_amplitude::Number, shift::Number, shape::Shape{N}) where {N} = new{N}(Float(t0), Float(t1), Float(max_amplitude), Float(shift), shape)
-end
+add_TR(shape::Shape, TR::Number) = Shape(shape.times .+ TR, shape.amplitudes)
 
-"""
-    ConcreteShape(times, amplitudes)
-
-Creates an amplitude profile by linearly interpolating the amplitudes between the given times.
-Times and amplitudes should be vectors of the same length.
-"""
-function ConcreteShape(times::AbstractVector{<:Number}, amplitudes::AbstractVector{<:Number})
-    if length(times) == 0
-        return ConcreteShape([0, 1], [0, 0])
-    end
-    if length(times) <= 1
-        error("ConcreteShape needs at least 2 control points")
-    end
-    t0 = times[1]
-    t1 = times[end]
-    max_amplitude = maximum(abs.(amplitudes))
-    ConcreteShape(
-        t0, t1, max_amplitude, 0,
-        Shape(
-            (times .- t0) ./ (t1 - t0),
-            iszero(max_amplitude) ? amplitudes : (amplitudes ./ max_amplitude)
-        )
-    )
-end
-
-"""
-    ConcreteShape()
-
-Produces a ConcreteShape with only zero amplitude.
-"""
-ConcreteShape() = ConcreteShape(Float[], Float[])
-
-convert_time(concrete::ConcreteShape, time::Number) = (time - concrete.t0) / (concrete.t1 - concrete.t0)
-amplitude(concrete::ConcreteShape, time::Number) = amplitude(concrete.shape, convert_time(concrete, time)) * concrete.max_amplitude + concrete.shift
-amplitude_derivative(concrete::ConcreteShape, time::Number) = amplitude_derivative(concrete.shape, convert_time(concrete, time)) * concrete.max_amplitude / (concrete.t1 - concrete.t0)
-amplitude_integral(concrete::ConcreteShape, t0::Number, t1::Number) = (amplitude_integral(concrete.shape, convert_time(concrete, t0), convert_time(concrete, t1)) * concrete.max_amplitude + concrete.shift) * (concrete.t1 - concrete.t0)
-amplitude_integral(concrete::ConcreteShape, t0::T, times::AbstractVector{T}) where {T<:Number} = amplitude_integral(concrete.shape, convert_time(concrete, t0), convert_time.(concrete, times)) .* (concrete.max_amplitude * (concrete.t1 - concrete.t0)) .+ (concrete.shift * (concrete.t1 - concrete.t0))
-amplitude_integral(concrete::ConcreteShape, t0::T, times::AbstractRange{T}) where {T<:Number} = amplitude_integral(concrete.shape, convert_time(concrete, t0), convert_time(concrete, times)) .* (concrete.max_amplitude * (concrete.t1 - concrete.t0)) .+ (concrete.shift * (concrete.t1 - concrete.t0))
-control_points(concrete::ConcreteShape) = control_points(concrete.shape) .* (concrete.t1 - concrete.t0) .+ concrete.t0
-
-add_TR(concrete::ConcreteShape, TR::Number) = ConcreteShape(concrete.t0 + TR, concrete.t1 + TR, concrete.max_amplitude, concrete.shift, concrete.shape)
-
-start_time(concrete::ConcreteShape) = concrete.t0
-end_time(concrete::ConcreteShape) = concrete.t1
+start_time(shape::Shape) = shape.times[1]
+end_time(shape::Shape) = shape.times[end]
+end_time(shape::Shape{0}) = 0
+start_time(shape::Shape{0}) = 0
 
 
 """
-    ShapePart(concrete_shape, t0, t1)
+    ShapePart(shape, t0, t1)
 
-Represents a small part of a [`ConcreteShape`](@ref) between `t0` and `t1` during which the amplitude varies linearly.
+Represents a small part of a [`Shape`](@ref) between `t0` and `t1` during which the amplitude varies linearly.
 This object is used to store the relevant part of the RF and gradient profiles within a single timestep (see [`SequencePart`](@ref)).
+
+Like the full shape values can be extracted using [`sample`](@ref), [`sample_derivative`](@ref), [`sample_integral`](@ref).
+The time passed on to these functions should be between 0 (for `t0`) and 1 (for `t1`).
 """
-struct ShapePart
-    start :: Float
-    final :: Float
-    slope :: Float
+struct ShapePart{T}
+    start :: T
+    final :: T
+    slope :: T
 end
 
-function ShapePart(concrete_shape::ConcreteShape, t0::Number, t1::Number)
+function ShapePart(shape::Shape{N, T}, t0::Number, t1::Number) where {N, T}
     tmean = (t0 + t1) / 2
-    mean_value = amplitude(concrete_shape, tmean)
-    slope = amplitude_derivative(concrete_shape, tmean)
-    return ShapePart(
-        (t0 - tmean) * slope + mean_value,
-        (t1 - tmean) * slope + mean_value,
+    mean_value = sample(shape, tmean)
+    slope = sample_derivative(shape, tmean)
+    return ShapePart{T}(
+        (t0 - tmean) * slope .+ mean_value,
+        (t1 - tmean) * slope .+ mean_value,
         slope * (t1 - t0),
     )
 end
 
-amplitude(part::ShapePart, time) = part.start + time * part.slope
-amplitude(part::ShapePart, t1, t2) = amplitude(part, (t1 + t2) / 2)
+sample(part::ShapePart, time) = part.start + time * part.slope
+sample(part::ShapePart, t1, t2) = sample(part, (t1 + t2) / 2)
+sample_derivative(part::ShapePart, time) = part.slope
+sample_integral(part::ShapePart, t1, t2) = sample(part, (t1 + t2) / 2) * (t2 - t1)

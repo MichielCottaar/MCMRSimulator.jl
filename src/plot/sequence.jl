@@ -25,7 +25,7 @@ function Makie.plot!(sp::Sequence_Plot)
             max_angle = nothing
         end
         if length(s.pulses) > 0
-            max_rf = maximum([p.amplitude.max_amplitude for p in s.pulses])
+            max_rf = maximum([maximum(p.amplitude.amplitudes) for p in s.pulses])
         else
             max_rf = nothing
         end
@@ -107,16 +107,18 @@ function Makie.plot!(gp::GradientPlot)
             nextfloat.(cp[1:end-1])...
         ]))
         gradients = [gradient(gradient_profile, t) for t in times]
-        grad_sizes = [norm(g) for g in gradients]
-        if isnothing(max_G) | !isfinite(max_G)
-            max_G = maximum(grad_sizes)
-        end
-        if single_grad
-            rgb = [Colors.RGB(abs.(g./s)...) for (g, s) in zip(gradients, grad_sizes)]
-            Makie.lines!(gp, times, [s / max_G for s in grad_sizes], color=1:length(times), colormap=rgb)
-        else
-            for (dim, color) in zip(1:3, ("red", "green", "blue"))
-                Makie.lines!(gp, times, [g[dim] / max_G for g in gradients], color=color)
+        if length(gradients) > 0
+            grad_sizes = [norm(g) for g in gradients]
+            if isnothing(max_G) | !isfinite(max_G)
+                max_G = maximum(grad_sizes)
+            end
+            if single_grad
+                rgb = [Colors.RGB(abs.(g./s)...) for (g, s) in zip(gradients, grad_sizes)]
+                Makie.lines!(gp, times, [s / max_G for s in grad_sizes], color=1:length(times), colormap=rgb)
+            else
+                for (dim, color) in zip(1:3, ("red", "green", "blue"))
+                    Makie.lines!(gp, times, [g[dim] / max_G for g in gradients], color=color)
+                end
             end
         end
     end

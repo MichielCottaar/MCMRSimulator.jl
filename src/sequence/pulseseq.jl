@@ -207,13 +207,19 @@ function build_sequence(; scanner=nothing, B0=3., TR=nothing, definitions, versi
             @assert version == v"1.3.1" || iszero(proc.time_id)
             (num, mag_shape) = shapes[proc.mag_id]
             block_duration = max(num * rf_raster + proc.delay * 1e-3, block_duration)
-            mag = ConcreteShape(start_time, start_time + num * rf_raster, proc.amp * 1e-3, 0, mag_shape)
+            mag = Shape(
+                mag_shape.times .* (num * rf_raster) .+ start_time,
+                mag_shape.amplitudes .* (proc.amp * 1e-3),
+            )
             if iszero(proc.phase_id)
-                phase = ConcreteShape([start_time, start_time + num * rf_raster], [0, 0])
+                phase = Shape([start_time, start_time + num * rf_raster], [0, 0])
             else
                 (num, phase_shape) = shapes[proc.phase_id]
                 block_duration = max(num * rf_raster + proc.delay * 1e-3, block_duration)
-                phase = ConcreteShape(start_time, start_time + num * rf_raster, proc.freq * 1e-3 * 360, rad2deg(proc.phase), phase_shape)
+                phase = Shape(
+                    phase_shape.times .* (num * rf_raster) .+ start_time,
+                    phase_shape.amplitudes .* (proc.freq * 1e-3 * 360) .+ rad2deg(proc.phase),
+                )
             end
             push!(rf_pulses, RFPulse(mag, phase, sqrt(proc.amp^2 + proc.freq^2)))
         end
@@ -268,6 +274,6 @@ function build_sequence(; scanner=nothing, B0=3., TR=nothing, definitions, versi
         push!(times, TR)
         push!(amplitudes, 0)
     end
-    gradients = MRGradients([ConcreteShape(t, a) for (t, a) in gradient_control_points]..., zero(PosVector))
+    gradients = MRGradients([Shape(t, a) for (t, a) in gradient_control_points]...)
     Sequence(; scanner=scanner, TR=TR, pulses=[rf_pulses..., readouts...], gradients=gradients)
 end

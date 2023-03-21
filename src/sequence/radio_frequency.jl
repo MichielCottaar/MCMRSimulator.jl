@@ -1,18 +1,19 @@
 """
-    RFPulse(times, amplitudes[, phases]; phase0=0., off_resonance=0)
+    RFPulse(times, amplitudes[, phases]; phase0=0, off_resonance=0)
 
 Creates a radio-frequency block between times `t0` and `t1`.
 At time `t0` the phase of the transverse B1 magnetic field is equal to `phase0` (given in degrees).
 
 The amplitude and frequency modulation profile of the RF pulse are provided as functions:
-- The amplitude represents the strength of the magnetic field in kHz the transverse plane as a function of time (between t0 and t1). This should always be positive.
-- The phase represents the offset from the Larmor frequency in degrees as a function of time (between t0 and t1). If not provided explicitly, the phase at time `t` is determined by the initial phase (in degrees) and the off-resonance (in kHz).
+- The amplitude represents the strength of the magnetic field in kHz within the transverse plane as a function of time (between t0 and t1). This should always be positive.
+- The phase represents the offset from the Larmor frequency in degrees as a function of time (between t0 and t1). If not provided explicitly, the phase is presumed to be a linear function starting with an initial `phase0` (in degrees) and increasing by the `off_resonance` (in kHz).
 
 The functions [`amplitude`](@ref), [`phase`](@ref), and [`off_resonance`](@ref) are used to get the value at a specific `t` or averaged between two times.
+[`flip_angle`](@ref) computes the total flip angle for particles perfectly in phase with the RF pulse.
 """
-struct RFPulse
-    amplitude :: ConcreteShape
-    phase :: ConcreteShape
+struct RFPulse{N, M}
+    amplitude :: Shape{N, Float}
+    phase :: Shape{M, Float}
     max_amplitude :: Float
 end
 
@@ -24,8 +25,8 @@ function RFPulse(times::AbstractVector, amplitudes::AbstractVector, phases=nothi
     off_resonance_step[isnan.(off_resonance_step)] .= 0
     off_resonance_edge = max.([0, off_resonance_step...], [off_resonance_step..., 0])
     return RFPulse(
-        ConcreteShape(times, amplitudes),
-        ConcreteShape(times, phases),
+        Shape(times, amplitudes),
+        Shape(times, phases),
         sqrt(maximum(@. amplitudes^2 + off_resonance_edge^2))
     )
 end
@@ -34,7 +35,12 @@ function Base.show(io::IO, pulse::RFPulse)
     print(io, "RFPulse: t=$(start_time(pulse)) to $(end_time(pulse))ms, θ=$(flip_angle(pulse))°, ϕ=$(phase(pulse, start_time(pulse)))°;")
 end
 
-flip_angle(pulse::RFPulse) = amplitude_integral(pulse.amplitude, pulse.amplitude.t0, pulse.amplitude.t1) * 360
+"""
+    flip_angle(pulse)
+
+Computes the total flip angle of a [`RFPulse`](@ref) for spins that are in phase with the pulse.
+"""
+flip_angle(pulse::RFPulse) = sample_integral(pulse.amplitude) * 360
 
 start_time(pulse::RFPulse) = min(start_time(pulse.amplitude), start_time(pulse.phase))
 end_time(pulse::RFPulse) = max(end_time(pulse.amplitude), end_time(pulse.phase))
@@ -45,7 +51,7 @@ end_time(pulse::RFPulse) = max(end_time(pulse.amplitude), end_time(pulse.phase))
 Computes the amplitude of the [`RFPulse`](@ref) at time `t1` in kHz.
 If `t2` is also provided, the average amplitude between times `t1` and `t2` is returned.
 """
-amplitude(pulse::RFPulse, time::Number) = amplitude(pulse.amplitude, time)
+amplitude(pulse::RFPulse, times...) = sample(pulse.amplitude, times...)
 
 """
     phase(rf_pulse, t1[, t2])
@@ -53,7 +59,7 @@ amplitude(pulse::RFPulse, time::Number) = amplitude(pulse.amplitude, time)
 Computes the phase of the [`RFPulse`](@ref) at time `t1` in degrees.
 If `t2` is also provided, the average phase between times `t1` and `t2` is returned.
 """
-phase(pulse::RFPulse, time::Number) = norm_angle(amplitude(pulse.phase, time))
+phase(pulse::RFPulse, times...) = norm_angle(sample(pulse.phase, times...))
 
 """
     off_resonance(rf_pulse, t1[, t2])
@@ -61,11 +67,8 @@ phase(pulse::RFPulse, time::Number) = norm_angle(amplitude(pulse.phase, time))
 Computes the off_resonance of the [`RFPulse`](@ref) at time `t1` in kHz.
 If `t2` is also provided, the average off_resonance between times `t1` and `t2` is returned.
 """
-off_resonance(pulse::RFPulse, time::Number) = amplitude_derivative(pulse.phase, time) / 360
+off_resonance(pulse::RFPulse, times...) = sample_derivative(pulse.phase, times...) / 360
 
-amplitude(pulse::RFPulse, t1::Number, t2::Number) = amplitude_integral(pulse.amplitude, t1, t2) / (t2 - t1)
-phase(pulse::RFPulse, t1::Number, t2::Number) = norm_angle(amplitude_integral(pulse.phase, t1, t2) / (t2 - t1))
-off_resonance(pulse::RFPulse, t1::Number, t2::Number) = (amplitude(pulse.phase, t2) - amplitude(pulse.phase, t1)) / ((t2 - t1) * 360)
 
 function add_TR(pulse::RFPulse, delta_time::Number) 
     RFPulse(

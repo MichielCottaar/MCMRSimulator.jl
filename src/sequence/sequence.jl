@@ -158,11 +158,9 @@ During this time the RF pulse and gradients are assumed to change linearly and h
 This is used to guide the spin evolution during the timestep between times `t1` and `t2` during the simulation.
 """
 struct SequencePart
-    rf_amplitude::ShapePart
-    rf_phase::ShapePart
-    Gx::ShapePart
-    Gy::ShapePart
-    Gz::ShapePart
+    rf_amplitude::ShapePart{Float}
+    rf_phase::ShapePart{Float}
+    gradients::ShapePart{PosVector}
     origin::PosVector
     total_time::Float
     B0::Float
@@ -180,24 +178,16 @@ function SequencePart(sequence::Sequence, t1::Number, t2::Number)
     end
     SequencePart(
         amp, phase,
-        ShapePart(sequence.gradient.Gx, t1_norm, t2_norm),
-        ShapePart(sequence.gradient.Gy, t1_norm, t2_norm),
-        ShapePart(sequence.gradient.Gz, t1_norm, t2_norm),
+        ShapePart(sequence.gradient.shape, t1_norm, t2_norm),
         sequence.gradient.origin,
         t2 - t1,
         B0(sequence)
     )
 end
 
-function gradient(position, part::SequencePart, t1, t2)
-    grad = zero(Float)
-    grad += amplitude(part.Gx, t1, t2) * (position[1] - part.origin[1])
-    grad += amplitude(part.Gy, t1, t2) * (position[2] - part.origin[2])
-    grad += amplitude(part.Gz, t1, t2) * (position[3] - part.origin[3])
-    grad
-end
+gradient(position, part::SequencePart, t0, t1) = sample(part.gradients, t0, t1) ⋅ (position - part.origin)
 
-effective_pulse(part::SequencePart, t0::Number, t1::Number) = InstantRFPulse(flip_angle=amplitude(part.rf_amplitude, t0, t1) * (t1 - t0) * part.total_time * 360., phase=amplitude(part.rf_phase, t0, t1))
+effective_pulse(part::SequencePart, t0::Number, t1::Number) = InstantRFPulse(flip_angle=sample_integral(part.rf_amplitude, t0, t1) * part.total_time * 360., phase=sample(part.rf_phase, t0, t1))
 B0(part::SequencePart) = part.B0
 
 include("diffusion.jl")

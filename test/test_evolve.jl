@@ -3,8 +3,15 @@
         @testset "Explicitly setting timestep" begin
             s1 = mr.dwi(bval=0.)
 
-            @test all(mr.propose_times(mr.Simulation(s1, max_timestep=0.5), 0., 80.) .== 0:0.5:80.)
-            @test all(mr.propose_times(mr.Simulation(s1, max_timestep=0.501), 0., 80.) .== 0:0.5:80.)
+            eval_at = [
+                0., nextfloat(0.),
+                0.5:0.5:39.5...,
+                prevfloat(40.), 40., nextfloat(40.),
+                40.5:0.5:79.5...,
+                prevfloat(80.), 80.,
+            ]
+            @test all(mr.propose_times(mr.Simulation(s1, max_timestep=0.5), 0., 80.) .≈ eval_at)
+            @test all(mr.propose_times(mr.Simulation(s1, max_timestep=0.501), 0., 80.) .≈ eval_at)
         end
         @testset "Setting gradient_precision" begin
             s1 = mr.dwi(bval=0.)
@@ -14,17 +21,18 @@
                 :gradient_precision => 1.,
                 :max_timestep => Inf,
             )
+            control_points = [0., nextfloat(0.), prevfloat(40.), 40., nextfloat(40.), prevfloat(80.), 80.]
 
-            @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 0., 80.) .== [0., 40., 80.])
+            @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 0., 80.) .== control_points)
             @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 90., 120.) .== [90., 120.])
-            @test all(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.) .== [0., 40., 80.])
+            @test all(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.) .== control_points)
             @test all(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 90., 120.) .== [90., 120.])
 
             kwargs[:diffusivity] = 1.
-            @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 0., 80.) .== [0., 40., 80.])
+            @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 0., 80.) .== control_points)
             @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 90., 120.) .== [90., 120.])
-            @test length(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.)) > 3
-            @test length(intersect(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.), [0., 40., 80.])) == 3
+            @test length(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.)) > length(control_points)
+            @test length(intersect(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.), control_points)) == length(control_points)
             @test all(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 90., 120.) .== [90., 120.])
         end
     end

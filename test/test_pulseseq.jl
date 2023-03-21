@@ -11,8 +11,8 @@
         @test mr.start_time(pulse) == 0.1  # start after 100 microseconds delay
         @test mr.end_time(pulse) == 0.22  # pulse lasts 120 microseconds
         for cshape in (pulse.amplitude, pulse.phase)
-            @test mr.start_time(cshape) == 0.1
-            @test mr.end_time(cshape) == 0.22 
+            @test mr.start_time(cshape) ≈ 0.1
+            @test mr.end_time(cshape) ≈ 0.22 
         end
         for (time, ampl) in [
             (0.09, 0.),
