@@ -43,7 +43,7 @@ include("plot/plot.jl")
 
 export Sequence, InstantRFPulse, Readout, InstantGradient, RFPulse
 export MRGradients, gradient, rotate_bvec
-export dwi, read_pulseseq
+export dwi, read_pulseq
 export Scanner, B0, max_gradient, max_slew_rate
 export Siemens_Connectom, Siemens_Prisma, Siemens_Terra
 export longitudinal, transverse, phase, vector, Spin, Snapshot, SpinOrientation, isinside, off_resonance, stuck, stuck_to

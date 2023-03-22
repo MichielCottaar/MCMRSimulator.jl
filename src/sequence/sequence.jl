@@ -191,4 +191,4 @@ effective_pulse(part::SequencePart, t0::Number, t1::Number) = InstantRFPulse(fli
 B0(part::SequencePart) = part.B0
 
 include("diffusion.jl")
-include("pulseseq.jl")
+include("pulseq.jl")

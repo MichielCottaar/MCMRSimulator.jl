@@ -76,8 +76,8 @@ function Makie.plot!(pp::PulsePlot)
             Makie.text!(pp, "readout", position=(get_time(pulse), 0.55), align=(:center, :center))
         elseif isa(pulse, RFPulse)
             times = control_points(pulse.amplitude)
-            norm = isnothing(max_rf) ? pulse.amplitude.max_amplitude : max_rf
-            Makie.lines!(pp, times, [amplitude(pulse, t) / norm for t in times], color="black")
+            norm = isnothing(max_rf) ? maximum(pulse.amplitude.amplitudes) : max_rf
+            Makie.lines!(pp, times, pulse.amplitude.amplitudes ./ norm, color="black")
         end
     end
     p[] = p[]

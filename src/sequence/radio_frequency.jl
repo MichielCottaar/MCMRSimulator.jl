@@ -11,9 +11,9 @@ The amplitude and frequency modulation profile of the RF pulse are provided as f
 The functions [`amplitude`](@ref), [`phase`](@ref), and [`off_resonance`](@ref) are used to get the value at a specific `t` or averaged between two times.
 [`flip_angle`](@ref) computes the total flip angle for particles perfectly in phase with the RF pulse.
 """
-struct RFPulse{N, M}
-    amplitude :: Shape{N, Float}
-    phase :: Shape{M, Float}
+struct RFPulse
+    amplitude :: Shape{Float}
+    phase :: Shape{Float}
     max_amplitude :: Float
 end
 

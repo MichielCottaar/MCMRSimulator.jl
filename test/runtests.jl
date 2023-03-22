@@ -18,7 +18,7 @@ all_tests = [
     "permeability",
     "radio_frequency",
     "hierarchical_mri",
-    "pulseseq",
+    "pulseq",
     "various",
 ]
 

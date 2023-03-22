@@ -6,14 +6,14 @@ The `Shape` is parametrised by the number of control points `N` and the type of 
 This amplitude type will be `Float` for the amplitude and phase of the [`RFPulse`](@ref).
 It will be `SVector{3, Float}` for [`MRGradients`](@ref).
 """
-struct Shape{N, T}
-    times :: SVector{N, Float}
-    amplitudes :: SVector{N, T}
+struct Shape{T}
+    times :: Vector{Float}
+    amplitudes :: Vector{T}
     function Shape(times::AbstractVector{<:Number}, amplitudes::AbstractVector{T}) where {T}
         N = length(times)
         @assert N == length(amplitudes)
         if N == 0 || times[1] == times[end]
-            return new{0, T}(Float[], T[])
+            return new{T}(Float[], T[])
         end
 
         # removing duplicate times
@@ -37,7 +37,7 @@ struct Shape{N, T}
         amplitudes = amplitudes[to_keep]
 
         @assert all(times[2:end] .> times[1:end-1])
-        new{length(times), T}(times, amplitudes)
+        new{T}(times, amplitudes)
     end
 end
 
@@ -46,14 +46,14 @@ control_points(shape::Shape) = shape.times
 
 Shape{T}() where {T} = Shape(Float[], T[])
 
-Base.length(shape::Shape{N}) where {N} = N
+Base.length(shape::Shape) = length(shape.times)
 
 """
     sample(shape, time)
 
 Returns the value of the shape at a given time using linear interpolation.
 """
-function sample(shape::Shape{N, T}, time::Number) where {N, T}
+function sample(shape::Shape{T}, time::Number) where {T}
     index = get_index(shape, time)
     if iszero(index)
         return zero(T)
@@ -82,9 +82,9 @@ At control points the derivative is always assumed to be the slope of the next b
 
 If `later_time` is provided the average derivative between both timepoints is computed.
 """
-function sample_derivative(shape::Shape{N, T}, time::Number) where {N, T}
+function sample_derivative(shape::Shape{T}, time::Number) where {T}
     index = get_index(shape, time)
-    if iszero(index) || index == N
+    if iszero(index) || index == length(shape)
         return zero(T)
     end
     return (shape.amplitudes[index + 1] - shape.amplitudes[index]) / (shape.times[index + 1] - shape.times[index])
@@ -112,7 +112,7 @@ end
 
 Integrate the shape value from t0 to t1.
 """
-function sample_integral(shape::Shape{N, T}, t0::Number=-Inf, t1::Number=Inf) where {N, T}
+function sample_integral(shape::Shape{T}, t0::Number=-Inf, t1::Number=Inf) where {T}
     @assert t1 >= t0
     if (t0 > end_time(shape)) || (t1 < start_time(shape))
         return zero(T)
@@ -155,10 +155,8 @@ Shifts the generic [`Shape`], [`MRGradients`], or [`RFPulse`] by a time `TR`.
 """
 add_TR(shape::Shape, TR::Number) = Shape(shape.times .+ TR, shape.amplitudes)
 
-start_time(shape::Shape) = shape.times[1]
-end_time(shape::Shape) = shape.times[end]
-end_time(shape::Shape{0}) = 0
-start_time(shape::Shape{0}) = 0
+start_time(shape::Shape) = iszero(length(shape)) ? 0 : shape.times[1]
+end_time(shape::Shape) = iszero(length(shape)) ? 0 : shape.times[end]
 
 
 """
@@ -176,7 +174,7 @@ struct ShapePart{T}
     slope :: T
 end
 
-function ShapePart(shape::Shape{N, T}, t0::Number, t1::Number) where {N, T}
+function ShapePart(shape::Shape{T}, t0::Number, t1::Number) where {T}
     tmean = (t0 + t1) / 2
     mean_value = sample(shape, tmean)
     slope = sample_derivative(shape, tmean)

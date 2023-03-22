@@ -11,8 +11,8 @@ They can be sampled using [`gradient`](@ref).
 
 Builds the MR gradients out of 3 [`Shape`](@ref) objects each describing the gradient profile in 1 dimension.
 """
-struct MRGradients{N}
-    shape::Shape{N, PosVector}
+struct MRGradients
+    shape::Shape{PosVector}
     origin::PosVector
 end
 
