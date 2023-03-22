@@ -24,7 +24,7 @@
             @test iszero(mr.off_resonance(outside))
         end
         @testset "Test simulation in $(obstruction)" begin
-            sequence = mr.Sequence(pulses=[mr.InstantRFPulse(flip_angle=90., time=0.)], TR=100.)
+            sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90., time=0.)], TR=100.)
             sim = mr.Simulation(sequence, R2=1., geometry=geom, diffusivity=1.)
             snap = mr.evolve([pos_in, pos_out], sim, 10.)
             within = snap[1].orientations[1]

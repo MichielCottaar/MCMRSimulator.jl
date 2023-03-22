@@ -168,7 +168,7 @@ end
 end
 
 @testset "Test readout formats" begin
-    seq = mr.Sequence(TR=100, pulses=[mr.Readout(10.), mr.Readout(30.)])
+    seq = mr.Sequence(TR=100, components=[mr.Readout(10.), mr.Readout(30.)])
     sim_empty = mr.Simulation([])
     sim_flat = mr.Simulation(seq)
     sim_single = mr.Simulation([seq])

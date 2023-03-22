@@ -38,7 +38,14 @@ function Makie.plot!(sp::Sequence_Plot)
             pulseplot!(sp, pulse; max_rf_pulse=max_rf, max_rf_angle=max_angle, max_qval=max_qval)
         end
         max_G = isnothing(max_G) ? s.scanner.gradient : max_G
-        gradientplot!(sp, s.gradient, max_G=max_G, single_gradient=sg)
+        if isinf(max_G)
+            if length(s.gradients) > 0
+                max_G = maximum([maximum(norm.(grad.shape.amplitudes)) for grad in s.gradients])
+            end
+        end
+        for grad in s.gradients
+            gradientplot!(sp, grad, max_G=max_G, single_gradient=sg)
+        end
     end
     seq[] = seq[]
     sp

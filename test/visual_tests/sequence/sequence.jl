@@ -26,7 +26,7 @@ end
             mr.InstantRFPulse(time=8., flip_angle=120.),
         ]
 
-        sequence = mr.Sequence(pulses=pulses, TR=30.)
+        sequence = mr.Sequence(components=pulses, TR=30.)
         f = Figure()
         Axis(f[1, 1])
         plot!(sequence)
@@ -47,6 +47,20 @@ end
 
     @visualtest fn->plot_finite_dwi(fn, true) "$dir/single_grad_dwi.png" !isCI
     @visualtest fn->plot_finite_dwi(fn, false) "$dir/multi_grad_dwi.png" !isCI
+end
+
+@testset "pulseseq example PRESS sequence" begin
+    function plot_press(fname, single_gradient=false)
+        fn = joinpath(dir, "..", "..", "example_pulseseq", "01_from_FID_to_PRESS_v140", "06_PRESS_center.seq")
+        sequence = mr.read_pulseq(fn)
+        f = Figure()
+        Axis(f[1, 1])
+        plot!(sequence; single_gradient=single_gradient)
+        CairoMakie.save(fname, f)
+    end
+
+    @visualtest fn->plot_press(fn, true) "$dir/single_pulseq_press.png" !isCI
+    @visualtest fn->plot_press(fn, false) "$dir/multi_pulseq_press.png" !isCI
 end
 
 end

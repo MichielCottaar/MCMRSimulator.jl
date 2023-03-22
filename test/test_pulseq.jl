@@ -24,7 +24,7 @@
         end
 
         # no gradients
-        @test mr.control_points(seq.gradient) == [0, seq.TR]
+        @test length(seq.gradients) == 0
 
         # Single readout
         @test length(seq.readout_times) == 1

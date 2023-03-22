@@ -192,16 +192,11 @@ function build_sequence(; scanner=nothing, B0=3., TR=nothing, definitions, versi
         error("Can only load pulseq files with versions v1.3.1 and v1.4.0, not $(version)")
     end
 
-    gradient_control_points = (
-        # times and amplitudes of gradient control points
-        ([zero(Float)], [zero(Float)]),
-        ([zero(Float)], [zero(Float)]),
-        ([zero(Float)], [zero(Float)]),
-    )
-    
     block_start_time = zero(Float)
     rf_pulses = RFPulse[]
     readouts = Readout[]
+    seq_gradients = MRGradients[]
+
     for block in values(blocks)
         block_duration = zero(Float)
         if !iszero(block.rf)
@@ -244,9 +239,11 @@ function build_sequence(; scanner=nothing, B0=3., TR=nothing, definitions, versi
             push!(readouts, Readout(mid_readout))
             block_duration = max(proc.delay * 1e-3 + proc.dwell * proc.num * 1e-6, block_duration)
         end
-        for ((times_grad, amps_grad), symbol_grad) in zip(gradient_control_points, [:gx, :gy, :gz])
+        grad_shapes = Shape{Float}[]
+        for symbol_grad in [:gx, :gy, :gz]
             grad_id = getfield(block, symbol_grad)
             if iszero(grad_id)
+                push!(grad_shapes, Shape{Float}())
                 continue
             end
             if !isnothing(gradients) && grad_id in keys(gradients)
@@ -260,20 +257,20 @@ function build_sequence(; scanner=nothing, B0=3., TR=nothing, definitions, versi
                 else
                     times = grad_shape.times .* (num * gradient_raster) .+ start_time
                 end
-                append!(times_grad, times)
-                append!(amps_grad, grad_shape.amplitudes .* (proc.amp * 1e-9))
+                push!(grad_shapes, Shape(times, grad_shape.amplitudes .* (proc.amp * 1e-9)))
                 block_duration = max(proc.delay * 1e-3 + num * gradient_raster, block_duration)
             elseif !isnothing(trap) && grad_id in keys(trap)
                 proc = trap[grad_id]
                 start_time = block_start_time + proc.delay * 1e-3
                 times = (cumsum([0, proc.rise, proc.flat, proc.fall]) .* 1e-3) .+ start_time
-                amplitudes = [0, proc.amp * 1e-9, proc.amp * 1e-9, 0]
-                append!(times_grad, times)
-                append!(amps_grad, amplitudes)
+                push!(grad_shapes, Shape(times, [0, proc.amp * 1e-9, proc.amp * 1e-9, 0]))
                 block_duration = max((proc.delay + proc.rise + proc.flat + proc.fall) * 1e-3, block_duration)
             else
                 error("Gradient ID $grad_id not found in either of [GRADIENTS] or [TRAP] sections")
             end
+        end
+        if any(length.(grad_shapes) .> 0)
+            push!(seq_gradients, MRGradients(grad_shapes...))
         end
         if version == v"1.3.1"
             if !iszero(block.delay)
@@ -291,10 +288,5 @@ function build_sequence(; scanner=nothing, B0=3., TR=nothing, definitions, versi
         total_duration = parse(Float, get(definitions, "TotalDuration", "0")) * 1000
         TR = iszero(total_duration) ? block_start_time : total_duration
     end
-    for (times, amplitudes) in gradient_control_points
-        push!(times, TR)
-        push!(amplitudes, 0)
-    end
-    grad = MRGradients([Shape(t, a) for (t, a) in gradient_control_points]...)
-    Sequence(; scanner=scanner, TR=TR, pulses=[rf_pulses..., readouts...], gradients=grad)
+    Sequence(; scanner=scanner, TR=TR, components=[rf_pulses..., readouts..., seq_gradients...])
 end

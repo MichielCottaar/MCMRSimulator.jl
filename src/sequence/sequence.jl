@@ -4,37 +4,52 @@ include("gradients.jl")
 include("radio_frequency.jl")
 
 """
-    Sequence(;TR, gradients=nothing, pulses=nothing, scanner=Scanner(B0), B0=3., interplate_gradients=:step)
+    Sequence(;TR, components=[], scanner=Scanner(B0), B0=3., interplate_gradients=:step)
 
-An MR sequence represented by a series of pulses repeated with a given repetition time (`TR`).
+An MR sequence represented by a series of components repeated with a given repetition time (`TR`).
 
 Possible sequence components are:
 - [`RFPulse`](@ref): Radio-frequency pulse with user-provided amplitude and phase profile.
 - [`InstantRFPulse`](@ref): instantaneous approximation of a radio-frequency pulse flipping the spin orientations.
+- [`MRGradients`](@ref): MRI gradient profiles
 - [`InstantGradient`](@ref): instantaneous gradients encoding spatial patterns in the spin phase distribution.
 - [`Readout`](@ref): Store the spins at this timepoint.
 
-The previous/current/next RF pulse at a specific time is given by [`previous_pulse`](@ref), [`current_pulse`](@ref), or [`next_pulse`](@ref). 
-All of these will return `nothing` if there is no previous/current/next pulse.
-The same functions exist for the previous/current/next instantaneous pulse (i.e., [`InstantRFPulse`](@ref) or [`InstantGradient`](@ref)), 
-    namely [`previous_instant`](@ref), [`current_instant`](@ref), or [`next_instant`](@ref). 
-Note that all gradients/pulses repeat every `TR`.
+The previous/current/next [`RFPulse`] at a specific time is given by [`previous_pulse`](@ref), [`current_pulse`](@ref), or [`next_pulse`](@ref). 
+Equivalent functions are available to [`MRGradients`] called [`previous_gradient`](@ref), [`current_gradient`](@ref), or [`next_gradient`](@ref).
+All of these will return `nothing` if there is no previous/current/next gradient/RF pulse.
+
+The same functions exist for the previous/current/next instantaneous gradient/RF pulse (i.e., [`InstantRFPulse`](@ref) or [`InstantGradient`](@ref)), namely [`previous_instant`](@ref), [`current_instant`](@ref), or [`next_instant`](@ref). 
+
+Note that all gradients/pulses repeat every `TR` milliseconds.
 """
-struct Sequence{NI, NP, NR, G<:MRGradients}
+struct Sequence{NI, NP, NR, NG}
     scanner :: Scanner
-    gradient :: G
+    gradients :: SVector{NG, MRGradients}
     instants :: SVector{NI, InstantComponent}
     pulses :: SVector{NP, RFPulse}
     TR :: Float
     readout_times :: SVector{NR, Float}
-    function Sequence(scanner::Scanner, gradients::MRGradients, pulses::AbstractVector, TR :: Real)
-        all([p isa Union{InstantComponent, Readout, RFPulse} for p in pulses])
-        instants = sort([p for p in pulses if p isa InstantComponent], by=get_time)
+    function Sequence(scanner::Scanner, components::AbstractVector, TR :: Real)
+        @assert all([p isa Union{InstantComponent, Readout, RFPulse, MRGradients} for p in components])
+    
+        instants = sort([p for p in components if p isa InstantComponent], by=get_time)
         @assert length(instants) == 0 || (get_time(instants[end]) <= TR && get_time(instants[1]) >= 0)
         @assert length(instants) == length(unique(get_time.(instants)))
-        readout_times = sort([get_time(p) for p in pulses if p isa Readout])
+
+        readout_times = sort([get_time(p) for p in components if p isa Readout])
         @assert length(readout_times) == 0 || (readout_times[end] <= TR && readout_times[1] >= 0)
-        rf_pulses = sort([p for p in pulses if p isa RFPulse], by=start_time)
+    
+        gradients = sort([p for p in components if p isa MRGradients], by=start_time)
+        for (p1, p2) in zip(gradients[1:end-1], gradients[2:end])
+            @assert end_time(p1) <= start_time(p2)
+        end
+        for pulse in gradients
+            @assert start_time(pulse) >= 0
+            @assert end_time(pulse) <= TR
+        end
+
+        rf_pulses = sort([p for p in components if p isa RFPulse], by=start_time)
         for (p1, p2) in zip(rf_pulses[1:end-1], rf_pulses[2:end])
             @assert end_time(p1) <= start_time(p2)
         end
@@ -42,20 +57,15 @@ struct Sequence{NI, NP, NR, G<:MRGradients}
             @assert start_time(pulse) >= 0
             @assert end_time(pulse) <= TR
         end
-        new{length(instants), length(rf_pulses), length(readout_times), typeof(gradients)}(scanner, gradients, instants, rf_pulses, Float(TR), readout_times)
+        new{length(instants), length(rf_pulses), length(readout_times), length(gradients)}(scanner, gradients, instants, rf_pulses, Float(TR), readout_times)
     end
 end
 
-function Sequence(; scanner=nothing, gradients=nothing, pulses::AbstractVector=[], TR::Real, B0::Real=3.)
+function Sequence(; scanner=nothing, components::AbstractVector=[], TR::Real, B0::Real=3.)
     if isnothing(scanner)
         scanner = Scanner(B0=B0)
     end
-    if isnothing(gradients)
-        gradients = MRGradients()
-    elseif !isa(gradients, MRGradients)
-        gradients = MRGradients(gradients)
-    end
-    Sequence(scanner, gradients, pulses, TR)
+    Sequence(scanner, components, TR)
 end
 
 function Base.show(io::IO, seq::Sequence)
@@ -110,7 +120,7 @@ function current_index(pulses, time)
 end
 
 for relative in ("previous", "current", "next")
-    for pulse_type in ("pulse", "instant")
+    for pulse_type in ("pulse", "instant", "gradient")
         func_name = Symbol(relative * "_" * pulse_type)
         plural_pulse_type = Symbol(pulse_type * "s")
         index_func = Symbol(relative * "_index")
@@ -140,22 +150,27 @@ for relative in ("previous", "current", "next")
 end
 
 """
-    gradient([position, ], sequence, t1[, t2])
+    gradient([position, ], sequence, t1)
 
-Gets the off-resonance field (units: kHz) at given `position` at time `t1` (or integrated between times `t1` and `t2`).
+Gets the off-resonance field (units: kHz) at given `position` at time `t1`.
 If position is not supplied the MR gradient is returned as a [`PosVector`](@ref) (units: kHz/um).
 """
-gradient(position::AbstractVector, seq::Sequence, time::Number) = gradient(position, seq.gradient, mod(time, seq.TR))
-gradient(position::AbstractVector, seq::Sequence, time1::Number, time2::Number) = gradient(position, seq.gradient, mod(time1, seq.TR), iszero(mod(time2, seq.TR)) ? seq.TR : mod(time2, seq.TR))
-gradient(seq::Sequence, time::Number) = gradient(seq.gradient, mod(time, seq.TR))
-gradient(seq::Sequence, time1::Number, time2::Number) = gradient(seq.gradient, mod(time1, seq.TR), iszero(mod(time2, seq.TR)) ? seq.TR : mod(time2, seq.TR))
+function gradient(position::AbstractVector, seq::Sequence, time::Number) 
+    grad = current_gradient(seq, time)
+    isnothing(grad) ? zero(Float) : gradient(position, current_gradient(seq, time), mod(time, seq.TR))
+end
+
+function gradient(seq::Sequence, time::Number)
+    grad = current_gradient(seq, time)
+    isnothing(grad) ? zero(Float) : gradient(current_gradient(seq, time), mod(time, seq.TR))
+end
 
 """
     SequencePart(sequence, t1, t2)
 
 Represents a small part of a [`Sequence`](@ref) between times `t1` and `t2`.
 During this time the RF pulse and gradients are assumed to change linearly and hence can be represented as [`ShapePart`](@ref) objects.
-This is used to guide the spin evolution during the timestep between times `t1` and `t2` during the simulation.
+This is used to guide the spin evolution during the timestep between times `t1` and `t2` in the simulation.
 """
 struct SequencePart
     rf_amplitude::ShapePart{Float}
@@ -176,12 +191,16 @@ function SequencePart(sequence::Sequence, t1::Number, t2::Number)
         amp = ShapePart(pulse.amplitude, t1_norm, t2_norm)
         phase = ShapePart(pulse.phase, t1_norm, t2_norm)
     end
+    grad = current_gradient(sequence, (t1_norm + t2_norm) / 2)
+    if isnothing(grad)
+        grad_part = ShapePart(zero(PosVector), zero(PosVector), zero(PosVector))
+    else
+        grad_part = ShapePart(grad.shape, t1_norm, t2_norm)
+    end
     SequencePart(
         amp, phase,
-        ShapePart(sequence.gradient.shape, t1_norm, t2_norm),
-        sequence.gradient.origin,
-        t2 - t1,
-        B0(sequence)
+        grad_part, isnothing(grad) ? zero(PosVector) : grad.origin,
+        t2 - t1, B0(sequence)
     )
 end
 

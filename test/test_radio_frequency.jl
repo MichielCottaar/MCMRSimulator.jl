@@ -3,7 +3,7 @@
         for phase in (0, 30)
             rf = mr.constant_pulse(0, 9, 90, phase0=phase)
             @test rf.max_amplitude ≈ 1/36
-            seq = mr.Sequence(pulses=[rf], TR=100.)
+            seq = mr.Sequence(components=[rf], TR=100.)
             sim = mr.Simulation(seq)
             signal = mr.signal(100, sim, 0:0.1:10)
             @test all(mr.propose_times(sim, 0, 9) .== 0:0.1:9)
@@ -20,7 +20,7 @@
     @testset "Constant RF pulse with off-resonance" begin
         rf = mr.constant_pulse(0, 9, 90, off_resonance=1.)
         @test rf.max_amplitude ≈ sqrt(1 + (90 / (360 * 9))^2)
-        seq = mr.Sequence(pulses=[rf], TR=100.)
+        seq = mr.Sequence(components=[rf], TR=100.)
         sim = mr.Simulation(seq, off_resonance=1)
         signal = mr.signal(100, sim, 0:0.1:10)
         increasing = signal[1:90]

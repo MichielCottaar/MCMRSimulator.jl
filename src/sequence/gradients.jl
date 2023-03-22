@@ -51,6 +51,9 @@ function MRGradients(times::AbstractVector{<:Number}, amplitudes::AbstractVector
     )
 end
 
+start_time(g::MRGradients) = start_time(g.shape)
+end_time(g::MRGradients) = end_time(g.shape)
+
 add_TR(g::MRGradients, TR::Number) = MRGradients(add_TR(g.shape, TR), g.origin)
 
 control_points(g::MRGradients) = control_points(g.shape)
@@ -80,7 +83,7 @@ Rotates the gradients in `gradients` to align with `bvec`.
 """
 function rotate_bvec(gradients::AbstractVector{<:Tuple{Real, Real}}, bvec)
     bvec = PosVector(bvec ./ norm(bvec))
-    [(time, bvec * grad) for (time, grad) in gradients]
+    MRGradients([(time, bvec * grad) for (time, grad) in gradients])
 end
 
 function rotate_bvec(gradients::MRGradients, bvec)

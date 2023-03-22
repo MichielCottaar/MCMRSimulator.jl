@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - v1.4.0 of the `pulseq` sequence is now supported
 ### Changed
 - The spelling of `read_pulseseq` has been corrected to `read_pulseq`.
+- `Sequence` constructor now expected all sequence components (pulses, gradients, and readouts) to be passed on as a vector to a single `components` flag rather than separate `pulses` and `gradients` flags.
 ### Fixed
 - A `DomainError` is now thrown when obstructions are cut off by the repeats.
 - The example `Scanner` objects were created with the wrong units. Their maximum gradient strengths and slew rates have now been fixed.

@@ -93,7 +93,7 @@ end
             actual_transfer = 1 - (1 - transfer) ^ (1/sqrt(timestep))
             geometry = mr.walls(MT_fraction=actual_transfer)
             spins = [mr.Spin(position=Random.rand(3) .* wall_dist) for _ in 1:nspins]
-            sequence = mr.Sequence(pulses=[mr.InstantRFPulse(flip_angle=90)], TR=1e5)
+            sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=1e5)
             simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=diffusivity, max_timestep=timestep)
             signal = mr.signal(spins, simulation, [timestep])
             @test length(signal) == 1
@@ -108,7 +108,7 @@ end
     @testset "Test that transfer rate does not depend on timestep" begin
         Random.seed!(1234)
         geometry = mr.walls(repeats=1, MT_fraction=0.1)
-        sequence = mr.Sequence(pulses=[mr.InstantRFPulse(flip_angle=90)], TR=1e5)
+        sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=1e5)
 
         reference = nothing
         for timestep in (0.01, 0.1, 1)
@@ -147,7 +147,7 @@ end
     @testset "Setting surface MRI properties" begin
         geometry = mr.walls(repeats=1, T2_surface=1e-6)
         init = mr.Snapshot(10000)
-        seq = mr.Sequence(pulses=[mr.InstantRFPulse(flip_angle=90)], TR=1000)
+        seq = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=1000)
         for density in (0, 0.5, 1)
             for dwell_time in (1, 2)
                 @testset "Density = $density; dwell_time = $dwell_time" begin

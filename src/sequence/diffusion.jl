@@ -89,7 +89,7 @@ function perfect_dwi(;
             InstantGradient(time=(TE + diffusion_time) / 2., qvec=qvec),
         ])
     end
-    Sequence(pulses=base_components, TR=TR)
+    Sequence(components=base_components, TR=TR)
 end
 
 """
@@ -128,8 +128,9 @@ function dwi(;
         InstantRFPulse(time=0., flip_angle=90., phase=-90.),
         InstantRFPulse(time=TE/2., flip_angle=180.),
         Readout(time=TE),
+        grad,
     ]
-    Sequence(scanner=scanner, pulses=pulses, gradients=grad, TR=TR)
+    Sequence(scanner=scanner, components=pulses, TR=TR)
 end
 
 

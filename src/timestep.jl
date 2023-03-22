@@ -87,7 +87,7 @@ end
 all_control_points(sequence::Sequence) = [
         0, sequence.TR,
         [get_time(instant) for instant in sequence.instants]...,
-        control_points(sequence.gradient)...,
+        vcat(control_points.(sequence.gradients)...)...,
         start_time.(sequence.pulses)...,
         end_time.(sequence.pulses)...,
     ]
@@ -114,7 +114,7 @@ function max_timestep_sequence_gradient(sequence::Sequence, gradient_precision::
     if iszero(gradient_precision)
         return Inf
     end
-    grad = norm(gradient(sequence, t_start, t_end))
+    grad = norm(gradient(sequence, (t_start + t_end) / 2))
     return (360 * diffusivity * grad * grad) ^ (-1/3) / gradient_precision
 end
 
