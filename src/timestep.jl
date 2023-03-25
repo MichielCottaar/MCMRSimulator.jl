@@ -11,7 +11,7 @@ Stores the settings controlling the maximum timestep during the simulation, name
 - `rf_rotation`: Maximum amount of rotation that an RF pulse should be able to apply in a single timestep (units: degrees).
     This constraint is only active if there is an RF pulse active in any of the sequences.
 
-More details about how these settings are used can be found in [`propose_times`](ref).
+More details about how these settings are used can be found in [`propose_times`](@ref).
 """
 struct TimeController
     max_timestep :: Float

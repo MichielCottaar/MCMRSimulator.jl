@@ -67,7 +67,7 @@ Spirals range from `inner` to `outer` radii starting at an angle of `theta0`.
 Each wrap has a thickness of `thickness` micrometers.
 Inner/outer cylinders can be added using respectively the `inner_cylinder` and `outer_cylinder` flags (default: only inner cylinder).
 
-[Myelinated spirals](@ref Myelinated_annuli) can be created by setting the `myelin` to true.
+Myelinated spirals can be created by setting the `myelin` to true.
 All parameters can be either a single value or a vector of values.
 
 The `positions`, `repeats`, and `rotation` control the annulus position and orientation and is explained in 

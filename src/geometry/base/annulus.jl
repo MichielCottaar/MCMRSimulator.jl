@@ -40,7 +40,7 @@ end
     annuli(inner, outer; myelin=false, chi_I=-0.1, chi_A=-0.1, positions=[0, 0], repeats=[Inf, Inf], rotation=I(3)
 
 Creates one or more [`Annulus`](@ref) with given `inner` and `outer` radii.
-[Myelinated annuli](@ref Myelinated_annuli) can be created by setting the `myelin` to true.
+Myelinated annuli can be created by setting the `myelin` to true.
 All parameters can be either a single value or a vector of values.
 
 The `positions`, `repeats`, and `rotation` control the annulus position and orientation and is explained in 

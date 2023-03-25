@@ -2,11 +2,11 @@
 [MCMRSimulator.jl](https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl) allows simulation of MR signal generation using Monte Carlo simulations.
 The spin evolution of randomly diffusing particles is tracked under influence of one or more MR sequences.
 At present, the simulator allows to model
-- Free diffusion and diffusion restricted by walls, cylinders, spirals (experimental, spheres, or meshes
-- T1 and T2 relaxation using global T1/T2 parameters
-- MR sequences consisting of RF pulses, gradients, and readouts
+- Free diffusion and diffusion restricted by [`walls`](@ref), [`cylinders`](@ref), [`spirals`](@ref) (experimental), [`spheres`](@ref), and/or a [`Mesh`](@ref).
+- T1 and T2 relaxation using global or local T1/T2 parameter
+- MR sequences consisting of arbitrary RF pulses, gradients, and readouts
 - Off-resonance field generation by myelinated cylinders
-- Magnetisation transfer between liquid spins and membranes in both a simplified way (i.e., spins relax when hitting an obstruction) or a more realistic way (spins get exchanged into the obstruction).
+- Magnetisation transfer between liquid spins and membranes in both a simplified way (i.e., spins relax when hitting an obstruction) or a more realistic way (spins get exchanged into the membrane).
 - Membrane permeability (i.e., exchange)
 - Surface tension of membranes causing spins to get temporarily "stuck" when they hit a membrane
 
@@ -35,8 +35,7 @@ We use the following units throughout (unless otherwise noted):
    - Install MCMRSimulator.jl (`pkg> add https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl.git`)
    - Install one of the [Makie backends](https://makie.juliaplots.org/stable/documentation/backends/) for plotting (e.g., `pkg> add CairoMakie`)
    - Press "\[backspace\]" to leave the package manager
-After this installation, you should be able to follow the steps in the tutorial below
-or create your own simulations.
+After this installation, you should be able to follow the steps in the tutorial below or create your own simulations.
 # Tutorial
 This tutorial will walk through an example of modelling the MRI signal evolution for a diffusion-weighted sequence.
 The spins in this simulation will be constrained by regularly packed cylinders.
@@ -47,62 +46,74 @@ using CairoMakie  # used for plotting; use GLMakie or WGLMakie for interactive p
 ```
 
 In general, running a simulation will consist of the following three steps:
-- Defining the microstructure and on or more sequences by creating an appropriate [`Simulation`](@ref) object.
-- Initialising one or more [`Spin`](@ref) objects.
+- Defining the microstructure and one or more sequences by creating an appropriate [`Simulation`](@ref) object.
+- Initialising [`Snapshot`](@ref) with one or more [`Spin`](@ref) objects.
 - Simulating a random walk of the spins through the microstructure and the MR signal produced by those spins.
 - Plotting the MR signal or storing it to disk.
 We will look through each of these steps below.
 ## Defining the simulation
 The first step is to define the environment through which the spins will evolve.
 We will do so by creating an appropriate [`Simulation`](@ref) object.
-This `Simulation` will contain information on the microstructure, the MR physics, and the enabled sequences.
+This `Simulation` will contain information on the microstructure, how spins interact with that microstructure, and the enabled sequence(s).
 
 These different steps are described in more detail in other sections of this documentation:
 - [How to define the microstrutural geometry](@ref geometry)
-- [Generate off-resonance fields due to the microstructural geometry](@ref off_resonance)
+- [Controlling spin behaviour](@ref properties)
 - [Sequence generation](@ref sequence)
 
-First we will define the geometry formed of regularly packed axons.
+First we will define a geometry formed of regularly packed axons.
 This is represented by a single cylinder with a radius of 1 micrometer that repeats itself every 2.5 micrometer (in both the x-, and y-direction).
 ```@example tutorial
 import Random; Random.seed!(1) # hide
 geometry = cylinders(1., repeats=[2.5, 2.5])
 
 f = plot(PlotPlane(size=5), geometry)
+f
 save("tutorial_geometry.png", f) # hide
 nothing # hide
 ```
 ![](tutorial_geometry.png)
-More complicated geometries can be generated as described [here](@ref geometry) including geometries with magnetic susceptibility that produce off-resonance fields (see [here](@ref off_resonance)).
 
-The next step is to define a sequence. 
+More complicated geometries can be generated as described [here](@ref geometry).
+
+The next step is to define a sequence (see [here](@ref sequence) for more details). 
 Here we will adopt a single diffusion-weighted MRI sequence.
 ```@example tutorial
 sequence = dwi(bval=2., TR=300, TE=80, scanner=Siemens_Prisma)  # default gradient orientation in the x-direction
 f = plot(sequence)
+f
 save("tutorial_sequence.png", f); # hide
 nothing # hide
 ```
 ![](tutorial_sequence.png)
 
-Once we have both a geometry and one or more sequences, we can put them together in a [`Simulation`](@ref) object (click on this object for more details on the many options available when setting up a simulation):
+Once we have both a geometry and one or more sequences, we can put them together in a [`Simulation`](@ref) object:
 ```@example tutorial
 simulation = Simulation(sequence, R2=0.012, R1=3e-3, diffusivity=2., off_resonance=0.1, geometry=geometry)
 nothing # hide
 ```
-Note that we actually have to set the `R2`, `R1`, and `diffusivity` to non-zero values to enable those pieces of physics.
+By default there is no T1 or T2 relaxation and spins do not move.
+Enabling spin relaxation and diffusion requires setting the appropriate parameters in the [`Simulation`](@ref).
 
 ## Initialising the simulation
-We can initialise the simulation in one of three ways:
-- An integer value indicating the number of spins to be simulated. The spins will be randomly distributed through a 1mm x 1mm x 1mm voxel and start with a longitudinal magnetisation in equilibrium.
-- A sequence of positions (i.e., length-3 vectors) with the initial spin positions.
-- A [`Snapshot`](@ref) (i.e., collection of spins with a timestamp) from a previous simulation.
-We will see examples of all three below.
+The current state of the simulation at any time is given by a [`Snapshot`](@ref) object.
+This is essentially a vector of [`Spin`](@ref) objects with a time stamp.
+Each [`Spin`](@ref) represents a single diffusing particle.
+Besides containing its current position, it also contains its contribution to the MR signal for each of the sequences in the simulation and whether it is stuck on any surfaces.
 
-Each `Spin` represents a single diffusing particle.
-Besides containing its current position, it also contains its contribution to the MR signal for each of the sequences in the simulation.
+The recommended way to initialise is to call [`Snapshot`](@ref)`(<number of spins>, <simulation>, [bounding_box])`.
+This will create randomly distributed spins within some [`BoundingBox`](@ref).
+By default this bounding box is an isotropic voxel with a size of 1 mm centered on the origin.
 
-At each timepoint the current state of the spins is represented by a [`Snapshot`](@ref).
+After initialisation or after running the simulation, the [`Snapshot`](@ref) can be later filtered to, for example, only include intra-cellular or extracellular spins (see [`isinside`](@ref)) or only free or stuck spins (see [`stuck`](@ref)).
+
+The simulation can also be initialised explicitly using a sequence of positions (i.e., length-3 vectors) with the initial spin positions. 
+Note that such a simulation will start with all spins free and not necessarily randomly distributed, which means it might take some time to reach an equilibrium.
+
+For each of these initialisations the initial magnetisation can be explicitly set using the [`transverse`](@ref), [`longitudinal`](@ref), and [`phase`](@ref) flags.
+The default is for spins to start in equilibrium (i.e., transverse magnetisation of 0 and longitudinal magnetisation of 1).
+
+Finally, one could start a simulation using a [`Snapshot`](@ref) from a previous simulation.
 
 !!! note "Deterministic spins"
     Each [`Spin`](@ref) is assigned a random number state at creation, which will be used for its future evolution. This means that after creation of a spin or a [`Snapshot`](@ref) its future is fully determined. This ensures that when a spin is evolved through the same simulation multiple times, it sill follow the same path each time. This allows improved comparisons between simulations with the same geometry, but different sequences/physics. However, it can lead to confusing results (e.g., a simulation initialised with `fill(Spin(), 500)` will contain 500 spins all following the exact same path).
@@ -112,10 +123,12 @@ Running the simulation is done through 4 functions, for which examples are shown
 - [`evolve`](@ref): evolve a large number of spins for a specific time
 - [`readout`](@ref): return the spin states at the time of the sequence readouts
 - [`signal`](@ref): return the average signal at high temporal resolution
+For each of these functions a [`Snapshot`](@ref) object can be passed on or a number. 
+In case of a number an initial [`Snapshot`](@ref) is created on the fly with the appropriate number of spins.
 ### Illustrating trajectories
 We will start by illustrating the 2D trajectory for two spins, one inside and one outside of the cylinder.
 To plot the trajectory we first need to output the state of the all spins at a high temporal resolution,
-which can be done using `trajectory`:
+which can be done using [`trajectory`](@ref):
 ```@example tutorial
 # Simulate 2 spins with given starting positions for 3 ms
 snapshots = trajectory([[0, 0, 0], [1, 1, 0]], simulation, 0:0.01:3.)
@@ -123,6 +136,7 @@ snapshots = trajectory([[0, 0, 0], [1, 1, 0]], simulation, 0:0.01:3.)
 pp = PlotPlane(size=5.)
 f = plot(pp, geometry)
 plot_trajectory2d!(pp, snapshots)
+f
 save("tutorial_trajectory2D.png", f) # hide
 nothing # hide
 ```
@@ -152,6 +166,7 @@ times = 0:0.1:sequence.TR
 average_signals = signal(3000, simulation, times)  # simulate 3000 spins for a single repetition time
 f = plot(sequence)
 lines!(times, transverse.(average_signals)/3000.)
+f
 save("tutorial_transverse.png", f) # hide
 nothing # hide
 ```
@@ -164,6 +179,7 @@ snapshot = evolve(3000, simulation, 80.)
 pp = PlotPlane(size=2.5)
 f = plot(pp, snapshot)
 plot!(pp, geometry)
+f
 save("tutorial_snapshot.png", f) # hide
 nothing # hide
 ```
@@ -187,6 +203,7 @@ for start in (first_TR_start, fifth_TR_start)
     simulated_signals = signal(start, simulation, times .+ start.time)
     lines!(times, longitudinal.(simulated_signals)/3000., cycle=[:color])
 end
+f
 save("tutorial_longitudinal.png", f) # hide
 nothing # hide
 ```

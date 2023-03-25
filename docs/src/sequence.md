@@ -1,10 +1,11 @@
 # [MR sequences](@id sequence)
 ## Pulseseq sequences
-The recommended way to define sequences is to use pulseq sequence format (http://pulseq.github.io/).
 Pulseq sequences can be generated using matlab (http://pulseq.github.io/) or python (https://pypulseq.readthedocs.io/en/master/).
 They can be loaded into MCMRSimulator using [`read_pulseq`](@ref).
+Developing your sequences in pulseq has the advantage that they can be used both in MCMRSimulator and on your MRI scanner.
 ## Built-in MR sequences
-### Diffusion-weighted MRI
+Simple [`gradient_echo`](@ref) and [`spin_echo`](@ref) sequences are available.
+
 A pulsed-gradient spin-echo can be created using [`dwi`](@ref)
 ```@example
 using MCMRSimulator # hide
@@ -16,6 +17,7 @@ nothing # hide
 ```  
 ![DWI sequence diagram](dwi_sequence.png)
 
+By setting the `gradient_duration` keyword to 0, [`InstantGradient`](@ref) objects can be inserted instead of [`MRGradients`](@ref).
 ```@example
 using MCMRSimulator # hide
 sequence = dwi(TR=100., bval=3., gradient_duration=0.)
@@ -34,10 +36,62 @@ This sequence contains of:
 - Readouts ([`Readout`](@ref)). These are always instanteneous as realistic modelling of an actual MRI readout would require modelling the whole brain and receiver coil configuration, which is far beyond the scope of this simulator.
 Each of these sequence components will play identically every repetition time (TR) of the sequence.
 
-## Defining the MR gradients
-The MRI scanner gradients cause the spins to precess at different rates in different part of the tissue.
-This encodes the spin location into the spin orientation and can hence be used to measure the movement of spins (e.g., in diffusion-weighted MRI).
-Crusher gradients are also commonly used to get rid of unwanted signal contributions due to imperfect RF pulses.
+The simplest way to create these sequences is as a (possibly nested) vector of sequence [`BuildingBlock`](@ref), which are played in sequence. 
+Each building block can be one of the following:
+- an RF pulse ([`InstantRFPulse`](@ref) or finite [`RFPulse`](@ref))
+- a gradient ([`InstantGradient`](@ref) or finite [`MRGradients`](@ref))
+- a number indicating a delay
+- a [`Readout`](@ref)
+- a [`BuildingBlock`](@ref) object, which can be used for when an RF pulse and gradient need to played simultaneously (e.g., for slice-selective pulses)
+Such a (nested) vector can be passed on directly to the [`Sequence`](@ref) constructor.
 
-The gradient profile over time can be modeled as a [`MRGradients`](@ref) object. 
-The off-resonance field at a specific time (or integrated over a timespan) and position can be computed using [`gradient`](@ref).
+For example, a simple pulsed-gradient spin echo sequence could be generated in the following way (rather than call [`dwi`](@ref)):
+```@example
+using MCMRSimulator # hide
+base_trapezium = MRGradients([
+    (0, 0),
+    (1, 0.01),  # 1 ms rise time to 0.01 kHz/um
+    (39, 0.01), # constant amplitude for 38 ms
+    (40, 0),    # total duration of 40 ms
+])
+trapezium = rotate_bvec(base_trapezium, [0, 1, 1])  # point +y/+z diagonal
+
+sequence = Sequence([
+    constant_pulse(2, 90),          # start with 2 ms excitation pulse
+    trapezium,                      # followed immediated by MR gradients
+    2,                              # wait for 2 ms
+    constant_pulse(4, 180),         # refocus pulse (4 ms long)
+    trapezium,
+    3,
+    Readout(),                      # Readout 90 ms after middle of excitation pulse
+], TR=130, scanner=Scanner(B0=3.))
+using CairoMakie # hide
+f = plot(sequence) # hide
+save("custom_dwi.png", f) # hide
+nothing # hide
+```
+![Sequence diagram of custom DWI](custom_dwi.png)
+
+Adding diffusion-weighting can be made easier using [`add_linear_diffusion_weighting`](@ref):
+
+```@example
+using MCMRSimulator # hide
+
+# Build sequence without diffusion weighting
+base_sequence = [
+    constant_pulse(2, 90),          
+    42,                      # to be replaced with gradient
+    constant_pulse(4, 180),          
+    23,                      # to be replaced with gradient
+    20,                      # kept empty to allow time for extended readout
+    Readout(),
+]
+# replace blocks 2 and 4 in the `base_sequence` with gradients that produce a b-value of 1 um^2/ms
+with_dwi = add_linear_diffusion_weighting(base_sequence, 2, 4, bval=1.) 
+sequence = Sequence(with_dwi; TR=100)
+using CairoMakie # hide
+f = plot(sequence) # hide
+save("custom_dwi_helped.png", f) # hide
+nothing # hide
+```
+![Sequence diagram of custom DWI using add_linear_diffusion_weighting](custom_dwi_helped.png)

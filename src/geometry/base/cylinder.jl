@@ -3,7 +3,6 @@
 
 Creates a hollow cylinder with a radius of `radius` micrometer (default 1 micrometer) at the given `location` (default: origin).
 Generate cylinders using [`cylinders`](@ref).
-See [Myelinated cylinders](@ref Myelinated_cylinders) for an explanation of the myelin sheath.
 """
 struct Cylinder <: BaseObstruction{2}
     radius :: Float
@@ -38,7 +37,7 @@ end
     cylinders(radii; g_ratio=1, chi_I=-0.1, chi_A=-0.1, positions=[0, 0], repeats=[Inf, Inf], rotation=I(3)
 
 Creates one or more [`Cylinder`](@ref)s with given radius (or vector of `radii`).
-[Myelinated cylinders](@ref Myelinated_cylinders) can be created by setting the `g_ratio` to a different value that 1.
+Myelinated cylinders can be created by setting the `g_ratio` to a different value that 1.
 All parameters can be either a single value or a vector of values.
 The `positions`, `repeats`, and `rotation` control the cylinder position and orientation and is explained in 
 more detail in [Defining the geometry](@ref).

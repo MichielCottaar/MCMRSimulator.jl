@@ -18,9 +18,9 @@ makedocs(
     ),
     pages=[
         "Home" => "index.md",
-        "Geometry" => "obstructions.md",
+        "Geometry" => "geometry.md",
         "Sequence" => "sequence.md",
-        "Magnetic susceptibility" => "off_resonance.md",
+        "MRI/collision properties" => "properties.md",
         "API" => "api.md",
         "References" => "references.md",
     ],

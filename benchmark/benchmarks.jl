@@ -3,7 +3,7 @@ import MCMRSimulator as mr
 
 
 span = mr.Snapshot(300)
-sequence = mr.perfect_dwi(bval=2.)
+sequence = mr.dwi(bval=2.)
 geometries = (
     mr.spheres(0.9, repeats=[2, 2, 2]),
     mr.cylinders(0.9, repeats=[2, 2]),

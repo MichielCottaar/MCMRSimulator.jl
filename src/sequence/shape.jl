@@ -16,6 +16,8 @@ struct Shape{T}
             return new{T}(Float[], T[])
         end
 
+        times = Float.(times)
+
         # removing duplicate times
         prev_matched = false
         to_remove = Int[]

@@ -39,6 +39,32 @@ T1(p::MRIProperties) = 1/R1(p)
 T2(p::MRIProperties) = 1/R2(p)
 off_resonance(p::MRIProperties) = p.off_resonance
 
+for (symbol, summary, opposite) in [
+    (:R1, "longitudinal relaxation rate (kHz)", "T1"),
+    (:T1, "longitudinal relaxation time (ms)", "R1"),
+    (:R2, "transverse relaxation rate (kHz)", "T2"),
+    (:T2, "transverse relaxation time (ms)", "R2"),
+    (:off_resonance, "off-resonance field (kHz)", nothing)
+]
+    symbol_str = string(symbol)
+
+    exclusive_statement = isnothing(opposite) ? "" : """ It is the inverse of $(opposite). $(opposite) and $(symbol_str) cannot both be set."""
+    @eval begin
+        """
+            $($symbol_str)(properties)
+
+        The $($summary) stored in [`MRIProperties`](@ref).$($exclusive_statement)
+
+        It can be set by the user when creating a [`Simulation`](@ref), in which case it will be stored in the [`GlobalProperties`](@ref).
+        When creating objects in this geometry, the $($symbol_str) can be updated in two ways:
+        - setting the `$($symbol_str)_inside` keyword affecting spins within the object
+        - setting the `$($symbol_str)_surface` keyword affecting spins stuck on the surface of the object
+        Both will be stored within a [`ObstructionProperties`](@ref) object.
+        """
+        function $(symbol) end
+    end
+end
+
 """
     empty_mri_properties(properties)
 
@@ -229,13 +255,23 @@ for symbol in (:permeability, :MT_fraction, :surface_density, :dwell_time)
     @eval $(symbol)(o::ObstructionProperties) = $(symbol)(o.collision)
     @eval $(symbol)(g::GlobalProperties) = $(symbol)(g.collision)
 
-    @eval function $(symbol)(o::ObstructionProperties, defaults) 
-        value = $(symbol)(o)
-        if isnan(value)
-            value = $(symbol)(defaults)
+    @eval begin
+        """
+            $($symbol)(properties)
+            $($symbol)(obstruction_properties, global_properties)
+
+        The $($symbol), which affects the spin when colliding with an obstruction.
+        It can be either set when creating a [`Simulation`](@ref), in which case it is stored in [`GlobalProperties`](@ref)
+        or when creating any [`Obstruction`](@ref), in which case it is stored in [`ObstructionProperties`](@ref).
+        """
+        function $(symbol)(o::ObstructionProperties, defaults) 
+            value = $(symbol)(o)
+            if isnan(value)
+                value = $(symbol)(defaults)
+            end
+            @assert !isnan(value)
+            return value
         end
-        @assert !isnan(value)
-        return value
     end
 end
 
@@ -259,4 +295,14 @@ function stick_probability(properties, diffusivity::Number, timestep::Number)
     return stick_probability(surface_density(properties), dwell_time(properties), diffusivity, timestep)
 end
 
+"""
+    correct_for_timestep(MT_fraction/permeability, timestep)
+
+Corrects the MT fraction or permeability for the variability in the timestep during the simulation.
+
+In Monte Carlo simulations the rate of collisions depends on the size of the timestep.
+This means that as the timestep changes, the effect of MT fraction and permeability will depend on the timestep.
+This function corrects the MT fraction and permeability values, so that their effect does not depend on timestep.
+The user-provided MT fraction and permeability will be used as is if the timestep is 1 milliseconds.
+"""
 correct_for_timestep(probability, timestep) = 1 - (1 - probability)^sqrt(timestep)

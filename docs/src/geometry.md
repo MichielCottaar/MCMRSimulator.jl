@@ -13,9 +13,9 @@ MCMRSimulator.jl comes with a variety of basic components that can be used to re
 
 The constructors for these components all have a similar interface.
 Some expect certain component-specific arguments (e.g., radii for [`spheres`](@ref) and [`cylinders`](@ref).
-Some also have component-specific keyword argumetns (e.g., the keywords regarding the off-resonance produces by [Myelinated cylinders](@ref Myelinated_cylinders)).
-MRI relaxation properties within the obstruction and collision parameters (magnetisation transfer rate & permeability) can be set using keyword arguments as described in [`ObstructionProperties`](@ref).
-Finally, they expect a set of keyword arguments that control their location.
+Some also have component-specific keyword argumetns (e.g., the keywords regarding the myelin-induced off-resonance field produced by [`cylinders`](@ref) or [`annuli`](@ref)).
+MRI relaxation properties within the obstruction and collision parameters (stuck spins, magnetisation transfer rate & permeability) can be set using keyword arguments as described in the [properties section](@ref properties).
+Finally, these constructors expect a set of keyword arguments that control their location.
 These arguments are identicaly across all constructors (although the expected input depends on the dimensionality of the component as listed in the table above):
 - `positions`: Set the positions for each generated components
 - `repeats`: Set the distance with which all components should be repeated
@@ -23,7 +23,7 @@ These arguments are identicaly across all constructors (although the expected in
 Components with a lower dimensionality are defined by default along the x-axis (for dimensionality of 1) or the x-y plane (for dimensionality of 2). 
 In other words, the normal of the [`walls`](@ref) point in the x-axis by default, while the [`cylinders`](@ref) point in the z-axis.
 Shifts and repeats should only be provided in this lower-dimensional space.
-The `rotation` can be used to define these components along other lines/planes.
+The `rotation` can be used to define these components along other lines/planes (see [`get_rotation`](@ref)).
 
 For example, we can create two base cylinders, which repeeat infinitely by running:
 ```@example
@@ -53,7 +53,7 @@ nothing # hide
 ```  
 ![Plot showing single cylinders repeating ad infinitum](regular_cylinders2.png)
 
-Myelin can be added to the cylinders, spirals, or annuli as described [here](@ref off_resonance).
+Myelin-induced off-resonance fields can be added to the cylinders, spirals, or annuli.
 
 A geometry is defined by either the [`TransformObstruction`](@ref) returned by a single call to these constructors
 or by an array of [`TransformObstruction`](@ref) objects.
@@ -62,6 +62,7 @@ A random set of positions and radii can be created using [`random_positions_radi
 The user in this case sets a target density (70% in the example below) and over which length scale the configuration should repeat itself (20x20 micrometer in the example below).
 ```@example random_distribution
 using MCMRSimulator # hide
+using Random; Random.seed!(1234) # hide
 (positions, outer_radii) = random_positions_radii((20, 20), 0.7, 2)
 nothing # hide
 ```

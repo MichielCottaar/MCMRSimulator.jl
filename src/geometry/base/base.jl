@@ -75,6 +75,12 @@ function lorentz_off_resonance end
     isinside(obstructions/geometry/bounding_box, snapshot)
 
 Test whether the particles are inside a [`BaseObstruction`](@ref), [`TransformObstruction`](@ref), [`Geometry`](@ref) or [`BoundingBox`](@ref) object.
+
+This can be used to filter a [`Snapshot`](@ref) using:
+```julia
+only_inside = filter(s -> isinside(geometry, s) > 0, snapshot)
+only_outside = filter(s -> isinside(geometry, s) == 0, snapshot)
+```
 """
 isinside(something, pos::AbstractVector) = isinside(something, SVector{length(pos)}(pos), empty_collision)
 
@@ -106,8 +112,8 @@ Computes the minimum size scale of the obstructions in the geometry.
 The size scale for each obstruction is defined as:
 - [`cylinders`](@ref)/[`spheres`](@ref): minimum radius
 - [`annuli`](@ref): minimum inner radius
-- [`mesh`](@ref): square root of median triangle size
-- [`wall`](@ref): distance between closest walls (infinite for single, non-repeating walls)
+- [`Mesh`](@ref): square root of median triangle size
+- [`Wall`](@ref): distance between closest walls (infinite for single, non-repeating walls)
 """
 function size_scale end
 

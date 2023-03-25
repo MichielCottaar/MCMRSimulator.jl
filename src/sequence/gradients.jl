@@ -39,7 +39,7 @@ end
 function MRGradients(times::AbstractVector{<:Number}, amplitudes::AbstractVector{<:Number}; origin=zero(PosVector))
     MRGradients(
         times,
-        [mr.PosVector(0, 0, a) for a in amplitudes],
+        [PosVector(0, 0, a) for a in amplitudes],
         origin=PosVector(origin)
     )
 end
@@ -82,8 +82,8 @@ end
 Rotates the gradients in `gradients` to align with `bvec`.
 """
 function rotate_bvec(gradients::AbstractVector{<:Tuple{Real, Real}}, bvec)
-    bvec = PosVector(bvec ./ norm(bvec))
-    MRGradients([(time, bvec * grad) for (time, grad) in gradients])
+    rotation = get_rotation(bvec, 1)
+    MRGradients([(time, rotation * [grad]) for (time, grad) in gradients])
 end
 
 function rotate_bvec(gradients::MRGradients, bvec)

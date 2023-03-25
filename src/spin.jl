@@ -118,6 +118,16 @@ function Base.show(io::IO, spin::Spin)
     print(io, "Spin(position=$(spin.position) ")
     show_helper(io, spin)
 end
+"""
+    stuck(spin)
+
+Returns true if the spin is stuck on the surface.
+This can be used to filter a [`Snapshot`](@ref) using:
+```julia
+only_stuck = filter(stuck, snapshot)
+only_free = filter(s -> !stuck(s), snapshot)
+```
+"""
 stuck(spin::Spin) = Reflection(spin) !== empty_reflection
 Reflection(spin) = spin.stuck_to
 Collision(spin) = Reflection(spin).collision

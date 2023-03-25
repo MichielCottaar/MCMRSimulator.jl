@@ -5,7 +5,7 @@ isCI = get(ENV, "CI", "false") == "true"
 
 @testset "Instantaneous gradients & pulses" begin
     function plot_perfect_dwi(fname)
-        sequence = mr.perfect_dwi(bval=2.)
+        sequence = mr.dwi(bval=2., gradient_duration=0)
         f = Figure()
         Axis(f[1, 1])
         plot!(sequence)

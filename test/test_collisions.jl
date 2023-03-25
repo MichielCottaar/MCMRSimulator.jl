@@ -228,7 +228,7 @@
                 mr.cylinders([0.8, 0.9], positions=[[0, 0], [0, 0]], repeats=[2, 2]),
                 mr.spheres([0.8, 0.9], positions=[[0, 0, 0], [2, 0, 2]], repeats=[2, 2, 2]),
             )
-                sequence = mr.perfect_dwi(bval=2.)
+                sequence = mr.dwi(bval=2., gradient_duration=0)
 
                 snap = mr.Snapshot(300);
 
@@ -244,7 +244,7 @@
             Random.seed!(1234)
             walls = mr.walls(positions=[0, 1])
             snap = mr.Snapshot([mr.Spin(position=rand(3)) for _ in 1:3000])
-            sequence = mr.perfect_dwi(bval=2.)
+            sequence = mr.dwi(bval=2., gradient_duration=0)
             simulation = mr.Simulation([sequence]; geometry=walls, diffusivity=3.);
 
             final = mr.evolve(snap, simulation, 200.)

@@ -91,6 +91,12 @@ function TransformObstruction(obstruction::BaseObstruction{N}; positions=nothing
     end
 end
 
+"""
+    get_rotation(vector, ndim)
+
+Returns the (3, `ndim`) rotation matrix mapping the x-direction to `vector` (if `ndim` is 1) or the z-direction to `vector` (if `ndim` is 3).
+Vector can be a length 3 array or one of the symbols :x, :y, or :z (representing vectors in those cardinal directions).
+"""
 get_rotation(rotation::Rotations.Rotation, ndim::Int) = get_rotation(Rotations.RotMatrix(rotation.mat), ndim)
 get_rotation(rotation::Rotations.RotMatrix, ndim::Int) = get_rotation(rotation.mat, ndim)
 function get_rotation(rotation::AbstractMatrix, ndim::Int)
@@ -203,7 +209,10 @@ end
     project(transform_obstruction, position)
 
 Computes the position in the space of the obstructions wrapped by the [`TransformObstruction`](@ref).
-Uses [`project_rotation`](@ref) and [`project_repeat`](@ref) under the hood.
+
+It does this first by rotating the `position` into the coordinate system of this [`TransformObstruction`](@ref).
+The position is then shifted by the appropriate amount for each [`Obstruction`](@ref).
+For repeating obstructions the position is always projected to the closest obstruction.
 """
 function project(trans::TransformObstruction{N, M}, pos::PosVector) where {N, M}
     [project_repeat(trans, project_rotation(trans, pos))(trans.obstructions[index]) for index in 1:M]

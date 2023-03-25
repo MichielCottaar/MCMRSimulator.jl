@@ -103,12 +103,12 @@ end
 Scanner(sequence::Sequence) = sequence.scanner
 B0(sequence::Sequence) = B0(Scanner(sequence))
 
-start_time(pulse::InstantComponent) = pulse.time
-end_time(pulse::InstantComponent) = pulse.time
+start_time(pulse::Union{InstantComponent, Readout}) = pulse.time
+end_time(pulse::Union{InstantComponent, Readout}) = pulse.time
 start_time(number::Number) = number
 end_time(number::Number) = number
 
-function add_TR(pulse::InstantComponent, delta_time) 
+function add_TR(pulse::Union{InstantComponent, Readout}, delta_time) 
     @set pulse.time += delta_time
 end
 
@@ -120,11 +120,21 @@ function current_index(pulses, time)
 end
 
 for relative in ("previous", "current", "next")
-    for pulse_type in ("pulse", "instant", "gradient")
+    for (pulse_type, type_name) in [
+        ("pulse", "[`RFPulse`](@ref)")
+        ("gradient", "[`MRGradients`](@ref)")
+        ("instant", "[`InstantGradient`](@ref) or [`InstantRFPulse`](@ref)")
+    ]
         func_name = Symbol(relative * "_" * pulse_type)
         plural_pulse_type = Symbol(pulse_type * "s")
         index_func = Symbol(relative * "_index")
         @eval begin
+            """
+                $($func_name)(sequence, time)
+            
+            Returns the $($relative) $($type_name) in the [`Sequence`](@ref) relative to `time`.
+            If there is no $($relative) $($pulse_type) `nothing` is returned instead.
+            """
             function $func_name(sequence, time)
                 nTR = Int(div(time, sequence.TR, RoundDown))
                 within_TR = time - sequence.TR * nTR
@@ -209,5 +219,4 @@ gradient(position, part::SequencePart, t0, t1) = sample(part.gradients, t0, t1) 
 effective_pulse(part::SequencePart, t0::Number, t1::Number) = InstantRFPulse(flip_angle=sample_integral(part.rf_amplitude, t0, t1) * part.total_time * 360., phase=sample(part.rf_phase, t0, t1))
 B0(part::SequencePart) = part.B0
 
-include("diffusion.jl")
 include("pulseq.jl")
