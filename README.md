@@ -24,7 +24,7 @@ This software can be cited using the information in the CITATION.cff file.
   month        = nov,
   year         = 2022,
   publisher    = {Zenodo},
-  version      = {V0.5},
+  version      = {V0.6},
   doi          = {10.5281/zenodo.7318657},
   url          = {https://doi.org/10.5281/zenodo.7318657}
 }
