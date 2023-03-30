@@ -6,35 +6,40 @@ Represents a reflection of a particle after colliding (see [`Collision`](@ref)).
 """
 struct Reflection
     collision::Collision
-    timestep::Float
-    fraction_used::Float
+    ratio_displaced::Float
+    time_moved::Float
+    distance_moved::Float
     direction::PosVector
 end
 
-function Reflection(collision::Collision, movement::Movement, timestep, fraction_used, permeable)
+function Reflection(collision::Collision, movement::Movement, ratio_displaced, time_moved, distance_moved, permeable)
     direction = movement.destination - movement.origin
     if permeable
         flipped = Collision(collision.distance, -collision.normal, collision.properties, collision.index, !collision.inside)
-        return Reflection(flipped, timestep, fraction_used, direction * (1 - collision.distance))
+        return Reflection(flipped, ratio_displaced, time_moved, distance_moved, direction / norm(direction))
     else
         reflection = - 2 * (collision.normal ⋅ direction) * collision.normal / norm(collision.normal) ^ 2 .+ direction
-        new_direction = reflection * (norm(direction) * (1 - collision.distance) / norm(reflection))
-        return Reflection(collision, timestep, fraction_used, new_direction)
+        return Reflection(collision, ratio_displaced, time_moved, distance_moved, reflection / norm(reflection))
     end
 end
 
 """
-    direction(reflection[, remaining_time])
+    direction(reflection, remaining_time)
 
 Returns the displacement that the spin should end up if it has `remaining_time` ms left in this timestep.
-
-If `remaining_time` is not provided, the time remaining is assumed to be the time remaining in this timestep.
 """
-direction(reflection::Reflection) = reflection.direction
 function direction(reflection::Reflection, new_time)
-    additional_movement = sqrt(reflection.fraction_used + new_time / reflection.timestep) - reflection.fraction_used
-    return reflection.direction * (additional_movement / (1 - reflection.fraction_used))
+    displacement_size = reflection.ratio_displaced * sqrt(reflection.time_moved + new_time) - reflection.distance_moved
+    @assert displacement_size > 0
+    return reflection.direction * displacement_size
 end
 
 
-const empty_reflection = Reflection(empty_collision, zero(Float), zero(Float), zero(PosVector))
+"""
+    new_reflection(ratio_displaced[, collision=empty_collision])
+
+Produces a new `Reflection` with no previous movement.
+If no `collision` is provided it is also assumed to have no previous collisions (i.e., a free particle at the start of any timestep).
+If a `collision` is provided the particle is supposed to have been released from this surface (i.e., a stuck particle at the start of the simulation).
+"""
+new_reflection(ratio_displaced, collision=empty_collision) = Reflection(collision, Float(ratio_displaced), zero(Float), zero(Float), zero(PosVector))

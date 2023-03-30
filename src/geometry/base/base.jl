@@ -155,7 +155,7 @@ function random_surface_spins(obstruction::BaseObstruction{N}, bounding_box::Bou
             position=position,
             stuck_to=Reflection(
                 Collision(0, n, obstruction.properties, index, inside),
-                0, 0, zero(PosVector)
+                0, 0, 0, zero(PosVector)
             ),
             kwargs...
         )

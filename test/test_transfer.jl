@@ -58,6 +58,23 @@
         @test all(radius[outer_cylinder] .≈ 0.6)
         @test mean([mr.isinside(s.geometry, p) for p in stuck_spins[outer_cylinder]]) ≈ 0.5 rtol=0.1
     end
+    @testset "Correct number of stuck particles for long timesteps" begin
+        Random.seed!(1234)
+        geometry = mr.walls(repeats=1, surface_density=0.5, dwell_time=1.)
+        sim = mr.Simulation([], diffusivity=3., geometry=geometry, max_timestep=10)
+        nspins = 10000
+        snapshot = mr.evolve(nspins, sim, 0)
+        fraction_stuck = sum(mr.stuck.(snapshot)) / nspins
+        @test fraction_stuck ≈ 1//3 rtol=0.05
+        snapshot2 = mr.evolve(snapshot, sim, 300)
+        fraction_stuck = sum(mr.stuck.(snapshot2)) / nspins
+        # TODO: this test is far less strict than it should be
+        @test fraction_stuck < 0.5
+        displacement = mr.position.(snapshot2) .- mr.position.(snapshot)
+        for dim in (2, 3)
+            @test var([d[dim] for d in displacement]) / (2 * 300) ≈ 2//3 * 3 rtol=0.05  # spends 2/3rd of time as free spin
+        end
+    end
     @testset "Particles on two repeating cylinders" begin
         s = mr.Simulation([], geometry=mr.cylinders(0.6, positions=[[0, 0], [1, 1]], repeats=[2, 2], surface_density=[1, 2]), diffusivity=1, dwell_time=1)
     

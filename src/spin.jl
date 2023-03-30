@@ -97,12 +97,12 @@ mutable struct Spin{N}
     orientations :: SVector{N, SpinOrientation}
     stuck_to :: Reflection
     rng :: FixedXoshiro
-    function Spin(position::AbstractArray{<:Real}, orientations::AbstractArray{SpinOrientation}, stuck_to=empty_reflection, rng::FixedXoshiro=FixedXoshiro()) 
+    function Spin(position::AbstractArray{<:Real}, orientations::AbstractArray{SpinOrientation}, stuck_to=new_reflection(0), rng::FixedXoshiro=FixedXoshiro()) 
         new{length(orientations)}(PosVector(position), SVector{length(orientations)}(deepcopy.(orientations)), stuck_to, rng)
     end
 end
 
-function Spin(;nsequences=1, position=zero(SVector{3,Float}), longitudinal=1., transverse=0., phase=0., stuck_to=empty_reflection, rng=FixedXoshiro()) 
+function Spin(;nsequences=1, position=zero(SVector{3,Float}), longitudinal=1., transverse=0., phase=0., stuck_to=new_reflection(0), rng=FixedXoshiro()) 
     base = Spin(SVector{3, Float}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), stuck_to, rng)
     return nsequences == 1 ? base : Spin(base, nsequences)
 end
@@ -118,6 +118,7 @@ function Base.show(io::IO, spin::Spin)
     print(io, "Spin(position=$(spin.position) ")
     show_helper(io, spin)
 end
+
 """
     stuck(spin)
 
@@ -128,10 +129,10 @@ only_stuck = filter(stuck, snapshot)
 only_free = filter(s -> !stuck(s), snapshot)
 ```
 """
-stuck(spin::Spin) = Reflection(spin) !== empty_reflection
-Reflection(spin) = spin.stuck_to
-Collision(spin) = Reflection(spin).collision
-stuck_to(spin) = Collision(spin).properties
+stuck(spin::Spin) = Collision(spin) !== empty_collision
+Reflection(spin::Spin) = spin.stuck_to
+Collision(spin::Spin) = Reflection(spin).collision
+stuck_to(spin::Spin) = Collision(spin).properties
 
 macro spin_rng(spin, expr)
     return quote

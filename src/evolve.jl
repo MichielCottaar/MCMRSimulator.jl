@@ -22,39 +22,46 @@ function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivit
         return
     end
     current_pos = spin.position
-    reflection = spin.stuck_to
     is_stuck = stuck(spin)
-    current_time = zero(Float)
+    fraction_timestep = zero(Float)
 
     found_solution = false
     @spin_rng spin begin
         if !stuck(spin)
             displacement = randn(PosVector) .* sqrt(2 * diffusivity * timestep)
             new_pos = current_pos + displacement
+            reflection = new_reflection(norm(displacement) / sqrt(timestep))
         end
         for _ in 1:10000
             if is_stuck
                 td = dwell_time(stuck_to(spin), default_properties)
-                time_stuck = -log(rand()) * td / timestep
-                relax!(spin, parts, geometry, current_time, min(one(Float), current_time + time_stuck), default_properties.mri)
-                current_time += time_stuck
-                if current_time >= 1
+                fraction_stuck = -log(rand()) * td / timestep
+                relax!(spin, parts, geometry, fraction_timestep, min(one(Float), fraction_timestep + fraction_stuck), default_properties.mri)
+                fraction_timestep += fraction_stuck
+                if fraction_timestep >= 1
                     found_solution = true
                     break
                 end
-                if iszero(Reflection(spin).timestep)
+                if iszero(Reflection(spin).ratio_displaced)
                     # special case where spin was generated as stuck on the surface
-                    displacement = randn(PosVector) .* sqrt(2 * diffusivity * timestep * (1 - current_time))
+                    displacement = randn(PosVector) .* sqrt(2 * diffusivity * timestep * (1 - fraction_timestep))
                     if displacement ⋅ Collision(spin).normal < 0
                         displacement = -displacement
                     end
+                    reflection = Reflection(
+                        Collision(spin),
+                        norm(displacement) / sqrt(timestep * (1 - fraction_timestep)), 
+                        0, 
+                        0,
+                        displacement / norm(displacement), 
+                    )
                 else
-                    displacement = direction(Reflection(spin), (1 - current_time) * timestep)
+                    reflection = Reflection(spin)
+                    displacement = direction(reflection, (1 - fraction_timestep) * timestep)
                 end
                 new_pos = current_pos + displacement
 
-                reflection = spin.stuck_to
-                spin.stuck_to = empty_reflection
+                spin.stuck_to = new_reflection(0)
                 is_stuck = false
             end
 
@@ -62,14 +69,16 @@ function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivit
             collision = detect_collision(
                 movement,
                 geometry,
-                reflection.collision
+                reflection.collision,
             )
 
             use_distance = collision === empty_collision ? 1 : collision.distance
-            next_time = current_time + (1 - current_time) * use_distance
+            next_fraction_timestep = fraction_timestep + (1 - fraction_timestep) * use_distance
+
+            # spin relaxation
             relax_pos_dist = rand() * use_distance
             spin.position = relax_pos_dist .* new_pos .+ (1 - relax_pos_dist) .* current_pos
-            relax!(spin, parts, geometry, current_time, next_time, default_properties.mri)
+            relax!(spin, parts, geometry, fraction_timestep, next_fraction_timestep, default_properties.mri)
 
             if collision === empty_collision
                 spin.position = new_pos
@@ -80,7 +89,11 @@ function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivit
 
             permeability_prob = correct_for_timestep(permeability(collision.properties, default_properties), timestep)
             passes_through = isone(permeability_prob) || !(iszero(permeability_prob) || rand() > permeability_prob)
-            reflection = Reflection(collision, movement, timestep, next_time, passes_through)
+            reflection = Reflection(collision, movement, reflection.ratio_displaced, 
+                reflection.time_moved + (1 - fraction_timestep) * use_distance * timestep, 
+                reflection.distance_moved + norm(new_pos - current_pos) * use_distance, 
+                passes_through
+            )
             current_pos = spin.position = @. (movement.origin * (1 - collision.distance) + movement.destination * collision.distance)
 
             sd = surface_density(collision.properties, default_properties)
@@ -88,10 +101,10 @@ function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivit
                 spin.stuck_to = reflection
                 is_stuck = true
             else
-                new_pos = current_pos .+ direction(reflection)
+                new_pos = current_pos .+ direction(reflection, (1 - next_fraction_timestep) * timestep)
             end
 
-            current_time = next_time
+            fraction_timestep = next_fraction_timestep
         end
     end
     if !found_solution
