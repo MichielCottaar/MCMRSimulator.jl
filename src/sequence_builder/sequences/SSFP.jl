@@ -41,7 +41,7 @@ function dwssfp(TR;
         @assert gradient_delay < TE "gradient delay too long"
         ramp_time = 0
     else
-        if isinf(max_gradient(scanner)) || isinf(max_slew_rate(scanner)) # Maybe implement a check for only inf gradient max in scanner()?
+        if isinf(max_gradient(scanner)) || isinf(max_slew_rate(scanner)) 
             ramp_time = 0.
         else
             ramp_time = max_gradient(scanner) / max_slew_rate(scanner)
@@ -67,7 +67,7 @@ function dwssfp(TR;
             error("Can't fit gradient with the specified delay inside TE")
         end
     end
-    display(gradient)
+    # display(gradient)
     define_sequence(scanner, TR) do 
         [
             excitation_pulse,
