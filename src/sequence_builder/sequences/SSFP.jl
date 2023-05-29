@@ -27,7 +27,6 @@ function dwssfp(TR;
     if excitation_time == 0
         excitation_pulse = InstantRFPulse(flip_angle = flip_angle)
     else
-        #error("Unclear how to define RF pulse yet. Set excitation_time to 0 for now")
         excitation_pulse = constant_pulse(0, excitation_time, flip_angle)
     end
 
