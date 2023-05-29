@@ -47,12 +47,12 @@ function dwssfp(TR;
             ramp_time = max_gradient(scanner) / max_slew_rate(scanner)
         end
         
-        if isnothing(qval) && !isnothing(gradient_strength) 
-            
-        elseif !isnothing(qval) # create a check for qval-gradient_strength consistency later
-            gradient_strength = qval/gradient_duration / 2π 
-        else
+        if isnothing(qval) && isnothing(gradient_strength) 
             error("Either q value (preferred) or gradient strength needs to be specified for a finite gradient duration")
+        elseif !isnothing(qval) && !isnothing(gradient_strength) 
+            @assert gradient_strength == qval/gradient_duration / 2π "gradient_strength and qval mismatch!"
+        elseif !isnothing(qval) && isnothing(gradient_strength)
+            gradient_strength = qval/gradient_duration / 2π
         end
         @assert gradient_strength <= max_gradient(scanner) "Requested gradient strength exceeds scanner limits"
         gradient = rotate_bvec([
