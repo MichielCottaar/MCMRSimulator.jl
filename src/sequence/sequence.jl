@@ -194,6 +194,9 @@ end
 function SequencePart(sequence::Sequence, t1::Number, t2::Number)
     t1_norm = mod(t1, sequence.TR)
     t2_norm = mod(t2, sequence.TR)
+    if iszero(t2_norm)
+        t2_norm = sequence.TR
+    end
     pulse = current_pulse(sequence, (t1_norm + t2_norm) / 2)
     if isnothing(pulse)
         amp = phase = ShapePart(zero(Float), zero(Float), zero(Float))
