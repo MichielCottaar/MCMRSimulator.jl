@@ -16,7 +16,7 @@ function dwssfp(TR;
                 flip_angle=90, 
                 gradient_strength=nothing, # Only used when gradient_duration != 0 and qval == nothing
                 gradient_duration=0, 
-                qval = 0,
+                qval = nothing,
                 gradient_delay=0,
                 gradient_orientation=SVector{3, Float}([1., 0., 0.]))
     

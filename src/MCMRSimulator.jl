@@ -56,7 +56,7 @@ export MT_fraction, permeability, surface_density, dwell_time, T1, R1, T2, R2, o
 export previous_pulse, current_pulse, next_pulse, previous_gradient, current_gradient, next_gradient, previous_instant, current_instant, next_instant
 export constant_pulse
 export BuildingBlock, define_sequence, add_linear_diffusion_weighting
-export read_pulseq, gradient_echo, spin_echo, dwi
+export read_pulseq, gradient_echo, spin_echo, dwi, dwssfp
 export PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d, simulator_movie
 end
 
