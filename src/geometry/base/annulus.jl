@@ -96,10 +96,10 @@ function lorentz_off_resonance(annulus::Annulus, position::SVector{2, Float}, b0
             if rsq > lorentz_radius_sq
                 continue
             end
-            if i == 0 && j == 0 && rsq < annulus.inner.radius^2
+            if iszero(i) && iszero(j) && rsq < annulus.inner.radius^2
                 # inside inner cylinder
                 field += annulus.internal_field * sin_theta_sq
-            elseif i == 0 && j == 0 && rsq < annulus.outer.radius^2
+            elseif iszero(i) && iszero(j) && rsq < annulus.outer.radius^2
                 # between cylinders
                 cos2 = (b0_field[1] * p1 + b0_field[2] * p2)^2 / rsq
                 cos2f = 2 * cos2 - 1

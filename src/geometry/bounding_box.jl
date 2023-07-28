@@ -89,28 +89,47 @@ corners(bb::BoundingBox{1}) = [
 isinside(bb::GenericBoundingBox{N}, pos::SVector{N, Float}) where {N} = all(pos .>= lower(bb)) && all(pos .<= upper(bb))
 isinside(bb::SymmetricBoundingBox{N}, pos::SVector{N, Float}) where {N} = (maximum(pos) <= bb.radius) && (minimum(pos) >= -bb.radius)
 
+
+function _bb_intersect_check_dim(::Val{M}, lower::Float, upper::Float, start::SVector{N, Float}, dest::SVector{N, Float}) where {N, M}
+    return !(
+        (start[M] > upper && dest[M] > upper) ||
+        (start[M] < lower && dest[M] < lower) 
+    )
+end
+
+function _bb_intersect_check_dim(::Val{M}, lower::SVector{N, Float}, upper::SVector{N, Float}, start::SVector{N, Float}, dest::SVector{N, Float}) where {N, M}
+    return !(
+        (start[M] > upper[M] && dest[M] > upper[M]) ||
+        (start[M] < lower[M] && dest[M] < lower[M]) 
+    )
+end
+
+function _bb_intersect_check_dims(lower, upper, start::SVector{1, Float}, dest::SVector{1, Float})
+    return _bb_intersect_check_dim(Val{1}(), lower, upper, start, dest)
+end
+
+function _bb_intersect_check_dims(lower, upper, start::SVector{2, Float}, dest::SVector{2, Float})
+    return (
+        _bb_intersect_check_dim(Val{1}(), lower, upper, start, dest) &&
+        _bb_intersect_check_dim(Val{2}(), lower, upper, start, dest)
+    )
+end
+
+function _bb_intersect_check_dims(lower, upper, start::SVector{3, Float}, dest::SVector{3, Float})
+    return (
+        _bb_intersect_check_dim(Val{1}(), lower, upper, start, dest) &&
+        _bb_intersect_check_dim(Val{2}(), lower, upper, start, dest) &&
+        _bb_intersect_check_dim(Val{3}(), lower, upper, start, dest)
+    )
+end
+
 function possible_intersection(bb::SymmetricBoundingBox{N}, start::SVector{N, Float}, dest::SVector{N, Float}) where {N}
-    for dim in 1:N
-        if (
-            (start[dim] > bb.radius && dest[dim] > bb.radius) ||
-            (start[dim] < -bb.radius && dest[dim] < -bb.radius) 
-        )
-            return false
-        end
-    end
-    return true
+    negative_radius = -bb.radius
+    return _bb_intersect_check_dims(negative_radius, bb.radius, start, dest)
 end
 
 function possible_intersection(bb::GenericBoundingBox{N}, start::SVector{N, Float}, dest::SVector{N, Float}) where {N}
-    for dim in 1:N
-        if (
-            (start[dim] > bb.upper[dim] && dest[dim] > bb.upper[dim]) ||
-            (start[dim] < bb.lower[dim] && dest[dim] < bb.lower[dim]) 
-        )
-            return false
-        end
-    end
-    return true
+    return _bb_intersect_check_dims(bb.lower, bb.upper, start, dest)
 end
 
 """

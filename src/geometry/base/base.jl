@@ -38,7 +38,7 @@ function inside_MRI_properties(obstruction::BaseObstruction{N}, position::SVecto
     if empty_mri_properties(obstruction.properties.inside) || (isinside(obstruction, position) > 0)
         return obstruction.properties.inside
     else
-        return MRIProperties()
+        return MRIProperties(NaN, NaN, NaN, true)
     end
 end
 

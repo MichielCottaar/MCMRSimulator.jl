@@ -14,29 +14,30 @@ These relaxation variables can be retrieved using:
 - [`off_resonance`](@ref)
 """
 struct MRIProperties
-    R1 :: Float
-    R2 :: Float
-    off_resonance :: Float
+    R1::Float
+    R2::Float
+    off_resonance::Float
+    empty::Bool
 end
 
 function MRIProperties(; R1=NaN, R2=NaN, T1=NaN, T2=NaN, off_resonance=NaN)
     if isnan(R1)
-        R1 = isnan(T1) ? NaN : 1/T1
+        R1 = isnan(T1) ? NaN : 1 / T1
     elseif !isnan(T1)
         error("R1 and T1 cannot both be set at the same time")
     end
     if isnan(R2)
-        R2 = isnan(T2) ? NaN : 1/T2
+        R2 = isnan(T2) ? NaN : 1 / T2
     elseif !isnan(T2)
         error("R2 and T2 cannot both be set at the same time")
     end
-    MRIProperties(Float(R1), Float(R2), Float(off_resonance))
+    MRIProperties(Float(R1), Float(R2), Float(off_resonance), all(isnan, (R1, R2, off_resonance)))
 end
 
 R1(p::MRIProperties) = p.R1
 R2(p::MRIProperties) = p.R2
-T1(p::MRIProperties) = 1/R1(p)
-T2(p::MRIProperties) = 1/R2(p)
+T1(p::MRIProperties) = 1 / R1(p)
+T2(p::MRIProperties) = 1 / R2(p)
 off_resonance(p::MRIProperties) = p.off_resonance
 
 for (symbol, summary, opposite) in [
@@ -70,7 +71,7 @@ end
 
 Returns true if none of the parameters have been set
 """
-empty_mri_properties(p::MRIProperties) = isnan(R1(p)) && isnan(R2(p)) && isnan(off_resonance(p))
+empty_mri_properties(p::MRIProperties) = p.empty
 
 
 """
@@ -79,49 +80,48 @@ empty_mri_properties(p::MRIProperties) = isnan(R1(p)) && isnan(R2(p)) && isnan(o
 Merges multiple MRI properties into one.
 An error is raised if they are inconsistent with each other
 """
-function merge_mri_parameters(properties, default_values=nothing)
-    if isnothing(default_values)
-        R1_val = R2_val = off_resonance_val = NaN
-    else
-        R1_val = default_values.R1
-        R2_val = default_values.R2
-        off_resonance_val = default_values.off_resonance
-    end
+merge_mri_parameters(properties) = _merge_mri_parameters(properties, NaN, NaN, NaN)
+merge_mri_parameters(properties, default_values) = _merge_mri_parameters(properties, default_values.R1, default_values.R2, default_values.off_resonance)
+
+function _merge_mri_parameters(properties, R1_val, R2_val, off_resonance_val)
     set_R1 = false
     set_R2 = false
     set_off_resonance = false
     for prop in properties
+        if prop.empty
+            continue
+        end
         if !isnan(prop.R1)
             if set_R1 && !(R1_val ≈ R1(prop))
-                error("Inconsistent values found for R1 when mergine MRI properties")
+                error("Inconsistent values found for R1 when merging MRI properties")
             end
             R1_val = R1(prop)
             set_R1 = true
         end
         if !isnan(prop.R2)
             if set_R2 && !(R2_val ≈ R2(prop))
-                error("Inconsistent values found for R2 when mergine MRI properties")
+                error("Inconsistent values found for R2 when merging MRI properties")
             end
             R2_val = R2(prop)
             set_R2 = true
         end
         if !isnan(prop.off_resonance)
             if set_off_resonance && !(off_resonance_val ≈ off_resonance(prop))
-                error("Inconsistent values found for off_resonance when mergine MRI properties")
+                error("Inconsistent values found for off_resonance when merging MRI properties")
             end
             off_resonance_val = off_resonance(prop)
             set_off_resonance = true
         end
     end
-    return MRIProperties(R1_val, R2_val, off_resonance_val)
+    return MRIProperties(R1_val, R2_val, off_resonance_val, all(isnan, (R1_val, R2_val, off_resonance_val)))
 end
 
 function setproperty!(props::MRIProperties, symbol, value)
     if symbol == :T1
-        setfield!(props, :R1, 1/value)
+        setfield!(props, :R1, 1 / value)
     end
     if symbol == :T2
-        setfield!(props, :R2, 1/value)
+        setfield!(props, :R2, 1 / value)
     end
     setfield!(props, symbol, value)
 end
@@ -141,10 +141,10 @@ These properties can be retrieved using:
 - [`dwell_time`](@ref)
 """
 struct CollisionProperties
-    MT_fraction :: Float
-    permeability :: Float
-    surface_density :: Float
-    dwell_time :: Float
+    MT_fraction::Float
+    permeability::Float
+    surface_density::Float
+    dwell_time::Float
 end
 
 """
@@ -162,10 +162,10 @@ For any property not set (or set to NaN) the default values will be used (i.e., 
 """
 struct ObstructionProperties
     # In future add MRIProperties for particles stuck on the surface
-    collision :: CollisionProperties
-    inside :: MRIProperties
-    surface :: MRIProperties
-    id :: UUID
+    collision::CollisionProperties
+    inside::MRIProperties
+    surface::MRIProperties
+    id::UUID
 end
 
 function ObstructionProperties(;
@@ -178,7 +178,7 @@ function ObstructionProperties(;
     R2_surface::Number=NaN, T2_surface::Number=NaN,
     off_resonance_surface::Number=NaN,
     surface_density::Number=NaN,
-    dwell_time::Number=NaN,
+    dwell_time::Number=NaN
 )
     ObstructionProperties(
         CollisionProperties(Float(MT_fraction), Float(permeability), Float(surface_density), Float(dwell_time)),
@@ -206,8 +206,8 @@ Parameters can be accessed using their accessors:
 - [`off_resonance`](@ref)
 """
 struct GlobalProperties
-    collision :: CollisionProperties
-    mri :: MRIProperties
+    collision::CollisionProperties
+    mri::MRIProperties
     function GlobalProperties(;
         MT_fraction::Number=0,
         permeability::Number=0,
@@ -215,7 +215,7 @@ struct GlobalProperties
         dwell_time::Number=NaN,
         R1::Number=NaN, T1::Number=NaN,
         R2::Number=NaN, T2::Number=NaN,
-        off_resonance::Number=0,
+        off_resonance::Number=0
     )
         if isnan(R1) & isnan(T1)
             R1 = 0
@@ -264,7 +264,7 @@ for symbol in (:permeability, :MT_fraction, :surface_density, :dwell_time)
         It can be either set when creating a [`Simulation`](@ref), in which case it is stored in [`GlobalProperties`](@ref)
         or when creating any [`Obstruction`](@ref), in which case it is stored in [`ObstructionProperties`](@ref).
         """
-        function $(symbol)(o::ObstructionProperties, defaults) 
+        function $(symbol)(o::ObstructionProperties, defaults)
             value = $(symbol)(o)
             if isnan(value)
                 value = $(symbol)(defaults)
@@ -288,7 +288,7 @@ a [`surface_density`](@ref) and [`dwell_time`](@ref) from a [`CollisionPropertie
 as well as the diffusivity (in um^2/ms) and the timestep (in ms).
 """
 function stick_probability(surface_density::Number, dwell_time::Number, diffusivity::Number, timestep::Number)
-    return sqrt(π * timestep / diffusivity) * surface_density/ dwell_time / 2
+    return sqrt(π * timestep / diffusivity) * surface_density / dwell_time / 2
 end
 
 function stick_probability(properties, diffusivity::Number, timestep::Number)
