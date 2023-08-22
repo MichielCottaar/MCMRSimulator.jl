@@ -1,3 +1,8 @@
+module Movie
+using Makie
+import ...Simulations: Simulation
+import ...Evolve: signal
+
 function simulator_movie(filename, simulator::Simulation{N}, times, repeats; resolution=(1600, 800), trajectory_init=30, signal_init=10000, framerate=50, plane_orientation=:z) where {N}
     if isa(trajectory_init, Integer)
         trajectory_init = [rand(3) .* repeats .- repeats ./ 2 for _ in 1:trajectory_init]
@@ -41,4 +46,6 @@ function simulator_movie(filename, simulator::Simulation{N}, times, repeats; res
             framerate=framerate) do i
         index[] = i
     end
+end
+
 end

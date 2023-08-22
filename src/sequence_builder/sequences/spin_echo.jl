@@ -1,3 +1,10 @@
+module SpinEcho
+import ....Scanners: Scanner
+import ....Sequences: InstantRFPulse, Readout
+import ...DefineSequence: define_sequence
+import ...Diffusion: add_linear_diffusion_weighting
+import ...BuildingBlocks: duration
+import StaticArrays: SVector
 """
     spin_echo(TE; TR=<TE>, scanner=<3T scanner>, excitation_pulse=Instant, excitation_time=<half pulse duration>, refocus_pulse=Instant, refocus_time=<half pulse duration>)
 
@@ -68,7 +75,7 @@ function dwi(;
     gradient_strength=nothing, # in mT/m
     gradient_duration=nothing,
     readout_time=0.,
-    orientation=SVector{3, Float}([1., 0., 0.]),
+    orientation=SVector{3, Float64}([1., 0., 0.]),
 )
     define_sequence(scanner, TR) do
         sequence = spin_echo(
@@ -94,4 +101,6 @@ function dwi(;
             orientation=orientation, scanner=scanner
         )
     end
+end
+
 end

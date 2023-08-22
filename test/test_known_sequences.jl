@@ -52,7 +52,7 @@
         end
         @testset "Diffusion within the sphere" begin
             for radius in (0.5, 1.)
-                sphere = mr.Sphere(radius)
+                sphere = mr.spheres(radius=radius)
                 all_pos = [rand(3) .* 2 .- 1 for _ in 1:30000]
                 snap = mr.Snapshot([mr.Spin(position=pos .* radius) for pos in all_pos if norm(pos) < 1.])
                 @testset "Stejskal-Tanner approximation at long diffusion times" begin
@@ -73,7 +73,7 @@
         end
         @testset "Diffusion between two planes" begin
             for distance in [0.5, 1]
-                walls = mr.walls(positions=[0., distance])
+                walls = mr.walls(position=[0., distance])
                 Random.seed!(1234)
                 snap = mr.Snapshot([mr.Spin(position=rand(3) * distance) for _ in 1:5000])
                 @testset "Stejskal-Tanner approximation at long diffusion times for a=$distance" begin

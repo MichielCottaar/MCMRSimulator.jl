@@ -1,138 +1,254 @@
-"""
-    draw_step!(spin, sequence_parts, diffusivity, timestep, default_properties, geometry])
+module Evolve
+import StaticArrays: SVector, MVector
+import LinearAlgebra: norm, ⋅
+import ..Methods: get_time
+import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientation, get_sequence
+import ..Sequences: SequencePart, next_instant, InstantComponent, apply!
+import ..Geometries.Internal: 
+    FixedGeometry, empty_reflection, detect_intersection, Intersection,
+    empty_intersection, direction, Reflection, has_intersection, previous_hit,
+    surface_relaxivity, surface_density, dwell_time, permeability, FixedSusceptibility
+import ..Simulations: Simulation, _to_snapshot
+import ..Relax: relax!, transfer!
+import ..Timestep: propose_times
+import ..Properties: GlobalProperties, correct_for_timestep, stick_probability
 
-Updates the spin based on a random movement through the given geometry for a given `timestep`:
-- draws the next location of the particle after `timestep` with given `diffusivity`.  
-  This displacement will take into account the obstructions in `geometry`.
-- The spin orientation will be affected by relaxation (see [`relax!`](@ref)) and potentially by magnetisation transfer during collisions.
 """
-function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivity :: Float, timestep :: Float, default_properties::GlobalProperties, geometry :: Geometry{0}) where {N}
-    if iszero(timestep)
-        return
+    readout(snapshot, simulation; bounding_box=<1x1x1 mm box>)
+
+Evolves the spins in the [`Snapshot`](@ref) through the [`Simulation`](@ref).
+Returns the [`Snapshot`](@ref) at every [`Readout`](@ref) in the simulated sequences during a single TR.
+If no `TR` is explicitly selected, it will return the current TR if the snapshot has not passed any readouts and the next TR otherwise.
+
+The return object depends on whether the simulation was created with a single sequence object or with a vector of sequences.
+- For a single sequence object a vector of [`Snapshot`](@ref) objects is returned with a single snapshot for each [`Readout`](@ref) in the sequence.
+- For a vector of sequences a vector of vectors of [`Snapshot`](@ref) objects is returned. Each element in the outer vector contains the result for a single sequence.
+"""
+function readout(spins, simulation::Simulation{N}; bounding_box=500) where {N}
+    snapshot = _to_snapshot(spins, simulation, bounding_box)
+
+    readout_times = Float64[]
+    per_seq_times = Vector{Float64}[]
+
+    for seq in simulation.sequences
+        if length(seq.readout_times) == 0
+            seq_times = Float64[]
+        else
+            current_TR = Int(div(get_time(snapshot), seq.TR, RoundDown))
+            time_in_TR = get_time(snapshot) - current_TR * seq.TR
+
+            if minimum(seq.readout_times) < time_in_TR
+                current_TR += 1
+            end
+            seq_times = seq.readout_times .+ (current_TR * seq.TR)
+        end
+        append!(readout_times, seq_times)
+        push!(per_seq_times, seq_times)
     end
-    relax!(spin, parts, geometry, 0, 1//2, default_properties.mri)
-    @spin_rng spin begin
-        spin.position += randn(PosVector) .* sqrt(2 * diffusivity * timestep)
+
+    final_snapshots = SVector{N}([Snapshot{1}[] for _ in 1:N])
+    for time in sort(unique(readout_times))
+        snapshot = evolve_to_time(snapshot, simulation, time)
+        for index in 1:N
+            if time in per_seq_times[index]
+                push!(final_snapshots[index], get_sequence(snapshot, index))
+            end
+        end
     end
-    relax!(spin, parts, geometry, 1//2, 1, default_properties.mri)
+    if simulation.flatten
+        return final_snapshots[1]
+    else
+        return final_snapshots
+    end
 end
 
-function draw_step!(spin :: Spin{N}, parts::SVector{N, SequencePart}, diffusivity :: Float, timestep :: Float, default_properties::GlobalProperties, geometry::Geometry) where {N}
+"""
+    trajectory(snapshot, simulation, times=[TR]; bounding_box=<1x1x1 mm box>)
+
+Evolves the [`Snapshot`](@ref) through the [`Simulation`](@ref) and outputs at the requested times.
+Returns a vector of [`Snapshot`](@ref) objects with the current state of each time in times.
+When you are only interested in the signal at each timepoint, use [`signal`](@ref) instead.
+"""
+function trajectory(spins, simulation::Simulation{N}, times; bounding_box=500) where {N}
+    snapshot = _to_snapshot(spins, simulation, bounding_box)
+    result = Array{typeof(snapshot)}(undef, size(times))
+    for index in sortperm(times)
+        snapshot = evolve_to_time(snapshot, simulation, Float64(times[index]))
+        result[index] = snapshot
+    end
+    result
+end
+
+"""
+    signal(snapshot, simulation, times=[TR]; bounding_box=<1x1x1 mm box>)
+
+Evolves the [`Snapshot`](@ref) through the [`Simulation`](@ref) and outputs the total signal at the requested times.
+To get the full snapshot at each timepoint use [`trajectory`](@ref).
+
+The return object depends on whether the simulation was created with a single sequence object or with a vector of sequences.
+- For a single sequence object a vector of [`SpinOrientation`](@ref) object with the total signal at each time is returned.
+- For a vector of sequences the return type is a (Nt, Ns) matrix of [`SpinOrientation`](@ref) objects for `Nt` timepoints and `Ns` sequences.
+"""
+function signal(spins, simulation::Simulation{N}, times; bounding_box=500) where {N}
+    snapshot = _to_snapshot(spins, simulation, bounding_box)
+    if simulation.flatten
+        result = Array{SpinOrientation}(undef, size(times))
+    else
+        result = Array{SpinOrientation}(undef, (length(times), N))
+    end
+    for index in sortperm(times)
+        snapshot = evolve_to_time(snapshot, simulation, Float64(times[index]))
+        if simulation.flatten
+            result[index] = SpinOrientation(snapshot)
+        else
+            for seq in 1:N
+                result[index, seq] = SpinOrientation(get_sequence(snapshot, seq))
+            end
+        end
+    end
+    result
+end
+
+"""
+    evolve(snapshot, simulation[, new_time]; bounding_box=<1x1x1 mm box>)
+
+Evolves the [`Snapshot`](@ref) through the [`Simulation`](@ref) to a new time.
+Returns a [`Snapshot`](@ref) at the new time, which can be used as a basis for further simulation.
+By default it will simulate till the start of the next TR.
+"""
+function evolve(spins, simulation::Simulation{N}, new_time=nothing; bounding_box=500) where {N}
+    snapshot = _to_snapshot(spins, simulation, bounding_box)
+    if isnothing(new_time)
+        TR = simulation.sequences[1].TR
+        new_time = (div(nextfloat(snapshot.time), TR, RoundDown) + 1) * TR
+    end
+    evolve_to_time(snapshot, simulation, Float64(new_time))
+end
+
+"""
+    draw_step!(spin, simulation, sequence_parts, timestep)
+
+Updates the spin based on a random movement through the given geometry for a given `timestep`:
+- draws the next location of the particle after `timestep` with given `simulation.diffusivity`.  
+  This displacement will take into account the obstructions in `simulation.geometry`.
+- The spin orientation will be affected by relaxation (see [`relax!`](@ref)) and potentially by magnetisation transfer during collisions.
+"""
+function draw_step!(spin :: Spin{N}, simulation::Simulation{N, 0}, parts::SVector{N, SequencePart}, timestep :: Float64) where {N}
     if iszero(timestep)
         return
+    end
+    relax!(spin, parts, simulation, 0, 1//2)
+    @spin_rng spin begin
+        spin.position += randn(SVector{3, Float64}) .* sqrt(2 * simulation.diffusivity * timestep)
+    end
+    relax!(spin, parts, simulation, 1//2, 1)
+end
+
+function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N, SequencePart}, timestep :: Float64, test_new_pos=nothing) where {N}
+    if ~isnothing(test_new_pos)
+        all_positions = [spin.position]
+    end
+    if iszero(timestep)
+        if ~isnothing(test_new_pos)
+            return all_positions
+        else
+            return
+        end
     end
     current_pos = spin.position
     is_stuck = stuck(spin)
-    fraction_timestep = zero(Float)
+    fraction_timestep = zero(Float64)
 
     found_solution = false
     @spin_rng spin begin
         if !stuck(spin)
-            displacement = randn(PosVector) .* sqrt(2 * diffusivity * timestep)
-            new_pos = current_pos + displacement
-            reflection = new_reflection(norm(displacement) / sqrt(timestep))
+            if isnothing(test_new_pos)
+                rand_base_vec = randn(SVector{3, Float64})
+                displacement = rand_base_vec .* sqrt(2 * simulation.diffusivity * timestep)
+                new_pos = current_pos + displacement
+            else
+                new_pos = SVector{3}(test_new_pos)
+            end
+            reflection = Reflection(norm(new_pos - current_pos) / sqrt(2 * simulation.diffusivity * timestep))
+            phit = (0, 0, false)
         end
         for _ in 1:10000
             if is_stuck
-                td = dwell_time(stuck_to(spin), default_properties)
+                td = dwell_time(simulation.geometry, simulation.properties, spin.reflection)
                 fraction_stuck = -log(rand()) * td / timestep
-                relax!(spin, parts, geometry, fraction_timestep, min(one(Float), fraction_timestep + fraction_stuck), default_properties.mri)
+                relax!(spin, parts, simulation, fraction_timestep, min(one(Float64), fraction_timestep + fraction_stuck))
                 fraction_timestep += fraction_stuck
                 if fraction_timestep >= 1
                     found_solution = true
                     break
                 end
-                if iszero(Reflection(spin).ratio_displaced)
-                    # special case where spin was generated as stuck on the surface
-                    displacement = randn(PosVector) .* sqrt(2 * diffusivity * timestep * (1 - fraction_timestep))
-                    if displacement ⋅ Collision(spin).normal < 0
-                        displacement = -displacement
-                    end
-                    reflection = Reflection(
-                        Collision(spin),
-                        norm(displacement) / sqrt(timestep * (1 - fraction_timestep)), 
-                        0, 
-                        0,
-                        displacement / norm(displacement), 
-                    )
-                else
-                    reflection = Reflection(spin)
-                    displacement = direction(reflection, (1 - fraction_timestep) * timestep)
-                end
+                phit = previous_hit(spin.reflection)
+                reflection = spin.reflection
+                displacement = direction(reflection, (1 - fraction_timestep) * timestep, simulation.diffusivity)
                 new_pos = current_pos + displacement
 
-                spin.stuck_to = new_reflection(0)
+                spin.reflection = empty_reflection
                 is_stuck = false
             end
 
-            movement = Movement(current_pos, new_pos)
-            collision = detect_collision(
-                movement,
-                geometry,
-                reflection.collision,
+            collision = detect_intersection(
+                simulation.geometry,
+                current_pos,
+                new_pos,
+                phit,
             )
 
-            use_distance = collision === empty_collision ? 1 : collision.distance
+            use_distance = collision === empty_intersection ? 1. : max(prevfloat(collision.distance), 0.)
             next_fraction_timestep = fraction_timestep + (1 - fraction_timestep) * use_distance
 
             # spin relaxation
             relax_pos_dist = rand() * use_distance
             spin.position = relax_pos_dist .* new_pos .+ (1 - relax_pos_dist) .* current_pos
-            relax!(spin, parts, geometry, fraction_timestep, next_fraction_timestep, default_properties.mri)
+            relax!(spin, parts, simulation, fraction_timestep, next_fraction_timestep)
 
-            if collision === empty_collision
+            if ~has_intersection(collision)
                 spin.position = new_pos
                 found_solution = true
                 break
             end
-            transfer!.(spin.orientations, correct_for_timestep(MT_fraction(collision.properties, default_properties), timestep))
+            relaxation = surface_relaxivity(simulation.geometry, simulation.properties, collision)
+            if ~iszero(relaxation)
+                transfer!.(spin.orientations, correct_for_timestep(relaxation, timestep))
+            end
 
-            permeability_prob = correct_for_timestep(permeability(collision.properties, default_properties), timestep)
+            permeability_prob = correct_for_timestep(permeability(simulation.geometry, simulation.properties, collision), timestep)
             passes_through = isone(permeability_prob) || !(iszero(permeability_prob) || rand() > permeability_prob)
-            reflection = Reflection(collision, movement, reflection.ratio_displaced, 
+            reflection = Reflection(collision, new_pos - current_pos, reflection.ratio_displaced, 
                 reflection.time_moved + (1 - fraction_timestep) * use_distance * timestep, 
                 reflection.distance_moved + norm(new_pos - current_pos) * use_distance, 
                 passes_through
             )
-            current_pos = spin.position = @. (movement.origin * (1 - collision.distance) + movement.destination * collision.distance)
-
-            sd = surface_density(collision.properties, default_properties)
-            if !iszero(sd) && rand() < stick_probability(sd, dwell_time(collision.properties, default_properties), diffusivity, timestep)
-                spin.stuck_to = reflection
-                is_stuck = true
-            else
-                new_pos = current_pos .+ direction(reflection, (1 - next_fraction_timestep) * timestep)
+            current_pos = spin.position = @. (current_pos * (1 - use_distance) + new_pos * use_distance)
+            if ~isnothing(test_new_pos)
+                push!(all_positions, current_pos)
             end
 
+            sd = surface_density(simulation.geometry, simulation.properties, collision)
+            if !iszero(sd) && rand() < stick_probability(sd, dwell_time(simulation.geometry, simulation.properties, collision), simulation.diffusivity, timestep)
+                spin.reflection = reflection
+                is_stuck = true
+            else
+                new_pos = current_pos .+ direction(reflection, (1 - next_fraction_timestep) * timestep, simulation.diffusivity)
+            end
+
+            phit = previous_hit(reflection)
             fraction_timestep = next_fraction_timestep
         end
     end
     if !found_solution
         error("Bounced single particle for 10000 times in single step; terminating!")
     end
+    if ~isnothing(test_new_pos)
+        push!(all_positions, spin.position)
+        return all_positions
+    end
 end
 
-
-"""
-    evolve_to_time(spin, simulation, current_time, new_time)
-
-Evolve a single spin to the next time of interest.
-This takes into account both random diffusion of the spin's position
-and relaxation of the MR spin orientation.
-It is used internally when evolving [`Simulation`](@ref) objects.
-"""
-function evolve_to_time!(
-    spin::Spin{N}, simulation::Simulation{N}, parts::SVector{N, SequencePart}, current_time::Float, new_time::Float
-) where {N}
-    if current_time > new_time
-        throw(DomainError("Spins cannot travel backwards in time"))
-    end
-    if new_time == current_time
-        return spin
-    end
-
-    draw_step!(spin, parts, simulation.diffusivity, new_time - current_time, simulation.properties, simulation.geometry)
-end
 
 """
     evolve_to_time(snapshot, simulation, new_time)
@@ -141,8 +257,8 @@ Evolves the full [`Snapshot`](@ref) through the [`Simulation`](@ref) to the give
 Multi-threading is used to evolve multiple spins in parallel.
 This is used internally when calling any of the snapshot evolution methods (e.g., [`evolve`](@ref)).
 """
-function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_time::Float) where {N}
-    current_time::Float = snapshot.time
+function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_time::Float64) where {N}
+    current_time::Float64 = snapshot.time
     if new_time < current_time
         error("New requested time ($(new_time)) is less than current time ($(snapshot.time)). Simulator does not work backwards in time.")
     end
@@ -152,13 +268,13 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
 
     # define next stopping times due to sequence, readout or times
     sequence_instants = Union{Nothing, InstantComponent}[next_instant(seq, current_time) for seq in simulation.sequences]
-    sequence_times = MVector{N, Float}([isnothing(i) ? Inf : get_time(i) for i in sequence_instants])
+    sequence_times = MVector{N, Float64}([isnothing(i) ? Inf : get_time(i) for i in sequence_instants])
 
     for next_time in times
         # evolve all spins to next interesting time
         parts = SequencePart.(simulation.sequences, current_time, next_time)
         Threads.@threads for spin in spins
-            draw_step!(spin, parts, simulation.diffusivity, next_time - current_time, simulation.properties, simulation.geometry)
+            draw_step!(spin, simulation, parts, next_time - current_time)
         end
         current_time = next_time
 
@@ -179,4 +295,6 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
         end
     end
     return Snapshot(spins, current_time)
+end
+
 end

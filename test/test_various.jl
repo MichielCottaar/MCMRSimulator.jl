@@ -1,17 +1,6 @@
 
 @testset "test_various.jl" begin
 @test length(detect_ambiguities(mr)) == 0
-@testset "Simple relaxation" begin
-    orient = mr.Spin(transverse=1., longitudinal=0.).orientations[1]
-    @testset "R2 relaxation" begin
-        mr.relax!(orient, 0.3, mr.GlobalProperties(R2=2).mri)
-        @test mr.transverse(orient) ≈ exp(-0.6)
-    end
-    @testset "R1 relaxation" begin
-        mr.relax!(orient, 0.3, mr.GlobalProperties(R1=2).mri)
-        @test mr.longitudinal(orient) ≈ 1 - exp(-0.6)
-    end
-end
 @testset "Spin conversions" begin
     vec = SA[1, 0, 0]
     @test mr.SpinOrientation(vec).longitudinal ≈ 0.
@@ -69,9 +58,9 @@ end
 
                 spin = mr.Spin(longitudinal=0., transverse=1., phase=pulse_phase)
                 mr.apply!(pulse, spin)
-                @test mr.longitudinal(spin) ≈ zero(Float) atol=1e-7
-                @test mr.transverse(spin) ≈ one(Float)
-                @test mr.phase(spin) ≈ Float(pulse_phase)
+                @test mr.longitudinal(spin) ≈ zero(Float64) atol=1e-7
+                @test mr.transverse(spin) ≈ one(Float64)
+                @test mr.phase(spin) ≈ Float64(pulse_phase)
             end
         end
     end
@@ -117,15 +106,15 @@ end
     end
     @testset "Gradient should do nothing at origin" begin
         spin = mr.Spin(position=SA[0, 2, 2], transverse=1., phase=90.)
-        @test mr.phase(spin) ≈ Float(90.)
+        @test mr.phase(spin) ≈ Float64(90.)
         mr.apply!(mr.InstantGradient(qvec=SA[4, 0, 0]), spin)
-        @test mr.phase(spin) ≈ Float(90.)
+        @test mr.phase(spin) ≈ Float64(90.)
     end
     @testset "Test instant gradient effect away from origin" begin
         spin = mr.Spin(position=SA[2, 2, 2], transverse=1., phase=90.)
-        @test mr.phase(spin) ≈ Float(90.)
+        @test mr.phase(spin) ≈ Float64(90.)
         mr.apply!(mr.InstantGradient(qvec=SA[0.01, 0, 0]), spin)
-        @test mr.phase(spin) ≈ Float(90. + 0.02 * 360)
+        @test mr.phase(spin) ≈ Float64(90. + 0.02 * 360)
     end
 end
 @testset "Random generator number control" begin
@@ -154,17 +143,18 @@ end
     end
 end
 @testset "Bounding boxes" begin
+    bb(g) = mr.BoundingBox(mr.fix(g)[1])
     # single obstruction
-    @test mr.BoundingBox(mr.Cylinder(1)) == mr.BoundingBox{2}(1)
+    @test bb(mr.cylinders(radius=1)) == mr.BoundingBox{2}(1)
 
     # shifted cylinder
-    @test mr.BoundingBox(mr.cylinders(1., positions=[2., 2.])) == mr.BoundingBox([1., 1.], [3, 3])
+    @test bb(mr.cylinders(radius=1., position=[2., 2.])) == mr.BoundingBox([1., 1.], [3, 3])
 
     # repeated obstructions
-    @test mr.BoundingBox(mr.cylinders(1., repeats=[2., 3.])) == mr.BoundingBox([-1, -1], [1, 1])
+    @test bb(mr.cylinders(radius=1., repeats=[2., 3.])) == mr.BoundingBox([-1, -1], [1, 1])
 
     # shifted spheres
-    @test mr.BoundingBox(mr.spheres(1., positions=[[1, 0, 0], [0, 1, 0]])) == mr.BoundingBox([-1, -1, -1.], [2., 2., 1.])
+    @test bb(mr.spheres(radius=1., position=[[1, 0, 0], [0, 1, 0]])) == mr.BoundingBox([-1, -1, -1.], [2., 2., 1.])
 end
 
 @testset "Test readout formats" begin
@@ -212,9 +202,9 @@ end
 end
 
 @testset "Test simulation pretty printing" begin
-    sim = mr.Simulation([mr.dwi(bval=1, TR=2000), mr.dwi(bval=2)], geometry=mr.spheres([1, 2.], repeats=[5, 5, 5]), R1=0.1, MT_fraction=0.3)
-    @test repr(sim, context=:compact => true) == "Simulation(2 sequences, Geometry(2 repeating Sphere objects, ), D=0.0um^2/ms, GlobalProperties(T1=10.0ms, MT_fraction=0.3, ))" 
-    @test repr(sim, context=:compact => false) == "Simulation(Geometry(2 repeating Sphere objects, ), D=0.0um^2/ms, GlobalProperties(T1=10.0ms, MT_fraction=0.3, )):
+    sim = mr.Simulation([mr.dwi(bval=1, TR=2000), mr.dwi(bval=2)], geometry=mr.spheres(radius=[1, 2.], repeats=[5, 5, 5]), R1=0.1, surface_relaxivity=0.3)
+    @test repr(sim, context=:compact => true) == "Simulation(2 sequences, Geometry(2 repeating Round objects, ), D=0.0um^2/ms, GlobalProperties(R1=0.1kHz, surface_relaxivity=0.3, ))" 
+    @test repr(sim, context=:compact => false) == "Simulation(Geometry(2 repeating Round objects, ), D=0.0um^2/ms, GlobalProperties(R1=0.1kHz, surface_relaxivity=0.3, )):
 2 sequences:
 Sequence (TR=2000.0ms):
     - InstantRFPulse: t=0.0ms, θ=90.0°, ϕ=-90.0°;
@@ -228,40 +218,17 @@ Sequence (TR=80.0ms):
 end
 
 @testset "Test size scale calculations" begin
-    @testset "Test special size scale calculations of walls" begin
-        @test isinf(mr.size_scale(mr.walls(positions=0)))
-        @test mr.size_scale(mr.walls(positions=[0, 2])) == 2
-        @test mr.size_scale(mr.walls(repeats=5)) == 5
-        @test mr.size_scale(mr.walls(positions=[0, 2], repeats=5)) == 2
-        @test mr.size_scale(mr.walls(positions=[0, 4], repeats=5)) == 1
-    end
+    size_scale(g) = mr.Geometries.Internal.size_scale(mr.fix(g))
 
-    @test mr.size_scale(mr.cylinders([0.3, 0.8], repeats=[2, 3])) == 0.3
-    @test mr.size_scale(mr.spheres([0.3, 0.8])) == 0.3
-    @test mr.size_scale(mr.annuli([0.5, 0.7], [0.6, 0.8])) == 0.5
-    @test mr.size_scale(mr.box_mesh()) ≈ sqrt(0.5)
+    @test isinf(size_scale(mr.walls(position=0)))
+    @test size_scale(mr.walls(position=[0, 2])) == 2
+    @test size_scale(mr.walls(repeats=5)) == 5
+    @test size_scale(mr.walls(position=[0, 2], repeats=5)) == 2
+    @test size_scale(mr.walls(position=[0, 4], repeats=5)) == 1
 
+    @test size_scale(mr.cylinders(radius=[0.3, 0.8], repeats=[2, 3])) == 0.3
+    @test size_scale(mr.spheres(radius=[0.3, 0.8])) == 0.3
+    @test size_scale(mr.annuli(inner=[0.5, 0.7], outer=[0.6, 0.8])) == 0.5
 end
 
-@testset "Test cutoff errors" begin
-    @testset "Cylinder at center, edge or corner" begin
-        @test_throws DomainError mr.cylinders(1., repeats=[1.5, 3.])
-        @test_throws DomainError mr.cylinders(1., repeats=[3, 1.5])
-
-        @test_throws DomainError mr.cylinders(1., repeats=[1.5, 3.], positions=[0.75, 0.])
-        @test_throws DomainError mr.cylinders(1., repeats=[1.5, 3.], positions=[0.75, 1.5])
-    end
-    @testset "Cylinder at intermediate positions" begin
-        mr.cylinders(1., repeats=[2.5, 3.], positions=[0., 0.])
-        mr.cylinders(1., repeats=[2.5, 3.], positions=[2.5, 0.])
-        mr.cylinders(1., repeats=[2.5, 3.], positions=[2.5, 3.])
-
-        @test_throws DomainError mr.cylinders(1., repeats=[2.5, 3.], positions=[0.6, 0.])
-        @test_throws DomainError mr.cylinders(1., repeats=[2.5, 3.], positions=[0.625, 0.])
-        @test_throws DomainError mr.cylinders(1., repeats=[2.5, 3.], positions=[0.65, 0.])
-        mr.cylinders(1., repeats=[2.5, 4.], positions=[2.5, 0.9])
-        mr.cylinders(1., repeats=[2.5, 4.], positions=[2.5, 1.])
-        mr.cylinders(1., repeats=[2.5, 4.], positions=[2.5, 1.1])
-    end
-end
 end

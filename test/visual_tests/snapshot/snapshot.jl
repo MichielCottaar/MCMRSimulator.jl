@@ -22,7 +22,7 @@
     @testset "Spins as image" begin
         function plot_image(fname)
             Random.seed!(1234)
-            positions = rand(mr.PosVector, 30000)
+            positions = rand(SVector{3, Float64}, 30000)
             snapshot = mr.Snapshot(
                 [
                     mr.Spin(position=pos, transverse=pos[1], phase=pos[2] * 360.)

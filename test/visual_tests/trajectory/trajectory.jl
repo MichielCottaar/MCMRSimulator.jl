@@ -14,7 +14,7 @@
 
         @visualtest plot_trajectory "$dir/trajectory_3d.png" !isCI
     end
-    @testset "3D plot" begin
+    @testset "2D plot" begin
         function plot_trajectory(fname)
             Random.seed!(1234)
             snapshot = mr.Snapshot([mr.Spin() for _ in 1:4])

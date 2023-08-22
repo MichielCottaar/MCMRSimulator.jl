@@ -94,11 +94,11 @@
         @test spin_with_diff.position != SA[0, 0, 0]
         @test mr.orientation.(spin_with_diff.orientations) == mr.orientation.(spin_no_diff.orientations)
         @test mr.transverse(spin_no_diff) ≈ exp(-0.6)
-        @test abs(mr.longitudinal(spin_no_diff)) < Float(1e-6)
+        @test abs(mr.longitudinal(spin_no_diff)) < Float64(1e-6)
     end
     @testset "Basic diffusion run within sphere" begin
         sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=2.)
-        sphere = mr.Sphere(1.)
+        sphere = mr.spheres(radius=1.)
         Random.seed!(12)
         diff = mr.Simulation([mr.Sequence(TR=20.)], diffusivity=2., geometry=sphere)
         snaps = mr.trajectory([mr.Spin(), mr.Spin()], diff, 0:0.5:sequence.TR)

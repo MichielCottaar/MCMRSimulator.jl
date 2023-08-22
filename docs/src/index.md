@@ -2,7 +2,7 @@
 [MCMRSimulator.jl](https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl) allows simulation of MR signal generation using Monte Carlo simulations.
 The spin evolution of randomly diffusing particles is tracked under influence of one or more MR sequences.
 At present, the simulator allows to model
-- Free diffusion and diffusion restricted by [`walls`](@ref), [`cylinders`](@ref), [`spirals`](@ref) (experimental), [`spheres`](@ref), and/or a [`Mesh`](@ref).
+- Free diffusion and diffusion restricted by [`walls`](@ref), [`cylinders`](@ref), [`spheres`](@ref), and/or a [`mesh`](@ref).
 - T1 and T2 relaxation using global or local T1/T2 parameter
 - MR sequences consisting of arbitrary RF pulses, gradients, and readouts
 - Off-resonance field generation by myelinated cylinders
@@ -70,7 +70,7 @@ First we will define a geometry formed of regularly packed axons.
 This is represented by a single cylinder with a radius of 1 micrometer that repeats itself every 2.5 micrometer (in both the x-, and y-direction).
 ```@example tutorial
 import Random; Random.seed!(1) # hide
-geometry = cylinders(1., repeats=[2.5, 2.5])
+geometry = cylinders(radius=1., repeats=[2.5, 2.5])
 
 f = plot(PlotPlane(size=5), geometry)
 f

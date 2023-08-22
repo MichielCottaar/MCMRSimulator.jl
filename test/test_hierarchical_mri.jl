@@ -1,31 +1,23 @@
 @testset "test_hierarchical_mri.jl" begin
-    defaults = mr.GlobalProperties(R2=1.).mri
+    defaults = mr.GlobalProperties(R2=1.)
     for (obstruction, pos_in, pos_out) in [
-        (mr.spheres(1., T1_inside=10., R2_inside=0.5), [0., 0, 0], [1, 2, 1.]),
-        (mr.spheres(1., T1_inside=10., R2_inside=0.5, repeats=(5, 5, 5)), [5., 5, 0], [1, 2, 1.]),
-        (mr.cylinders(1., T1_inside=10., R2_inside=0.5), [0., 0, 0], [1, 2, 1.]),
-        (mr.annuli(0.5, 1., T1_inside=10., R2_inside=0.5), [0., 0, 0], [1, 2, 1.]),
+        (mr.spheres(radius=1., R1_volume=0.1, R2_volume=0.5), [0., 0, 0], [1, 2, 1.]),
+        (mr.spheres(radius=1., R1_volume=0.1, R2_volume=0.5, repeats=(5, 5, 5)), [5., 5, 0], [1, 2, 1.]),
+        (mr.cylinders(radius=1., R1_volume=0.1, R2_volume=0.5), [0., 0, 0], [1, 2, 1.]),
     ]
-        geom = mr.Geometry(obstruction)
-        @testset "Test correct values in $(obstruction)" begin
-            @test mr.isinside(geom, pos_in) > 0
-            @test mr.isinside(geom, pos_out) == 0
-            within = mr.inside_MRI_properties(geom, pos_in, defaults)
-            @test mr.R1(within) == 0.1
-            @test mr.T1(within) == 10.
-            @test mr.R2(within) == 0.5
-            @test mr.T2(within) == 2.
-            @test iszero(mr.off_resonance(within))
-            outside = mr.inside_MRI_properties(geom, pos_out, defaults)
-            @test iszero(mr.R1(outside))
-            @test isinf(mr.T1(outside))
-            @test mr.R2(outside) == 1.
-            @test mr.T2(outside) == 1.
-            @test iszero(mr.off_resonance(outside))
+        @testset "Test correct values in $(typeof(obstruction))" begin
+            @test mr.isinside(obstruction, pos_in) > 0
+            @test mr.isinside(obstruction, pos_out) == 0
+            @test mr.R1(pos_in, obstruction, defaults) == 0.1
+            @test mr.R2(pos_in, obstruction, defaults) == 0.5
+            @test iszero(mr.off_resonance(pos_in, obstruction, defaults))
+            @test iszero(mr.R1(pos_out, obstruction, defaults))
+            @test mr.R2(pos_out, obstruction, defaults) == 1.
+            @test iszero(mr.off_resonance(pos_out, obstruction, defaults))
         end
-        @testset "Test simulation in $(obstruction)" begin
+        @testset "Test simulation in $(typeof(obstruction))" begin
             sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90., time=0.)], TR=100.)
-            sim = mr.Simulation(sequence, R2=1., geometry=geom, diffusivity=1.)
+            sim = mr.Simulation(sequence, R2=1., geometry=obstruction, diffusivity=1.)
             snap = mr.evolve([pos_in, pos_out], sim, 10.)
             within = snap[1].orientations[1]
             @test mr.transverse(within) ≈ exp(-5.)
@@ -34,5 +26,18 @@
             @test mr.transverse(outside) ≈ exp(-10.)
             @test abs(mr.longitudinal(outside)) < 1e-8
         end
+    end
+    @testset "Test correct values in annuli" begin
+        geometry = mr.annuli(inner=0.5, outer=1., R1_inner_volume=0.1, R1_outer_volume=0.2, R2_outer_volume=10.)
+        inner = SVector{3}([0., 0., 0.])
+        outer = SVector{3}([0.7, 0., 0.])
+        outside = SVector{3}([1.2, 0., 0.])
+        @test mr.R1(inner, geometry, defaults) == 0.1
+        @test mr.R1(outer, geometry, defaults) == 0.2
+        @test iszero(mr.R1(outside, geometry, defaults))
+
+        @test mr.R2(inner, geometry, defaults) == 10.
+        @test mr.R2(outer, geometry, defaults) == 10.
+        @test mr.R2(outside, geometry, defaults) == 1.
     end
 end

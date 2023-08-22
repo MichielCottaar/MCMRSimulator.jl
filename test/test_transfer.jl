@@ -2,9 +2,10 @@
 @testset "Generate stuck particles" begin
     nspins = Int(1e5)
     @testset "Particles on repeating wall" begin
-        s = mr.Simulation([], geometry=mr.walls(repeats=1., rotation=[1, 1, 0]), surface_density=1, dwell_time=1, diffusivity=1)
+        geometry = mr.walls(repeats=1., rotation=[1, 1, 0])
+        s = mr.Simulation([], geometry=geometry, surface_density=1, dwell_time=1, diffusivity=1)
         all_spins = mr.Snapshot(nspins, s, 5.)
-        @test !any([mr.isinside(s.geometry, p) > 0 for p in all_spins])
+        @test !any([mr.isinside(geometry, p) > 0 for p in all_spins])
         free_spins = filter(s->!mr.stuck(s), [all_spins...])
         for dim in 1:3
             arr = [mr.position(s)[dim] for s in free_spins]
@@ -26,11 +27,12 @@
         @test minimum(limited_dim) ≈ -7
     end
     @testset "Particles on two annuli" begin
-        s = mr.Simulation([], geometry=mr.annuli(0.4, 0.6, positions=[[0, 0], [1, 1]], surface_density=[1, 2], dwell_time=1), diffusivity=1)
+        geometry = mr.annuli(inner=0.4, outer=0.6, position=[[0, 0], [1, 1]], inner_surface_density=1, outer_surface_density=2, inner_surface_dwell_time=1, outer_surface_dwell_time=1)
+        s = mr.Simulation([], geometry=geometry, diffusivity=1.)
         all_spins = mr.Snapshot(nspins, s, 2)
         stuck_spins = filter(mr.stuck, all_spins)
 
-        relative_to_free = 2π * (0.4 + 0.6) * (1 + 2) / 4^2  # surface area * surface_density / volume
+        relative_to_free = 2π * (0.4 + 0.6 * 2) * 2 / 4^2  # surface area * surface_density * #annuli / volume
         fraction_stuck = relative_to_free / (1 + relative_to_free)
         @test fraction_stuck ≈ length(stuck_spins) / nspins rtol=0.1
 
@@ -39,24 +41,24 @@
         # analyse annulus at origin
         radius = @. sqrt(x^2 + y^2)
         inner_cylinder = radius .< 0.5
-        @test sum(inner_cylinder) / nspins ≈ fraction_stuck / 3 * 0.4 rtol=0.1
+        @test sum(inner_cylinder) / nspins ≈ fraction_stuck * 0.4 / 1.6 / 2 rtol=0.1
         @test all(radius[inner_cylinder] .≈ 0.4)
-        @test mean([mr.isinside(s.geometry, p) for p in stuck_spins[inner_cylinder]]) ≈ 1.5 rtol=0.1
+        @test mean([mr.isinside(geometry, p) for p in stuck_spins[inner_cylinder]]) ≈ 1.5 rtol=0.1
         outer_cylinder = 0.5 .< radius .< 0.7
-        @test sum(outer_cylinder) / nspins ≈ fraction_stuck / 3 * 0.6 rtol=0.1
+        @test sum(outer_cylinder) / nspins ≈ fraction_stuck * 1.2 / 1.6 / 2 rtol=0.1
         @test all(radius[outer_cylinder] .≈ 0.6)
-        @test mean([mr.isinside(s.geometry, p) for p in stuck_spins[outer_cylinder]]) ≈ 0.5 rtol=0.1
+        @test mean([mr.isinside(geometry, p) for p in stuck_spins[outer_cylinder]]) ≈ 0.5 rtol=0.1
 
         # same for shifted annulus
         radius = @. sqrt((x - 1)^2 + (y - 1)^2)
         inner_cylinder = radius .< 0.5
-        @test sum(inner_cylinder) / nspins ≈ fraction_stuck * 2 / 3 * 0.4 rtol=0.1
+        @test sum(inner_cylinder) / nspins ≈ fraction_stuck * 0.4 / 1.6 / 2 rtol=0.1
         @test all(radius[inner_cylinder] .≈ 0.4)
-        @test mean([mr.isinside(s.geometry, p) for p in stuck_spins[inner_cylinder]]) ≈ 1.5 rtol=0.1
+        @test mean([mr.isinside(geometry, p) for p in stuck_spins[inner_cylinder]]) ≈ 1.5 rtol=0.1
         outer_cylinder = 0.5 .< radius .< 0.7
-        @test sum(outer_cylinder) / nspins ≈ fraction_stuck * 2 / 3 * 0.6 rtol=0.1
+        @test sum(outer_cylinder) / nspins ≈ fraction_stuck * 1.2 / 1.6 / 2 rtol=0.1
         @test all(radius[outer_cylinder] .≈ 0.6)
-        @test mean([mr.isinside(s.geometry, p) for p in stuck_spins[outer_cylinder]]) ≈ 0.5 rtol=0.1
+        @test mean([mr.isinside(geometry, p) for p in stuck_spins[outer_cylinder]]) ≈ 0.5 rtol=0.1
     end
     @testset "Correct number of stuck particles for long timesteps" begin
         Random.seed!(1234)
@@ -76,7 +78,8 @@
         end
     end
     @testset "Particles on two repeating cylinders" begin
-        s = mr.Simulation([], geometry=mr.cylinders(0.6, positions=[[0, 0], [1, 1]], repeats=[2, 2], surface_density=[1, 2]), diffusivity=1, dwell_time=1)
+        geometry = mr.cylinders(radius=0.6, position=[[0, 0], [1, 1]], repeats=[2, 2], surface_density=[1, 2])
+        s = mr.Simulation([], geometry=geometry, diffusivity=1, dwell_time=1)
     
         all_spins = mr.Snapshot(nspins, s, 1)
         stuck_spins = filter(mr.stuck, all_spins)
@@ -90,13 +93,13 @@
         origin_cylinder = radius .< 0.7
         @test all(radius[origin_cylinder] .≈ 0.6)
         @test sum(origin_cylinder) / nspins ≈ fraction_stuck / 3 rtol=0.1
-        @test mean([mr.isinside(s.geometry, p) for p in stuck_spins[origin_cylinder]]) ≈ 0.5 rtol=0.1
+        @test mean([mr.isinside(geometry, p) for p in stuck_spins[origin_cylinder]]) ≈ 0.5 rtol=0.1
 
         shifted_cylinder = radius .> 0.7
         other_radius = @. sqrt((abs(x) - 1)^2 + (abs(y) - 1)^2)
         @test all(other_radius[shifted_cylinder] .≈ 0.6)
         @test sum(shifted_cylinder) / nspins ≈ fraction_stuck * 2 / 3 rtol=0.1
-        @test mean([mr.isinside(s.geometry, p) for p in stuck_spins[shifted_cylinder]]) ≈ 0.5 rtol=0.1
+        @test mean([mr.isinside(geometry, p) for p in stuck_spins[shifted_cylinder]]) ≈ 0.5 rtol=0.1
     end
 end
 @testset "Test simplified magnetisation transfer" begin
@@ -108,7 +111,7 @@ end
         function test_MT_walls(wall_dist, diffusivity, timestep; nspins=100000, transfer=0.5)
             Random.seed!(1234)
             actual_transfer = 1 - (1 - transfer) ^ (1/sqrt(timestep))
-            geometry = mr.walls(MT_fraction=actual_transfer)
+            geometry = mr.walls(surface_relaxivity=actual_transfer)
             spins = [mr.Spin(position=Random.rand(3) .* wall_dist) for _ in 1:nspins]
             sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=1e5)
             simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=diffusivity, max_timestep=timestep)
@@ -124,7 +127,7 @@ end
     end
     @testset "Test that transfer rate does not depend on timestep" begin
         Random.seed!(1234)
-        geometry = mr.walls(repeats=1, MT_fraction=0.1)
+        geometry = mr.walls(repeats=1, surface_relaxivity=0.1)
         sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=1e5)
 
         reference = nothing
@@ -162,7 +165,7 @@ end
         end
     end
     @testset "Setting surface MRI properties" begin
-        geometry = mr.walls(repeats=1, T2_surface=1e-6)
+        geometry = mr.walls(repeats=1, R2_surface=1e6)
         init = mr.Snapshot(10000)
         seq = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=1000)
         for density in (0, 0.5, 1)

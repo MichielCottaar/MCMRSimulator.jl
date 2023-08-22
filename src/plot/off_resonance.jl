@@ -1,3 +1,9 @@
+module OffResonance
+using Makie
+import StaticArrays: SVector
+import ...Geometries.Internal: FixedSusceptibility, susceptibility_off_resonance
+import ...Geometries: fix_susceptibility
+
 """
     plot_off_resonance(plot_plane, geometry)
     plot_off_resonance(plot_plane, geometry)
@@ -14,7 +20,7 @@ end
 function Makie.plot!(por::Plot_Off_Resonance)
     plot_plane = por[1]
     raw_geometry = por[2]
-    geometry = @lift Geometry($raw_geometry)
+    susc = @lift raw_geometry isa FixedSusceptibility ? raw_geometry : fix_susceptibility($raw_geometry)
 
     dims = @lift -0.5:(1/$(por[:ngrid])):0.5
     xx_1d = @lift $dims * $plot_plane.sizex
@@ -25,7 +31,9 @@ function Makie.plot!(por::Plot_Off_Resonance)
         reshape($yy_1d, 1, length($yy_1d)),
     )
     pos_orig = @lift inv($plot_plane.transformation).($pos_plane)
-    field = @lift map(p->off_resonance($geometry, p), $pos_orig)
+    field = @lift map(p->susceptibility_off_resonance($susc, p), $pos_orig)
     Makie.image!(por, xx_1d, yy_1d, field, colormap=por[:colormap])
     por
+end
+
 end

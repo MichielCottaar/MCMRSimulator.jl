@@ -1,18 +1,22 @@
+module Plot
 using Makie
 
-"""
-    color(orient::SpinOrientation; saturation=1.)
 
-Returns a color representing the spin orientation in the transverse (x-y) plane.
-Brighter colors have a larger transverse component, so that spins with no transverse component are black.
-The actual color encodes the spin orientation.
-"""
-color(orient::Union{Spin{1}, SpinOrientation}; saturation=1.) = Colors.HSV(phase(orient) + 180, saturation, transverse(orient))
-
-include("plot_plane.jl")
-include("sequence.jl")
-include("geometry.jl")
+include("utils.jl")
+include("plot_planes.jl")
+include("sequences.jl")
+include("geometries.jl")
 include("off_resonance.jl")
-include("snapshot.jl")
+include("snapshots.jl")
 include("trajectory.jl")
 include("movie.jl")
+
+import .PlotPlanes: PlotPlane
+import .Geometries: plot_geometry, plot_geometry!
+import .Snapshots: plot_snapshot, image_snapshot, dyad_snapshot
+import .Snapshots: plot_snapshot!, image_snapshot!, dyad_snapshot!
+import .Trajectory: plot_trajectory2d, plot_trajectory3d
+import .Trajectory: plot_trajectory2d!, plot_trajectory3d!
+import .OffResonance: plot_off_resonance, plot_off_resonance!
+import .Movie: simulator_movie
+end

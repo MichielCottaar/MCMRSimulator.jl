@@ -1,3 +1,9 @@
+module Trajectory
+using Makie
+import Colors
+import ..PlotPlanes: PlotPlane, project_trajectory
+import ..Utils: color
+import ...Spins: Snapshot, position, get_sequence
 """
     plot(snapshots)
     plot!(snapshots)
@@ -43,7 +49,7 @@ Plots trajectory of the spins in a sequence of [`Snapshot`](@ref) objects.
 end
 
 function Makie.plot!(ss::Plot_Trajectory2D)
-    function _get_colors(sequence_index :: Integer, spin_index :: Integer, snapshots :: Vector{Snapshot{N}}, times :: Vector{Float}) where {N}
+    function _get_colors(sequence_index :: Integer, spin_index :: Integer, snapshots :: Vector{Snapshot{N}}, times :: Vector{Float64}) where {N}
         if N == 0 || sequence_index == 0
             return [Colors.HSV() for _ in times]
         else
@@ -65,3 +71,5 @@ function Makie.plot!(ss::Plot_Trajectory2D)
 end
 
 Makie.plottype(::PlotPlane, ::Vector{<:Snapshot}) = Plot_Trajectory2D
+
+end

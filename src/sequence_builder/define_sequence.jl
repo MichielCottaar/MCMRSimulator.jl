@@ -1,3 +1,7 @@
+module DefineSequence
+import ...Scanners: Scanner
+import ...Sequences: Sequence
+import ..BuildingBlocks: BuildingBlock
 const defining_sequence::Ref{Bool} = Ref(false)
 
 function define_sequence(f::Function, scanner::Scanner, TR=nothing)
@@ -12,4 +16,5 @@ function define_sequence(f::Function, scanner::Scanner, TR=nothing)
             defining_sequence[] = false
         end
     end
+end
 end
