@@ -4,7 +4,7 @@ import StaticArrays: SVector
 import LinearAlgebra: norm, cross, ⋅
 import Distributions: Poisson
 import Random: rand
-import ..FixedObstructions: FixedObstruction, BoundingBox, has_inside, isinside, detect_intersection, size_scale, random_surface_positions
+import ..FixedObstructions: FixedObstruction, BoundingBox, has_inside, isinside, detect_intersection, size_scale, random_surface_positions, radius
 import ..ObstructionIntersections: ObstructionIntersection, empty_obstruction_intersections
 
 abstract type Triangle <: FixedObstruction{3} end
@@ -53,6 +53,10 @@ end
 
 BoundingBox(t::IndexTriangle, vertices::Vertices) = BoundingBox(FullTriangle(t, vertices))
     
+function radius(t::FullTriangle) 
+    bb = BoundingBox(t)
+    return maximum(bb.upper .- bb.lower) / 2
+end
 
 has_inside(::Type{Triangle}) = false
 isinside(::Triangle, ::SVector{3, Float64}) = false

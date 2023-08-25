@@ -34,9 +34,9 @@ for obstruction_type in (
             Field{Float64}(:inner, "Radius of the inner cylinder.", required=true), 
             Field{Float64}(:outer, "Radius of the outer cylinder.", required=true), 
             Field{Bool}(:myelin, "Whether the annulus is myelinated.", false, required=true), 
-            Field{Float64}(:susceptibility_iso, "Isotropic component of the susceptibility (in ppm).", -0.1),
-            Field{Float64}(:susceptibility_aniso, "Ansotropic component of the susceptibility (in ppm).", -0.1),
-            Field{Float64}(:lorentz_radius, "Only compute field explicitly for cylinders with this Lorentz radius.", 5.),
+            Field{Float64}(:susceptibility_iso, "Isotropic component of the myelin susceptibility (in ppm).", -0.1),
+            Field{Float64}(:susceptibility_aniso, "Ansotropic component of the myelin susceptibility (in ppm).", -0.1),
+            Field{Float64}(:lorentz_radius, "Only compute field explicitly for a annuli with this Lorentz radius.", 5.),
         ]),
     ObstructionType(
         :Sphere; ndim=3, fields=[
@@ -46,7 +46,11 @@ for obstruction_type in (
         :Triangle; plural=:Mesh, ndim=3, include_shift=false, fields=[
             Field{MVector{3, Int}}(:triangles, "Each triangle is defined by 3 vertices into the mesh.", required=true),
             Field{Vector{MVector{3, Float64}}}(:vertices, "Positions of the corners of the triangular mesh.", required=true, only_group=true),
+            Field{Bool}(:myelin, "Whether the mesh is myelinated.", false, required=true), 
+            Field{Float64}(:susceptibility_iso, "Isotropic component of the myelin susceptibility (in ppm).", -0.1),
+            Field{Float64}(:susceptibility_aniso, "Ansotropic component of the myelin susceptibility (in ppm).", -0.1),
             Field{Bool}(:save_memory, "If true the internal triangle representation will contain the indices of the vertices rather than the actual corner coordinates. This will save memory, but slow down the algorithm as more memory lookups will have to take place.", true, required=true, only_group=true),
+            Field{Float64}(:lorentz_radius, "Only compute field explicitly for triangles with this Lorentz radius.", 5.),
         ]),
 )
     name_string = String(obstruction_type.singular)

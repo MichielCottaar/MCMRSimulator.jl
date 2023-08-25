@@ -1,8 +1,8 @@
 module FixSusceptibility
 import StaticArrays: SVector
 import LinearAlgebra: transpose
-import ...Internal.Susceptibility: FixedSusceptibility, ParentSusceptibility, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility
-import ...Internal: Grid, BoundingBox
+import ...Internal.Susceptibility: FixedSusceptibility, ParentSusceptibility, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, TriangleSusceptibility
+import ...Internal: Grid, BoundingBox, FullTriangle, radius
 import ..Obstructions: ObstructionType, ObstructionGroup, Walls, Cylinders, Spheres, Annuli, Mesh, fields, isglobal
 
 """
@@ -52,11 +52,32 @@ function fix_susceptibility_type(group::Annuli)
     add_parent(group, base; radius_symbol=:inner)
 end
 
-function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusceptibility{N}}; radius_symbol=:radius) where {N}
-    positions = isglobal(user.position) ? fill(SVector{N}(user.position.value), length(internal)) : SVector{N}.(user.position.value)
+function fix_susceptibility_type(group::Mesh)
+    if ~any(group.myelin.value)
+        return nothing
+    end
+    b0_field = group.rotation.value[3, :]
+    res = TriangleSusceptibility[]
+    radii = Float64[]
+    positions = SVector{3, Float64}[]
+    for (index, (i1, i2, i3)) in enumerate(group.triangles.value)
+        ft = FullTriangle(group.vertices.value[i1], group.vertices.value[i2], group.vertices.value[i3])
+        push!(radii, radius(ft))
+        push!(positions, ft.a)
+        push!(res, TriangleSusceptibility(ft, group[index].susceptibility_iso, group[index].susceptibility_aniso, b0_field))
+    end
+    return add_parent(group, res; positions=positions, radii=radii)
+end
 
-    user_radius = getproperty(user, radius_symbol)
-    radii = isglobal(user_radius) ? fill(user_radius.value, length(internal)) : user_radius.value
+function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusceptibility{N}}; positions=nothing, radii=nothing, radius_symbol=:radius) where {N}
+    if isnothing(positions)
+        positions = isglobal(user.position) ? fill(SVector{N}(user.position.value), length(internal)) : SVector{N}.(user.position.value)
+    end
+
+    if isnothing(radii)
+        user_radius = getproperty(user, radius_symbol)
+        radii = isglobal(user_radius) ? fill(user_radius.value, length(internal)) : user_radius.value
+    end
 
     repeats = isnothing(user.repeats.value) ? nothing : SVector{N}(user.repeats.value)
     bbs = map((p, r) -> BoundingBox(p .- (r + user.lorentz_radius.value), p .+ (r + user.lorentz_radius.value)), positions, radii)
