@@ -12,5 +12,5 @@ import .User:
     Sphere, Spheres, spheres,
     Annulus, Annuli, annuli,
     Triangle, Mesh, mesh,
-    load_mesh, random_positions_radii
+    load_mesh, random_positions_radii, split_mesh
 end

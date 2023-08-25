@@ -4,6 +4,9 @@ All notable changes to MCMRSimulator.jl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+### Added
+- `split_mesh` function that splits a mesh into connected components (and fixes the mesh normals)
+- `isinside` now works for meshes. This can be used to filter intra- or extra-cellular water as well as to set a different T1/T2/off-resonance in the intra-cellular space.
 ### Changed
 - Geometries are now mutable.
 - Geometries can no longer be generated individually using the type (e.g., `Sphere`, `Annulus`). Instead, use the plural constructors even when creating a single obstruction (e.g., `spheres`, `annuli`).
