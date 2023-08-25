@@ -108,6 +108,8 @@ function single_susceptibility(triangle::TriangleSusceptibility, position::Abstr
         # compute contribution of triangle between origin, p2, and (x, y)
         inside_plane = sign(x) == sign(b)
         if ~iszero(x)
+            # Note that whether the right triangle has a positive contribution is determined by
+            # xor, not by an and statement as implied in the paper.
             add_to_field!(-x, a - y, height, xor(inside_plane, (y > a)))
             add_to_field!(-x, -y, height, xor(inside_plane, (y < 0)))
         end
