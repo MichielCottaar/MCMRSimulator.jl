@@ -2,7 +2,7 @@
 @testset "test_offresonance.jl" begin
     function field(geometry, position)
         susc = mr.fix_susceptibility(geometry)
-        return mr.Geometries.Internal.susceptibility_off_resonance(susc, position)
+        return mr.Geometries.Internal.susceptibility_off_resonance(susc, SVector{3, Float64}(position))
     end
     function grad(geometry)
         susc = mr.fix_susceptibility(geometry)
@@ -76,6 +76,15 @@
             @test field(annuli, SVector{3, Float64}([0, 0, 2])) ≈ outer_field
             @test field(annuli, SVector{3, Float64}([0, 2, 0])) ≈ -outer_field
             @test grad(annuli) ≈ outer_field * 4
+        end
+    end
+    @testset "mesh off-resonance field" begin
+        @testset "Single right triangle test" begin
+            for t in ([1, 2, 3], [2, 1, 3])
+                mesh = mr.mesh(vertices=[[0, 0, 0], [1, 0, 0], [1, 1, 0]], triangles=[t], myelin=true, susceptibility_iso=1., susceptibility_aniso=0.)
+                @test field(mesh, [0, 0, 1]) ≈ atan(sqrt(3)) - atan(1)
+                @test field(mesh, [0, 0, -1]) ≈ atan(-sqrt(3)) + atan(1)
+            end
         end
     end
 end
