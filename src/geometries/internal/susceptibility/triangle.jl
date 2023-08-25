@@ -4,7 +4,7 @@ Computes the off-resonance field produced by a triangular mesh:
 module Triangle
 
 import StaticArrays: SVector
-import LinearAlgebra: norm, cross, ⋅
+import LinearAlgebra: norm, cross, ⋅, inv
 import Rotations: MRP, Angle2d, RotMatrix2
 import ..Base: BaseSusceptibility, single_susceptibility, single_susceptibility_gradient
 import ...Obstructions.Triangles: FullTriangle, normal
@@ -28,9 +28,9 @@ function TriangleSusceptibility(ft::FullTriangle, chi_I::Number, chi_A::Number, 
     e1 = ft.b .- ft.a
     e1 = e1 ./ norm(e1)
     e2 = cross(e1, n)
-    rot = MRP(hcat(e2, e1, n))
+    rot = inv(MRP(hcat(e2, e1, n)))
     if iszero(chi_A)
-        susceptibility = chi_I
+        susceptibility = chi_I / 4π
     else
         b0_field = rot * b0_field
         cos_thetasq = b0_field[3] * b0_field[3]
@@ -86,6 +86,7 @@ function single_susceptibility(triangle::TriangleSusceptibility, position::Abstr
             height = 1e-6
         end
     end
+    @assert ~iszero(height) "distance to mesh should not be exactly zero for free particles"
 
     (b0_x, b0_y, b0_z) = triangle.rotation * b0_field
 
@@ -105,7 +106,7 @@ function single_susceptibility(triangle::TriangleSusceptibility, position::Abstr
     (b, c) = triangle.e3_shift
     for dim in 1:3
         # compute contribution of triangle between origin, p2, and (x, y)
-        inside_plane = sign(y) == sign(c)
+        inside_plane = sign(x) == sign(b)
         if ~iszero(x)
             add_to_field!(-x, a - y, height, inside_plane && (y < a))
             add_to_field!(-x, -y, height, inside_plane && (y > 0))
