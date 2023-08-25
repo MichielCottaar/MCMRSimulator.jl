@@ -66,7 +66,7 @@ end
 
 Computed using the algorithm described in [rubeckAnalyticalCalculationMagnet2013](@cite).
 """
-function single_susceptibility(triangle::TriangleSusceptibility, position::AbstractVector, distance::Number, stuck_inside::Union{Nothing, Bool})
+function single_susceptibility(triangle::TriangleSusceptibility, position::AbstractVector, distance::Number, stuck_inside::Union{Nothing, Bool}, b0_field::SVector{3, Float64})
     if iszero(triangle.susceptibility)
         return 0.
     end
@@ -80,7 +80,7 @@ function single_susceptibility(triangle::TriangleSusceptibility, position::Abstr
         end
     end
 
-    (b0_x, b0_y, b0_z) = triangle.rotation * SVector{3}((0., 0., 1.))
+    (b0_x, b0_y, b0_z) = triangle.rotation * b0_field
 
     field = 0.
 

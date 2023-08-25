@@ -45,12 +45,13 @@ end
 
 function susceptibility_off_resonance_non_repeating(parent::ParentSusceptibility{L, N}, position::SVector{N, Float64}, inside::Union{Nothing, Bool}) where {L, N}
     field = zero(Float64)
+    b0_field = parent.rotation[:, 3]
     for (index, _) in get_indices(parent.grid, position)
         (center, radius) = parent.positions_radii[index]
         offset = position - center
         dist = norm(offset)
         if isinf(parent.lorentz_radius) || dist - radius < parent.lorentz_radius
-            field += single_susceptibility(parent.base[index], offset, dist, inside)
+            field += single_susceptibility(parent.base[index], offset, dist, inside, b0_field)
         end
     end
     return field
@@ -60,6 +61,7 @@ function susceptibility_off_resonance_repeating(parent::ParentSusceptibility{L, 
     field = zero(Float64)
 
     normed = @. mod(position + parent.half_repeats, 2 * parent.half_repeats) - parent.half_repeats
+    b0_field = parent.rotation[:, 3]
 
     for (index, shift) in get_indices(parent.grid, normed)
         (center, radius) = parent.positions_radii[index]
@@ -76,7 +78,7 @@ function susceptibility_off_resonance_repeating(parent::ParentSusceptibility{L, 
             dist = sqrt(offset[1] * offset[1] + offset[2] * offset[2] + offset[3] * offset[3])
         end
         if dist < (parent.lorentz_radius + radius)
-            field += single_susceptibility(parent.base[index], offset, dist, inside)
+            field += single_susceptibility(parent.base[index], offset, dist, inside, b0_field)
         end
     end
     return field

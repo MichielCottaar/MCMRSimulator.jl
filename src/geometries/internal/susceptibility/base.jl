@@ -17,12 +17,13 @@ Each `BaseSusceptibility` object represents a single susceptibility source in `N
 abstract type BaseSusceptibility{N} end
 
 """
-    single_susceptibility(source::BaseSusceptibility, offset, distance, stuck_to)
+    single_susceptibility(source::BaseSusceptibility, offset, distance, stuck_to, b0_field)
 
 Computes the off-resonance field contribution from a [`BaseSusceptibility`](@ref) source given:
 - `offset` vector from spin position to the centre of the `source`
 - `distance` of the spin from the source (which is the norm of `offset`)
 - `stuck_to` tuple with the pair of indices that the particle is stuck to as well as a boolean indicating whether it is stuck to the inside.
+- `b0_field` N-length vector with the magnetic field within the coordinate system of the susceptibility source
 """
 function single_susceptibility end
 

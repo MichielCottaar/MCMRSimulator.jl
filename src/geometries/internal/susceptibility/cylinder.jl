@@ -12,7 +12,6 @@ struct CylinderSusceptibility <: BaseSusceptibility{2}
     rsq :: Float64
     internal_field :: Float64
     external_field :: Float64
-    b0_field :: SVector{2, Float64}
 end
 
 
@@ -23,17 +22,16 @@ function CylinderSusceptibility(radius::Number, g_ratio::Number, chi_I::Number, 
         radius^2,
         -0.75 * chi_A * log(g_ratio) * sin_theta_sq,
         2 * (chi_I + chi_A/4) * (1 - g_ratio^2) / (1 + g_ratio)^2 * radius^2 * sin_theta_sq,
-        SVector{2, Float64}(b0_field),
     )
 end
 
 """
-    single_susceptibility(cylinder, position, distance, b0_field)
+    single_susceptibility(cylinder, position, distance, stuck_to, b0_field)
 
 Computed by the hollow cylinder fiber model from [Wharton_2012](@cite).
 The myelin sheath is presumed to be an infinitely thin cylinder.
 """
-function single_susceptibility(cylinder::CylinderSusceptibility, position::AbstractVector, distance::Number, stuck_inside::Union{Nothing, Bool})
+function single_susceptibility(cylinder::CylinderSusceptibility, position::AbstractVector, distance::Number, stuck_inside::Union{Nothing, Bool}, b0_field::SVector{2, Float64})
     if iszero(cylinder.internal_field) && iszero(cylinder.external_field)
         return zero(Float64)
     end
@@ -46,7 +44,7 @@ function single_susceptibility(cylinder::CylinderSusceptibility, position::Abstr
     if inside
         return cylinder.internal_field
     else
-        cos2 = (cylinder.b0_field[1] * position[1] + cylinder.b0_field[2] * position[2])^2 / rsq
+        cos2 = (b0_field[1] * position[1] + b0_field[2] * position[2])^2 / rsq
         return cylinder.external_field * (2 * cos2 - 1) / rsq
     end
 end
