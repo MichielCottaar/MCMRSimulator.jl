@@ -1,8 +1,9 @@
 module Fix
 import LinearAlgebra: I, transpose
 import StaticArrays: SVector
-import ...Internal: FixedObstructionGroup, FixedGeometry, Internal, get_quadrant, Grid
+import ...Internal: FixedObstructionGroup, FixedGeometry, Internal, get_quadrant, Grid, isinside_grid, FixedMesh
 import ..Obstructions: ObstructionType, ObstructionGroup, Walls, Cylinders, Spheres, Annuli, Mesh, fields, isglobal
+import ..SplitMesh: split_mesh
 
 function fix(geometry::AbstractVector)
     result = FixedObstructionGroup[]
@@ -77,6 +78,10 @@ function fix_type(annuli::Annuli, index::Int)
 end
 
 function fix_type(mesh::Mesh, index::Int)
+    [fix_type_single(m, index + i - 1) for (i, m) in enumerate(split_mesh(mesh))]
+end
+
+function fix_type_single(mesh::Mesh, index::Int)
     base_obstructions = [Internal.IndexTriangle(index) for index in mesh.triangles.value]
     if ~mesh.save_memory.value
         base_obstructions = [Internal.FullTriangle(it, SVector{3}.(mesh.vertices.value)) for it in base_obstructions]
@@ -146,7 +151,7 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
     bounding_boxes = map(o->Internal.BoundingBox(o, vertices), internal_obstructions)
     grid = Grid(bounding_boxes, user_obstructions.grid_resolution.value, user_obstructions.repeats.value)
     
-    return FixedObstructionGroup(
+    result = FixedObstructionGroup(
         internal_obstructions,
         index,
         rotation,
@@ -156,7 +161,20 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
         surface,
         vertices
     )
-
+    if result isa FixedMesh
+        grid = Grid(bounding_boxes, user_obstructions.grid_resolution.value, user_obstructions.repeats.value; isinside=isinside_grid(result))
+        result = FixedObstructionGroup(
+            internal_obstructions,
+            index,
+            rotation,
+            grid,
+            bounding_boxes,
+            volume,
+            surface,
+            vertices
+        )
+    end
+    return result
 end
 
 

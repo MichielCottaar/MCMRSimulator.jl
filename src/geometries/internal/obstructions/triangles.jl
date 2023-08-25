@@ -88,8 +88,16 @@ function normal(t::FullTriangle)
 end
 
 
-
 function detect_intersection(triangle::FullTriangle, start::SVector{N}, dest::SVector{N}, inside=nothing) where {N}
+    return detect_intersection_partial(triangle, start, dest, inside)[1]
+end
+
+"""
+Computes the intersection for a triangle in a mesh (returned by [`detect_intersection`](@ref)).
+This function also returns an additional bool.
+This bool will be true if the intersection is exactly at the edge of the triangle.
+"""
+function detect_intersection_partial(triangle::FullTriangle, start::SVector{N}, dest::SVector{N}, inside=nothing) where {N}
     t_normal = normal(triangle)
     dist_plane = t_normal ⋅ triangle.a
 
@@ -97,23 +105,24 @@ function detect_intersection(triangle::FullTriangle, start::SVector{N}, dest::SV
     dist_dest = t_normal ⋅ dest
     if abs(dist_start - dist_dest) < 1e-8
         # moving parallel to the triangle
-        return empty_obstruction_intersections[3]
+        return (empty_obstruction_intersections[3], false)
     end
     if ~isnothing(inside) && (dist_plane - dist_start) < 1e-3
         # if starting point is within 1 nm of the previous intersection than this is the same triangle, not a repeat
-        return empty_obstruction_intersections[3]
+        return (empty_obstruction_intersections[3], false)
     end
 
     time = (dist_plane - dist_start ) / (dist_dest - dist_start)
 
     if time < 0 || time > 1
         # does not reach the plane of the triangle
-        return empty_obstruction_intersections[3]
+        return (empty_obstruction_intersections[3], false)
     end
 
     # where the trajectory intersects the plane
     intersect_point = @. time * dest + (1 - time) * start
 
+    partial = false
     for (dim, d1) in (
             (1, 2),
             (2, 3),
@@ -122,17 +131,20 @@ function detect_intersection(triangle::FullTriangle, start::SVector{N}, dest::SV
         edge = triangle[d1] - triangle[dim]
         to_point = intersect_point - triangle[dim]
         along_normal = cross(edge, to_point)
-        if (along_normal ⋅ t_normal) < 0
+        inpr = along_normal ⋅ t_normal
+        if (inpr) < 0
             # intersect point is on the wrong side of this edge and hence not in the triangle
-            return empty_obstruction_intersections[3]  
+            return (empty_obstruction_intersections[3], false)
+        elseif iszero(inpr)
+            partial = true
         end
     end
     inside = dist_dest > dist_start
-    return ObstructionIntersection(
+    return (ObstructionIntersection(
         time,
         inside ? -t_normal : t_normal,
         inside
-    )
+    ), partial)
 end
 
 function random_surface_positions(ft::FullTriangle, density::Number)

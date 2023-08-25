@@ -1,5 +1,5 @@
 @testset "test_meshes.jl: Creating and using meshes" begin
-    function box_mesh(;center=[0, 0, 0], size=[1, 1, 1], grid_size=10)
+    function box_mesh(;center=[0, 0, 0], size=[1, 1, 1], kwargs...)
         center = SVector{3}(center)
         size = SVector{3}(size)
         vertices = [
@@ -33,7 +33,7 @@
             [3, 7, 8],
         ]
         c2 = center .- (size .* 0.5)
-        mr.mesh(vertices=map(v->((v .* size) .+ c2), vertices), triangles=triangles)
+        return mr.mesh(; vertices=map(v->((v .* size) .+ c2), vertices), triangles=triangles, kwargs...)
     end
 
     @testset "Computing normals" begin
@@ -47,8 +47,23 @@
         @test normal(p1, p2, p3) ≈ normal(p3, p1, p2)
         @test normal(p1, p2, p3) ≈ -normal(p1, p3, p2)
     end
+
+    @testset "Computing inside for mesh" begin
+        for grid_resolution in (0.1, 0.5, Inf)
+            for repeats in (nothing, [1.5, 1.5, 1.5])
+                mesh = box_mesh(center=[-0.11, -0.11, -0.11], grid_resolution=grid_resolution, repeats=repeats)
+                @test mr.isinside(mesh, [0, 0, 0]) == 1
+                @test mr.isinside(mesh, [-0.5, 0, 0]) == 1
+                @test mr.isinside(mesh, [-0.5, 0, -0.5]) == 1
+                @test mr.isinside(mesh, [-0.5, 0, 0.5]) == 0
+                @test mr.isinside(mesh, [0.5, 0, 0.5]) == 0
+                @test mr.isinside(mesh, [0.7, 0, -0.7]) == 0
+            end
+        end
+        @test_throws "Grid voxel centre falls exactly" mr.fix(box_mesh(center=[0, 0, 0], repeats=[1.5, 1.5, 1.5], grid_resolution=0.5))
+    end
     @testset "Bounding box calculation" begin
-        bb = mr.BoundingBox(mr.fix(box_mesh(grid_size=1))[1])
+        bb = mr.BoundingBox(mr.fix(box_mesh())[1])
         @test all(bb.lower .== [-0.5, -0.5, -0.5])
         @test all(bb.upper .== [0.5, 0.5, 0.5])
     end

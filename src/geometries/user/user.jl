@@ -3,6 +3,7 @@ User interface for defining geometry.
 """
 module User
 include("obstructions/obstructions.jl")
+include("split_mesh.jl")
 include("fix.jl")
 include("fix_susceptibility.jl")
 include("load_mesh.jl")
@@ -16,6 +17,7 @@ import .Obstructions:
     Sphere, Spheres, spheres,
     Annulus, Annuli, annuli,
     Triangle, Mesh, mesh
-import .LoadMesh: load_mesh
+import .SplitMesh: split_mesh
 import .RandomDistribution: random_positions_radii
+import .LoadMesh: load_mesh
 end

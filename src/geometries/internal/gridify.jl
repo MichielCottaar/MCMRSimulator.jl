@@ -24,6 +24,7 @@ struct Grid{N}
     indices :: Array{Vector{Tuple{Int32, Int32}}, N}
     shifts :: Vector{SVector{N, Float64}}
     repeating :: Bool
+    isinside :: Array{Bool, N}
 end
 
 
@@ -42,7 +43,7 @@ function get_indices(grid::Grid, position::AbstractVector)
 end
 
 
-function Grid(obstructions::Vector{BoundingBox{N}}, grid_resolution::Float64, _::Nothing=nothing) where {N}
+function Grid(obstructions::Vector{BoundingBox{N}}, grid_resolution::Float64, repeats::Nothing=nothing; isinside=nothing) where {N}
     bb_actual = BoundingBox(obstructions...)
     extend_by = isfinite(grid_resolution) ? grid_resolution / 100 : 0.001
     bb = BoundingBox(bb_actual.lower .- extend_by, bb_actual.upper .+ extend_by)
@@ -62,10 +63,13 @@ function Grid(obstructions::Vector{BoundingBox{N}}, grid_resolution::Float64, _:
             push!(grid[grid_indices...], (index, 0))
         end
     end
-    return Grid{N}(bb.lower, sz, actual_grid_resolution, grid, SVector{N, Float64}[], false)
+    if isnothing(isinside)
+        isinside = zeros(Bool, dims...)
+    end
+    return Grid{N}(bb.lower, sz, actual_grid_resolution, grid, SVector{N, Float64}[], false, isinside)
 end
 
-function Grid(obstructions::Vector{BoundingBox{N}}, grid_resolution::Float64, repeats::AbstractVector) where {N}
+function Grid(obstructions::Vector{BoundingBox{N}}, grid_resolution::Float64, repeats::AbstractVector; isinside=nothing) where {N}
     repeats = SVector{N}(repeats)
     half_repeats = repeats / 2
     bb = BoundingBox(-half_repeats, half_repeats)
@@ -103,7 +107,11 @@ function Grid(obstructions::Vector{BoundingBox{N}}, grid_resolution::Float64, re
             end
         end
     end
-    return Grid(-repeats/2, repeats, actual_grid_resolution, grid, shifts, true)
+
+    if isnothing(isinside)
+        isinside = zeros(Bool, dims...)
+    end
+    return Grid(-repeats/2, repeats, actual_grid_resolution, grid, shifts, true, isinside)
 end
 
 end

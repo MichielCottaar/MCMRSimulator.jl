@@ -132,6 +132,7 @@ BoundingBox(obstructions::Vector{IndexTriangle}, vertices::Vector{SVector{3, Flo
     isinside(obstruction_group, position[, stuck_to])
 
 Returns a vector of indices with all the obstructions in [`FixedObstructionGroup`](@ref) containing the `position` (in order).
+For obstructions with only a single inside, will return an empty vector ("[]") if the particle is outside and a "[0]" if inside.
 """
 function isinside(g::FixedObstructionGroup{L}, pos::SVector{3}, stuck_to::Reflection=empty_reflection) where {L}
     if ~has_inside(typeof(g))
@@ -257,7 +258,7 @@ function detect_intersection_loop(g::FixedObstructionGroup{L, N, R, O}, start, d
         else
             new_intersection = detect_intersection(obstruction, start_shift, dest_shift)
         end
-        if (new_intersection.distance < intersection.distance) && (new_intersection.distance >= 0)
+        if (new_intersection.distance >= 0) && (new_intersection.distance < intersection.distance)
             intersection = new_intersection
             intersection_index = index
         end
