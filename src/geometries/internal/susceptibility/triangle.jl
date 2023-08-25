@@ -108,8 +108,8 @@ function single_susceptibility(triangle::TriangleSusceptibility, position::Abstr
         # compute contribution of triangle between origin, p2, and (x, y)
         inside_plane = sign(x) == sign(b)
         if ~iszero(x)
-            add_to_field!(-x, a - y, height, inside_plane && (y < a))
-            add_to_field!(-x, -y, height, inside_plane && (y > 0))
+            add_to_field!(-x, a - y, height, xor(inside_plane, (y > a)))
+            add_to_field!(-x, -y, height, xor(inside_plane, (y < 0)))
         end
 
         if dim != 3
