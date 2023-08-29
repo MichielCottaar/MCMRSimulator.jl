@@ -52,8 +52,12 @@ function single_susceptibility(annulus::AnnulusSusceptibility, position::Abstrac
         return annulus.internal_field
     else
         sin_theta_sq = b0_field[1] * b0_field[1] + b0_field[2] * b0_field[2]
-        cos2 = (b0_field[1] * position[1] + b0_field[2] * position[2])^2 / (rsq * sin_theta_sq)
-        cos2f = 2 * cos2 - 1
+        if iszero(sin_theta_sq)
+            cos2 = (b0_field[1] * position[1] + b0_field[2] * position[2])^2 / (rsq * sin_theta_sq)
+            cos2f = 2 * cos2 - 1
+        else
+            cos2f = 0.5
+        end
         if inside == 1
             return (
                 annulus.chi_I * (2//3 - sin_theta_sq * (1 + cos2f * (annulus.inner_rsq / rsq))) / 2 +
