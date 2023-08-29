@@ -53,10 +53,10 @@ function single_susceptibility(annulus::AnnulusSusceptibility, position::Abstrac
     else
         sin_theta_sq = b0_field[1] * b0_field[1] + b0_field[2] * b0_field[2]
         if iszero(sin_theta_sq)
+            cos2f = 0.5
+        else
             cos2 = (b0_field[1] * position[1] + b0_field[2] * position[2])^2 / (rsq * sin_theta_sq)
             cos2f = 2 * cos2 - 1
-        else
-            cos2f = 0.5
         end
         if inside == 1
             return (
