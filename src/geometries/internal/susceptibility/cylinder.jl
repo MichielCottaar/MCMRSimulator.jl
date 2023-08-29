@@ -44,7 +44,8 @@ function single_susceptibility(cylinder::CylinderSusceptibility, position::Abstr
     if inside
         return cylinder.internal_field
     else
-        cos2 = (b0_field[1] * position[1] + b0_field[2] * position[2])^2 / rsq
+        sin_theta_sq = b0_field[1] * b0_field[1] + b0_field[2] * b0_field[2]
+        cos2 = (b0_field[1] * position[1] + b0_field[2] * position[2])^2 / (rsq * sin_theta_sq)
         return cylinder.external_field * (2 * cos2 - 1) / rsq
     end
 end
