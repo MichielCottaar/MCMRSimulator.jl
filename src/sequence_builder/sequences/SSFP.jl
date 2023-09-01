@@ -17,7 +17,7 @@ function dwssfp(TR;
                 gradient_strength=nothing, # Only used when gradient_duration != 0 and qval == nothing
                 gradient_duration=0, 
                 qval = nothing,
-                gradient_delay=0,
+                gradient_delay=0.1, # have a small delay to separate RF pulse and gradient by default
                 gradient_orientation=SVector{3, Float}([1., 0., 0.]))
     
     if isnothing(TE)
@@ -49,9 +49,9 @@ function dwssfp(TR;
         if isnothing(qval) && isnothing(gradient_strength) 
             error("Either q value (preferred) or gradient strength needs to be specified for a finite gradient duration")
         elseif !isnothing(qval) && !isnothing(gradient_strength) 
-            @assert gradient_strength == qval/gradient_duration / 2π "gradient_strength and qval mismatch!"
+            @assert gradient_strength == qval/gradient_duration / 2π   "gradient_strength and qval mismatch!"
         elseif !isnothing(qval) && isnothing(gradient_strength)
-            gradient_strength = qval/gradient_duration / 2π
+            gradient_strength = qval/gradient_duration / 2π 
         end
         @assert gradient_strength <= max_gradient(scanner) "Requested gradient strength exceeds scanner limits"
         gradient = rotate_bvec([
