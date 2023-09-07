@@ -4,19 +4,17 @@ include("obstruction_types.jl")
 include("obstruction_groups.jl")
 import StaticArrays: MVector
 import .ObstructionTypes: ObstructionType, fields
-import .Fields: Field, FieldValue, isglobal
+import .Fields: Field, FieldValue, isglobal, description
 import .ObstructionGroups: ObstructionGroup, IndexedObstruction, key_value_pairs
 
 function field_to_docs(key::Symbol, field_value::FieldValue{T}) where {T}
     field = field_value.field
     key_txt = replace(String(key), "_"=>"\\_")
-    required_text = field.required ? " (required)" : ""
-    category_text = isnothing(field_value.category) ? "" : " Applied in $(field_value.category)."
-    as_string = "- $(key_txt) ($T): $(field.description)$(category_text)$(required_text)\n"
+    as_string = "- $(key_txt): $(description(field_value))"
     if ~isnothing(field.default_value)
-        as_string = as_string * "  default value: $(field.default_value)\n"
+        as_string = as_string * "  default value: $(field.default_value)"
     end
-    return as_string
+    return as_string * "\n"
 end
 
 for obstruction_type in (

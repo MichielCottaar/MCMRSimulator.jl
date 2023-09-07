@@ -231,4 +231,34 @@ end
     @test size_scale(mr.annuli(inner=[0.5, 0.7], outer=[0.6, 0.8])) == 0.5
 end
 
+@testset "Test geometry JSON I/O" begin
+    for geometry in (
+        mr.cylinders(radius=[0.7, 0.8]),
+        mr.annuli(inner=0.2, outer=0.4, repeats=[2, 3], rotation=:y),
+        mr.walls(position=[1, 2, 3, 4, 5]),
+        mr.spheres(radius=[0.2, 0.4, 0.8], R1_volume=1., R2_volume=[2., 2.3, 3.4]),
+        mr.mesh(triangles=[[1, 2, 3], [2, 1, 3]], vertices=[[0, 0, 0], [1, 1, 1], [2, 0, 3]])
+    )
+        io = IOBuffer()
+        mr.write_geometry(io, geometry)
+        s = String(io.data)
+        group = mr.read_geometry(s)
+        @test group.n_obstructions == geometry.n_obstructions
+        for (key, field_value) in group.field_values
+            @test all(field_value.value .== getproperty(geometry, key).value)
+        end
+
+        io = IOBuffer()
+        mr.write_geometry(io, [geometry])
+        s = String(io.data)
+        groups = mr.read_geometry(s)
+        @test length(groups) == 1
+        group = groups[1]
+        @test group.n_obstructions == geometry.n_obstructions
+        for (key, field_value) in group.field_values
+            @test all(field_value.value .== getproperty(geometry, key).value)
+        end
+    end
+end
+
 end

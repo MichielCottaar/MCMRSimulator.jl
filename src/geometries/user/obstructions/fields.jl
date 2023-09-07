@@ -28,6 +28,8 @@ struct Field{T}
     end
 end
 
+description(f::Field) = f.description
+
 """
     convert_value(T, value, required::Bool)
 
@@ -98,6 +100,13 @@ mutable struct FieldValue{T}
     end
 end
 
+description(fv::FieldValue{T}) where {T} = (
+    description(fv.field) * 
+    (isnothing(fv.category) ? "" : " $(uppercasefirst(String(fv.category))) property.") *
+    (fv.field.required ? " Field is required." : " Field can be null.") *
+    (" Expected type: $T.")
+)
+
 function Base.setproperty!(v::FieldValue{T}, s::Symbol, value) where {T}
     if s == :value
         value = convert_value(T, value)
@@ -144,11 +153,11 @@ function Base.show(io::IO, fv::FieldValue)
 end
 
 property_fields = (
-    Field{Float64}(:R1, "Longitudinal relaxation rate.", per_volume=true, per_surface=true),
-    Field{Float64}(:R2, "Transverse relaxation rate.", per_volume=true, per_surface=true),
-    Field{Float64}(:off_resonance, "Off-resonance field offset.", per_volume=true, per_surface=true),
-    Field{Float64}(:dwell_time, "Average time a particle stays stuck to the surface.", per_surface=true),
-    Field{Float64}(:density, "Surface density of stuck particles relative to the volume density.", per_surface=true),
+    Field{Float64}(:R1, "Longitudinal relaxation rate (kHz).", per_volume=true, per_surface=true),
+    Field{Float64}(:R2, "Transverse relaxation rate (kHz).", per_volume=true, per_surface=true),
+    Field{Float64}(:off_resonance, "Off-resonance field offset (kHz).", per_volume=true, per_surface=true),
+    Field{Float64}(:dwell_time, "Average time a particle stays stuck to the surface (ms).", per_surface=true),
+    Field{Float64}(:density, "Surface density of stuck particles relative to the volume density (um).", per_surface=true),
     Field{Float64}(:permeability, "Probability of particle passing through the obstruction.", per_surface=true),
     Field{Float64}(:relaxivity, "Fraction of transverse spin lost each time it hits the obstruction.", per_surface=true),
 )

@@ -58,7 +58,7 @@ import .Geometries:
     Sphere, Spheres, spheres,
     Triangle, Mesh, mesh, split_mesh,
     load_mesh, fix, fix_susceptibility,
-    random_positions_radii
+    random_positions_radii, write_geometry, read_geometry
 export annuli, cylinders, walls, spheres, mesh, load_mesh, fix, random_positions_radii, split_mesh
 
 import .Geometries.Internal: BoundingBox, FixedGeometry

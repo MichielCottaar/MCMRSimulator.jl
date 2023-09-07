@@ -62,6 +62,15 @@ function get_rotation(rotation::AbstractMatrix, ndim::Int)
 end
 
 function get_rotation(rotation::AbstractVector, ndim::Int)
+    T = typeof(rotation[1])
+    return get_rotation(T.(rotation), ndim)
+end
+
+function get_rotation(rotation::AbstractVector{<:AbstractVector}, ndim::Int)
+    return get_rotation(hcat(rotation...), ndim)
+end
+
+function get_rotation(rotation::AbstractVector{<:Number}, ndim::Int)
     @assert length(rotation)==3
     normed = rotation / norm(rotation)
     if ndim == 1
