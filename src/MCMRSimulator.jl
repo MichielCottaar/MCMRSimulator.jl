@@ -51,6 +51,8 @@ export Simulation
 import .Evolve: evolve, readout, signal, trajectory
 export evolve, readout, signal, trajectory
 
+import .CLI: run_main
+
 import .Geometries: 
     ObstructionGroup, IndexedObstruction,
     Annulus, Annuli, annuli,
