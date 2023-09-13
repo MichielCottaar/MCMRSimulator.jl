@@ -25,6 +25,7 @@ include("relax.jl")
 include("simulations.jl")
 include("evolve.jl")
 include("plot/plot.jl")
+include("cli/cli.jl")
 
 import .Constants: gyromagnetic_ratio
 export gyromagnetic_ratio
