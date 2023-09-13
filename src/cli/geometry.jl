@@ -3,7 +3,7 @@ Defines command line interface for `mcmr geometry`
 """
 module Geometry
 
-import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, parse_args
+import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, parse_args, ArgParseError, usage_string
 import ...Geometries.User.Obstructions: walls, Walls, spheres, Spheres, cylinders, Cylinders, annuli, Annuli, fields, field_to_docs, Field
 
 field_type(::Field{T}) where {T} = T
@@ -103,16 +103,17 @@ By default it is set to `ARGS`.
 """
 function run_main(args=ARGS::AbstractVector[<:AbstractString])
     parser = get_parser()
-    run_main(parse_args(args, parser))
+    return run_main(parse_args(args, parser))
 end
 
 function run_main(::Nothing)
-    return
+    return 1
 end
 
 function run_main(args::Dict{<:AbstractString, <:Any})
     cmd = args["%COMMAND%"]
     @show args[cmd]
+    return 0
 end
 
 

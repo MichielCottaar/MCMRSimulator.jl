@@ -13,14 +13,17 @@ import .Geometry
 
 function run_main(args=ARGS)
     if length(args) == 0
-        error("No mcmr command given. Available commands: run, geometry")
-    end
-    if args[1] == "run"
-        Run.run_main(args[2:end])
-    elseif args[1] == "geometry"
-        Geometry.run_main(args[2:end])
+        println("No mcmr command given.\n")
     else
-        error("Invalid mcmr command $(args[1]) given. Expected one of: run, geometry")
+        if args[1] == "run"
+            return Run.run_main(args[2:end])
+        elseif args[1] == "geometry"
+            return Geometry.run_main(args[2:end])
+        else
+            println("Invalid mcmr command $(args[1]) given.\n")
+        end
     end
+    println("usage: mcmr {run/geometry}")
+    return 1
 end
 end
