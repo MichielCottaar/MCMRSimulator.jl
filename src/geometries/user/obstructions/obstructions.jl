@@ -8,13 +8,17 @@ import .Fields: Field, FieldValue, isglobal, description
 import .ObstructionGroups: ObstructionGroup, IndexedObstruction, key_value_pairs
 
 function field_to_docs(key::Symbol, field_value::FieldValue{T}) where {T}
-    field = field_value.field
     key_txt = replace(String(key), "_"=>"\\_")
-    as_string = "- $(key_txt): $(description(field_value))"
+    return "- $(key_txt): $(field_to_docs(field_value))\n"
+end
+
+function field_to_docs(field_value::FieldValue{T}) where {T}
+    field = field_value.field
+    as_string = description(field_value)
     if ~isnothing(field.default_value)
         as_string = as_string * "  default value: $(field.default_value)"
     end
-    return as_string * "\n"
+    return as_string
 end
 
 for obstruction_type in (
