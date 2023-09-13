@@ -88,7 +88,7 @@ function run_main(args=ARGS::AbstractVector[<:AbstractString])
     run_main(parse_args(args, parser))
 end
 
-run_main(::Nothing) = 1
+run_main(::Nothing) = Cint(1)
 
 function run_main(args::Dict{<:AbstractString, <:Any})
     geometry = read_geometry(args["geometry"])
@@ -103,7 +103,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
         bb = BoundingBox(args["voxel-size"]/2)
         snap = Snapshot(args["N"], simulation, bb)
     end
-    return 0
+    return Cint(0)
 end
 
 

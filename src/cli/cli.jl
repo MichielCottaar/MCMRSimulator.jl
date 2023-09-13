@@ -24,6 +24,6 @@ function run_main(args=ARGS)
         end
     end
     println("usage: mcmr {run/geometry}")
-    return 1
+    return Cint(1)
 end
 end

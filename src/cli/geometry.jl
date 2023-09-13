@@ -107,13 +107,13 @@ function run_main(args=ARGS::AbstractVector[<:AbstractString])
 end
 
 function run_main(::Nothing)
-    return 1
+    return Cint(1)
 end
 
 function run_main(args::Dict{<:AbstractString, <:Any})
     cmd = args["%COMMAND%"]
     @show args[cmd]
-    return 0
+    return Cint(0)
 end
 
 
