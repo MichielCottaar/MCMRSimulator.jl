@@ -68,4 +68,5 @@ compile:
     - mkdir compiled
     - tar -czf compiled/mcmr.tar.gz mcmr/*
   artifacts:
-    - compiled
+    paths:
+      - compiled
