@@ -65,7 +65,7 @@ build_pages:
 compile:
   script:
     - cd test
-    - julia --project=.. -e 'using PackageCompiler; create_app("..", "../mcmr", executables=["mcmr"=>"run_main"], precompile_execution_file="runtests_no_plot.jl")'
+    - julia --project=.. -e 'import Pkg; Pkg.instantiate(); using PackageCompiler; create_app("..", "../mcmr", executables=["mcmr"=>"run_main"], precompile_execution_file="runtests_no_plot.jl")'
     - cd ..
     - mkdir compiled
     - tar -czf compiled/mcmr.tar.gz mcmr/*
