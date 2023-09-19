@@ -75,6 +75,7 @@ compile:
     - cd ..
     - mkdir compiled
     - tar -czf compiled/mcmr.tar.gz mcmr/*
+  timeout: 2h
   artifacts:
     paths:
       - compiled
