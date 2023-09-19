@@ -68,6 +68,8 @@ build_pages:
 
 compile:
   script:
+    - apt-get update
+    - apt-get install -y clang
     - cd test
     - julia --project=.. -e 'import Pkg; Pkg.instantiate(); using PackageCompiler; create_app("..", "../mcmr", executables=["mcmr"=>"run_main"], precompile_execution_file="runtests_no_plot.jl")'
     - cd ..
