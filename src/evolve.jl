@@ -1,3 +1,11 @@
+"""
+Defines the functions that run the actual simulation:
+- [`readout`](@ref): get total signal or [`Snapshot`](@ref) at any [`Readout`](@ref) objects in the sequences.
+- [`custom_readout`](@ref): get total signal or [`Snapshot`](@ref) at user-defined times.
+- [`evolve`](@ref): Return a single [`Snapshot`](@ref) with the state of the simulation at a given time. This snapshot can be used as initialisation for further runs.
+
+All of these functions call [`evolve_to_time`](@ref) under the hood to actually run the simulation.
+"""
 module Evolve
 import StaticArrays: SVector, MVector
 import LinearAlgebra: norm, ⋅
@@ -14,15 +22,16 @@ import ..Timestep: propose_times
 import ..Properties: GlobalProperties, correct_for_timestep, stick_probability
 
 """
-    readout(snapshot, simulation; bounding_box=<1x1x1 mm box>)
+    readout(snapshot, simulation; bounding_box=<1x1x1 mm box>, skip_TR=0, nTR=1)
 
 Evolves the spins in the [`Snapshot`](@ref) through the [`Simulation`](@ref).
-Returns the [`Snapshot`](@ref) at every [`Readout`](@ref) in the simulated sequences during a single TR.
-If no `TR` is explicitly selected, it will return the current TR if the snapshot has not passed any readouts and the next TR otherwise.
+Returns the [`Snapshot`](@ref) at every [`Readout`](@ref) in the simulated sequences over one or more repetition times.
 
 The return object depends on whether the simulation was created with a single sequence object or with a vector of sequences.
-- For a single sequence object a vector of [`Snapshot`](@ref) objects is returned with a single snapshot for each [`Readout`](@ref) in the sequence.
+- For a single sequence object a vector of [`Snapshot`](@ref) objects is returned with a single snapshot for each [`Readout`](@ref) in the sequence during the TRs.
 - For a vector of sequences a vector of vectors of [`Snapshot`](@ref) objects is returned. Each element in the outer vector contains the result for a single sequence.
+
+
 """
 function readout(spins, simulation::Simulation{N}; bounding_box=500) where {N}
     snapshot = _to_snapshot(spins, simulation, bounding_box)
@@ -114,12 +123,15 @@ end
 
 Evolves the [`Snapshot`](@ref) through the [`Simulation`](@ref) to a new time.
 Returns a [`Snapshot`](@ref) at the new time, which can be used as a basis for further simulation.
-By default it will simulate till the start of the next TR.
+If undefined `new_time` will be set to the start of the next TR.
 """
 function evolve(spins, simulation::Simulation{N}, new_time=nothing; bounding_box=500) where {N}
     snapshot = _to_snapshot(spins, simulation, bounding_box)
     if isnothing(new_time)
         TR = simulation.sequences[1].TR
+        if !all(s.TR == TR for s in simulation.sequences)
+            error("Cannot evolve snapshot for a single TR, because the simulation contains sequences with different TRs. Please set a `new_time` explicitly.")
+        end
         new_time = (div(nextfloat(snapshot.time), TR, RoundDown) + 1) * TR
     end
     evolve_to_time(snapshot, simulation, Float64(new_time))
