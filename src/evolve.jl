@@ -15,43 +15,55 @@ import ..Sequences: SequencePart, next_instant, InstantComponent, apply!
 import ..Geometries.Internal: 
     FixedGeometry, empty_reflection, detect_intersection, Intersection,
     empty_intersection, direction, Reflection, has_intersection, previous_hit,
-    surface_relaxivity, surface_density, dwell_time, permeability, FixedSusceptibility
+    surface_relaxivity, surface_density, dwell_time, permeability, FixedSusceptibility,
+    BoundingBox
 import ..Simulations: Simulation, _to_snapshot
 import ..Relax: relax!, transfer!
 import ..Timestep: propose_times
 import ..Properties: GlobalProperties, correct_for_timestep, stick_probability
 
 """
-    readout(snapshot, simulation; bounding_box=<1x1x1 mm box>, skip_TR=0, nTR=1)
+    readout(spins, simulation; bounding_box=<1x1x1 mm box>, skip_TR=0, nTR=1, snapshot=false)
 
 Evolves the spins in the [`Snapshot`](@ref) through the [`Simulation`](@ref).
-Returns the [`Snapshot`](@ref) at every [`Readout`](@ref) in the simulated sequences over one or more repetition times.
+Returns the total signal or a [`Snapshot`](@ref) at every [`Readout`](@ref) in the simulated sequences over one or more repetition times (TRs).
+To explicitly control the times of the readout, use [`custom_readout`](@ref) instead.
 
-The return object depends on whether the simulation was created with a single sequence object or with a vector of sequences.
-- For a single sequence object a vector of [`Snapshot`](@ref) objects is returned with a single snapshot for each [`Readout`](@ref) in the sequence during the TRs.
-- For a vector of sequences a vector of vectors of [`Snapshot`](@ref) objects is returned. Each element in the outer vector contains the result for a single sequence.
+For each sequence this function returns a NxM matrix (for N readouts per TR and M TRs).
+By default each element of this matrix is either a [`SpinOrientation`](@ref) with the total signal.
+If `snapshot=true` is set, each element is the full [`Snapshot`](@ref) instead.
 
+Positional arguments:
+- `spins`: Number of spins to simulate or an already existing [`Snapshot`](@ref).
+- `simulation`: [`Simulation`](@ref) object defining the environment, scanner, and sequence(s).
 
+Keyword arguments:
+- `bounding_box`: radius of the box in um (default is 500, corresponding to a 1x1x1 mm box). Can be set to a [`BoundingBox`](@ref) object for more control
+- `skip_TR`: Number of repetition times to skip before starting the readout. 
+    Even if set to zero (the default), the simulator will still skip the current TR before starting the readout 
+    if the starting snapshot is from a time past one of the sequence readouts.
+- `nTR`: number of TRs for which to store the output
+- `snapshot`: set to true to output the full [`Snapshot`](@ref) at each readout rather than a [`SpinOrientation`](@ref) with the total signal.
 """
-function readout(spins, simulation::Simulation{N}; bounding_box=500) where {N}
+function readout(spins, simulation::Simulation{N}; bounding_box=500, skip_TR=0, nTR=1, snapshot=false) where {N}
     snapshot = _to_snapshot(spins, simulation, bounding_box)
 
     readout_times = Float64[]
-    per_seq_times = Vector{Float64}[]
+    per_seq_times = Vector{Vector{Float64}}[]
 
     for seq in simulation.sequences
         if length(seq.readout_times) == 0
-            seq_times = Float64[]
+            seq_times = Vector{Float64}[]
         else
             current_TR = Int(div(get_time(snapshot), seq.TR, RoundDown))
             time_in_TR = get_time(snapshot) - current_TR * seq.TR
 
-            if minimum(seq.readout_times) < time_in_TR
-                current_TR += 1
+            if iszero(skip_TR) && minimum(seq.readout_times) < time_in_TR
+                skip_TR = 1
             end
-            seq_times = seq.readout_times .+ (current_TR * seq.TR)
+            seq_times = [seq.readout_times .+ ((current_TR + skip_TR + index) * seq.TR) for index in 0:nTR-1]
         end
-        append!(readout_times, seq_times)
+        append!(readout_times, vcat(seq_times...))
         push!(per_seq_times, seq_times)
     end
 
@@ -278,7 +290,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
 
     times = propose_times(simulation, snapshot.time, new_time)
 
-    # define next stopping times due to sequence, readout or times
+    # define next stopping time due to instantaneous components
     sequence_instants = Union{Nothing, InstantComponent}[next_instant(seq, current_time) for seq in simulation.sequences]
     sequence_times = MVector{N, Float64}([isnothing(i) ? Inf : get_time(i) for i in sequence_instants])
 
@@ -290,7 +302,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
         end
         current_time = next_time
 
-        # return final snapshot state
+        # apply instant components (if we are not at new_time already)
         if current_time != new_time && any(t -> t == current_time, sequence_times)
             components = SVector{N, Union{Nothing, InstantComponent}}([
                 time == current_time ? instant : nothing 
