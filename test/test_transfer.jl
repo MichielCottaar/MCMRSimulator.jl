@@ -115,7 +115,7 @@ end
             spins = [mr.Spin(position=Random.rand(3) .* wall_dist) for _ in 1:nspins]
             sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=1e5)
             simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=diffusivity, max_timestep=timestep)
-            signal = mr.signal(spins, simulation, [timestep])
+            signal = mr.readout(spins, simulation, [timestep])
             @test length(signal) == 1
             fhit = frachit(wall_dist, diffusivity, timestep)
             @test transfer * fhit ≈ (1 - mr.transverse(signal[end]) / nspins) rtol=0.1

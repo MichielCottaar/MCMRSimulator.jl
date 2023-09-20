@@ -1,7 +1,6 @@
 """
 Defines the functions that run the actual simulation:
 - [`readout`](@ref): get total signal or [`Snapshot`](@ref) at any [`Readout`](@ref) objects in the sequences.
-- [`custom_readout`](@ref): get total signal or [`Snapshot`](@ref) at user-defined times.
 - [`evolve`](@ref): Return a single [`Snapshot`](@ref) with the state of the simulation at a given time. This snapshot can be used as initialisation for further runs.
 
 All of these functions call [`evolve_to_time`](@ref) under the hood to actually run the simulation.
@@ -23,112 +22,107 @@ import ..Timestep: propose_times
 import ..Properties: GlobalProperties, correct_for_timestep, stick_probability
 
 """
-    readout(spins, simulation; bounding_box=<1x1x1 mm box>, skip_TR=0, nTR=1, snapshot=false)
+    readout(spins, simulation[, readout_times]; bounding_box=<1x1x1 mm box>, skip_TR=0, nTR=1, snapshot=false)
 
-Evolves the spins in the [`Snapshot`](@ref) through the [`Simulation`](@ref).
-Returns the total signal or a [`Snapshot`](@ref) at every [`Readout`](@ref) in the simulated sequences over one or more repetition times (TRs).
-To explicitly control the times of the readout, use [`custom_readout`](@ref) instead.
+Evolves a set of spins through the [`Simulation`](@ref).
+Returns the total signal or a full [`Snapshot`](@ref) at every readout time in the simulated sequences over one or more repetition times (TRs).
 
-For each sequence this function returns a NxM matrix (for N readouts per TR and M TRs).
-By default each element of this matrix is either a [`SpinOrientation`](@ref) with the total signal.
-If `snapshot=true` is set, each element is the full [`Snapshot`](@ref) instead.
-
-Positional arguments:
+# Positional arguments:
 - `spins`: Number of spins to simulate or an already existing [`Snapshot`](@ref).
 - `simulation`: [`Simulation`](@ref) object defining the environment, scanner, and sequence(s).
+- `times` (optional): time of the readouts relative to the start of the TR (in ms). If not provided, the times of any [`Readout`](@ref) objects in the sequence will be used.
 
-Keyword arguments:
-- `bounding_box`: radius of the box in um (default is 500, corresponding to a 1x1x1 mm box). Can be set to a [`BoundingBox`](@ref) object for more control
+# Keyword arguments:
+- `bounding_box`: size of the voxel in which the spins are initiated in um (default is 1000, corresponding to a 1x1x1 mm box centered on zero). Can be set to a [`BoundingBox`](@ref) object for more control.
 - `skip_TR`: Number of repetition times to skip before starting the readout. 
     Even if set to zero (the default), the simulator will still skip the current TR before starting the readout 
     if the starting snapshot is from a time past one of the sequence readouts.
 - `nTR`: number of TRs for which to store the output
-- `snapshot`: set to true to output the full [`Snapshot`](@ref) at each readout rather than a [`SpinOrientation`](@ref) with the total signal.
+- `return_snapshot`: set to true to output the the state of all the spins as a [`Snapshot`](@ref) at each readout instead of a [`SpinOrientation`](@ref) with the total signal.
+
+# Returns
+The function returns an up to 3-dimensional (NxMxL) array, with the following dimensions:
+- `N`: the number of sequences. This dimension is not included if the simulation only contains a single sequencen (and this single sequence is not passed into the [`Simulation`](@ref) as a vector).
+- `M`: the number of readout times with a single TR. This dimension is skipped if the `readout_times` is set to a scalar number. This dimension might contain `nothing`s for sequences that contain fewer [`Readout`](@ref) objects than the maximum (`M`).
+- `L`: the number of TRs (controlled by the `nTR` keyword). If `nTR` is not explicitly set by the user, this dimension is skipped.
+By default each element of this matrix is either a [`SpinOrientation`](@ref) with the total signal.
+If `return_snapshot=true` is set, each element is the full [`Snapshot`](@ref) instead.
 """
-function readout(spins, simulation::Simulation{N}; bounding_box=500, skip_TR=0, nTR=1, snapshot=false) where {N}
+function readout(spins, simulation::Simulation{N}, readout_times=nothing; bounding_box=500, skip_TR=0, nTR=nothing, return_snapshot=false) where {N}
     snapshot = _to_snapshot(spins, simulation, bounding_box)
 
-    readout_times = Float64[]
-    per_seq_times = Vector{Vector{Float64}}[]
-
-    for seq in simulation.sequences
-        if length(seq.readout_times) == 0
-            seq_times = Vector{Float64}[]
+    if isnothing(readout_times)
+        if iszero(N)
+            nreadout_per_TR = 0
         else
-            current_TR = Int(div(get_time(snapshot), seq.TR, RoundDown))
-            time_in_TR = get_time(snapshot) - current_TR * seq.TR
-
-            if iszero(skip_TR) && minimum(seq.readout_times) < time_in_TR
-                skip_TR = 1
-            end
-            seq_times = [seq.readout_times .+ ((current_TR + skip_TR + index) * seq.TR) for index in 0:nTR-1]
+            nreadout_per_TR = maximum((length(seq.readout_times) for seq in simulation.sequences))
         end
-        append!(readout_times, vcat(seq_times...))
-        push!(per_seq_times, seq_times)
+    else
+        nreadout_per_TR = length(readout_times)
+    end
+    actual_readout_times = Set{Float64}()
+    use_nTR = isnothing(nTR) ? 1 : nTR
+    store_times = fill(-1., (N, nreadout_per_TR, use_nTR))
+
+    for (i, seq) in enumerate(simulation.sequences)
+        current_TR = Int(div(get_time(snapshot), seq.TR, RoundDown))
+        time_in_TR = get_time(snapshot) - current_TR * seq.TR
+
+        rt = isnothing(readout_times) ? seq.readout_times : readout_times
+        if rt isa Number
+            rt = [rt]
+        end
+        if iszero(length(rt))
+            continue
+        end
+
+        if iszero(skip_TR) && minimum(rt) < time_in_TR
+            skip_TR = 1
+        end
+
+        for (j, relative_time) in enumerate(rt)
+            for k in 1:use_nTR
+                new_readout_time = ((skip_TR + k - 1) * seq.TR) + relative_time
+                if new_readout_time < snapshot.time
+                    warn("Skipping readouts scheduled before the current snapshot. Did you provide negative `readout_times`?")
+                    continue
+                end
+                push!(actual_readout_times, new_readout_time)
+                store_times[i, j, k] = new_readout_time
+            end
+        end
     end
 
-    final_snapshots = SVector{N}([Snapshot{1}[] for _ in 1:N])
-    for time in sort(unique(readout_times))
+    return_type = return_snapshot ? Snapshot{1} : SpinOrientation
+    result = convert(Array{Union{Nothing, return_type}}, fill(nothing, size(store_times)))
+
+    for time in sort!([actual_readout_times...])
         snapshot = evolve_to_time(snapshot, simulation, time)
-        for index in 1:N
-            if time in per_seq_times[index]
-                push!(final_snapshots[index], get_sequence(snapshot, index))
+        for index in eachindex(IndexCartesian(), store_times)
+            if time != store_times[index]
+                continue
             end
+            single_snapshot = get_sequence(snapshot, index[1])
+            value = return_snapshot ? single_snapshot : SpinOrientation(single_snapshot)
+            result[index] = value
         end
     end
-    if simulation.flatten
-        return final_snapshots[1]
-    else
-        return final_snapshots
+
+    # Only include Nothing in the return type if there are any nothings in the data.
+    if ~any(isnothing.(result))
+        result = convert(Array{return_type}, result)
     end
+
+    return result[
+        # remove first dimension if simulation was initalised with scalar sequence
+        simulation.flatten ? 1 : :,
+        # remove second dimension if there are no sequences with multiple Readouts or readout_times is set to a scalar number
+        (isnothing(readout_times) && isone(nreadout_per_TR)) || readout_times isa Number ? 1 : :,
+        # remove third dimension if nTR is not explicitly set by the user
+        isnothing(nTR) ? 1 : :,
+    ]
 end
 
-"""
-    trajectory(snapshot, simulation, times=[TR]; bounding_box=<1x1x1 mm box>)
-
-Evolves the [`Snapshot`](@ref) through the [`Simulation`](@ref) and outputs at the requested times.
-Returns a vector of [`Snapshot`](@ref) objects with the current state of each time in times.
-When you are only interested in the signal at each timepoint, use [`signal`](@ref) instead.
-"""
-function trajectory(spins, simulation::Simulation{N}, times; bounding_box=500) where {N}
-    snapshot = _to_snapshot(spins, simulation, bounding_box)
-    result = Array{typeof(snapshot)}(undef, size(times))
-    for index in sortperm(times)
-        snapshot = evolve_to_time(snapshot, simulation, Float64(times[index]))
-        result[index] = snapshot
-    end
-    result
-end
-
-"""
-    signal(snapshot, simulation, times=[TR]; bounding_box=<1x1x1 mm box>)
-
-Evolves the [`Snapshot`](@ref) through the [`Simulation`](@ref) and outputs the total signal at the requested times.
-To get the full snapshot at each timepoint use [`trajectory`](@ref).
-
-The return object depends on whether the simulation was created with a single sequence object or with a vector of sequences.
-- For a single sequence object a vector of [`SpinOrientation`](@ref) object with the total signal at each time is returned.
-- For a vector of sequences the return type is a (Nt, Ns) matrix of [`SpinOrientation`](@ref) objects for `Nt` timepoints and `Ns` sequences.
-"""
-function signal(spins, simulation::Simulation{N}, times; bounding_box=500) where {N}
-    snapshot = _to_snapshot(spins, simulation, bounding_box)
-    if simulation.flatten
-        result = Array{SpinOrientation}(undef, size(times))
-    else
-        result = Array{SpinOrientation}(undef, (length(times), N))
-    end
-    for index in sortperm(times)
-        snapshot = evolve_to_time(snapshot, simulation, Float64(times[index]))
-        if simulation.flatten
-            result[index] = SpinOrientation(snapshot)
-        else
-            for seq in 1:N
-                result[index, seq] = SpinOrientation(get_sequence(snapshot, seq))
-            end
-        end
-    end
-    result
-end
 
 """
     evolve(snapshot, simulation[, new_time]; bounding_box=<1x1x1 mm box>)

@@ -48,8 +48,8 @@ export TimeController, propose_times
 import .Simulations: Simulation
 export Simulation
 
-import .Evolve: evolve, readout, signal, trajectory
-export evolve, readout, signal, trajectory
+import .Evolve: evolve, readout
+export evolve, readout
 
 import .CLI: run_main
 

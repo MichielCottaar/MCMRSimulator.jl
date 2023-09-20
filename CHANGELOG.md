@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `isinside` now works for meshes. This can be used to filter intra- or extra-cellular water as well as to set a different T1/T2/off-resonance in the intra-cellular space.
 - Off-resonance fields can now be calculated for meshes. Set `myelin=true` for the mesh to enable this.
 ### Changed
+- Replaced `readout`, `trajectory`, and `signal` with a single, improved `readout` function. This new function can:
+    - return the total signal or snapshots using on `return_snapshot` keyword
+    - either return the signal at the `Readout` objects in the sequence or at any times set when calling the `readout` function
+    - allow the signal to equilibriate for multiple repetition times before returning an output (using the new `skip_TR` keyword)
+    - return the signal for multiple repetition times (using the new `nTR` keyword)
+    - This does not affect the `evolve` function, which has not been changed.
 - Geometries are now mutable.
 - Geometries can no longer be generated individually using the type (e.g., `Sphere`, `Annulus`). Instead, use the plural constructors even when creating a single obstruction (e.g., `spheres`, `annuli`).
 - The "MT_fraction" keyword has been renamed "surface_relaxivity".

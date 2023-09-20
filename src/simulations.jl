@@ -47,9 +47,7 @@ For more details on how to adjust them, see [`TimeController`](@ref).
 # Running the simulation
 To run a [`Snapshot`](@ref) of spins through the simulations you can use one of the following functions:
 - [`evolve`](@ref): evolves the spins in the snapshot until a single given time and returns that state in a new [`Snapshot`](@ref).
-- [`trajectory`](@ref): returns full spin trajectory (recommended only for small number of spins).
-- [`signal`](@ref): returns signal variation over time.
-- [`readout`](@ref): returns the snapshots at the sequence readouts.
+- [`readout`](@ref): evolves the spins to particular times in each TR and return the total signal at that time (or a [`Snaphshot`](@ref)).
 """
 struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, S<:Sequence, O<:FixedSusceptibility}
     # N sequences, datatype T

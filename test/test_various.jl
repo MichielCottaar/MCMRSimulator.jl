@@ -135,8 +135,8 @@ end
     @testset "Reproducible evolution" begin
         spin = mr.Spin()
         env = mr.Simulation([], diffusivity=3.)
-        t1 = [s[1] for s in mr.trajectory(spin, env, 1:5)]
-        t2 = [s[1] for s in mr.trajectory(spin, env, 1:5)]
+        t1 = mr.readout(spin, env, 1:5, return_snapshot=true)
+        t2 = mr.readout(spin, env, 1:5, return_snapshot=true)
         @test all(@. mr.position(t1) == mr.position(t2))
         get_rng(spin) = spin.rng
         @test all(@. get_rng(t1) == get_rng(t2))
@@ -164,32 +164,37 @@ end
     sim_single = mr.Simulation([seq])
     sim_double = mr.Simulation([seq, seq])
 
-    @testset "Test signal function output" begin
+    @testset "Test readout function output" begin
         times = 1:0.1:10
         Nt = length(times)
         for (sim, shape) in [
-            (sim_empty, (Nt, 0)),
-            (sim_flat, (Nt, )),
-            (sim_single, (Nt, 1)),
-            (sim_double, (Nt, 2)),
+            (sim_empty, (0, )),
+            (sim_flat, ()),
+            (sim_single, (1, )),
+            (sim_double, (2, )),
         ]
-            @test size(mr.signal(100, sim, times)) == shape
-            @test all(mr.longitudinal.(mr.signal(100, sim, times)) .≈ 100.)
+            @test size(mr.readout(10, sim, times)) == (shape..., Nt)
+            @test size(mr.readout(10, sim, times, nTR=1)) == (shape..., Nt, 1)
+            @test size(mr.readout(10, sim, times, nTR=2)) == (shape..., Nt, 2)
+            nreadouts = shape == (0,) ? 0 : 2
+            @test size(mr.readout(10, sim)) == (shape..., nreadouts)
+            @test size(mr.readout(10, sim, nTR=1)) == (shape..., nreadouts, 1)
+            @test size(mr.readout(10, sim, nTR=2)) == (shape..., nreadouts, 2)
+            @test all(mr.longitudinal.(mr.readout(10, sim, times)) .≈ 10.)
         end
-    end
-    @testset "Test readout function output" begin
-        @test length(mr.readout(100, sim_empty)) == 0
-        @test length(mr.readout(100, sim_flat)) == 2
-        for (time, snapshot) in zip((10., 30.), mr.readout(100, sim_flat))
+
+        @test size(mr.readout(100, sim_empty)) == (0, 0)
+        @test size(mr.readout(100, sim_flat)) == (2, )
+        for (time, snapshot) in zip((10., 30.), mr.readout(100, sim_flat, return_snapshot=true))
             @test length(snapshot) == 100
             @test time == mr.get_time(snapshot)
             @test mr.longitudinal(snapshot) ≈ 100.
         end
-        @test length(mr.readout(100, sim_single)) == 1
-        @test length(mr.readout(100, sim_double)) == 2
+        @test size(mr.readout(100, sim_single)) == (1, 2)
+        @test size(mr.readout(100, sim_double)) == (2, 2)
         for sim in (sim_single, sim_double)
-            @test length(sim.sequences) == length(mr.readout(100, sim))
-            for r in mr.readout(100, sim)
+            @test length(sim.sequences) == size(mr.readout(100, sim))[1]
+            for r in eachrow(mr.readout(100, sim, return_snapshot=true))
                 @test length(r) == 2
                 for (time, snapshot) in zip((10., 30.), r)
                     @test length(snapshot) == 100
