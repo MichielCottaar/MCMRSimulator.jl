@@ -9,6 +9,94 @@ import ...Sequences.PulseQ: read_pulseq
 import ...Simulations: Simulation
 import ...Spins: Snapshot, BoundingBox
 
+
+"""Add simulation definition parameters to an argument parser."""
+function add_simulation_definition!(parser)
+    add_arg_group!(parser, "Define the simulation parameters", :simulation)
+    @add_arg_table! parser begin
+        "geometry"
+            required = true
+            help = "JSON file describing the spatial configuration of any obstructions as well as biophysical properties associated with those obstructions. Can be generated using `mcmr geometry`. Alternatively, a mesh file can be provided."
+        "sequence"
+            nargs = '*'
+            help = "One of more pulseq .seq files describing the sequences to be run."
+        "--R1"
+            help = "Longitudinal relaxation in 1/ms. This relaxation rate will at the very least be applied to free, extra-cellular spins. It might be overriden in the 'geometry' for bound spins or spins inside any obstructions."
+            arg_type = Float64
+            default = 0.
+        "--R2"
+            help = "Transverse relaxation in 1/ms. This relaxation rate will at the very least be applied to free, extra-cellular spins. It might be overriden in the 'geometry' for bound spins or spins inside any obstructions."
+            arg_type = Float64
+            default = 0.
+    end
+end
+
+"""Add output flags to an argument parser."""
+function add_output_flags!(parser)
+    add_arg_group!(parser, "Output flags. At least one is required", :output, required=true)
+    @add_arg_table! parser begin
+        "-o" "--output_signal"
+            help = "Writes the total signal at the readouts to this file as a comma-separated value (CSV) table."
+        "--output_snapshot"
+            help = "Writes the state of all the spins at the readouts to this file as a comma-separated value (CSV) table."
+    end
+end
+
+"""Add readout flags to an argument parser."""
+function add_readout_flags!(parser)
+    add_arg_group!(parser, "Readout flags. These control when the signal/spin states will be read out", :readout)
+    @add_arg_table! parser begin
+        "--nTR"
+            help = "Acquire the signal provided at the sequence readouts for this many repetition times (TRs). Output will be stored as a CSV file."
+            arg_type = Int
+            default = 1
+        "-T" "--times"
+            help = "Acquire the signal at the given times within each TR (in ms). Multiple values can be provided (e.g., '-T 0 10 15.3'). By default, the Readout markers in the sequence will be used instead."
+            arg_type = Float64
+            nargs = '+'
+        "--skip-TR"
+            help = "The number of repetition times the simulation will run before starting to acquire data. The time provided in the output options (`--TE` or `--snapshot`) are relative to the end of this equilibriation period."
+            arg_type = Int
+            default = 0
+        "--subset"
+            help = "Can be provided multiple times. For each time it is provided, the signal will be computed at each readout for a specific subset of spins. Each flag should have 4 values: all/bound/free all/inside/outside <geometry_index> <obstruction_index>."
+            nargs = 4
+            action = :append_arg
+    end
+end
+
+"""Add initialisation flags to an argument parser."""
+function add_init_flags!(parser)
+    add_arg_group!(parser, "Initialisation flags. These control the spins initial state", :init)
+    @add_arg_table! parser begin
+        "--N"
+            help = "Number of spins to simulate. Ignored if --init is set."
+            arg_type = Int
+            default = 10000
+        "--voxel-size"
+            help = "Size of the voxel (in mm) over which the initial spins are spread."
+            arg_type = Float64
+            default = 1.
+        "--longitudinal"
+            help = "Initial value of the longitudinal magnetisation for each spin. Note the the equilibrium longitudinal magnetisation for each spin is 1."
+            arg_type = Float64
+            default = 1.
+        "--transverse"
+            help = "Initial value of the magnitude of the transverse magnetisation for each spin."
+            arg_type = Float64
+            default = 0.
+        "--phase"
+            help = "Initial value of the phase of the transverse magnetisation for each spin in degrees."
+            arg_type = Float64
+            default = 0.
+        "--init"
+            help = "Continues the simulation with the spin states stored in a JSON file (produced using the 'mcmr pre-run' command). If used all other initialisation flags (except for --seed) are ignored."
+        "--seed"
+            help = "Initialisation for random number seed. Supply this to get reproducible results. If --init is also set, this flag will override the seed stored in this initialisation file."
+            arg_type = Int
+    end
+end
+
 """
     get_parser()
 
@@ -16,62 +104,10 @@ Returns the parser of arguments for `mcmr run`
 """
 function get_parser()
     parser = ArgParseSettings(prog="mcmr run", description="Runs a Monte Carlo simulation of the MRI signal evolution for spins interacting with the geometry.")
-    add_arg_group!(parser, "output options. Exactly one of these options should be supplied.", :output, false, required=true, exclusive=true)
-    @add_arg_table! parser begin
-        "geometry"
-            required = true
-            help = "JSON file describing the spatial configuration of any obstructions as well as biophysical proeprties associated with those obstructions. Can be generated using `mcmr geometry`. Alternatively, a mesh file can be provided."
-        "sequence"
-            required = true
-            nargs = '+'
-            help = "One of more pulseq .seq files describing the sequences to be run."
-        "-o" "--output"
-            help = "The output filename. The format of the output file depends on which of the other output options are provided."
-            required = true
-        "--nTR"
-            help = "Acquire the signal provided at the sequence readouts for this many repetition times (TRs). Output will be stored as a CSV file."
-            arg_type = Int
-            group = :output
-        "--TE"
-            help = "Acquire the signal at the given times (in ms). Output will be stored as a CSV file."
-            arg_type = Float64
-            nargs = '+'
-            group = :output
-        "--snapshot"
-            help = "Output the full state of the simulation at given time (in ms). The output will be stored in a JSON file."
-            arg_type = Float64
-            group = :output
-        "-N"
-            help = "Number of spins to simulate (default 10,000)."
-            arg_type = Int
-            default = 10000
-        "--voxel-size"
-            help = "Size of the voxel (in mm) over which the initial spins are spread (default: 1 mm)."
-            arg_type = Float64
-            default = 1.
-        "--seed"
-            help = "Initialisation for random number seed. Supply this to get reproducible results."
-            arg_type = Int
-        "--init"
-            help = "Continues the simulation with the spin states stored in a JSON file (produced using the `--snapshot` flag)."
-        "--R1"
-            help = "Longitudinal relaxation rate (i.e., 1/T1 in 1/ms). This might be overriden for bound spins or within certain obstructions by `geometry`."
-            default = 0.
-            arg_type = Float64
-        "--R2"
-            help = "Transverse relaxation rate (i.e., 1/T2 in 1/ms). This might be overriden for bound spins or within certain obstructions by `geometry`."
-            default = 0.
-            arg_type = Float64
-        "--skip-TR"
-            help = "The number of repetition times the simulation will run before starting to acquire data. The time provided in the output options (`--TE` or `--snapshot`) are relative to the end of this equilibriation period."
-            arg_type = Int
-            default=0
-        "--subset"
-            help = "Can be provided multiple times. For each time it is provided, the signal will be added for a specific subset of spins. Each flag should have 4 values: all/bound/free all/inside/outside <geometry_index> <obstruction_index>."
-            nargs = 4
-            action = :append_arg
-            
-    end
+    add_simulation_definition!(parser)
+    add_output_flags!(parser)
+    add_readout_flags!(parser)
+    add_init_flags!(parser)
     return parser
 end
 
