@@ -139,7 +139,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     if !isnothing(args["init"])
         error("Reading snapshots not yet implemented!")
     else
-        bb = BoundingBox{3}(args["voxel-size"]/2)
+        bb = BoundingBox(args["voxel-size"]/2)
         snap = Snapshot(args["N"], simulation, bb; longitudinal=args["longitudinal"], transverse=args["transverse"])
     end
     as_snapshot = !isnothing(args["output_snapshot"])

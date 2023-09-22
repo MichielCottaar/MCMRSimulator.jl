@@ -41,6 +41,9 @@ end
 function BoundingBox{N}(radius::Number) where {N}
     BoundingBox(fill(-radius, N), fill(radius, N))
 end
+BoundingBox(radius::Number) = BoundingBox{3}(radius)
+
+BoundingBox(bb::BoundingBox) = bb
 
 lower(bb::BoundingBox{N}) where {N} = bb.lower
 upper(bb::BoundingBox{N}) where {N} = bb.upper
