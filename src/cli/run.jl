@@ -140,10 +140,10 @@ function run_main(args::Dict{<:AbstractString, <:Any})
         error("Reading snapshots not yet implemented!")
     else
         bb = BoundingBox(args["voxel-size"]/2)
-        snap = Snapshot(args["Nspins"], simulation, bb; longitudinal=args["longitudinal"], transverse=args["transverse"])
+        init_snapshot = Snapshot(args["Nspins"], simulation, bb; longitudinal=args["longitudinal"], transverse=args["transverse"])
     end
     as_snapshot = !isnothing(args["output-snapshot"])
-    result = readout(snap, simulation, args["times"]; skip_TR=args["skip-TR"], nTR=args["nTR"], noflatten=true, return_snapshot=as_snapshot)
+    result = readout(init_snapshot, simulation, args["times"]; skip_TR=args["skip-TR"], nTR=args["nTR"], noflatten=true, return_snapshot=as_snapshot)
 
     # convert to tabular format
     if !isnothing(args["output-signal"])
@@ -160,7 +160,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 TR=index[3],
                 readout=index[2],
                 subset=1,
-                nspins=length(snapshot),
+                nspins=length(init_snapshot),
                 longitudinal=longitudinal(value),
                 transverse=transverse(value),
                 phase=phase(transverse),
