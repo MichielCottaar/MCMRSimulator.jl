@@ -5,7 +5,7 @@ module Geometry
 
 import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, parse_args, ArgParseError, usage_string
 import StaticArrays: SizedVector
-import ...Geometries.User.Obstructions: walls, Walls, spheres, Spheres, cylinders, Cylinders, annuli, Annuli, fields, field_to_docs, Field, ObstructionGroup
+import ...Geometries.User.Obstructions: walls, Walls, spheres, Spheres, cylinders, Cylinders, annuli, Annuli, fields, field_to_docs, Field, ObstructionGroup, FieldValue
 import ...Geometries.User.JSON: write_geometry
 
 field_type(::Field{T}) where {T} = T
@@ -110,6 +110,49 @@ function get_parser()
 end
 
 """
+    parse_user_argument(field_value, value, n_objects)
+
+Parse the user argument to something that can actually be used internally by Julia.
+"""
+parse_user_argument(field_value::FieldValue{T}, value, n_objects) where {T} = value
+function parse_user_argument(field_value::FieldValue{T}, value::Vector, n_objects) where {T}
+    if field_value.field.name == :orientation
+        return parse_user_orientation(value)
+    end
+    if length(value) == 0
+        return nothing
+    elseif T <: SizedVector
+        nt = size(T)[1]
+        if length(value) == nt
+            return value
+        elseif length(value) == nt * n_objects
+            return [value[1 + i * nt: nt * (i + 1) for i in 0:n_objects-1]]
+        else
+            error("Expected $nt or $(nt * n_objects) values for $(field_value.name). Got $(length(value)) instead.")
+        end
+    else
+        if length(value) == 1
+            return value[1]
+        elseif length(field_value) == n_objects
+            return value
+        end
+    end
+end
+
+
+function parse_user_orientation(value::Vector{String})
+    if length(value) == 1
+        return Symbol(value[1])
+    end
+    parsed = parse.(Float64, value)
+    if length(parsed) == 3
+        return parsed
+    else
+        return reshape(parsed, (length(parsed) // 3, 3))
+    end
+end
+
+"""
     run_main([arguments])
 
 Runs the `mcmr geometry` command line interface.
@@ -138,14 +181,17 @@ function run_create(args::Dict{<:AbstractString, <:Any})
     obstruction_type = args["%COMMAND%"]
     flags = args[obstruction_type]
     output_file = pop!(flags, "output_file")
-    symbol_flags = Dict(Symbol(k) => v for (k, v) in flags)
     constructor = Dict(
         "walls" => walls,
         "cylinders" => cylinders,
         "spheres" => spheres,
         "annuli" => annuli,
     )[obstruction_type]
-    result = constructor(;symbol_flags...)
+    test_group = constructor(number=0)
+    number = pop!(flags, "number")
+    symbol_flags = Dict(Symbol(k) => parse_user_argument(getproperty(test_group, Symbol(k)), v, number) for (k, v) in flags)
+    filtered = Dict(k=>v for (k, v) in symbol_flags if ~isnothing(v))
+    result = constructor(;number=number, filtered...)
     write_geometry(output_file, result)
 end
 
