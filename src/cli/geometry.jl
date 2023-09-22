@@ -202,7 +202,7 @@ function run_create(args::Dict{<:AbstractString, <:Any})
 end
 
 function run_merge(args)
-    res = []
+    res = ObstructionGroup[]
     for input_file in args["input_file"]
         input_geom = read_geometry(input_file)
         if input_geom isa ObstructionGroup
