@@ -142,11 +142,11 @@ function run_main(args::Dict{<:AbstractString, <:Any})
         bb = BoundingBox(args["voxel-size"]/2)
         snap = Snapshot(args["N"], simulation, bb; longitudinal=args["longitudinal"], transverse=args["transverse"])
     end
-    as_snapshot = !isnothing(args["output_snapshot"])
-    result = readout(snap, simulation, args["times"]; skip_TR=args["skip_TR"], nTR=args["nTR"], noflatten=true, return_snapshot=as_snapshot)
+    as_snapshot = !isnothing(args["output-snapshot"])
+    result = readout(snap, simulation, args["times"]; skip_TR=args["skip-TR"], nTR=args["nTR"], noflatten=true, return_snapshot=as_snapshot)
 
     # convert to tabular format
-    if !isnothing(args["output_signal"])
+    if !isnothing(args["output-signal"])
         df_list = []
         for index in eachindex(:IndexCartesian, result)
             if as_snapshot
@@ -169,10 +169,10 @@ function run_main(args::Dict{<:AbstractString, <:Any})
             ))
         end
         df = DataFrame(df_list)
-        CSV.write(args["output_signal"], df)
+        CSV.write(args["output-signal"], df)
     end
 
-    if !isnothing(args["output_snapshot"])
+    if !isnothing(args["output-snapshot"])
         df_list = []
         for index in eachindex(:IndexCartesian, result)
             snapshot = result[index]
@@ -196,7 +196,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
             end
         end
         df = DataFrame(df_list)
-        CSV.write(args["output_snapshot"], df)
+        CSV.write(args["output-snapshot"], df)
     end
 
     return Cint(0)
