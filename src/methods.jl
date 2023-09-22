@@ -89,12 +89,13 @@ function get_rotation(rotation::AbstractVector{<:Number}, ndim::Int)
 end
 
 function get_rotation(rotation::Symbol, ndim::Int)
+    orig_dimension = ndim == 1 ? 1 : 3
     target_dimension = Dict(
         :x => 1,
         :y => 2,
         :z => 3,
+        :I => orig_dimension,
     )[rotation]
-    orig_dimension = ndim == 1 ? 1 : 3
     target = zeros(Float64, 3, ndim)
     if orig_dimension <= ndim
         target[target_dimension, orig_dimension] = one(Float64)

@@ -87,6 +87,7 @@ function get_parser()
                 as_dict[:arg_type] = eltype(field_type(field_value.field))
                 if field_value.field.name == :rotation
                     pop!(as_dict, :arg_type)
+                    as_dict[:default] = ["I"]
                 end
             elseif !field_value.field.only_group
                 as_dict[:nargs] = '+'
