@@ -111,8 +111,11 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
         internal_obstructions = Internal.Shift.(internal_obstructions, shifts)
     end
 
-    fix_array_type(other) = other
-    function fix_array_type(arr::Vector{Union{Nothing, T}}) where {T}
+    fix_array_type(other, name) = other
+    function fix_array_type(arr::Vector{Union{Nothing, T}}, name) where {T}
+        if length(arr) != user_obstructions.n_obstructions
+            error("Cannot fix geometry. Parameter $name has $(length(arr)) values, which does not match the number of obstructions ($(user_obstructions.n_obstructions)).")
+        end
         if ~any(isnothing.(arr))
             return Vector{T}(arr)
         else
@@ -122,7 +125,7 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
 
     # get volumetric MRI properties
     if ~isnothing(volume)
-        get_volume(s) = fix_array_type(getproperty(user_obstructions, Symbol(String(s) * "_" * String(volume))).value)
+        get_volume(s) = fix_array_type(getproperty(user_obstructions, Symbol(String(s) * "_" * String(volume))).value, s)
         symbols = filter(s->~isnothing(get_volume(s)), [:R1, :R2, :off_resonance])
         values = [get_volume(s) for s in symbols]
         volume = NamedTuple{Tuple(symbols)}(Tuple(values))
@@ -132,7 +135,7 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
 
     # get surface properties (bound MRI & collision)
     if ~isnothing(surface)
-        get_surface(s) = fix_array_type(getproperty(user_obstructions, Symbol(String(s) * "_" * String(surface))).value)
+        get_surface(s) = fix_array_type(getproperty(user_obstructions, Symbol(String(s) * "_" * String(surface))).value, s)
         symbols = filter(s->~isnothing(get_surface(s)), [:R1, :R2, :off_resonance, :permeability, :density, :dwell_time, :relaxivity])
         values = [get_surface(s) for s in symbols]
         updated_symbols = replace(symbols, :density=>:surface_density, :relaxivity=>:surface_relaxivity)
