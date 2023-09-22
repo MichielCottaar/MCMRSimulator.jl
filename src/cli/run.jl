@@ -148,7 +148,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     # convert to tabular format
     if !isnothing(args["output-signal"])
         df_list = []
-        for index in eachindex(:IndexCartesian, result)
+        for index in eachindex(IndexCartesian(), result)
             if as_snapshot
                 value = SpinOrientation(result[index])
             else
