@@ -163,7 +163,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 nspins=length(init_snapshot),
                 longitudinal=longitudinal(value),
                 transverse=transverse(value),
-                phase=phase(transverse),
+                phase=phase(value),
                 Sx=orient_as_vec[1],
                 Sy=orient_as_vec[2],
             ))
@@ -190,7 +190,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                     z=pos[3],
                     longitudinal=longitudinal(spin),
                     transverse=transverse(spin),
-                    phase=phase(transverse),
+                    phase=phase(spin),
                     Sx=orient_as_vec[1],
                     Sy=orient_as_vec[2],
                 ))
