@@ -6,7 +6,7 @@ module Geometry
 import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, parse_args, ArgParseError, usage_string
 import StaticArrays: SizedVector
 import ...Geometries.User.Obstructions: walls, Walls, spheres, Spheres, cylinders, Cylinders, annuli, Annuli, fields, field_to_docs, Field, ObstructionGroup, FieldValue
-import ...Geometries.User.JSON: write_geometry
+import ...Geometries.User.JSON: write_geometry, read_geometry
 
 field_type(::Field{T}) where {T} = T
 
@@ -176,6 +176,8 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     cmd = args["%COMMAND%"]
     if cmd == "create"
         run_create(args[cmd])
+    elseif cmd == "merge"
+        run_merge(args[cmd])
     end
     return Cint(0)
 end
@@ -196,6 +198,19 @@ function run_create(args::Dict{<:AbstractString, <:Any})
     filtered = Dict(k=>v for (k, v) in symbol_flags if ~isnothing(v))
     result = constructor(;number=number, filtered...)
     write_geometry(output_file, result)
+end
+
+function run_merge(args)
+    res = []
+    for input_file in args["input_file"]
+        input_geom = read_geometry(input_file)
+        if input_geom isa ObstructionGroup
+            push!(res, input_geom)
+        else
+            append!(res, input_geom)
+        end
+    end
+    write_geometry(args["output_file"], res)
 end
 
 end
