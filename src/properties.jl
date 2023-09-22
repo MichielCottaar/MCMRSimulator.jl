@@ -11,6 +11,7 @@ Methods:
 - [`surface_density`](@ref)
 - [`dwell_time`](@ref)
 - [`correct_for_timestep`](@ref)
+- [`stick_probability`](@ref)
 """
 module Properties
 
