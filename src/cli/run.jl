@@ -38,7 +38,7 @@ end
 function add_output_flags!(parser)
     add_arg_group!(parser, "Output flags. At least one is required", :output, required=true)
     @add_arg_table! parser begin
-        "-o" "--output-signal"
+        "--output-signal", "-o"
             help = "Writes the total signal at the readouts to this file as a comma-separated value (CSV) table."
         "--output-snapshot"
             help = "Writes the state of all the spins at the readouts to this file as a comma-separated value (CSV) table."
@@ -53,7 +53,7 @@ function add_readout_flags!(parser)
             help = "Acquire the signal provided at the sequence readouts for this many repetition times (TRs). Output will be stored as a CSV file."
             arg_type = Int
             default = 1
-        "-T" "--times"
+        "--times", "-T"
             help = "Acquire the signal at the given times within each TR (in ms). Multiple values can be provided (e.g., '-T 0 10 15.3'). By default, the Readout markers in the sequence will be used instead."
             arg_type = Float64
             nargs = '+'
@@ -72,7 +72,7 @@ end
 function add_init_flags!(parser)
     add_arg_group!(parser, "Initialisation flags. These control the spins initial state", :init)
     @add_arg_table! parser begin
-        "--N"
+        "--Nspins", "-N"
             help = "Number of spins to simulate. Ignored if --init is set."
             arg_type = Int
             default = 10000
@@ -140,7 +140,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
         error("Reading snapshots not yet implemented!")
     else
         bb = BoundingBox(args["voxel-size"]/2)
-        snap = Snapshot(args["N"], simulation, bb; longitudinal=args["longitudinal"], transverse=args["transverse"])
+        snap = Snapshot(args["Nspins"], simulation, bb; longitudinal=args["longitudinal"], transverse=args["transverse"])
     end
     as_snapshot = !isnothing(args["output-snapshot"])
     result = readout(snap, simulation, args["times"]; skip_TR=args["skip-TR"], nTR=args["nTR"], noflatten=true, return_snapshot=as_snapshot)
@@ -169,6 +169,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
             ))
         end
         df = DataFrame(df_list)
+        @show df
         CSV.write(args["output-signal"], df)
     end
 
