@@ -4,10 +4,13 @@ Defines the command line interface to `mcmr run`.
 module Run
 
 import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_group!, parse_args
+import DataFrames: DataFrame
+import CSV
 import ...Geometries.User.JSON: read_geometry
 import ...Sequences.PulseQ: read_pulseq
 import ...Simulations: Simulation
-import ...Spins: Snapshot, BoundingBox
+import ...Spins: Snapshot, BoundingBox, longitudinal, transverse, phase, orientation, position
+import ...Evolve: readout
 
 
 """Add simulation definition parameters to an argument parser."""
@@ -35,9 +38,9 @@ end
 function add_output_flags!(parser)
     add_arg_group!(parser, "Output flags. At least one is required", :output, required=true)
     @add_arg_table! parser begin
-        "-o" "--output_signal"
+        "-o" "--output-signal"
             help = "Writes the total signal at the readouts to this file as a comma-separated value (CSV) table."
-        "--output_snapshot"
+        "--output-snapshot"
             help = "Writes the state of all the spins at the readouts to this file as a comma-separated value (CSV) table."
     end
 end
@@ -55,7 +58,7 @@ function add_readout_flags!(parser)
             arg_type = Float64
             nargs = '+'
         "--skip-TR"
-            help = "The number of repetition times the simulation will run before starting to acquire data. The time provided in the output options (`--TE` or `--snapshot`) are relative to the end of this equilibriation period."
+            help = "The number of repetition times the simulation will run before starting to acquire data."
             arg_type = Int
             default = 0
         "--subset"
@@ -133,12 +136,69 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     simulation = Simulation(sequences; geometry=geometry, R1=args["R1"], R2=args["R2"])
 
     # initial state
-    if !isnothing(args["snapshot"])
+    if !isnothing(args["init"])
         error("Reading snapshots not yet implemented!")
     else
         bb = BoundingBox(args["voxel-size"]/2)
-        snap = Snapshot(args["N"], simulation, bb)
+        snap = Snapshot(args["N"], simulation, bb; longitudinal=args["longitudinal"], transverse=args["transverse"])
     end
+    as_snapshot = !isnothing(args["output_snapshot"])
+    result = readout(snap, simulation, args["times"]; skip_TR=args["skip_TR"], nTR=args["nTR"], noflatten=true, return_snapshot=as_snapshot)
+
+    # convert to tabular format
+    if !isnothing(args["output_signal"])
+        df_list = []
+        for index in eachindex(:IndexCartesian, result)
+            if as_snapshot
+                value = SpinOrientation(result[index])
+            else
+                value = result[index]
+            end
+            orient_as_vec = orientation(value)
+            push!(df_list, (
+                sequence=index[1],
+                TR=index[3],
+                readout=index[2],
+                subset=1,
+                nspins=length(snapshot),
+                longitudinal=longitudinal(value),
+                transverse=transverse(value),
+                phase=phase(transverse),
+                Sx=orient_as_vec[1],
+                Sy=orient_as_vec[2],
+            ))
+        end
+        df = DataFrame(df_list)
+        CSV.write(args["output_signal"], df)
+    end
+
+    if !isnothing(args["output_snapshot"])
+        df_list = []
+        for index in eachindex(:IndexCartesian, result)
+            snapshot = result[index]
+            for (ispin, spin) in enumerate(snapshot)
+                orient_as_vec = orientation(spin)
+                pos =  position(spin)
+                push!(df_list, (
+                    sequence=index[1],
+                    TR=index[3],
+                    readout=index[2],
+                    spin=ispin,
+                    x=pos[1],
+                    y=pos[2],
+                    z=pos[3],
+                    longitudinal=longitudinal(spin),
+                    transverse=transverse(spin),
+                    phase=phase(transverse),
+                    Sx=orient_as_vec[1],
+                    Sy=orient_as_vec[2],
+                ))
+            end
+        end
+        df = DataFrame(df_list)
+        CSV.write(args["output_snapshot"], df)
+    end
+
     return Cint(0)
 end
 
