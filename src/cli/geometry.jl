@@ -75,7 +75,7 @@ function get_parser()
                 else
                     as_dict[:action] = :store_true
                 end
-            elseif field_type(field_value.field) <: AbstractVector
+            elseif field_type(field_value.field) <: AbstractArray
                 if field_value.field.only_group && field_type(field_value.field) <: SizedVector
                     as_dict[:nargs] = size(field_type(field_value.field))[1]
                 else
@@ -85,6 +85,9 @@ function get_parser()
                     end
                 end
                 as_dict[:arg_type] = eltype(field_type(field_value.field))
+                if field_value.field.name == :rotation
+                    pop!(as_dict, :arg_type)
+                end
             elseif !field_value.field.only_group
                 as_dict[:nargs] = '+'
                 if !isnothing(as_dict[:default])
@@ -116,8 +119,8 @@ Parse the user argument to something that can actually be used internally by Jul
 """
 parse_user_argument(field_value::FieldValue{T}, value, n_objects) where {T} = value
 function parse_user_argument(field_value::FieldValue{T}, value::Vector, n_objects) where {T}
-    if field_value.field.name == :orientation
-        return parse_user_orientation(value)
+    if field_value.field.name == :rotation
+        return parse_user_rotation(value)
     end
     if length(value) == 0
         return nothing
@@ -140,7 +143,7 @@ function parse_user_argument(field_value::FieldValue{T}, value::Vector, n_object
 end
 
 
-function parse_user_orientation(value::Vector{String})
+function parse_user_rotation(value::Vector)
     if length(value) == 1
         return Symbol(value[1])
     end
