@@ -4,7 +4,9 @@ Defines command line interface for `mcmr geometry`
 module Geometry
 
 import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, parse_args, ArgParseError, usage_string
-import ...Geometries.User.Obstructions: walls, Walls, spheres, Spheres, cylinders, Cylinders, annuli, Annuli, fields, field_to_docs, Field
+import StaticArrays: SizedVector
+import ...Geometries.User.Obstructions: walls, Walls, spheres, Spheres, cylinders, Cylinders, annuli, Annuli, fields, field_to_docs, Field, ObstructionGroup
+import ...Geometries.User.JSON: write_geometry
 
 field_type(::Field{T}) where {T} = T
 
@@ -55,27 +57,41 @@ function get_parser()
         group = constructor(number=0)
         for unique_key in group.unique_keys
             field_value = group.field_values[unique_key]
-            required = field_value.field.required & isnothing(field_value.field.default_value)
+            as_dict = Dict(
+                :dest_name => String(unique_key),
+                :help => field_to_docs(field_value),
+                :required => field_value.field.required && isnothing(field_value.field.default_value),
+                :default => field_value.field.default_value,
+                :arg_type => field_type(field_value.field),
+            )
+            flag = "--" * String(unique_key)
             if field_type(field_value.field) == Bool
-                if field_value.field.default_value
-                    add_arg_table!(parser["create"][as_string], "--no-" * String(unique_key), Dict(
-                        :action => :store_false,
-                        :dest_name => String(unique_key),
-                        :help => field_to_docs(field_value)
-                    ))
-                else
-                    add_arg_table!(parser["create"][as_string], "--" * String(unique_key), Dict(
-                        :action => :store_true,
-                        :help => field_to_docs(field_value)
-                    ))
+                for s in (:required, :default, :arg_type)
+                    pop!(as_dict, s)
                 end
-            else
-                add_arg_table!(parser["create"][as_string], "--" * String(unique_key), Dict(
-                    :help => field_to_docs(field_value),
-                    :required => required,
-                    :default => field_value.field.default_value
-                ))
+                if field_value.field.default_value
+                    flag = "--no-" * String(unique_key)
+                    as_dict[:action] = :store_false
+                else
+                    as_dict[:action] = :store_true
+                end
+            elseif field_type(field_value.field) <: AbstractVector
+                if field_value.field.only_group && field_type(field_value.field) <: SizedVector
+                    as_dict[:nargs] = size(field_type(field_value.field))[1]
+                else
+                    as_dict[:nargs] = '+'
+                    if !isnothing(as_dict[:default])
+                        as_dict[:default] = [as_dict[:default]...]
+                    end
+                end
+                as_dict[:arg_type] = eltype(field_type(field_value.field))
+            elseif !field_value.field.only_group
+                as_dict[:nargs] = '+'
+                if !isnothing(as_dict[:default])
+                    as_dict[:default] = [as_dict[:default]]
+                end
             end
+            add_arg_table!(parser["create"][as_string], flag, as_dict)
         end
     end
 
@@ -112,9 +128,25 @@ end
 
 function run_main(args::Dict{<:AbstractString, <:Any})
     cmd = args["%COMMAND%"]
-    @show args[cmd]
+    if cmd == "create"
+        run_create(args[cmd])
+    end
     return Cint(0)
 end
 
+function run_create(args::Dict{<:AbstractString, <:Any})
+    obstruction_type = args["%COMMAND%"]
+    flags = args[obstruction_type]
+    output_file = pop!(flags, "output_file")
+    symbol_flags = Dict(Symbol(k) => v for (k, v) in flags)
+    constructor = Dict(
+        "walls" => walls,
+        "cylinders" => cylinders,
+        "spheres" => spheres,
+        "annuli" => annuli,
+    )[obstruction_type]
+    result = constructor(;symbol_flags...)
+    write_geometry(output_file, result)
+end
 
 end

@@ -46,6 +46,9 @@ function write_geometry(io::IO, group::ObstructionGroup)
     print(io, "  }\n")
 end
 
+function write_geometry(filename::AbstractString, geometry)
+    open(io -> write_geometry(io, geometry), filename; write=true)
+end
 
 """
     read_geometry(filename/io)
