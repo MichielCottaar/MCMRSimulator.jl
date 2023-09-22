@@ -48,7 +48,7 @@ The function returns an up to 3-dimensional (NxMxL) array, with the following di
 By default each element of this matrix is either a [`SpinOrientation`](@ref) with the total signal.
 If `return_snapshot=true` is set, each element is the full [`Snapshot`](@ref) instead.
 """
-function readout(spins, simulation::Simulation{N}, readout_times=nothing; bounding_box=500, skip_TR=0, nTR=nothing, return_snapshot=false) where {N}
+function readout(spins, simulation::Simulation{N}, readout_times=nothing; bounding_box=500, skip_TR=0, nTR=nothing, return_snapshot=false, noflatten=false) where {N}
     snapshot = _to_snapshot(spins, simulation, bounding_box)
 
     if isnothing(readout_times)
@@ -111,6 +111,10 @@ function readout(spins, simulation::Simulation{N}, readout_times=nothing; boundi
     # Only include Nothing in the return type if there are any nothings in the data.
     if ~any(isnothing.(result))
         result = convert(Array{return_type}, result)
+    end
+
+    if noflatten
+        return result
     end
 
     return result[
