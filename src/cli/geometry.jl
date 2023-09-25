@@ -7,6 +7,7 @@ import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, parse_args, 
 import StaticArrays: StaticVector
 import ...Geometries.User.Obstructions: walls, Walls, spheres, Spheres, cylinders, Cylinders, annuli, Annuli, fields, field_to_docs, Field, ObstructionGroup, FieldValue
 import ...Geometries.User.JSON: write_geometry, read_geometry
+import ...Geometries.User.RandomDistribution: random_positions_radii
 
 field_type(::Field{T}) where {T} = T
 
@@ -136,7 +137,7 @@ function get_parser()
                 end
 
                 if sub_command == "create-random"
-                    if unique_key == :radius
+                    if unique_key in [:radius, :position]
                         continue
                     end
                     if unique_key == :repeats
@@ -176,19 +177,24 @@ function parse_user_argument(field_value::FieldValue{T}, value::Vector, n_object
     if length(value) == 0
         return nothing
     elseif T <: StaticVector
+        if eltype(value) <: AbstractArray
+            return value
+        end
         nt = size(T)[1]
         if length(value) == nt
             return value
         elseif length(value) == nt * n_objects
             return [value[1 + i * nt: nt * (i + 1) for i in 0:n_objects-1]]
         else
-            error("Expected $nt or $(nt * n_objects) values for $(field_value.name). Got $(length(value)) instead.")
+            error("Expected $nt or $(nt * n_objects) values for $(field_value.field.name). Got $(length(value)) instead.")
         end
     else
         if length(value) == 1
             return value[1]
-        elseif length(field_value) == n_objects
+        elseif length(value) == n_objects
             return value
+        else
+            error("Expected 1 or $(n_objects) values for $(field_value.field.name). Got $(length(value)) instead.")
         end
     end
 end
@@ -227,6 +233,8 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     cmd = args["%COMMAND%"]
     if cmd == "create"
         run_create(args[cmd])
+    elseif cmd == "create-random"
+        run_create_random(args[cmd])
     elseif cmd == "merge"
         run_merge(args[cmd])
     end
@@ -248,6 +256,35 @@ function run_create(args::Dict{<:AbstractString, <:Any})
     symbol_flags = Dict(Symbol(k) => parse_user_argument(getproperty(test_group, Symbol(k)), v, number) for (k, v) in flags)
     filtered = Dict(k=>v for (k, v) in symbol_flags if ~isnothing(v))
     result = constructor(;number=number, filtered...)
+    write_geometry(output_file, result)
+end
+
+function run_create_random(args::Dict{<:AbstractString, <:Any})
+    obstruction_type = args["%COMMAND%"]
+    flags = args[obstruction_type]
+    output_file = pop!(flags, "output_file")
+    (constructor, ndim) = Dict(
+        "cylinders" => (cylinders, 2),
+        "spheres" => (spheres, 3),
+        "annuli" => (annuli, 2),
+    )[obstruction_type]
+    (positions, radius) = random_positions_radii(
+        flags["repeats"], pop!(flags, "target-density"), ndim; 
+        mean=pop!(flags, "mean-radius"), variance=max(pop!(flags, "var-radius"), 1e-20), min_radius=0.
+    )
+    flags["position"] = positions
+    if obstruction_type == "annuli"
+        flags["outer"] = radius
+        flags["inner"] = radius * pop!(flags, "g-ratio")
+    else
+        flags["radius"] = radius
+    end
+    test_group = constructor(number=0)
+    number = length(radius)
+    symbol_flags = Dict(Symbol(k) => parse_user_argument(getproperty(test_group, Symbol(k)), v, number) for (k, v) in flags)
+    filtered = Dict(k=>v for (k, v) in symbol_flags if ~isnothing(v))
+    result = constructor(;number=number, filtered...)
+    @show result
     write_geometry(output_file, result)
 end
 
