@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The inner and outer radii of `annuli` are now set using the "inner" and "outer" keywords rather than as positional arguments.
 ### Fixed
 - Fixed the calculation of the off-resonance fields of annuli and cylinders for oblique magnetic field orientations.
+- `random_positions_radii` now accepts a variance of zero.
 ### Refactor
 - The code is now split up into many Julia modules with each file corresponding to a module. This should not affect the package user.
 - The geometry module has been rewritten to separate the user interface for setting/updating the geometry from the internal representation of that geometry. This change meant the internal representation could be optimised for running speed. There are some minor changes in the rewrite (see "Changed" above).

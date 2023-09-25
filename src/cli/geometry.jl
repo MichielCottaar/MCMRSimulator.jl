@@ -270,7 +270,7 @@ function run_create_random(args::Dict{<:AbstractString, <:Any})
     )[obstruction_type]
     (positions, radius) = random_positions_radii(
         flags["repeats"], pop!(flags, "target-density"), ndim; 
-        mean=pop!(flags, "mean-radius"), variance=max(pop!(flags, "var-radius"), 1e-20), min_radius=0.
+        mean=pop!(flags, "mean-radius"), variance=pop!(flags, "var-radius"), min_radius=0.
     )
     flags["position"] = positions
     if obstruction_type == "annuli"

@@ -82,7 +82,9 @@ function random_positions_radii(
     distribution=nothing, mean=1., variance=1., max_iter=1000,
     min_radius=0.1, max_radius=Inf,
 )
-    if isnothing(distribution)
+    if iszero(variance)
+        distribution = Distributions.Normal(mean, 0.)
+    elseif isnothing(distribution)
         a = mean * mean / variance
         scale = variance/mean
         distribution = Distributions.Gamma(a, scale)
