@@ -24,6 +24,9 @@ function get_parser()
         "create"
             help="Creates a geometry JSON file containing a single set of obstructions (e.g., cylinders, spheres, walls)."
             action=:command
+        "create-random"
+            help="Creates a geometry JSON file containing randomly distributed cylinders or spheres."
+            action=:command
         "merge"
             help="Merge the geometries in multiple JSON files into one."
             action=:command
@@ -37,65 +40,115 @@ function get_parser()
         ("spheres", spheres),
         ("annuli", annuli),
     ]
-        add_arg_table!(parser["create"], as_string, Dict(
-            :help => "Fill the geometry with $as_string.",
-            :action => :command
-        ))
-        parser["create"][as_string].description = "Create a geometry JSON file filled with only $as_string with any properties defined by the flags."
+        for sub_command in ("create", "create-random")
+            if sub_command == "create-random" && as_string == "walls"
+                continue
+            end
+            add_arg_table!(parser[sub_command], as_string, Dict(
+                :help => "Fill the geometry with $as_string.",
+                :action => :command
+            ))
+            parser[sub_command][as_string].description = "Create a geometry JSON file filled with only $as_string with any properties defined by the flags."
 
-        add_arg_table!(parser["create"][as_string],
-            "number", Dict(
-                :arg_type => Int,
-                :help => "Number of obstructions to create.",
-                :required => true,
-            ),
-            "output_file", Dict(
-                :help => "Geometry JSON output filename.",
-                :required => true,
-            )
-        )
-        group = constructor(number=0)
-        for unique_key in group.unique_keys
-            field_value = group.field_values[unique_key]
-            as_dict = Dict(
-                :dest_name => String(unique_key),
-                :help => field_to_docs(field_value),
-                :required => field_value.field.required && isnothing(field_value.field.default_value),
-                :default => field_value.field.default_value,
-                :arg_type => field_type(field_value.field),
-            )
-            flag = "--" * String(unique_key)
-            if field_type(field_value.field) == Bool
-                for s in (:required, :default, :arg_type)
-                    pop!(as_dict, s)
-                end
-                if field_value.field.default_value
-                    flag = "--no-" * String(unique_key)
-                    as_dict[:action] = :store_false
-                else
-                    as_dict[:action] = :store_true
-                end
-            elseif field_type(field_value.field) <: AbstractArray
-                if field_value.field.only_group && field_type(field_value.field) <: SizedVector
-                    as_dict[:nargs] = size(field_type(field_value.field))[1]
-                else
-                    as_dict[:nargs] = '+'
-                    if !isnothing(as_dict[:default])
-                        as_dict[:default] = [as_dict[:default]...]
-                    end
-                end
-                as_dict[:arg_type] = eltype(field_type(field_value.field))
-                if field_value.field.name == :rotation
-                    pop!(as_dict, :arg_type)
-                    as_dict[:default] = ["I"]
-                end
-            elseif !field_value.field.only_group
-                as_dict[:nargs] = '+'
-                if !isnothing(as_dict[:default])
-                    as_dict[:default] = [as_dict[:default]]
+
+            if sub_command == "create"
+                add_arg_table!(parser[sub_command][as_string],
+                    "number", Dict(
+                        :arg_type => Int,
+                        :help => "Number of obstructions to create.",
+                        :required => true,
+                    )
+                )
+            elseif sub_command == "create-random"
+                add_arg_table!(parser[sub_command][as_string],
+                    "target-density", Dict(
+                        :arg_type => Float64,
+                        :help => "Total fraction of the total space that should be filled with these obstructions.",
+                        :required => true,
+                    ),
+                    "--mean-radius", Dict(
+                        :arg_type => Float64,
+                        :help => "Mean radius of the $as_string (um).",
+                        :default => 1.,
+                    ),
+                    "--var-radius", Dict(
+                        :arg_type => Float64,
+                        :help => "Variance of the $as_string radius distribution (um^2).",
+                        :default => 0.,
+                    ),
+                )
+                if as_string == "annuli"
+                    add_arg_table!(parser[sub_command][as_string],
+                        "--g-ratio", Dict(
+                            :arg_type => Float64,
+                            :help => "Ratio of the inner over outer radius for the annuli.",
+                            :default => 0.7,
+                        )
+                    )
                 end
             end
-            add_arg_table!(parser["create"][as_string], flag, as_dict)
+            add_arg_table!(parser[sub_command][as_string],
+                "output_file", Dict(
+                    :help => "Geometry JSON output filename.",
+                    :required => true,
+                )
+            )
+            group = constructor(number=0)
+            for unique_key in group.unique_keys
+                field_value = group.field_values[unique_key]
+                as_dict = Dict(
+                    :dest_name => String(unique_key),
+                    :help => field_to_docs(field_value),
+                    :required => field_value.field.required && isnothing(field_value.field.default_value),
+                    :default => field_value.field.default_value,
+                    :arg_type => field_type(field_value.field),
+                )
+                flag = "--" * String(unique_key)
+                if field_type(field_value.field) == Bool
+                    for s in (:required, :default, :arg_type)
+                        pop!(as_dict, s)
+                    end
+                    if field_value.field.default_value
+                        flag = "--no-" * String(unique_key)
+                        as_dict[:action] = :store_false
+                    else
+                        as_dict[:action] = :store_true
+                    end
+                elseif field_type(field_value.field) <: AbstractArray
+                    @show field_type(field_value.field)
+                    @show field_type(field_value.field) <: SizedVector
+                    if (field_value.field.only_group || sub_command == "create-random") && field_type(field_value.field) <: SizedVector
+                        println(unique_key)
+                        as_dict[:nargs] = size(field_type(field_value.field))[1]
+                    else
+                        as_dict[:nargs] = '+'
+                        if !isnothing(as_dict[:default])
+                            as_dict[:default] = [as_dict[:default]...]
+                        end
+                    end
+                    as_dict[:arg_type] = eltype(field_type(field_value.field))
+                    if field_value.field.name == :rotation
+                        pop!(as_dict, :arg_type)
+                        as_dict[:default] = ["I"]
+                    end
+                elseif sub_command == "create" && !field_value.field.only_group
+                    as_dict[:nargs] = '+'
+                    if !isnothing(as_dict[:default])
+                        as_dict[:default] = [as_dict[:default]]
+                    end
+                end
+
+                if sub_command == "create-random"
+                    if unique_key == :radius
+                        continue
+                    end
+                    if unique_key == :repeats
+                        as_dict[:required] = true
+                        as_dict[:help] = "Length scale on which the random pattern of $as_string repeats itself (um)."
+                    end
+                end
+                add_arg_table!(parser[sub_command][as_string], flag, as_dict)
+            end
         end
     end
 
