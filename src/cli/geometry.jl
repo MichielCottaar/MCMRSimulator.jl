@@ -4,7 +4,7 @@ Defines command line interface for `mcmr geometry`
 module Geometry
 
 import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, parse_args, ArgParseError, usage_string
-import StaticArrays: SizedVector
+import StaticArrays: StaticVector
 import ...Geometries.User.Obstructions: walls, Walls, spheres, Spheres, cylinders, Cylinders, annuli, Annuli, fields, field_to_docs, Field, ObstructionGroup, FieldValue
 import ...Geometries.User.JSON: write_geometry, read_geometry
 
@@ -115,16 +115,13 @@ function get_parser()
                         as_dict[:action] = :store_true
                     end
                 elseif field_type(field_value.field) <: AbstractArray
-                    @show field_type(field_value.field)
-                    @show field_type(field_value.field) <: SizedVector
-                    if (field_value.field.only_group || sub_command == "create-random") && field_type(field_value.field) <: SizedVector
-                        println(unique_key)
+                    if (field_value.field.only_group || sub_command == "create-random") && field_type(field_value.field) <: StaticVector
                         as_dict[:nargs] = size(field_type(field_value.field))[1]
                     else
                         as_dict[:nargs] = '+'
-                        if !isnothing(as_dict[:default])
-                            as_dict[:default] = [as_dict[:default]...]
-                        end
+                    end
+                    if !isnothing(as_dict[:default])
+                        as_dict[:default] = [as_dict[:default]...]
                     end
                     as_dict[:arg_type] = eltype(field_type(field_value.field))
                     if field_value.field.name == :rotation
@@ -178,7 +175,7 @@ function parse_user_argument(field_value::FieldValue{T}, value::Vector, n_object
     end
     if length(value) == 0
         return nothing
-    elseif T <: SizedVector
+    elseif T <: StaticVector
         nt = size(T)[1]
         if length(value) == nt
             return value
