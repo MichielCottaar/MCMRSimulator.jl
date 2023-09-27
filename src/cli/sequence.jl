@@ -2,7 +2,8 @@
 Defines the command line interface to `mcmr sequence`.
 """
 module Sequence
-import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_group!, parse_args
+
+import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, add_arg_group!, parse_args
 import ...SequenceBuilder.Sequences.SpinEcho: spin_echo, dwi
 import ...Sequences: InstantRFPulse, constant_pulse
 import ...Scanners: Scanner
@@ -44,7 +45,7 @@ function known_sequence_parser(name)
 end
 
 function get_scanner(arguments)
-    units = pop!(parser, "kHz") ? :kHz ? :Tesla
+    units = pop!(parser, "kHz") ? :kHz : :Tesla
     B0 = pop!(parser, "B0")
     grad = pop!(parser, "max-gradient")
     slew = pop!(parser, "max-slew-rate")
@@ -58,20 +59,23 @@ function add_pulse_to_parser!(parser, pulse_name; flip_angle=90., phase=0., dura
         addition = "--$pulse_name"
     end
     caps = uppercasefirst(pulse_name)
-    @add_arg_table! parser begin
-        "$(addition)-duration"
-            help = "$caps pulse duration (ms)."
-            arg_type = Float64
-            default = duration
-        "$(addition)-flip-angle"
-            help = "$caps pulse flip angle (deg)."
-            arg_type = Float64
-            default = flip_angle
-        "$(addition)-phase"
-            help = "$caps phase (deg)."
-            arg_type = Float64
-            default = phase
-    end
+    add_arg_table!(parser,
+        "$(addition)-duration", Dict(
+            :help => "$caps pulse duration (ms).",
+            :arg_type => Float64,
+            :default => Float64(duration),
+        ),
+        "$(addition)-flip-angle", Dict(
+            :help => "$caps pulse flip angle (deg).",
+            :arg_type => Float64,
+            :default => Float64(flip_angle),
+        ),
+        "$(addition)-phase", Dict(
+            :help => "$caps phase (deg).",
+            :arg_type => Float64,
+            :default => Float64(phase),
+        ),
+    )
 end
 
 function get_pulse(arguments, pulse_name)
@@ -95,9 +99,10 @@ function run_dwi(args=ARGS::AbstractVector[<:AbstractString])
             help = "Echo time in ms."
             arg_type = Float64
             required = true
-        "--bval"
+        "-b", "--bval"
             help = "Strength of the diffusion-weighting (ms/um^2)."
             arg_type = Float64
+            required = true
         "--gradient-duration"
             help = "Duration of the gradients (ms). Default: maximum possible"
             arg_type = Float64
@@ -110,13 +115,13 @@ function run_dwi(args=ARGS::AbstractVector[<:AbstractString])
     add_pulse_to_parser!(parser, "refocus"; flip_angle=180, phase=0, duration=0)
 
 
-    as_dict = parse_args(args)
+    as_dict = parse_args(args, parser)
     output_file = pop!(as_dict, "output-file")
     as_dict["excitation_pulse"] = get_pulse(as_dict, "excitation")
     as_dict["refocus_pulse"] = get_pulse(as_dict, "refocus")
     as_dict["scanner"] = get_scanner(as_dict)
     sequence = dwi(; as_dict...)
-    write_sequence()
+    write_sequence(output_file, sequence)
 end
 
 
@@ -134,7 +139,7 @@ function run_main(args=ARGS::AbstractVector[<:AbstractString])
         if args[1] == "custom"
             return run_custom(args[2:end])
         elseif args[1] == "dwi"
-            return Geometry.run_dwi(args[2:end])
+            return run_dwi(args[2:end])
         else
             println("Invalid mcmr command sequence  $(args[1]) given.\n")
         end
