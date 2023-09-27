@@ -72,7 +72,7 @@ function dwssfp(TR;
             excitation_pulse,
             gradient_delay,
             gradient,
-            TE - (gradient_delay + excitation_time + gradient_duration + ramp_time),
+            TE - (gradient_delay + excitation_time + gradient_duration + ramp_time + 10^(-6)), # Leave a small interval between readout and end of TR (TE) so that it always happens before the RF pulse of the next TR.
             Readout()
         ]
     end
