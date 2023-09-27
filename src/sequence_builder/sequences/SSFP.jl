@@ -6,22 +6,24 @@ Creates a unit of a diffusion weight steady state free precession sequence consi
 - a delay
 - a diffusion weighting gradient (by default, the gradient will be centred at (TE-excitation_time)/2)
 - a readout `TE` ms after the excitation.
+
+Note this function can also perform some non-dw ssfp by setting gradient duration to 0 and q value to 0 or nothing.
 """
 
 function dwssfp(TR; 
                 TE=nothing, 
                 scanner=Scanner(B0=3.), 
-                excitation_pulse=InstantRFPulse(flip_angle=90), 
+                excitation_pulse=InstantRFPulse(flip_angle=90), # Use instant RF pulse by default
                 excitation_time=0, 
                 flip_angle=90, 
                 gradient_strength=nothing, # Only used when gradient_duration != 0 and qval == nothing
-                gradient_duration=0, 
+                gradient_duration=0, # Use instant gradient by default
                 qval = nothing,
                 gradient_delay=0.1, # have a small delay to separate RF pulse and gradient by default
                 gradient_orientation=SVector{3, Float}([1., 0., 0.]))
     
     if isnothing(TE)
-        TE = TR
+        TE = TR - 10^(-6) # Leave a small interval between readout and end of TR (TE) so that it always happens before the RF pulse of the next TR.
     end
 
     if excitation_time == 0
@@ -31,10 +33,10 @@ function dwssfp(TR;
     end
 
     if gradient_duration == 0
-        if qval == 0 
+        if qval == 0 || isnothing(qval)
             gradient = []
         else
-            gradient = InstantGradient(qvec=qval .* get_rotation(gradient_orientation, 1)[:, 1] / 2π) # ? ask Michiel
+            gradient = InstantGradient(qvec=qval .* get_rotation(gradient_orientation, 1)[:, 1] / 2π) # gradient_strength ignored when duration is 0
         end
 
         @assert gradient_delay < TE "gradient delay too long"
@@ -47,7 +49,7 @@ function dwssfp(TR;
         end
         
         if isnothing(qval) && isnothing(gradient_strength) 
-            error("Either q value (preferred) or gradient strength needs to be specified for a finite gradient duration")
+            error("Either q value (preferred) or gradient strength needs to be specified for a finite gradient duration. If you want ssfp without diffusion weighting, set gradient_duration to 0 too.")
         elseif !isnothing(qval) && !isnothing(gradient_strength) 
             @assert gradient_strength == qval/gradient_duration / 2π   "gradient_strength and qval mismatch!"
         elseif !isnothing(qval) && isnothing(gradient_strength)
@@ -72,7 +74,7 @@ function dwssfp(TR;
             excitation_pulse,
             gradient_delay,
             gradient,
-            TE - (gradient_delay + excitation_time + gradient_duration + ramp_time + 10^(-6)), # Leave a small interval between readout and end of TR (TE) so that it always happens before the RF pulse of the next TR.
+            TE - (gradient_delay + excitation_time + gradient_duration + ramp_time ), 
             Readout()
         ]
     end
