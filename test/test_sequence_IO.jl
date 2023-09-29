@@ -114,4 +114,46 @@
             end
         end
     end
+    @testset "check that JSON encoding works for some sequences with instant pulses/gradients" begin
+        for seq_orig in [
+            mr.dwi(bval=2., TR=100., scanner=mr.Siemens_Connectom),
+            mr.dwi(bval=2., gradient_duration=0., TR=100, scanner=mr.Siemens_Terra),
+            mr.spin_echo(30., TR=100., scanner=mr.Scanner(B0=1.5)),
+        ]
+            io = IOBuffer()
+            mr.write_sequence(io, seq_orig)
+            s = String(io.data)
+            seq_json = mr.read_sequence(s)
+            @test seq_json.TR == 100.
+            @test seq_json.scanner.B0 == seq_orig.scanner.B0
+            @test seq_json.scanner.gradient == seq_orig.scanner.gradient
+            @test seq_json.scanner.slew_rate == seq_orig.scanner.slew_rate
+            @test length(seq_orig.gradients) == length(seq_json.gradients)
+            for (g1, g2) in zip(seq_orig.gradients, seq_json.gradients)
+                @test all(g1.origin .== g2.origin)
+                @test all(g1.shape.times .== g2.shape.times)
+                @test all(g1.shape.amplitudes .== g2.shape.amplitudes)
+            end
+            @test iszero(length(seq_json.pulses))
+            @test length(seq_json.instants) == length(seq_orign.instants)
+            for (i1, i2) in zip(seq_orig.instants, seq_json.instants)
+                @test i1.time == i2.time
+                if isinstance(i1, mr.InstantRFPulse)
+                    @test isinstance(i2, mr.InstantRFPulse)
+                    @test i1.flip_angle == i2.flip_angle
+                    @test i1.phase == i2.phase
+                else
+                    @test isinstance(i1, mr.InstantGradient)
+                    @test isinstance(i2, mr.InstantGradient)
+                    @test all(i1.q_origin .== i2.q_origin)
+                    @test all(i1.qvec .== i2.qvec)
+                end
+                @test all(g1.origin .== g2.origin)
+                @test all(g1.shape.times .== g2.shape.times)
+                @test all(g1.shape.amplitudes .== g2.shape.amplitudes)
+            end
+            @test length(seq_json.readout_times) > 0
+            @test all(seq_json.readout_times .== seq_orig.readout_times)
+        end
+    end
 end
