@@ -5,7 +5,7 @@ module Sequence
 
 import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, add_arg_group!, parse_args
 import ...SequenceBuilder.Sequences.SpinEcho: spin_echo, dwi
-import ...Sequences: InstantRFPulse, constant_pulse
+import ...Sequences: InstantRFPulse, constant_pulse, write_sequence
 import ...Scanners: Scanner
 
 
@@ -14,6 +14,7 @@ function known_sequence_parser(name)
     @add_arg_table! parser begin
         "output-file"
             help = "Create a sequence JSON file containing the $name sequence"
+            required = true
     end
 
     add_arg_group!(parser, "Scanner parameters", :scanner)
@@ -29,7 +30,7 @@ function known_sequence_parser(name)
         "--max-slew-rate"
             help = "Slew rate in T/m/s (unless --kHz is set)."
             arg_type = Float64
-            default = 0.
+            default = Inf
         "--kHz"
             help = "Give gradient in kHz/um and slew rate in kHz/um/ms rather than the default values"
             action = :store_true
@@ -45,10 +46,10 @@ function known_sequence_parser(name)
 end
 
 function get_scanner(arguments)
-    units = pop!(parser, "kHz") ? :kHz : :Tesla
-    B0 = pop!(parser, "B0")
-    grad = pop!(parser, "max-gradient")
-    slew = pop!(parser, "max-slew-rate")
+    units = pop!(arguments, "kHz") ? :kHz : :Tesla
+    B0 = pop!(arguments, "B0")
+    grad = pop!(arguments, "max-gradient")
+    slew = pop!(arguments, "max-slew-rate")
     return Scanner(B0=B0, gradient=grad, slew_rate=slew, units=units)
 end
 
@@ -120,7 +121,7 @@ function run_dwi(args=ARGS::AbstractVector[<:AbstractString])
     as_dict["excitation_pulse"] = get_pulse(as_dict, "excitation")
     as_dict["refocus_pulse"] = get_pulse(as_dict, "refocus")
     as_dict["scanner"] = get_scanner(as_dict)
-    sequence = dwi(; as_dict...)
+    sequence = dwi(; Dict(Symbol(replace(k, "-"=>"_")) => v for (k, v) in as_dict)...)
     write_sequence(output_file, sequence)
 end
 
