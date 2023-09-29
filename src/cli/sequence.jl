@@ -73,7 +73,7 @@ function add_pulse_to_parser!(parser, pulse_name; flip_angle=90., phase=0., dura
             :default => Float64(flip_angle),
         ),
         "$(addition)-phase", Dict(
-            :help => "$caps phase (deg).",
+            :help => "$caps pulse phase (deg).",
             :arg_type => Float64,
             :default => Float64(phase),
         ),
