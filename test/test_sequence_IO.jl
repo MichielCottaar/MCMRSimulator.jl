@@ -1,4 +1,4 @@
-@testset "test_pulseq.jl" begin
+@testset "test_sequence_IO.jl" begin
     directory = joinpath(pwd(), "example_pulseseq")
     @testset "read v1.3.1 fiddisp.seq file" begin
         seq = mr.read_pulseq(joinpath(directory, "fiddisp_v131.seq"))
