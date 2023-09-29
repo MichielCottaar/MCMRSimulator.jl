@@ -145,16 +145,16 @@ end
 @testset "Bounding boxes" begin
     bb(g) = mr.BoundingBox(mr.fix(g)[1])
     # single obstruction
-    @test bb(mr.cylinders(radius=1)) == mr.BoundingBox{2}(1)
+    @test bb(mr.Cylinders(radius=1)) == mr.BoundingBox{2}(1)
 
     # shifted cylinder
-    @test bb(mr.cylinders(radius=1., position=[2., 2.])) == mr.BoundingBox([1., 1.], [3, 3])
+    @test bb(mr.Cylinders(radius=1., position=[2., 2.])) == mr.BoundingBox([1., 1.], [3, 3])
 
     # repeated obstructions
-    @test bb(mr.cylinders(radius=1., repeats=[2., 3.])) == mr.BoundingBox([-1, -1], [1, 1])
+    @test bb(mr.Cylinders(radius=1., repeats=[2., 3.])) == mr.BoundingBox([-1, -1], [1, 1])
 
     # shifted spheres
-    @test bb(mr.spheres(radius=1., position=[[1, 0, 0], [0, 1, 0]])) == mr.BoundingBox([-1, -1, -1.], [2., 2., 1.])
+    @test bb(mr.Spheres(radius=1., position=[[1, 0, 0], [0, 1, 0]])) == mr.BoundingBox([-1, -1, -1.], [2., 2., 1.])
 end
 
 @testset "Test readout formats" begin
@@ -207,7 +207,7 @@ end
 end
 
 @testset "Test simulation pretty printing" begin
-    sim = mr.Simulation([mr.dwi(bval=1, TR=2000), mr.dwi(bval=2)], geometry=mr.spheres(radius=[1, 2.], repeats=[5, 5, 5]), R1=0.1, surface_relaxivity=0.3)
+    sim = mr.Simulation([mr.dwi(bval=1, TR=2000), mr.dwi(bval=2)], geometry=mr.Spheres(radius=[1, 2.], repeats=[5, 5, 5]), R1=0.1, surface_relaxivity=0.3)
     @test repr(sim, context=:compact => true) == "Simulation(2 sequences, Geometry(2 repeating Round objects, ), D=0.0um^2/ms, GlobalProperties(R1=0.1kHz, surface_relaxivity=0.3, ))" 
     @test repr(sim, context=:compact => false) == "Simulation(Geometry(2 repeating Round objects, ), D=0.0um^2/ms, GlobalProperties(R1=0.1kHz, surface_relaxivity=0.3, )):
 2 sequences:
@@ -225,24 +225,24 @@ end
 @testset "Test size scale calculations" begin
     size_scale(g) = mr.Geometries.Internal.size_scale(mr.fix(g))
 
-    @test isinf(size_scale(mr.walls(position=0)))
-    @test size_scale(mr.walls(position=[0, 2])) == 2
-    @test size_scale(mr.walls(repeats=5)) == 5
-    @test size_scale(mr.walls(position=[0, 2], repeats=5)) == 2
-    @test size_scale(mr.walls(position=[0, 4], repeats=5)) == 1
+    @test isinf(size_scale(mr.Walls(position=0)))
+    @test size_scale(mr.Walls(position=[0, 2])) == 2
+    @test size_scale(mr.Walls(repeats=5)) == 5
+    @test size_scale(mr.Walls(position=[0, 2], repeats=5)) == 2
+    @test size_scale(mr.Walls(position=[0, 4], repeats=5)) == 1
 
-    @test size_scale(mr.cylinders(radius=[0.3, 0.8], repeats=[2, 3])) == 0.3
-    @test size_scale(mr.spheres(radius=[0.3, 0.8])) == 0.3
-    @test size_scale(mr.annuli(inner=[0.5, 0.7], outer=[0.6, 0.8])) == 0.5
+    @test size_scale(mr.Cylinders(radius=[0.3, 0.8], repeats=[2, 3])) == 0.3
+    @test size_scale(mr.Spheres(radius=[0.3, 0.8])) == 0.3
+    @test size_scale(mr.Annuli(inner=[0.5, 0.7], outer=[0.6, 0.8])) == 0.5
 end
 
 @testset "Test geometry JSON I/O" begin
     for geometry in (
-        mr.cylinders(radius=[0.7, 0.8]),
-        mr.annuli(inner=0.2, outer=0.4, repeats=[2, 3], rotation=:y),
-        mr.walls(position=[1, 2, 3, 4, 5]),
-        mr.spheres(radius=[0.2, 0.4, 0.8], R1_volume=1., R2_volume=[2., 2.3, 3.4]),
-        mr.mesh(triangles=[[1, 2, 3], [2, 1, 3]], vertices=[[0, 0, 0], [1, 1, 1], [2, 0, 3]])
+        mr.Cylinders(radius=[0.7, 0.8]),
+        mr.Annuli(inner=0.2, outer=0.4, repeats=[2, 3], rotation=:y),
+        mr.Walls(position=[1, 2, 3, 4, 5]),
+        mr.Spheres(radius=[0.2, 0.4, 0.8], R1_volume=1., R2_volume=[2., 2.3, 3.4]),
+        mr.Mesh(triangles=[[1, 2, 3], [2, 1, 3]], vertices=[[0, 0, 0], [1, 1, 1], [2, 0, 3]])
     )
         io = IOBuffer()
         mr.write_geometry(io, geometry)

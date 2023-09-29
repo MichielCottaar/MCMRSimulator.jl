@@ -33,7 +33,7 @@
             [3, 7, 8],
         ]
         c2 = center .- (size .* 0.5)
-        return mr.mesh(; vertices=map(v->((v .* size) .+ c2), vertices), triangles=triangles, kwargs...)
+        return mr.Mesh(; vertices=map(v->((v .* size) .+ c2), vertices), triangles=triangles, kwargs...)
     end
 
     @testset "Computing normals" begin

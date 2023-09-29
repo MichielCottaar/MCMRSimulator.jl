@@ -99,7 +99,7 @@
     end
     @testset "Basic diffusion run within sphere" begin
         sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=2.)
-        sphere = mr.spheres(radius=1.)
+        sphere = mr.Spheres(radius=1.)
         Random.seed!(12)
         diff = mr.Simulation(mr.Sequence(TR=20.), diffusivity=2., geometry=sphere)
         snaps = mr.readout([mr.Spin(), mr.Spin()], diff, 0:0.5:sequence.TR, return_snapshot=true)

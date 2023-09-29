@@ -62,7 +62,7 @@ for obstruction_type in (
     fields_string = join(field_to_docs.(unique_keys, unique_field_values))
     @eval const $(obstruction_type.singular) = IndexedObstruction{$(QuoteNode(obstruction_type.plural))}
     @eval const $(obstruction_type.plural) = ObstructionGroup{$(QuoteNode(obstruction_type.plural))}
-    constructor = Symbol(lowercase(String(obstruction_type.plural)))
+    constructor = obstruction_type.plural
     @eval begin
         $(constructor)(; kwargs...) = ObstructionGroup($(obstruction_type); kwargs...)
         @doc """

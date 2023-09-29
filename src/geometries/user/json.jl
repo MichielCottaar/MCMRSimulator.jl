@@ -73,7 +73,7 @@ function parse_geometry(v::Vector)
 end
 
 function parse_geometry(d::Dict)
-    type_name = Symbol(lowercase(d["type"]))
+    type_name = Symbol(d["type"])
     constructor = getproperty(Obstructions, type_name)
     kwargs = Dict{Symbol, Any}()
     for (key, value) in d

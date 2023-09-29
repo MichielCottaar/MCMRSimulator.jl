@@ -9,7 +9,7 @@ import SparseArrays: sparse, SparseMatrixCSC
 import LinearAlgebra: norm, ⋅
 import Statistics: mean
 import ...Internal.Obstructions.Triangles: normal
-import ..Obstructions: mesh, Mesh, isglobal
+import ..Obstructions: Mesh, isglobal
 
 """
     split_mesh(mesh::Mesh)
@@ -46,7 +46,7 @@ function split_mesh(old_mesh::Mesh)
             end
         end
 
-        push!(result, mesh(; kwargs...))
+        push!(result, Mesh(; kwargs...))
     end
     return result
 end

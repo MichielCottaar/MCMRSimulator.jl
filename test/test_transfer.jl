@@ -2,7 +2,7 @@
 @testset "Generate stuck particles" begin
     nspins = Int(1e5)
     @testset "Particles on repeating wall" begin
-        geometry = mr.walls(repeats=1., rotation=[1, 1, 0])
+        geometry = mr.Walls(repeats=1., rotation=[1, 1, 0])
         s = mr.Simulation([], geometry=geometry, surface_density=1, dwell_time=1, diffusivity=1)
         all_spins = mr.Snapshot(nspins, s, 5.)
         @test !any([mr.isinside(geometry, p) > 0 for p in all_spins])
@@ -27,7 +27,7 @@
         @test minimum(limited_dim) ≈ -7
     end
     @testset "Particles on two annuli" begin
-        geometry = mr.annuli(inner=0.4, outer=0.6, position=[[0, 0], [1, 1]], inner_surface_density=1, outer_surface_density=2, inner_surface_dwell_time=1, outer_surface_dwell_time=1)
+        geometry = mr.Annuli(inner=0.4, outer=0.6, position=[[0, 0], [1, 1]], inner_surface_density=1, outer_surface_density=2, inner_surface_dwell_time=1, outer_surface_dwell_time=1)
         s = mr.Simulation([], geometry=geometry, diffusivity=1.)
         all_spins = mr.Snapshot(nspins, s, 2)
         stuck_spins = filter(mr.stuck, all_spins)
@@ -62,7 +62,7 @@
     end
     @testset "Correct number of stuck particles for long timesteps" begin
         Random.seed!(1234)
-        geometry = mr.walls(repeats=1, surface_density=0.5, dwell_time=1.)
+        geometry = mr.Walls(repeats=1, surface_density=0.5, dwell_time=1.)
         sim = mr.Simulation([], diffusivity=3., geometry=geometry, max_timestep=10)
         nspins = 10000
         snapshot = mr.evolve(nspins, sim, 0)
@@ -78,7 +78,7 @@
         end
     end
     @testset "Particles on two repeating cylinders" begin
-        geometry = mr.cylinders(radius=0.6, position=[[0, 0], [1, 1]], repeats=[2, 2], surface_density=[1, 2])
+        geometry = mr.Cylinders(radius=0.6, position=[[0, 0], [1, 1]], repeats=[2, 2], surface_density=[1, 2])
         s = mr.Simulation([], geometry=geometry, diffusivity=1, dwell_time=1)
     
         all_spins = mr.Snapshot(nspins, s, 1)
@@ -111,7 +111,7 @@ end
         function test_MT_walls(wall_dist, diffusivity, timestep; nspins=100000, transfer=0.5)
             Random.seed!(1234)
             actual_transfer = 1 - (1 - transfer) ^ (1/sqrt(timestep))
-            geometry = mr.walls(surface_relaxivity=actual_transfer)
+            geometry = mr.Walls(surface_relaxivity=actual_transfer)
             spins = [mr.Spin(position=Random.rand(3) .* wall_dist) for _ in 1:nspins]
             sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=1e5)
             simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=diffusivity, max_timestep=timestep)
@@ -127,7 +127,7 @@ end
     end
     @testset "Test that transfer rate does not depend on timestep" begin
         Random.seed!(1234)
-        geometry = mr.walls(repeats=1, surface_relaxivity=0.1)
+        geometry = mr.Walls(repeats=1, surface_relaxivity=0.1)
         sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=1e5)
 
         reference = nothing
@@ -145,7 +145,7 @@ end
 @testset "Test realistic magnetisation transfer" begin
     @testset "Particles getting stuck reduces diffusivity" begin
         Random.seed!(123)
-        geometry = mr.walls(repeats=1)
+        geometry = mr.Walls(repeats=1)
         for density in (0, 0.5, 1, 2)
             @testset "Density = $density" begin
                 simulation = mr.Simulation([], geometry=geometry, diffusivity=1, surface_density=density, dwell_time=0.5)
@@ -165,7 +165,7 @@ end
         end
     end
     @testset "Setting surface MRI properties" begin
-        geometry = mr.walls(repeats=1, R2_surface=1e6)
+        geometry = mr.Walls(repeats=1, R2_surface=1e6)
         init = mr.Snapshot(10000)
         seq = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=1000)
         for density in (0, 0.5, 1)

@@ -4,9 +4,9 @@ dir = @__DIR__
 isCI = get(ENV, "CI", "false") == "true"
 @testset "Plot walls" begin
     geometry = [
-        mr.walls(repeats=1),
-        mr.walls(rotation=:y),
-        mr.walls(repeats=1, rotation=[1, 1, 1]),
+        mr.Walls(repeats=1),
+        mr.Walls(rotation=:y),
+        mr.Walls(repeats=1, rotation=[1, 1, 1]),
     ]
     pp = mr.PlotPlane()
 
@@ -20,7 +20,7 @@ isCI = get(ENV, "CI", "false") == "true"
 end
 @testset "Plot annuli" begin
     geometry = [
-        mr.annuli(inner=0.2, outer=0.4, repeats=[1, 1], rotation=[0, 1, 1]),
+        mr.Annuli(inner=0.2, outer=0.4, repeats=[1, 1], rotation=[0, 1, 1]),
     ]
     pp = mr.PlotPlane()
 
@@ -34,7 +34,7 @@ end
 end
 @testset "Plot myelinated annuli" begin
     geometry = [
-        mr.annuli(inner=0.2, outer=0.4, repeats=[1, 1], rotation=[0, 1, 1], myelin=true)
+        mr.Annuli(inner=0.2, outer=0.4, repeats=[1, 1], rotation=[0, 1, 1], myelin=true)
     ]
     pp = mr.PlotPlane()
 

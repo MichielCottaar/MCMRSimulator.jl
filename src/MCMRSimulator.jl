@@ -55,14 +55,14 @@ import .CLI: run_main
 
 import .Geometries: 
     ObstructionGroup, IndexedObstruction,
-    Annulus, Annuli, annuli,
-    Cylinder, Cylinders, cylinders,
-    Wall, Walls, walls,
-    Sphere, Spheres, spheres,
-    Triangle, Mesh, mesh, split_mesh,
+    Annulus, Annuli,
+    Cylinder, Cylinders,
+    Wall, Walls,
+    Sphere, Spheres,
+    Triangle, Mesh, split_mesh,
     load_mesh, fix, fix_susceptibility,
     random_positions_radii, write_geometry, read_geometry
-export annuli, cylinders, walls, spheres, mesh, load_mesh, fix, random_positions_radii, split_mesh
+export Annuli, Cylinders, Walls, Spheres, Mesh, load_mesh, fix, random_positions_radii, split_mesh
 
 import .Geometries.Internal: BoundingBox, FixedGeometry
 export BoundingBox

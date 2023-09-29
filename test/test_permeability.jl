@@ -6,10 +6,10 @@
 
             function new_pos(permeability; timestep=0.1)
                 if set_global
-                    sphere = mr.spheres(radius=1.)
+                    sphere = mr.Spheres(radius=1.)
                     simulation = mr.Simulation([], geometry=sphere, diffusivity=1., max_timestep=timestep, permeability=permeability)
                 else
-                    sphere = mr.spheres(radius=1., permeability=permeability)
+                    sphere = mr.Spheres(radius=1., permeability=permeability)
                     simulation = mr.Simulation([], geometry=sphere, diffusivity=1., max_timestep=timestep)
                 end
                 mr.position.(mr.evolve(snapshot, simulation, 10.))
@@ -42,10 +42,10 @@
 
             function new_pos(permeability; timestep=0.1)
                 if set_global
-                    walls = mr.walls(position=0.5, repeats=1)
+                    walls = mr.Walls(position=0.5, repeats=1)
                     simulation = mr.Simulation([], geometry=walls, diffusivity=10., max_timestep=timestep, permeability=permeability)
                 else
-                    walls = mr.walls(position=0.5, permeability=permeability, repeats=1)
+                    walls = mr.Walls(position=0.5, permeability=permeability, repeats=1)
                     simulation = mr.Simulation([], geometry=walls, diffusivity=10., max_timestep=timestep)
                 end
                 [p[1] for p in mr.position.(mr.evolve(snapshot, simulation, 10.))]

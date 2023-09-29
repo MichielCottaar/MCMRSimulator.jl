@@ -10,14 +10,14 @@
         @testset "Hitting vertical wall directly" begin
             res = correct_collisions(
                 [0, 0, 0], [3, 0, 0],
-                mr.walls(rotation=:x, position=[1])
+                mr.Walls(rotation=:x, position=[1])
             )
             compare(res, [[0, 0, 0], [1, 0, 0], [-1, 0, 0]])
         end
         @testset "Hitting vertical wall under angle" begin
             res = correct_collisions(
                 [0, 0, 0], [3, 6, 0],
-                mr.walls(rotation=:x, position=[1])
+                mr.Walls(rotation=:x, position=[1])
             )
             compare(res, [
                 [0, 0, 0], [1, 2, 0], [-1, 6, 0]
@@ -26,7 +26,7 @@
         @testset "Missing vertical wall" begin
             res = correct_collisions(
                 [0, 0, 0], [0, 2, 0],
-                mr.walls(rotation=:x, position=[1])
+                mr.Walls(rotation=:x, position=[1])
             )
             compare(res, [
                 [0, 0, 0], [0, 2, 0],
@@ -35,7 +35,7 @@
         @testset "Hitting two vertical walls" begin
             res = correct_collisions(
                 [0, 0, 0], [6, 0, 12],
-                mr.walls(rotation=:x, position=[-1, 1])
+                mr.Walls(rotation=:x, position=[-1, 1])
             )
             compare(res, [
                 [0, 0, 0], [1, 0, 2], [-1 ,0, 6], [1, 0, 10], [0, 0, 12]
@@ -44,7 +44,7 @@
         @testset "Hitting vertical and horizontal walls" begin
             res = correct_collisions(
                 [-1, 0, 0], [2, 3, 3],
-                [mr.walls(rotation=:x, position=1.), mr.walls(rotation=:y, position=1.)]
+                [mr.Walls(rotation=:x, position=1.), mr.Walls(rotation=:y, position=1.)]
             )
             compare(res, [
                 [-1, 0, 0], [0, 1, 1], [1, 0, 2], [0, -1, 3]
@@ -53,7 +53,7 @@
         @testset "Hitting a corner" begin
             res = correct_collisions(
                 [0, 0, 0], [3, 3, 3],
-                [mr.walls(rotation=:x, position=1.), mr.walls(rotation=:y, position=1.)]
+                [mr.Walls(rotation=:x, position=1.), mr.Walls(rotation=:y, position=1.)]
             )
             compare(res, [
                 [0, 0, 0], [1, 1, 1], [1, 1, 1], [-1, -1, 3]
@@ -62,7 +62,7 @@
         @testset "Hitting diagonal wall" begin
             res = correct_collisions(
                 [1, 0, 0], [1, 3, 0],
-                mr.walls(rotation=[1, 1, 0], position=sqrt(2)),
+                mr.Walls(rotation=[1, 1, 0], position=sqrt(2)),
             )
             compare(res, [
                 [1, 0, 0], [1, 1, 0], [-1, 1, 0]
@@ -71,7 +71,7 @@
         @testset "Test repeating wall" begin
             res = correct_collisions(
                 [1.5, 0, 0], [3.5, 2, 0],
-                mr.walls(position=0., repeats=1.),
+                mr.Walls(position=0., repeats=1.),
             )
             compare(res, [
                 [1.5, 0, 0], [2, 0.5, 0], [1, 1.5, 0], [1.5, 2, 0]
@@ -80,7 +80,7 @@
         @testset "Test shifted repeating wall" begin
             res = correct_collisions(
                 [1, 0, 0], [5, 4, 0],
-                mr.walls(position=0.5, repeats=1.),
+                mr.Walls(position=0.5, repeats=1.),
             )
             compare(res, [
                 [1, 0, 0], 
@@ -91,7 +91,7 @@
         end
         @testset "Particle remain between reflecting walls" begin
             Random.seed!(1234)
-            geometry = mr.walls(position=0.5, repeats=1)
+            geometry = mr.Walls(position=0.5, repeats=1)
             simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
             snap = mr.Snapshot(10000)
             snap2 = mr.evolve(snap, simulation, 100)
@@ -104,7 +104,7 @@
         @testset "Remain within sphere" begin
             res = correct_collisions(
                 [0, 0, 1.5], [6, 8, 6],
-                mr.spheres(radius=1., position=[0, 0, 2])
+                mr.Spheres(radius=1., position=[0, 0, 2])
             )
             final = res[end]
             radius = norm(final .- [0, 0, 2])
@@ -115,7 +115,7 @@
         @testset "Within cylinder along radial line" begin
             res = correct_collisions(
                 [0, 0, 0], [6, 0, 6],
-                [mr.cylinders(radius=1., rotation=:z)]
+                [mr.Cylinders(radius=1., rotation=:z)]
             )
             compare(res, [
                 [0, 0, 0], [1, 0, 1], [-1, 0, 3], [1, 0, 5], [0, 0, 6],
@@ -124,7 +124,7 @@
         @testset "90 degree bounces within vertical cylinder" begin
             res = correct_collisions(
                 [0, 1, 0], [10, 1, 0],
-                mr.cylinders(radius=sqrt(2), rotation=:z, position=[0, 0])
+                mr.Cylinders(radius=sqrt(2), rotation=:z, position=[0, 0])
             )
             compare(res, [
                 [0, 1, 0], [1, 1, 0], [1, -1, 0], [-1, -1, 0], [-1, 1, 0], [1, 1, 0], [1, 0, 0]
@@ -133,7 +133,7 @@
         @testset "90 degree bounces from outside vertical cylinder" begin
             res = correct_collisions(
                 [-2, 1, 0], [2, 1, 0],
-                [mr.cylinders(radius=sqrt(2), rotation=:z, position=[0, 0])]
+                [mr.Cylinders(radius=sqrt(2), rotation=:z, position=[0, 0])]
             )
             compare(res, [
                 [-2, 1, 0], [-1, 1, 0], [-1, 4, 0]
@@ -141,7 +141,7 @@
         end
         @testset "Remain within angled cylinder" begin
             orient = [1, 2, sqrt(3)]
-            cylinder = mr.cylinders(radius=2.3, rotation=orient)
+            cylinder = mr.Cylinders(radius=2.3, rotation=orient)
             res = correct_collisions(
                 [0, 0.5, 0.3], [-30, 50, 10],
                 [cylinder]
@@ -153,7 +153,7 @@
         end
         @testset "Remain within distant cylinder" begin
             Random.seed!(1234)
-            geometry = mr.cylinders(radius=[0.8, 0.9], repeats=[2., 2.])
+            geometry = mr.Cylinders(radius=[0.8, 0.9], repeats=[2., 2.])
             spin = mr.Spin(position=[200., 200., 0.])
             @test mr.isinside(geometry, spin) == 2
             inside = true
@@ -166,7 +166,7 @@
         end
         @testset "Test variance of parallel displacement within cylinder" begin
             Random.seed!(1234)
-            sim = mr.Simulation([], geometry=mr.cylinders(radius=0.8), diffusivity=3.)
+            sim = mr.Simulation([], geometry=mr.Cylinders(radius=0.8), diffusivity=3.)
             snap = mr.evolve(zeros(100000, 3), sim, 10)
             zval = map(spin -> spin.position[3], snap)
             @test var(zval) ≈ 60. rtol=0.05
@@ -187,7 +187,7 @@
     end
     @testset "Reflections on planes of cylinders" begin
         @testset "Bounce between four cylinders" begin
-            cylinders = mr.cylinders(
+            cylinders = mr.Cylinders(
                 radius=sqrt(2), repeats=[3, 4]
             )
             res = correct_collisions(
@@ -200,7 +200,7 @@
             ])
         end
         @testset "Travel through many repeats between bounces" begin
-            cylinders = mr.cylinders(
+            cylinders = mr.Cylinders(
                 radius=1, repeats=[2, 4]
             )
             res = correct_collisions(
@@ -213,8 +213,8 @@
         end
         @testset "Test lots of particles still don't cross compartments" begin
             for geometry in (
-                mr.cylinders(radius=[0.8, 0.9], position=[[0, 0], [0, 0]], repeats=[2, 2]),
-                mr.spheres(radius=[0.8, 0.9], position=[[0, 0, 0], [2, 0, 2]], repeats=[2, 2, 2]),
+                mr.Cylinders(radius=[0.8, 0.9], position=[[0, 0], [0, 0]], repeats=[2, 2]),
+                mr.Spheres(radius=[0.8, 0.9], position=[[0, 0, 0], [2, 0, 2]], repeats=[2, 2, 2]),
             )
                 sequence = mr.dwi(bval=2., gradient_duration=0)
 
@@ -230,7 +230,7 @@
         end
         @testset "Test that we remain between two walls" begin
             Random.seed!(1234)
-            walls = mr.walls(position=[0, 1])
+            walls = mr.Walls(position=[0, 1])
             snap = mr.Snapshot([mr.Spin(position=rand(3)) for _ in 1:3000])
             sequence = mr.dwi(bval=2., gradient_duration=0)
             simulation = mr.Simulation([sequence]; geometry=walls, diffusivity=3.);

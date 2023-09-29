@@ -1,9 +1,9 @@
 @testset "test_hierarchical_mri.jl" begin
     defaults = mr.GlobalProperties(R2=1.)
     for (obstruction, pos_in, pos_out) in [
-        (mr.spheres(radius=1., R1_volume=0.1, R2_volume=0.5), [0., 0, 0], [1, 2, 1.]),
-        (mr.spheres(radius=1., R1_volume=0.1, R2_volume=0.5, repeats=(5, 5, 5)), [5., 5, 0], [1, 2, 1.]),
-        (mr.cylinders(radius=1., R1_volume=0.1, R2_volume=0.5), [0., 0, 0], [1, 2, 1.]),
+        (mr.Spheres(radius=1., R1_volume=0.1, R2_volume=0.5), [0., 0, 0], [1, 2, 1.]),
+        (mr.Spheres(radius=1., R1_volume=0.1, R2_volume=0.5, repeats=(5, 5, 5)), [5., 5, 0], [1, 2, 1.]),
+        (mr.Cylinders(radius=1., R1_volume=0.1, R2_volume=0.5), [0., 0, 0], [1, 2, 1.]),
     ]
         @testset "Test correct values in $(typeof(obstruction))" begin
             @test mr.isinside(obstruction, pos_in) > 0
@@ -28,7 +28,7 @@
         end
     end
     @testset "Test correct values in annuli" begin
-        geometry = mr.annuli(inner=0.5, outer=1., R1_inner_volume=0.1, R1_outer_volume=0.2, R2_outer_volume=10.)
+        geometry = mr.Annuli(inner=0.5, outer=1., R1_inner_volume=0.1, R1_outer_volume=0.2, R2_outer_volume=10.)
         inner = SVector{3}([0., 0., 0.])
         outer = SVector{3}([0.7, 0., 0.])
         outside = SVector{3}([1.2, 0., 0.])
