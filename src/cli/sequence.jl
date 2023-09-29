@@ -5,6 +5,7 @@ module Sequence
 
 import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, add_arg_group!, parse_args
 import ...SequenceBuilder.Sequences.SpinEcho: spin_echo, dwi
+import ...SequenceBuilder.Sequences.GradientEcho: gradient_echo
 import ...Sequences: InstantRFPulse, constant_pulse, write_sequence
 import ...Scanners: Scanner
 
@@ -93,7 +94,7 @@ end
 
 
 function run_dwi(args=ARGS::AbstractVector[<:AbstractString])
-    parser = known_sequence_parser("dwi")
+    parser = known_sequence_parser("dw-pgse")
 
     @add_arg_table! parser begin
         "--TE"
@@ -126,6 +127,51 @@ function run_dwi(args=ARGS::AbstractVector[<:AbstractString])
 end
 
 
+function run_spin_echo(args=ARGS::AbstractVector[<:AbstractString])
+    parser = known_sequence_parser("spin_echo")
+
+    @add_arg_table! parser begin
+        "--TE"
+            help = "Echo time in ms."
+            arg_type = Float64
+            required = true
+    end
+    add_pulse_to_parser!(parser, "excitation"; flip_angle=90, phase=-90, duration=0)
+    add_pulse_to_parser!(parser, "refocus"; flip_angle=180, phase=0, duration=0)
+
+
+    as_dict = parse_args(args, parser)
+    output_file = pop!(as_dict, "output-file")
+    as_dict["excitation_pulse"] = get_pulse(as_dict, "excitation")
+    as_dict["refocus_pulse"] = get_pulse(as_dict, "refocus")
+    as_dict["scanner"] = get_scanner(as_dict)
+    TE = pop!(as_dict, "TE")
+    sequence = spin_echo(TE; Dict(Symbol(replace(k, "-"=>"_")) => v for (k, v) in as_dict)...)
+    write_sequence(output_file, sequence)
+end
+
+
+function run_gradient_echo(args=ARGS::AbstractVector[<:AbstractString])
+    parser = known_sequence_parser("gradient_echo")
+
+    @add_arg_table! parser begin
+        "--TE"
+            help = "Echo time in ms."
+            arg_type = Float64
+            required = true
+    end
+    add_pulse_to_parser!(parser, "excitation"; flip_angle=90, phase=-90, duration=0)
+
+
+    as_dict = parse_args(args, parser)
+    output_file = pop!(as_dict, "output-file")
+    as_dict["excitation_pulse"] = get_pulse(as_dict, "excitation")
+    as_dict["scanner"] = get_scanner(as_dict)
+    TE = pop!(as_dict, "TE")
+    sequence = gradient_echo(TE; Dict(Symbol(replace(k, "-"=>"_")) => v for (k, v) in as_dict)...)
+    write_sequence(output_file, sequence)
+end
+
 """
     run_main([arguments])
 
@@ -134,18 +180,23 @@ Arguments are provided as a sequence of strings.
 By default it is set to `ARGS`.
 """
 function run_main(args=ARGS::AbstractVector[<:AbstractString])
+    pre_created = Dict(
+        "dwi" => run_dwi,
+        "dw-pgse" => run_dwi,
+        "spin-echo" => run_spin_echo,
+        "gradient-echo" => run_gradient_echo,
+    )
     if length(args) == 0
         println("No mcmr sequence sub-command given.\n")
     else
-        if args[1] == "custom"
-            return run_custom(args[2:end])
-        elseif args[1] == "dwi"
-            return run_dwi(args[2:end])
+        if haskey(pre_created, args[1])
+            return pre_created[args[1]](args[2:end])
         else
             println("Invalid mcmr command sequence  $(args[1]) given.\n")
         end
     end
-    println("usage: mcmr {custom/}")
+    names = join(keys(pre_created), "/")
+    println("usage: mcmr sequence {$names}")
     return Cint(1)
 
 end
