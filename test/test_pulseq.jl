@@ -78,4 +78,40 @@
             @test mr.phase(p, mr.start_time(p) + 1.5) ≈ 90 rtol=1e-5
         end
     end
+    @testset "check that JSON encoding works for all v1.4.0 files in 01_from_FID_to_PRESS" begin
+        path = joinpath(directory, "01_from_FID_to_PRESS_v140")
+        for fn in readdir(path)
+            @testset "checking $fn" begin
+                if !endswith(fn, ".seq")
+                    continue
+                end
+                full_filename = joinpath(path, fn)
+                seq_orig = mr.read_pulseq(full_filename)
+
+                
+                io = IOBuffer()
+                mr.write_sequence(io, seq_orig)
+                s = String(io.data)
+                seq_json = mr.read_sequence(s)
+                @test seq_orig.TR == seq_json.TR
+                @test length(seq_orig.gradients) == length(seq_json.gradients)
+                for (g1, g2) in zip(seq_orig.gradients, seq_json.gradients)
+                    @test all(g1.origin .== g2.origin)
+                    @test all(g1.shape.times .== g2.shape.times)
+                    @test all(g1.shape.amplitudes .== g2.shape.amplitudes)
+                end
+                @test length(seq_orig.pulses) == length(seq_json.pulses)
+                for (p1, p2) in zip(seq_orig.pulses, seq_json.pulses)
+                    @test p1.max_amplitude == p2.max_amplitude
+                    @test all(p1.amplitude.times .== p2.amplitude.times)
+                    @test all(p1.amplitude.amplitudes .== p2.amplitude.amplitudes)
+                    @test all(p1.phase.times .== p2.phase.times)
+                    @test all(p1.phase.amplitudes .== p2.phase.amplitudes)
+                end
+                @test iszero(length(seq_json.instants))
+                @test length(seq_json.readout_times) > 0
+                @test all(seq_json.readout_times .== seq_orig.readout_times)
+            end
+        end
+    end
 end
