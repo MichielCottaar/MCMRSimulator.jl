@@ -7,7 +7,7 @@ import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_group!, parse_args
 import DataFrames: DataFrame
 import CSV
 import ...Geometries.User.JSON: read_geometry
-import ...Sequences.PulseQ: read_pulseq
+import ...Sequences.JSON: read_sequence
 import ...Simulations: Simulation
 import ...Spins: Snapshot, BoundingBox, longitudinal, transverse, phase, orientation, position
 import ...Evolve: readout
@@ -131,7 +131,7 @@ run_main(::Nothing) = Cint(1)
 
 function run_main(args::Dict{<:AbstractString, <:Any})
     geometry = read_geometry(args["geometry"])
-    sequences = read_pulseq.(args["sequence"])
+    sequences = read_sequence.(args["sequence"])
 
     simulation = Simulation(sequences; geometry=geometry, R1=args["R1"], R2=args["R2"])
 
