@@ -23,6 +23,10 @@ function add_simulation_definition!(parser)
         "sequence"
             nargs = '*'
             help = "One of more pulseq .seq files describing the sequences to be run."
+        "-D", "--diffusivity"
+            help = "Diffusivity of free water (um^2/ms)."
+            arg_type = Float64
+            default = 3.
         "--R1"
             help = "Longitudinal relaxation in 1/ms. This relaxation rate will at the very least be applied to free, extra-cellular spins. It might be overriden in the 'geometry' for bound spins or spins inside any obstructions."
             arg_type = Float64
@@ -133,7 +137,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     geometry = read_geometry(args["geometry"])
     sequences = read_sequence.(args["sequence"])
 
-    simulation = Simulation(sequences; geometry=geometry, R1=args["R1"], R2=args["R2"])
+    simulation = Simulation(sequences; geometry=geometry, R1=args["R1"], R2=args["R2"], diffusivity=args["diffusivity"])
 
     # initial state
     if !isnothing(args["init"])
