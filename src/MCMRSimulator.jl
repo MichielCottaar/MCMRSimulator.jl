@@ -33,7 +33,7 @@ export gyromagnetic_ratio
 import .Methods: get_time, get_rotation
 export get_time, get_rotation
 
-import .Sequences: Sequence, InstantRFPulse, Readout, InstantGradient, RFPulse, MRGradients, gradient, rotate_bvec, flip_angle
+import .Sequences: Sequence, InstantRFPulse, Readout, InstantGradient, RFPulse, MRGradients, gradient, rotate_bvec, flip_angle, read_sequence, write_sequence
 export Sequence, InstantRFPulse, Readout, InstantGradient, RFPulse, MRGradients, gradient, rotate_bvec, flip_angle
 
 import .Scanners: Scanner, B0, max_gradient, max_slew_rate, Siemens_Connectom, Siemens_Prisma, Siemens_Terra
