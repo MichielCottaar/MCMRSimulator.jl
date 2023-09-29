@@ -95,10 +95,11 @@ end
 
 function run_dwi(args=ARGS::AbstractVector[<:AbstractString])
     parser = known_sequence_parser("dw-pgse")
+    parser.description = "Implement diffusion-weighted (DW) pulsed-gradient spin-echo (PGSE) sequence."
 
     @add_arg_table! parser begin
         "--TE"
-            help = "Echo time in ms."
+            help = "Spin echo and readout time in ms."
             arg_type = Float64
             required = true
         "-b", "--bval"
@@ -129,10 +130,11 @@ end
 
 function run_spin_echo(args=ARGS::AbstractVector[<:AbstractString])
     parser = known_sequence_parser("spin_echo")
+    parser.description = "Implement spin echo sequence with single readout."
 
     @add_arg_table! parser begin
         "--TE"
-            help = "Echo time in ms."
+            help = "Spin echo time in ms."
             arg_type = Float64
             required = true
     end
@@ -153,10 +155,11 @@ end
 
 function run_gradient_echo(args=ARGS::AbstractVector[<:AbstractString])
     parser = known_sequence_parser("gradient_echo")
+    parser.description = "Implement gradient echo sequence with single readout."
 
     @add_arg_table! parser begin
         "--TE"
-            help = "Echo time in ms."
+            help = "Gradient echo time in ms."
             arg_type = Float64
             required = true
     end
