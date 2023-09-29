@@ -20,7 +20,7 @@ function gradient_echo(
     excitation_time=nothing
 )
     excitation_time = isnothing(excitation_time) ? duration(excitation_pulse) / 2 : excitation_time
-    use_scanner(scanner) do 
+    define_sequence(scanner, TR) do 
         [
             excitation_pulse,
             TE - duration(excitation_pulse) + excitation_time,
