@@ -5,7 +5,7 @@ module Scanners
 import ..Constants: gyromagnetic_ratio
 import ..Methods: B0
 """
-    Scanner(;B0=3., max_gradient=Inf, max_slew_rate=Inf, units=:kHz)
+    Scanner(;B0=3., gradient=Inf, slew_rate=Inf, units=:kHz)
 
 Properties of an MRI scanner relevant for the MR signal simulations.
 - [`B0`](@ref): magnetic field strength (in Tesla)
