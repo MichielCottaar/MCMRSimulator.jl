@@ -66,7 +66,7 @@ function parse_sequence(d::Dict)
 end
 
 function parse_instant(d::Dict)
-    if "flip_angle" in d
+    if haskey(d, "flip_angle")
         InstantRFPulse(; time=d["time"], flip_angle=d["flip_angle"], phase=d["phase"])
     else
         InstantGradient(; qvec=d["qvec"], q_origin=d["q_origin"], time=d["time"])
