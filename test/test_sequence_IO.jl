@@ -135,22 +135,19 @@
                 @test all(g1.shape.amplitudes .== g2.shape.amplitudes)
             end
             @test iszero(length(seq_json.pulses))
-            @test length(seq_json.instants) == length(seq_orign.instants)
+            @test length(seq_json.instants) == length(seq_orig.instants)
             for (i1, i2) in zip(seq_orig.instants, seq_json.instants)
                 @test i1.time == i2.time
-                if isinstance(i1, mr.InstantRFPulse)
-                    @test isinstance(i2, mr.InstantRFPulse)
+                if i1 isa mr.InstantRFPulse
+                    @test i2 isa mr.InstantRFPulse
                     @test i1.flip_angle == i2.flip_angle
                     @test i1.phase == i2.phase
                 else
-                    @test isinstance(i1, mr.InstantGradient)
-                    @test isinstance(i2, mr.InstantGradient)
+                    @test i1 isa mr.InstantGradient
+                    @test i2 isa mr.InstantGradient
                     @test all(i1.q_origin .== i2.q_origin)
                     @test all(i1.qvec .== i2.qvec)
                 end
-                @test all(g1.origin .== g2.origin)
-                @test all(g1.shape.times .== g2.shape.times)
-                @test all(g1.shape.amplitudes .== g2.shape.amplitudes)
             end
             @test length(seq_json.readout_times) > 0
             @test all(seq_json.readout_times .== seq_orig.readout_times)
