@@ -10,7 +10,7 @@ import ..RadioFrequency: RFPulse, effective_pulse
 import ..Shapes: ShapePart, sample_integral, sample
 import ..Methods: start_time, end_time, add_TR
 """
-    Sequence(;TR, components=[], scanner=Scanner(B0), B0=3., interplate_gradients=:step)
+    Sequence(;TR, components=[], scanner=Scanner(B0), B0=3.)
 
 An MR sequence represented by a series of components repeated with a given repetition time (`TR`).
 
