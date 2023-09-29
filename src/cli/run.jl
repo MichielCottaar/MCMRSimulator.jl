@@ -143,7 +143,8 @@ function run_main(args::Dict{<:AbstractString, <:Any})
         init_snapshot = Snapshot(args["Nspins"], simulation, bb; longitudinal=args["longitudinal"], transverse=args["transverse"])
     end
     as_snapshot = !isnothing(args["output-snapshot"])
-    result = readout(init_snapshot, simulation, args["times"]; skip_TR=args["skip-TR"], nTR=args["nTR"], noflatten=true, return_snapshot=as_snapshot)
+    readout_times = iszero(length(args["times"])) ? nothing : args["times"]
+    result = readout(init_snapshot, simulation, readout_times; skip_TR=args["skip-TR"], nTR=args["nTR"], noflatten=true, return_snapshot=as_snapshot)
 
     # convert to tabular format
     if !isnothing(args["output-signal"])
