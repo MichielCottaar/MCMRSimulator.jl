@@ -20,6 +20,12 @@ struct Scanner
     gradient::Float64
     slew_rate::Float64
     function Scanner(;B0=3., gradient=Inf, slew_rate=Inf, units=:kHz)
+        if isnothing(gradient)
+            gradient = Inf
+        end
+        if isnothing(slew_rate)
+            slew_rate = Inf
+        end
         if isinf(gradient) && !isinf(slew_rate)
             error("Can't have infinite gradient strength with finite slew rate.")
         end
