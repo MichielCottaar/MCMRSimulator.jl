@@ -71,3 +71,20 @@ build_pages:
     - if:   $CI_COMMIT_TAG != null
       when: always
     - when: never
+
+
+# from https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#docker-alternatives
+build:
+  stage: build
+  image: quay.io/buildah/stable
+  variables:
+    STORAGE_DRIVER: vfs
+    BUILDAH_FORMAT: docker
+    FQ_IMAGE_NAME: "$CI_REGISTRY_IMAGE/test"
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+  script:
+    - buildah images
+    - buildah build -t $FQ_IMAGE_NAME
+    - buildah images
+    - buildah push $FQ_IMAGE_NAME
