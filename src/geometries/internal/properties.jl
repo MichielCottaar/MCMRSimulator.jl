@@ -36,7 +36,7 @@ mutable struct MRIProperties
 end
 
 function MRIProperties(full_geometry::FixedGeometry, inside_geometry::FixedGeometry, glob::GlobalProperties, position::SVector{3, Float64}, stuck_to::Reflection)
-    res = MRIProperties(glob.R1, glob.R2, glob.off_resonance, 1.)
+    res = MRIProperties(glob.R1, glob.R2, glob.off_resonance)
 
     # first check stuck properties
     if ~iszero(stuck_to.geometry_index)
