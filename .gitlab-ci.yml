@@ -83,6 +83,13 @@ build:
     BUILDAH_ISOLATION: rootless
     FQ_IMAGE_NAME: "michielc/mcmr:latest"
   script:
+    - docker info
+    - cat /etc/subgid
+    - cat /etc/subuid
+    - touch /etc/subgid /etc/subuid
+    - chmod g=u /etc/subgid /etc/subuid /etc/passwd
+    - echo build:10000:65536 > /etc/subuid
+    - echo build:10000:65536 > /etc/subgid
     - buildah manifest create mcmr
     - buildah build -t $FQ_IMAGE_NAME --manifest mcmr --arch amd64
     - buildah build -t $FQ_IMAGE_NAME --manifest mcmr --arch arm64
