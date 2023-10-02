@@ -126,7 +126,7 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
     end
 
     # get volumetric MRI properties
-    symbols = (:R1, :R2, :off_resonance, :turtoisity)
+    symbols = (:R1, :R2, :off_resonance)
     if ~isnothing(volume)
         get_volume(s) = fix_array(s, getproperty(user_obstructions, Symbol(String(s) * "_" * String(volume))).value)
         values = [get_volume(s) for s in symbols]

@@ -34,7 +34,7 @@ Collection of L base [`FixedObstruction`](@ref) objects.
 struct FixedObstructionGroup{
     L, N, R, O <: FixedObstruction{N},
     B <: Union{Nothing, Vector{BoundingBox{N}}},
-    V <: NamedTuple{(:R1, :R2, :off_resonance, :turtoisity)},
+    V <: NamedTuple{(:R1, :R2, :off_resonance)},
     S <: NamedTuple{(:R1, :R2, :off_resonance, :permeability, :surface_density, :dwell_time, :surface_relaxivity)}, K
     }
     obstructions :: Vector{O}

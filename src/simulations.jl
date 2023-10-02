@@ -108,7 +108,7 @@ function Simulation(
     end
     susceptibility = fix_susceptibility(geometry)
     geometry = fix(geometry; permeability=permeability, density=surface_density, dwell_time=dwell_time, relaxivity=surface_relaxivity)
-    last_interesting_inside = findlast(g->~all(all(getproperty(g.volume, s) .== v) for (s, v) in ((:R1, 0), (:R2, 0), (:off_resonance, 0), (:turtoisity, 1))), geometry)
+    last_interesting_inside = findlast(g->~all(all(getproperty(g.volume, s) .== v) for (s, v) in ((:R1, 0), (:R2, 0), (:off_resonance, 0))), geometry)
     if isnothing(last_interesting_inside)
         inside_geometry = ()
     else

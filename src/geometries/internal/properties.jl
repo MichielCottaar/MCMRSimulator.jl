@@ -33,7 +33,6 @@ mutable struct MRIProperties
     R1 :: Float64
     R2 :: Float64
     off_resonance :: Float64
-    turtoisity :: Float64
 end
 
 function MRIProperties(full_geometry::FixedGeometry, inside_geometry::FixedGeometry, glob::GlobalProperties, position::SVector{3, Float64}, stuck_to::Reflection)
@@ -45,7 +44,6 @@ function MRIProperties(full_geometry::FixedGeometry, inside_geometry::FixedGeome
         res.R1 += get_value(Val(:R1), group.surface, stuck_to.obstruction_index)
         res.R2 += get_value(Val(:R2), group.surface, stuck_to.obstruction_index)
         res.off_resonance += get_value(Val(:off_resonance), group.surface, stuck_to.obstruction_index)
-        res.turtoisity = 0.
     end
 
     for group in inside_geometry
@@ -56,7 +54,6 @@ function MRIProperties(full_geometry::FixedGeometry, inside_geometry::FixedGeome
             res.R1 += get_value(Val(:R1), props, index)
             res.R2 += get_value(Val(:R2), props, index)
             res.off_resonance += get_value(Val(:off_resonance), props, index)
-            res.turtoisity *= get_value(Val(:turtoisity), props, index)
             break
         end
     end
