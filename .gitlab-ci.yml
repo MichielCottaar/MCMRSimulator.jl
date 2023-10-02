@@ -85,11 +85,7 @@ build:
   script:
     - cat /etc/subgid
     - cat /etc/subuid
-    - touch /etc/subgid /etc/subuid
-    - chmod g=u /etc/subgid /etc/subuid /etc/passwd
-    - echo build:10000:65536 > /etc/subuid
-    - echo build:10000:65536 > /etc/subgid
-    - buildah manifest create mcmr
+    - sudo -u build buildah manifest create mcmr
     - buildah build -t $FQ_IMAGE_NAME --manifest mcmr --arch amd64
     - buildah build -t $FQ_IMAGE_NAME --manifest mcmr --arch arm64
     - buildah push mcmr docker://registry.hub.docker.com/$FQ_IMAGE_NAME --creds=$DOCKER_HUB_USER:$DOCKER_HUB_PASSWORD
