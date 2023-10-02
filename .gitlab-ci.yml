@@ -83,7 +83,6 @@ build:
     BUILDAH_ISOLATION: rootless
     FQ_IMAGE_NAME: "michielc/mcmr:latest"
   script:
-    - docker info
     - cat /etc/subgid
     - cat /etc/subuid
     - touch /etc/subgid /etc/subuid
