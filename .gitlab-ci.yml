@@ -82,13 +82,10 @@ build:
     BUILDAH_FORMAT: docker
     BUILDAH_ISOLATION: chroot
     FQ_IMAGE_NAME: "michielc/mcmr:latest"
-  before_script:
-    - echo $DOCKER_HUB_USER
-    - buildah login -u "$DOCKER_HUB_USER" -p "$DOCKER_HUB_PASSWORD" https://registry.hub.docker.com
   script:
     - buildah images
     - buildah manifest create mcmr
     - buildah build -t $FQ_IMAGE_NAME --manifest mcmr --arch amd64
     - buildah build -t $FQ_IMAGE_NAME --manifest mcmr --arch arm64
     - buildah images
-    - buildah push mcmr docker://registry.hub.docker.com/$FQ_IMAGE_NAME
+    - buildah push mcmr docker://registry.hub.docker.com/$FQ_IMAGE_NAME --creds=$DOCKER_HUB_USER:$DOCKER_HUB_PASSWORD
