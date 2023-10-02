@@ -80,7 +80,7 @@ build:
   variables:
     STORAGE_DRIVER: vfs
     BUILDAH_FORMAT: docker
-    BUILDAH_ISOLATION: chroot
+    BUILDAH_ISOLATION: rootless
     FQ_IMAGE_NAME: "michielc/mcmr:latest"
   script:
     - buildah manifest create mcmr
