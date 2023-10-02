@@ -80,9 +80,9 @@ build:
   variables:
     STORAGE_DRIVER: vfs
     BUILDAH_FORMAT: docker
-    FQ_IMAGE_NAME: "$CI_REGISTRY_IMAGE/test"
+    FQ_IMAGE_NAME: "michielc/mcmr:latest"
   before_script:
-    - echo "$CI_REGISTRY_PASSWORD" | buildah login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - echo "$DOCKER_HUB_PASSWORD" | buildah login -u "$DOCKER_HUB_USER" --password-stdin https://registry.hub.docker.com
   script:
     - buildah images
     - buildah build -t $FQ_IMAGE_NAME
