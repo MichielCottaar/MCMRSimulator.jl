@@ -196,7 +196,7 @@ function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N
         end
         for _ in 1:10000
             if is_stuck
-                td = dwell_time(simulation.geometry, simulation.properties, spin.reflection)
+                td = dwell_time(simulation.geometry, spin.reflection)
                 fraction_stuck = -log(rand()) * td / timestep
                 relax!(spin, parts, simulation, fraction_timestep, min(one(Float64), fraction_timestep + fraction_stuck))
                 fraction_timestep += fraction_stuck
@@ -233,12 +233,12 @@ function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N
                 found_solution = true
                 break
             end
-            relaxation = surface_relaxivity(simulation.geometry, simulation.properties, collision)
+            relaxation = surface_relaxivity(simulation.geometry, collision)
             if ~iszero(relaxation)
                 transfer!.(spin.orientations, correct_for_timestep(relaxation, timestep))
             end
 
-            permeability_prob = correct_for_timestep(permeability(simulation.geometry, simulation.properties, collision), timestep)
+            permeability_prob = correct_for_timestep(permeability(simulation.geometry, collision), timestep)
             passes_through = isone(permeability_prob) || !(iszero(permeability_prob) || rand() > permeability_prob)
             reflection = Reflection(collision, new_pos - current_pos, reflection.ratio_displaced, 
                 reflection.time_moved + (1 - fraction_timestep) * use_distance * timestep, 
@@ -250,8 +250,8 @@ function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N
                 push!(all_positions, current_pos)
             end
 
-            sd = surface_density(simulation.geometry, simulation.properties, collision)
-            if !iszero(sd) && rand() < stick_probability(sd, dwell_time(simulation.geometry, simulation.properties, collision), simulation.diffusivity, timestep)
+            sd = surface_density(simulation.geometry, collision)
+            if !iszero(sd) && rand() < stick_probability(sd, dwell_time(simulation.geometry, collision), simulation.diffusivity, timestep)
                 spin.reflection = reflection
                 is_stuck = true
             else

@@ -208,8 +208,8 @@ end
 
 @testset "Test simulation pretty printing" begin
     sim = mr.Simulation([mr.dwi(bval=1, TR=2000), mr.dwi(bval=2)], geometry=mr.Spheres(radius=[1, 2.], repeats=[5, 5, 5]), R1=0.1, surface_relaxivity=0.3)
-    @test repr(sim, context=:compact => true) == "Simulation(2 sequences, Geometry(2 repeating Round objects, ), D=0.0um^2/ms, GlobalProperties(R1=0.1kHz, surface_relaxivity=0.3, ))" 
-    @test repr(sim, context=:compact => false) == "Simulation(Geometry(2 repeating Round objects, ), D=0.0um^2/ms, GlobalProperties(R1=0.1kHz, surface_relaxivity=0.3, )):
+    @test repr(sim, context=:compact => true) == "Simulation(2 sequences, Geometry(2 repeating Round objects, ), D=0.0um^2/ms, GlobalProperties(R1=0.1kHz, ))" 
+    @test repr(sim, context=:compact => false) == "Simulation(Geometry(2 repeating Round objects, ), D=0.0um^2/ms, GlobalProperties(R1=0.1kHz, )):
 2 sequences:
 Sequence (TR=2000.0ms):
     - InstantRFPulse: t=0.0ms, θ=90.0°, ϕ=-90.0°;
@@ -241,7 +241,7 @@ end
         mr.Cylinders(radius=[0.7, 0.8]),
         mr.Annuli(inner=0.2, outer=0.4, repeats=[2, 3], rotation=:y),
         mr.Walls(position=[1, 2, 3, 4, 5]),
-        mr.Spheres(radius=[0.2, 0.4, 0.8], R1_volume=1., R2_volume=[2., 2.3, 3.4]),
+        mr.Spheres(radius=[0.2, 0.4, 0.8], R1_inside=1., R2_inside=[2., 2.3, 3.4]),
         mr.Mesh(triangles=[[1, 2, 3], [2, 1, 3]], vertices=[[0, 0, 0], [1, 1, 1], [2, 0, 3]])
     )
         io = IOBuffer()

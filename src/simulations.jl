@@ -6,7 +6,7 @@ import ..Sequences: Sequence
 import ..Timestep: TimeController, propose_times
 import ..Spins: Spin, Snapshot, SpinOrientation
 import ..Methods: get_time, B0
-import ..Properties: GlobalProperties, surface_density, R1, R2, off_resonance
+import ..Properties: GlobalProperties, R1, R2, off_resonance
 
 """
     Simulation(
@@ -91,7 +91,13 @@ function Simulation(
     max_timestep=nothing,
     gradient_precision=1.,
     rf_rotation=1.,
-    kwargs...
+    permeability=0.,
+    surface_density=0.,
+    dwell_time=0.,
+    surface_relaxivity=0.,
+    R1=0.,
+    R2=0.,
+    off_resonance=0.,
 )
     flatten = false
     if isa(sequences, Sequence)
@@ -101,11 +107,17 @@ function Simulation(
         sequences = Sequence[]
     end
     susceptibility = fix_susceptibility(geometry)
-    geometry = fix(geometry)
-    inside_geometry = Tuple(filter(g->any(hasproperty(g.volume, s) for s in (:R1, :R2, :off_resonance)), geometry))
-    default_properties = GlobalProperties(; kwargs...)
+    geometry = fix(geometry; permeability=permeability, density=surface_density, dwell_time=dwell_time, relaxivity=surface_relaxivity)
+    last_interesting_inside = findlast(g->~all(all(getproperty(g.volume, s) .== v) for (s, v) in ((:R1, 0), (:R2, 0), (:off_resonance, 0), (:turtoisity, 1))), geometry)
+    if isnothing(last_interesting_inside)
+        inside_geometry = ()
+    else
+        inside_geometry = geometry[1:last_interesting_inside]
+    end
+
+    default_properties = GlobalProperties(; R1=R1, R2=R2, off_resonance=off_resonance)
     max_B0 = iszero(length(sequences)) ? 0 : maximum(B0.(sequences))
-    controller = TimeController(geometry, susceptibility, max_B0, diffusivity, default_properties; max_timestep=max_timestep, gradient_precision=gradient_precision, rf_rotation=rf_rotation)
+    controller = TimeController(geometry, susceptibility, max_B0, diffusivity; max_timestep=max_timestep, gradient_precision=gradient_precision, rf_rotation=rf_rotation)
     if iszero(diffusivity) && length(geometry) > 0
         @warn "Restrictive geometry will have no effect, because the diffusivity is set at zero"
     end
@@ -146,7 +158,7 @@ function Base.show(io::IO, sim::Simulation{N}) where {N}
 end
 
 function Snapshot(nspins::Integer, simulation::Simulation{N}, bounding_box=500; kwargs...) where {N}
-    Snapshot(nspins, bounding_box, simulation.geometry, surface_density(simulation.properties); nsequences=N, kwargs...)
+    Snapshot(nspins, bounding_box, simulation.geometry; nsequences=N, kwargs...)
 end
 _to_snapshot(spins::Int, simulation::Simulation, bounding_box) = _to_snapshot(Snapshot(spins, simulation, bounding_box), simulation, bounding_box)
 _to_snapshot(spins::AbstractVector{<:Real}, simulation::Simulation, bounding_box) = _to_snapshot(Spin(position=spins), simulation, bounding_box)

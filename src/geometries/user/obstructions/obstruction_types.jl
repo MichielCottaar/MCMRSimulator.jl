@@ -27,7 +27,7 @@ struct ObstructionType{N}
     include_shift :: Bool
 end
 
-function ObstructionType(singular::Symbol; plural=nothing, ndim=3, surfaces=[:surface], volumes=[:volume], group_volumes=false, fields=Field[], include_shift=true)
+function ObstructionType(singular::Symbol; plural=nothing, ndim=3, surfaces=[:surface], volumes=[:inside], group_volumes=false, fields=Field[], include_shift=true)
     if isnothing(plural)
         plural = Symbol(String(singular) * "s")
     end

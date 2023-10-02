@@ -67,8 +67,8 @@ export Annuli, Cylinders, Walls, Spheres, Mesh, load_mesh, fix, random_positions
 import .Geometries.Internal: BoundingBox, FixedGeometry
 export BoundingBox
 
-import .Properties: GlobalProperties, R1, R2, off_resonance, permeability, surface_relaxivity, surface_density, dwell_time
-export GlobalProperties, R1, R2, off_resonance, permeability, surface_relaxivity, surface_density, dwell_time
+import .Properties: GlobalProperties, R1, R2, off_resonance
+export GlobalProperties, R1, R2, off_resonance
 
 import .Sequences: previous_pulse, current_pulse, next_pulse, previous_gradient, current_gradient, next_gradient, previous_instant, current_instant, next_instant
 export previous_pulse, current_pulse, next_pulse, previous_gradient, current_gradient, next_gradient, previous_instant, current_instant, next_instant

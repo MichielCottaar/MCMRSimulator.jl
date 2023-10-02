@@ -153,9 +153,10 @@ function Base.show(io::IO, fv::FieldValue)
 end
 
 property_fields = (
-    Field{Float64}(:R1, "Longitudinal relaxation rate (kHz).", per_volume=true, per_surface=true),
-    Field{Float64}(:R2, "Transverse relaxation rate (kHz).", per_volume=true, per_surface=true),
-    Field{Float64}(:off_resonance, "Off-resonance field offset (kHz).", per_volume=true, per_surface=true),
+    Field{Float64}(:R1, "Additional longitudinal relaxation rate (kHz).", 0., per_volume=true, per_surface=true, required=true),
+    Field{Float64}(:R2, "Additional transverse relaxation rate (kHz).", 0., per_volume=true, per_surface=true, required=true),
+    Field{Float64}(:off_resonance, "Additional off-resonance field offset (kHz).", 0., per_volume=true, per_surface=true, required=true),
+    Field{Float64}(:turtoisity, "Multiplicative factor (between 0 and 1) that is applied with the difusivity to lower it.", 1., per_volume=true, required=true),
     Field{Float64}(:dwell_time, "Average time a particle stays stuck to the surface (ms).", per_surface=true),
     Field{Float64}(:density, "Surface density of stuck particles relative to the volume density (um).", per_surface=true),
     Field{Float64}(:permeability, "Probability of particle passing through the obstruction.", per_surface=true),

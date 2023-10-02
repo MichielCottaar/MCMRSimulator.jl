@@ -311,7 +311,7 @@ The equilibrium longitudinal spin (after T1 relaxation) is always 1.
 
 # Useful constructors
     Snapshot(positions; time=0., longitudinal=1., transverse=0., phase=0., nsequences=1)
-    Snapshot(nspins[, bounding_box[, geometry, default_surface_density]]; time=0., longitudinal=1., transverse=0., phase=0., nsequences=1)
+    Snapshot(nspins[, bounding_box[, geometry]]; time=0., longitudinal=1., transverse=0., phase=0., nsequences=1)
     Snapshot(nspins, simulation[, bounding_box; time=0., longitudinal=1., transverse=0., phase=0., nsequences=1)
 
 Creates a new Snapshot at the given `time` with spins initialised for simulating `nsequences` sequences.
@@ -348,7 +348,7 @@ function Snapshot(positions :: AbstractVector{<:AbstractVector{<:Real}}; time ::
     Snapshot(map(p -> Spin(; position=p, kwargs...), positions), time)
 end
 
-function Snapshot(nspins::Integer, bounding_box=500, geometry=nothing, default_surface_density=zero(Float64); time::Real=0., kwargs...)
+function Snapshot(nspins::Integer, bounding_box=500, geometry=nothing; time::Real=0., kwargs...)
     bounding_box = BoundingBox(bounding_box)
     sz = (upper(bounding_box) - lower(bounding_box))
     free_spins = map(i->Spin(; position=rand(SVector{3, Float64}) .* sz .+ lower(bounding_box), kwargs...), 1:nspins)
@@ -358,7 +358,7 @@ function Snapshot(nspins::Integer, bounding_box=500, geometry=nothing, default_s
     end
     volume = prod(sz)
     density = nspins / volume
-    stuck_spins = random_surface_spins(geometry, bounding_box, density, default_surface_density; kwargs...)
+    stuck_spins = random_surface_spins(geometry, bounding_box, density; kwargs...)
     if length(stuck_spins) == 0
         spins = free_spins
     else
@@ -373,9 +373,9 @@ Base.show(io::IO, snap::Snapshot{1}) = print(io, "Snapshot($(length(snap)) spins
 Base.show(io::IO, snap::Snapshot{N}) where {N} = print(io, "Snapshot($(length(snap)) spins with magnetisations for $N sequences at t=$(get_time(snap))ms)")
 
 
-function random_surface_spins(geometry::FixedGeometry, bounding_box::BoundingBox{3}, volume_density::Number, default_surface_density::Number; nsequences=1, kwargs...)
+function random_surface_spins(geometry::FixedGeometry, bounding_box::BoundingBox{3}, volume_density::Number; nsequences=1, kwargs...)
     spins = Spin{nsequences}[]
-    for (position, normal, geometry_index, obstruction_index) in random_surface_positions(geometry, bounding_box, volume_density, default_surface_density)
+    for (position, normal, geometry_index, obstruction_index) in random_surface_positions(geometry, bounding_box, volume_density)
         inside = Random.rand() > 0.5
         use_normal = inside ? normal : -normal
         direction = Random.randn(SVector{3, Float64})

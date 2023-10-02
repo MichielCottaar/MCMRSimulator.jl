@@ -25,17 +25,17 @@ import ..Reflections: Reflection, empty_reflection
 import ..RayGridIntersection: ray_grid_intersections
 import ..Gridify: Grid, get_indices
 
-const Optional{T} = Union{Nothing, T}
-const OneOrMore{T} = Union{Nothing, T, Vector{T}}
 
 """
 Collection of L base [`FixedObstruction`](@ref) objects.
 """
+
+
 struct FixedObstructionGroup{
     L, N, R, O <: FixedObstruction{N},
-    B <: Optional{Vector{BoundingBox{N}}},
-    V <: NamedTuple,
-    S <: NamedTuple, K
+    B <: Union{Nothing, Vector{BoundingBox{N}}},
+    V <: NamedTuple{(:R1, :R2, :off_resonance, :turtoisity)},
+    S <: NamedTuple{(:R1, :R2, :off_resonance, :permeability, :surface_density, :dwell_time, :surface_relaxivity)}, K
     }
     obstructions :: Vector{O}
     parent_index :: Int
@@ -135,6 +135,10 @@ Returns a vector of indices with all the obstructions in [`FixedObstructionGroup
 For obstructions with only a single inside, will return an empty vector ("[]") if the particle is outside and a "[0]" if inside.
 """
 function isinside(g::FixedObstructionGroup{L}, pos::SVector{3}, stuck_to::Reflection=empty_reflection) where {L}
+    isinside(g, pos, stuck_to.geometry_index == g.parent_index ? stuck_to.obstruction_index : 0, stuck_to.inside)
+end
+
+function isinside(g::FixedObstructionGroup{L}, pos::SVector{3}, stuck_to, inside::Bool) where {L}
     if ~has_inside(typeof(g))
         return Int[]
     end
@@ -150,8 +154,8 @@ function isinside(g::FixedObstructionGroup{L}, pos::SVector{3}, stuck_to::Reflec
     end
     indices = Int[]
     for (index, shift) in get_indices(g.grid, normed)
-        if stuck_to.geometry_index == g.parent_index && stuck_to.obstruction_index == index
-            if stuck_to.inside
+        if stuck_to == index
+            if inside
                 push!(indices, index)
             end
             continue
@@ -299,7 +303,7 @@ end
 
 
 """
-    random_surface_positions(group/geometry, bounding_box, volume_density, default_surface_density)
+    random_surface_positions(group/geometry, bounding_box, volume_density)
 
 Randomly draws positions on the surface within the [`BoundingBox`](@ref).
 The density of points will be equal to `surface_density` * `volume_density`,
@@ -311,16 +315,12 @@ For each drawn position will return a tuple with:
 - geometry_index: index of the group
 - obstruction_index: index of the obstruction within the group that the position is on the surface of
 """
-function random_surface_positions(group::FixedObstructionGroup{L, N}, bb::BoundingBox{3}, volume_density::Number, default_surface_density::Number) where {L, N}
-    if hasproperty(group.surface, :surface_density)
-        local_surface_density = group.surface.surface_density
-        if local_surface_density isa Vector
-            surface_density = [isnothing(sd) ? default_surface_density : sd for sd in local_surface_density]
-        else
-            surface_density = fill(local_surface_density, L)
-        end
+function random_surface_positions(group::FixedObstructionGroup{L, N}, bb::BoundingBox{3}, volume_density::Number) where {L, N}
+    local_surface_density = group.surface.surface_density
+    if local_surface_density isa Vector
+        surface_density = [isnothing(sd) ? default_surface_density : sd for sd in local_surface_density]
     else
-        surface_density = fill(default_surface_density, L)
+        surface_density = fill(local_surface_density, L)
     end
 
     if N == 1
@@ -387,11 +387,11 @@ function random_surface_positions(group::FixedObstructionGroup{L, N}, bb::Boundi
     )
 end
 
-function random_surface_positions(geometry::FixedGeometry, bb::BoundingBox{3}, volume_density::Number, default_surface_density::Number)
-    vcat([random_surface_positions(g, bb, volume_density, default_surface_density) for g in geometry]...)
+function random_surface_positions(geometry::FixedGeometry, bb::BoundingBox{3}, volume_density::Number)
+    vcat([random_surface_positions(g, bb, volume_density) for g in geometry]...)
 end
 
-function random_surface_positions(geometry::FixedGeometry{0}, bb::BoundingBox{3}, volume_density::Number, default_surface_density::Number)
+function random_surface_positions(geometry::FixedGeometry{0}, bb::BoundingBox{3}, volume_density::Number)
     return Tuple{SVector{3, Float64}, SVector{3, Float64}, Int{}, Int{}}[]
 end
 

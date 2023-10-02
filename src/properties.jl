@@ -24,17 +24,10 @@ struct GlobalProperties
     R1 :: Float64
     R2 :: Float64
     off_resonance :: Float64
-    permeability :: Float64
-    dwell_time :: Float64
-    surface_density :: Float64
-    surface_relaxivity :: Float64
 end
 
-function GlobalProperties(; R1=0, R2=0, off_resonance=0, permeability=0, dwell_time=0, surface_density=0, surface_relaxivity=0) 
-    if iszero(dwell_time) && ~iszero(surface_density)
-        error("Default dwell time needs to be set if default surface_density is non-zero")
-    end
-    GlobalProperties(R1, R2, off_resonance, permeability, dwell_time, surface_density, surface_relaxivity)
+function GlobalProperties(; R1=0, R2=0, off_resonance=0) 
+    GlobalProperties(R1, R2, off_resonance)
 end
 
 for symbol in propertynames(GlobalProperties())
@@ -49,10 +42,6 @@ function Base.show(io::IO, prop::GlobalProperties)
         (R1, "kHz"),
         (R2, "kHz"),
         (off_resonance, "kHz"),
-        (surface_relaxivity, ""),
-        (permeability, ""),
-        (surface_density, "um"),
-        (dwell_time, "ms"),
     ]
         value = func(prop)
         if !iszero(value) && !isinf(value) && !isnan(value)

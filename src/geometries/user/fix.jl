@@ -5,22 +5,27 @@ import ...Internal: FixedObstructionGroup, FixedGeometry, Internal, get_quadrant
 import ..Obstructions: ObstructionType, ObstructionGroup, Walls, Cylinders, Spheres, Annuli, Mesh, fields, isglobal
 import ..SplitMesh: split_mesh
 
-function fix(geometry::AbstractVector)
+"""
+    fix(user_geometry; permeability=0., density=0., dwell_time=0., relaxivity=0.)
+
+Creates a fixed version of the user-created geometry that will be used internally by the simulator.
+"""
+function fix(geometry::AbstractVector; kwargs...)
     result = FixedObstructionGroup[]
     for og in geometry
-        append!(result, fix(og, length(result) + 1))
+        append!(result, fix(og, length(result) + 1; kwargs...))
     end
     return Tuple(result)
 end
 
-function fix(geometry::ObstructionGroup, index::Int=1)
+function fix(geometry::ObstructionGroup, index::Int=1; permeability=0., density=0., dwell_time=0., relaxivity=0.)
     for key in propertynames(geometry)
         field_value = getproperty(geometry, key)
         if field_value.field.required && any(isnothing.(field_value.value))
             error("Missing value for required field $field_value")
         end
     end
-    result = fix_type(geometry, index)
+    result = fix_type(geometry, index; permeability=permeability, density=density, dwell_time=dwell_time, relaxivity=relaxivity)
     return result isa FixedObstructionGroup ? (result, ) : Tuple(result)
 end
 
@@ -37,56 +42,56 @@ Shifts, collision properties, and volumetric and surface MRI properties can be a
 """
 function fix_type end
 
-function fix_type(walls::Walls, index::Int)
+function fix_type(walls::Walls, index::Int; kwargs...)
     base_obstructions = fill(Internal.Wall(), length(walls))
-    apply_properties(walls, base_obstructions, index; surface="surface")
+    apply_properties(walls, base_obstructions, index; surface="surface", kwargs...)
 end
 
-function fix_type(cylinders::Cylinders, index::Int)
+function fix_type(cylinders::Cylinders, index::Int; kwargs...)
     if isglobal(cylinders.radius)
         base_obstructions = fill(Internal.Cylinder(cylinders.radius.value), length(cylinders))
     else
         base_obstructions = [Internal.Cylinder(r) for r in cylinders.radius.value]
     end
-    apply_properties(cylinders, base_obstructions, index; surface="surface", volume="volume")
+    apply_properties(cylinders, base_obstructions, index; surface="surface", volume="inside", kwargs...)
 end
 
-function fix_type(spheres::Spheres, index::Int)
+function fix_type(spheres::Spheres, index::Int; kwargs...)
     if isglobal(spheres.radius)
         base_obstructions = fill(Internal.Sphere(spheres.radius.value), length(spheres))
     else
         base_obstructions = [Internal.Sphere(r) for r in spheres.radius.value]
     end
-    apply_properties(spheres, base_obstructions, index; surface="surface", volume="volume")
+    apply_properties(spheres, base_obstructions, index; surface="surface", volume="inside", kwargs...)
 end
 
-function fix_type(annuli::Annuli, index::Int)
+function fix_type(annuli::Annuli, index::Int; kwargs...)
     if isglobal(annuli.inner)
         base_inner = fill(Internal.Cylinder(annuli.inner.value), length(annuli))
     else
         base_inner = [Internal.Cylinder(r) for r in annuli.inner.value]
     end
-    inner_cylinders = apply_properties(annuli, base_inner, index; surface="inner_surface", volume="inner_volume")
+    inner_cylinders = apply_properties(annuli, base_inner, index; surface="inner_surface", volume="inner_volume", kwargs...)
 
     if isglobal(annuli.outer)
         base_outer = fill(Internal.Cylinder(annuli.outer.value), length(annuli))
     else
         base_outer = [Internal.Cylinder(r) for r in annuli.outer.value]
     end
-    outer_cylinders = apply_properties(annuli, base_outer, index + 1; surface="outer_surface", volume="outer_volume")
+    outer_cylinders = apply_properties(annuli, base_outer, index + 1; surface="outer_surface", volume="outer_volume", kwargs...)
     return (inner_cylinders, outer_cylinders)
 end
 
-function fix_type(mesh::Mesh, index::Int)
-    [fix_type_single(m, index + i - 1) for (i, m) in enumerate(split_mesh(mesh))]
+function fix_type(mesh::Mesh, index::Int; kwargs...)
+    [fix_type_single(m, index + i - 1; kwargs...) for (i, m) in enumerate(split_mesh(mesh))]
 end
 
-function fix_type_single(mesh::Mesh, index::Int)
+function fix_type_single(mesh::Mesh, index::Int; kwargs...)
     base_obstructions = [Internal.IndexTriangle(index) for index in mesh.triangles.value]
     if ~mesh.save_memory.value
         base_obstructions = [Internal.FullTriangle(it, SVector{3}.(mesh.vertices.value)) for it in base_obstructions]
     end
-    apply_properties(mesh, base_obstructions, index; surface="surface", volume="volume")
+    apply_properties(mesh, base_obstructions, index; surface="surface", volume="inside", kwargs...)
 end
 
 """
@@ -101,7 +106,7 @@ This function applies (if appropriate):
 - repeats
 - mesh vertices
 """
-function apply_properties(user_obstructions::ObstructionGroup, internal_obstructions::Vector{<:Internal.FixedObstruction}, index::Int; surface=nothing, volume=nothing)
+function apply_properties(user_obstructions::ObstructionGroup, internal_obstructions::Vector{<:Internal.FixedObstruction}, index::Int; surface=nothing, volume=nothing, kwargs...)
     # apply shifts
     if hasproperty(user_obstructions, :position)
         shifts = isglobal(user_obstructions.position) ? fill(user_obstructions.position.value, length(user_obstructions)) : user_obstructions.position.value
@@ -111,37 +116,34 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
         internal_obstructions = Internal.Shift.(internal_obstructions, shifts)
     end
 
-    fix_array_type(other, name) = other
-    function fix_array_type(arr::Vector{Union{Nothing, T}}, name) where {T}
+    fix_array(s::Symbol, other) = other
+    fix_array(s::Symbol, ::Nothing) = kwargs[s]
+    function fix_array(s::Symbol, arr::Vector{Union{Nothing, T}}) where {T}
         if length(arr) != user_obstructions.n_obstructions
             error("Cannot fix geometry. Parameter $name has $(length(arr)) values, which does not match the number of obstructions ($(user_obstructions.n_obstructions)).")
         end
-        if ~any(isnothing.(arr))
-            return Vector{T}(arr)
-        else
-            return arr
-        end
+        [isnothing(v) ? T(kwargs[s]) : v for v in arr]
     end
 
     # get volumetric MRI properties
+    symbols = (:R1, :R2, :off_resonance, :turtoisity)
     if ~isnothing(volume)
-        get_volume(s) = fix_array_type(getproperty(user_obstructions, Symbol(String(s) * "_" * String(volume))).value, s)
-        symbols = filter(s->~isnothing(get_volume(s)), [:R1, :R2, :off_resonance])
+        get_volume(s) = fix_array(s, getproperty(user_obstructions, Symbol(String(s) * "_" * String(volume))).value)
         values = [get_volume(s) for s in symbols]
-        volume = NamedTuple{Tuple(symbols)}(Tuple(values))
+        volume = NamedTuple{symbols}(Tuple(values))
     else
-        volume = NamedTuple{()}(())
+        volume = NamedTuple{symbols}(Tuple(zeros(length(symbols))))
     end
 
     # get surface properties (bound MRI & collision)
+    symbols = (:R1, :R2, :off_resonance, :permeability, :density, :dwell_time, :relaxivity)
+    updated_symbols = replace(symbols, :density=>:surface_density, :relaxivity=>:surface_relaxivity)
     if ~isnothing(surface)
-        get_surface(s) = fix_array_type(getproperty(user_obstructions, Symbol(String(s) * "_" * String(surface))).value, s)
-        symbols = filter(s->~isnothing(get_surface(s)), [:R1, :R2, :off_resonance, :permeability, :density, :dwell_time, :relaxivity])
+        get_surface(s) = fix_array(s, getproperty(user_obstructions, Symbol(String(s) * "_" * String(surface))).value)
         values = [get_surface(s) for s in symbols]
-        updated_symbols = replace(symbols, :density=>:surface_density, :relaxivity=>:surface_relaxivity)
-        surface = NamedTuple{Tuple(updated_symbols)}(Tuple(values))
+        surface = NamedTuple{updated_symbols}(Tuple(values))
     else
-        surface = NamedTuple{()}(())
+        surface = NamedTuple{updated_symbols}(Tuple(zeros(length(symbols))))
     end
 
     rotation = user_obstructions.rotation.value

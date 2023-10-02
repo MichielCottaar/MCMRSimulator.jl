@@ -26,8 +26,8 @@ struct TimeController
     rf_rotation :: Float64
 end
 
-function TimeController(geometry::FixedGeometry, susceptibility::FixedSusceptibility, B0::Number, diffusivity::Number, default_properties::GlobalProperties; max_timestep=nothing, gradient_precision=1., rf_rotation=1.)
-    mt_stick = max_timestep_sticking(geometry, default_properties, diffusivity)
+function TimeController(geometry::FixedGeometry, susceptibility::FixedSusceptibility, B0::Number, diffusivity::Number; max_timestep=nothing, gradient_precision=1., rf_rotation=1.)
+    mt_stick = max_timestep_sticking(geometry, diffusivity)
     if isnothing(max_timestep)
         max_timestep = min(
             size_scale(geometry),

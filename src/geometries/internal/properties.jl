@@ -18,7 +18,7 @@ Others:
 module Properties
 
 import StaticArrays: SVector
-import ....Properties: GlobalProperties, R1, R2, off_resonance, permeability, surface_relaxivity, surface_density, dwell_time, stick_probability
+import ....Properties: GlobalProperties, R1, R2, off_resonance, stick_probability
 import ..FixedObstructionGroups: FixedGeometry, FixedObstructionGroup, isinside
 import ..Intersections: Intersection
 import ..Reflections: Reflection, empty_reflection
@@ -33,76 +33,42 @@ mutable struct MRIProperties
     R1 :: Float64
     R2 :: Float64
     off_resonance :: Float64
+    turtoisity :: Float64
 end
 
 function MRIProperties(full_geometry::FixedGeometry, inside_geometry::FixedGeometry, glob::GlobalProperties, position::SVector{3, Float64}, stuck_to::Reflection)
-    res = MRIProperties(NaN, NaN, NaN)
-
-    finished() = ~(isnan(res.R1) || isnan(res.R2) || isnan(res.off_resonance))
+    res = MRIProperties(glob.R1, glob.R2, glob.off_resonance, 1.)
 
     # first check stuck properties
     if ~iszero(stuck_to.geometry_index)
-        update_stuck_properties!(res, full_geometry[stuck_to.geometry_index], stuck_to.obstruction_index)
-        if finished()
-            return res
-        end
+        group = full_geometry[stuck_to.geometry_index]
+        res.R1 += get_value(Val(:R1), group.surface, stuck_to.obstruction_index)
+        res.R2 += get_value(Val(:R2), group.surface, stuck_to.obstruction_index)
+        res.off_resonance += get_value(Val(:off_resonance), group.surface, stuck_to.obstruction_index)
+        res.turtoisity = 0.
     end
 
     for group in inside_geometry
-        if (
-            (isnan(res.R1) && hasproperty(group.volume, :R1)) ||
-            (isnan(res.R2) && hasproperty(group.volume, :R2)) ||
-            (isnan(res.off_resonance) && hasproperty(group.volume, :off_resonance))
-        )
-            update_inside_properties!(res, group, position, group.parent_index == stuck_to.geometry_index ? stuck_to.obstruction_index : empty_reflection)
-        end
-        if finished()
-            return res
+        props = group.volume
+        indices = isinside(group, position, stuck_to)
+        if length(indices) > 0
+            index = indices[1]
+            res.R1 += get_value(Val(:R1), props, index)
+            res.R2 += get_value(Val(:R2), props, index)
+            res.off_resonance += get_value(Val(:off_resonance), props, index)
+            res.turtoisity *= get_value(Val(:turtoisity), props, index)
+            break
         end
     end
-    update_global_properties!(Val(:R1), res, glob)
-    update_global_properties!(Val(:R2), res, glob)
-    update_global_properties!(Val(:off_resonance), res, glob)
     return res
 end
 
-function update_global_properties!(::Val{S}, to_update::MRIProperties, glob::GlobalProperties) where {S}
-    if isnan(getproperty(to_update, S))
-        setproperty!(to_update, S, getproperty(glob, S))
-    end
-end
-
-function update_stuck_properties!(properties::MRIProperties, group::FixedObstructionGroup, index::Int)
-    properties.R1 = get_surface_value(Val(:R1), group, index)
-    properties.R2 = get_surface_value(Val(:R2), group, index)
-    properties.off_resonance = get_surface_value(Val(:off_resonance), group, index)
-end
-
-function get_surface_value(::Val{S}, group::FixedObstructionGroup, index::Int) where {S}
-    if ~hasproperty(group.surface, S)
-        return NaN
-    end
-    value = getproperty(group.surface, S)
-    if value isa Vector
-        return value[index]
+function get_value(::Val{S}, properties::NamedTuple, index::Int) where {S}
+    res = getproperty(properties, S)
+    if res isa Vector
+        return res[index]
     else
-        return value
-    end
-end
-
-function update_inside_properties!(properties::MRIProperties, group::FixedObstructionGroup, position::SVector{3, Float64}, stuck_to::Reflection)
-    for index in isinside(group, position, stuck_to)
-        update_volume_value!(Val(:R1), properties, group, index)
-        update_volume_value!(Val(:R2), properties, group, index)
-        update_volume_value!(Val(:off_resonance), properties, group, index)
-    end
-end
-
-function update_volume_value!(::Val{S}, properties::MRIProperties, group::FixedObstructionGroup, index::Int) where {S}
-    if hasproperty(group.volume, S) && isnan(getproperty(properties, S))
-        value = getproperty(group.volume, S)
-        use_value = value isa Vector ? value[index] : value
-        setproperty!(properties, S, use_value)
+        return res
     end
 end
 
@@ -118,53 +84,43 @@ end
 for symbol in (:permeability, :surface_relaxivity, :dwell_time, :surface_density)
     @eval begin
         """
-            $($symbol)(properties, )
-            $($symbol)(geometry, properties, reflection)
+            $($symbol)(geometry, reflection)
         
         Returns the $($symbol) experienced by the spin hitting the surface represented by a [`Reflection`](@ref).
         The `geometry` has to be a [`FixedGeometry`](@ref).
         """
-        function $symbol(group::FixedObstructionGroup, properties::GlobalProperties, has_hit=nothing)
-            if hasproperty(group.surface, $(QuoteNode(symbol)))
-                local_value = group.surface.$symbol
-                if isnothing(has_hit)
-                    return local_value
-                end
-                if local_value isa Vector
-                    the_value = local_value[has_hit]
-                    if ~isnothing(the_value)
-                        return the_value::typeof($symbol(properties))
-                    end
-                else
-                    return local_value
-                end
+        function $symbol(group::FixedObstructionGroup, has_hit::Int)
+            value = group.surface.$symbol
+            if value isa Vector
+                return value[has_hit]
+            else
+                return value
             end
-            return $symbol(properties)
         end
 
-        function $symbol(geometry::FixedGeometry, properties::GlobalProperties, has_hit::Tuple{Int, Int})
-            $symbol(geometry[has_hit[1]], properties, has_hit[2])
+        function $symbol(geometry::FixedGeometry, has_hit::Tuple{Int, Int})
+            $symbol(geometry[has_hit[1]], has_hit[2])
         end
 
-        function $symbol(geometry::FixedGeometry, properties::GlobalProperties, has_hit::Union{Intersection, Reflection})
-            $symbol(geometry, properties, (has_hit.geometry_index, has_hit.obstruction_index))
+        function $symbol(geometry::FixedGeometry, has_hit::Union{Intersection, Reflection})
+            $symbol(geometry, (has_hit.geometry_index, has_hit.obstruction_index))
         end
     end
 end
 
 """
-    max_timestep_sticking(geometry, properties, diffusivity)
+    max_timestep_sticking(geometry, diffusivity)
 
 Returns the maximum timestep that can be used while keeping [`stick_probability`](@ref) lower than 1.
 """
-function max_timestep_sticking(geometry::FixedGeometry, properties::GlobalProperties, diffusivity::Number)
-    minimum([max_timestep_sticking(group, properties, diffusivity) for group in geometry])
+function max_timestep_sticking(geometry::FixedGeometry, diffusivity::Number)
+    minimum([max_timestep_sticking(group, diffusivity) for group in geometry])
 end
 
-max_timestep_sticking(geometry::FixedGeometry{0}, properties::GlobalProperties, diffusivity::Number) = Inf
+max_timestep_sticking(geometry::FixedGeometry{0}, diffusivity::Number) = Inf
 
-function max_timestep_sticking(group::FixedObstructionGroup, properties::GlobalProperties, diffusivity::Number)
-    return maximum(stick_probability.(surface_density(group, properties), dwell_time(group, properties), diffusivity, 1))^-2
+function max_timestep_sticking(group::FixedObstructionGroup, diffusivity::Number)
+    return maximum(stick_probability.(group.surface.surface_density, group.surface.dwell_time, diffusivity, 1))^-2
 end
 
 end
