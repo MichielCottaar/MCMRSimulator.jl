@@ -5,7 +5,7 @@ module Geometry
 
 import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, parse_args, ArgParseError, usage_string
 import StaticArrays: StaticVector
-import ...Geometries.User.Obstructions: walls, Walls, spheres, Spheres, cylinders, Cylinders, annuli, Annuli, fields, field_to_docs, Field, ObstructionGroup, FieldValue
+import ...Geometries.User.Obstructions: Walls, Spheres, Cylinders, Annuli, fields, field_to_docs, Field, ObstructionGroup, FieldValue
 import ...Geometries.User.JSON: write_geometry, read_geometry
 import ...Geometries.User.RandomDistribution: random_positions_radii
 
@@ -36,10 +36,10 @@ function get_parser()
     parser["create"].description = "Create a geometry JSON file with obstructions of a specific type. Select a type for more help."
 
     for (as_string, constructor) in [
-        ("walls", walls),
-        ("cylinders", cylinders),
-        ("spheres", spheres),
-        ("annuli", annuli),
+        ("walls", Walls),
+        ("cylinders", Cylinders),
+        ("spheres", Spheres),
+        ("annuli", Annuli),
     ]
         for sub_command in ("create", "create-random")
             if sub_command == "create-random" && as_string == "walls"
@@ -246,10 +246,10 @@ function run_create(args::Dict{<:AbstractString, <:Any})
     flags = args[obstruction_type]
     output_file = pop!(flags, "output_file")
     constructor = Dict(
-        "walls" => walls,
-        "cylinders" => cylinders,
-        "spheres" => spheres,
-        "annuli" => annuli,
+        "walls" => Walls,
+        "cylinders" => Cylinders,
+        "spheres" => Spheres,
+        "annuli" => Annuli,
     )[obstruction_type]
     test_group = constructor(number=0)
     number = pop!(flags, "number")

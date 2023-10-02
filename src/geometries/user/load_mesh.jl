@@ -1,6 +1,6 @@
 module LoadMesh
 import PlyIO
-import ..Obstructions: mesh
+import ..Obstructions: Mesh
 """
     ply_from_mesh(file)
 
@@ -16,7 +16,7 @@ function ply_from_mesh(ply_file)
         ply["vertex"]["z"],
     )
     indices = [v .+ 1 for v in ply["face"]["vertex_indices"]]
-    return mesh(vertices=vertices, triangles=indices)
+    return Mesh(vertices=vertices, triangles=indices)
 end
 
 
