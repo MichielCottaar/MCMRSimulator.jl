@@ -85,6 +85,8 @@ build:
     - echo "$DOCKER_HUB_PASSWORD" | buildah login -u "$DOCKER_HUB_USER" --password-stdin https://registry.hub.docker.com
   script:
     - buildah images
-    - buildah build -t $FQ_IMAGE_NAME
+    - buildah manifest create mcmr
+    - buildah build -t $FQ_IMAGE_NAME --manifest mcmr --arch amd64
+    - buildah build -t $FQ_IMAGE_NAME --manifest mcmr --arch arm64
     - buildah images
-    - buildah push $FQ_IMAGE_NAME
+    - buildah push mcmr docker://registry.hub.docker.com/$FQ_IMAGE_NAME
