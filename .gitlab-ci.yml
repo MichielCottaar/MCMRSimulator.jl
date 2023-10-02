@@ -83,7 +83,7 @@ build:
     FQ_IMAGE_NAME: "michielc/mcmr:latest"
   before_script:
     - echo $DOCKER_HUB_USER
-    - buildah login -u "$DOCKER_HUB_USER" --password "$DOCKER_HUB_PASSWORD" https://registry.hub.docker.com
+    - buildah login -u "$DOCKER_HUB_USER" -p "$DOCKER_HUB_PASSWORD" https://registry.hub.docker.com
   script:
     - buildah images
     - buildah manifest create mcmr
