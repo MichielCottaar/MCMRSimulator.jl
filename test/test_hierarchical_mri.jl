@@ -41,17 +41,17 @@
         @test mr.R2(outside, geometry, defaults) == 1.
     end
     @testset "Test length of inside geometry" begin
-        geometry = mr.annuli(inner=0.5, outer=1., R1_outer_volume=0.2)
+        geometry = mr.Annuli(inner=0.5, outer=1., R1_outer_volume=0.2)
         simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
         @test length(simulation.geometry) == 2
         @test length(simulation.inside_geometry) == 2
 
-        geometry = mr.annuli(inner=0.5, outer=1.)
+        geometry = mr.Annuli(inner=0.5, outer=1.)
         simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
         @test length(simulation.geometry) == 2
         @test length(simulation.inside_geometry) == 0
 
-        geometry = mr.annuli(inner=0.5, outer=1., R1_inner_volume=0.2)
+        geometry = mr.Annuli(inner=0.5, outer=1., R1_inner_volume=0.2)
         simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
         @test length(simulation.geometry) == 2
         @test length(simulation.inside_geometry) == 1
