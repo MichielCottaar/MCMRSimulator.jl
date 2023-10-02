@@ -80,7 +80,7 @@ build:
   variables:
     STORAGE_DRIVER: vfs
     BUILDAH_FORMAT: docker
-    BUILDAH_ISOLATION: rootless
+    BUILDAH_ISOLATION: chroot
     FQ_IMAGE_NAME: "michielc/mcmr:latest"
   script:
     - cat /etc/subgid
