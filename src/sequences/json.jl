@@ -15,6 +15,7 @@ import ..Instants: InstantRFPulse, InstantGradient, Readout
 import ..RadioFrequency: RFPulse
 import ..Gradients: MRGradients
 import ..Shapes: Shape
+import ..PulseQ: read_pulseq
 
 """
     write_sequence([io, ]sequence)
@@ -47,6 +48,9 @@ function read_sequence(filename::AbstractString)
     if startswith(filename, "{")
         obj = JSON_pkg.parse(filename)
         return parse_sequence(obj)
+    end
+    if endswith(filename, ".seq")
+        return read_pulseq(filename)
     end
     open(read_sequence, filename; read=true)
 end
