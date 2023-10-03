@@ -22,6 +22,17 @@ In other words, the normal of the [`Walls`](@ref) point in the x-axis by default
 Shifts and repeats should only be provided in this lower-dimensional space.
 The `rotation` keyword can be used to define these components along other lines/planes (see [`get_rotation`](@ref)).
 
+From the command line all of these keywords are available as flags, which can be seen by running:
+```bash
+mcmr geometry create Walls/Cylinders/Annuli/Spheres --help
+```
+
+In Julia, the easiest way to get the documentation for all keywords is to run:
+```
+?Walls/Cylinders/Annuli/Spheres/Mesh
+```
+
+
 For example, we can create two base cylinders, which repeat infinitely by running:
 ```@example
 using MCMRSimulator
@@ -59,6 +70,8 @@ using Random; Random.seed!(1234) # hide
 (positions, outer_radii) = random_positions_radii((20, 20), 0.7, 2)
 nothing # hide
 ```
+
+From the command line this functionality is available by running `mcmr geometry create-random Cylinders/Annuli/Spheres`.
 
 These can be used to produce randomly distributed cylinders:
 ```@example random_distribution

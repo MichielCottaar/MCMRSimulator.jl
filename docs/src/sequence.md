@@ -4,9 +4,11 @@ Pulseq sequences can be generated using matlab (http://pulseq.github.io/) or pyt
 They can be loaded into MCMRSimulator using [`read_pulseq`](@ref).
 Developing your sequences in pulseq has the advantage that they can be used both in MCMRSimulator and on your MRI scanner.
 ## Built-in MR sequences
-Simple [`gradient_echo`](@ref) and [`spin_echo`](@ref) sequences are available.
+Simple [`gradient_echo`](@ref) and [`spin_echo`](@ref) sequences are available. A pulsed-gradient spin-echo can be created using [`dwi`](@ref).
 
-A pulsed-gradient spin-echo can be created using [`dwi`](@ref)
+From the command line these sequences can be generated using `mcmr sequence gradient-echo/spin-echo/dwi`.
+
+In Julia, one can use:
 ```@example
 using MCMRSimulator # hide
 sequence = dwi(TR=100., bval=3.)
@@ -44,6 +46,8 @@ Each building block can be one of the following:
 - a [`Readout`](@ref)
 - a [`BuildingBlock`](@ref) object, which can be used for when an RF pulse and gradient need to played simultaneously (e.g., for slice-selective pulses)
 Such a (nested) vector can be passed on directly to the [`Sequence`](@ref) constructor.
+
+Such custom sequences cannot be generated using the command line yet.
 
 For example, a simple pulsed-gradient spin echo sequence could be generated in the following way (rather than call [`dwi`](@ref)):
 ```@example
