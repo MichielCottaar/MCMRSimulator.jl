@@ -16,9 +16,9 @@ In the future, we will also provide docker and singularity images to make it pos
 
 ## Running MCMRSimulator
 After this installation process, you can run MCMRSimulator in one of the following ways:
-- *Julia REPL*: Start the REPL in a terminal by typing `$ julia --project=<project_dir>`. Afterwards type `using MCMRSimulator` to import the simulator. You can now follow the steps in the [MCMRSimulator tutorial using Julia](@ref julia_tutorial).
-- *Jupyter notebook*: Make sure that you install `IJulia` using the instructions above. This will allow you to start a notebook in jupyter running in Julia. Within this notebook, you can follow the steps in the [MCMRSimulator tutorial using Julia](@ref julia_tutorial).
-- *Command line interface*: You can now run the command line interface using `julia --project=<project_dir> -e 'import MCMRSimulator.CLI: run_main; run_main()' -- [args]`. This is a lot to type, so I would recommend adding an alias for this to your ".bashrc" file (or equivalent): `alias mcmr="julia --project=<project_dir> -e 'import MCMRSimulator.CLI: run_main; run_main()' -- "`.
+- *Julia REPL*: Start the REPL in a terminal by typing `$ julia --project=<project_dir>`. Afterwards type `using MCMRSimulator` to import the simulator. You can now follow the steps in the [MCMRSimulator tutorial using Julia](@ref tutorial_julia).
+- *Jupyter notebook*: Make sure that you install `IJulia` using the instructions above. This will allow you to start a notebook in jupyter running in Julia. Within this notebook, you can follow the steps in the [MCMRSimulator tutorial using Julia](@ref tutorial_julia).
+- *Command line interface*: You can now run the command line interface using `julia --project=<project_dir> -e 'import MCMRSimulator.CLI: run_main; run_main()' -- [args]`. This is a lot to type, so I would recommend adding an alias for this to your ".bashrc" file (or equivalent): `alias mcmr="julia --project=<project_dir> -e 'import MCMRSimulator.CLI: run_main; run_main()' -- "`. With this alias set up, you can now follow [the command line tutorial](@ref tutorial_cli)
 
 ## Upgrading MCMRSimulator
 1. Start the julia REPL again in a terminal (`$ julia --project=<project_dir>`)

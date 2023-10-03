@@ -27,8 +27,8 @@ We use the following units throughout (unless otherwise noted):
 ## How to get started?
 1. If MCMRSimulator is not yet installed, follow the [installation instructions](@ref installation).
 2. Look through one of the tutorials. There are two available, depending on which interface you prefer to use:
-    - For the command line interface: [CLI tutorial](@ref cli_tutorial)
-    - For the julia interface: [Julia tutorial](@ref julia_tutorial)
+    - For the command line interface: [CLI tutorial](@ref tutorial_cli)
+    - For the julia interface: [Julia tutorial](@ref tutorial_julia)
 3. If you want more information on a specific topic, you can check one of the more dedicated sections:
     - [Geometry](@ref geometry)
     - [MRI & collision properties](@ref properties)
