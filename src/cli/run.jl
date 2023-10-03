@@ -180,7 +180,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
 
     if !isnothing(args["output-snapshot"])
         df_list = []
-        for index in eachindex(:IndexCartesian, result)
+        for index in eachindex(IndexCartesian(), result)
             snapshot = result[index]
             for (ispin, spin) in enumerate(snapshot)
                 orient_as_vec = orientation(spin)
