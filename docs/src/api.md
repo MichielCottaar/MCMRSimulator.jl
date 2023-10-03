@@ -55,6 +55,7 @@ Modules = [
     MCMRSimulator.Sequences.RadioFrequency,
     MCMRSimulator.Sequences.Main,
     MCMRSimulator.Sequences.PulseQ,
+    MCMRSimulator.Sequences.JSON,
     MCMRSimulator.SequenceBuilder,
     MCMRSimulator.SequenceBuilder.BuildingBlocks,
     MCMRSimulator.SequenceBuilder.DefineSequence,
