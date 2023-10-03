@@ -4,7 +4,7 @@ You can run simulations either directly from the Julia REPL, in a [Jupyter noteb
 
 For now, it is only possible to install MCMRSimulator using the built-in Julia package manager. 
 In the future, we will also provide docker and singularity images to make it possible to run the command line interface without installing julia.
-# [Global Julia installation](@ref global_julia)
+# [Global Julia installation](@id global_julia)
 1. First install julia from the [official website](https://julialang.org/downloads/).
 2. Choose a directory, where you will install MCMRSimulator. If you want to install a single version of MCMRSimulator, this might just be any folder in your home directory. If you want to associate the MCMRSimulator with a specific project, you might want to select a directory within that project. We will refer to this chosen directory below as "<project_dir>".
 2. Start the julia REPL in a terminal (`$ julia --project=<project_dir>`).

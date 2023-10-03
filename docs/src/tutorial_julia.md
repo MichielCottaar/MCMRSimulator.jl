@@ -2,7 +2,7 @@
 This tutorial will walk through an example of modelling the MRI signal evolution for a diffusion-weighted sequence.
 The spins in this simulation will be constrained by regularly packed cylinders.
 This tutorial will use the programatic Julia interface, which you can run in the Julia REPL or in a Jupyter notebook.
-If you would prefer to use the command line interface, you can find a tutorial doing the same analysis [here](@ref tutotial_cli).
+If you would prefer to use the command line interface, you can find a tutorial doing the same analysis [here](@ref tutorial_cli).
 
 After [installation](@ref installation) we can load MCMRSimulator.jl using
 ```@example tutorial

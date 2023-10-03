@@ -32,7 +32,7 @@ We use the following units throughout (unless otherwise noted):
 3. If you want more information on a specific topic, you can check one of the more dedicated sections:
     - [Geometry](@ref geometry)
     - [MRI & collision properties](@ref properties)
-    - [Sequences](@ref sequences)
+    - [Sequences](@ref sequence)
     - Full [API](@ref api)
 ## Contributors
 The original simulator was written by Michiel Cottaar.

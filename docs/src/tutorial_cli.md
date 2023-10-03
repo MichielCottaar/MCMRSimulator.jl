@@ -2,7 +2,7 @@
 This tutorial will walk through an example of modelling the MRI signal evolution for a diffusion-weighted sequence.
 The spins in this simulation will be constrained by regularly packed cylinders.
 This tutorial will use the command line interface, which we assume is available through the `mcmr` command (see [installation instructions](@ref installation)).
-If you would prefer to interact with MCMRSimulator in Julia, you can find a tutorial doing the same analysis [here](@ref tutotial_julia).
+If you would prefer to interact with MCMRSimulator in Julia, you can find a tutorial doing the same analysis [here](@ref tutorial_julia).
 
 In general, running a simulation will consist of the following three steps:
 - Creating a geometry using one or more calls to `mcmr geometry` ([full description](@ref geometry))
