@@ -75,12 +75,12 @@ The procedure to create [`Walls`](@ref), [`Spheres`](@ref), or [`Annuli`](@ref) 
 Randomly distributed cylinders, annuli, and spheres can be created using `mcmr geometry create-random`.
 
 ## Defining the sequence
-For now, the command line interface only supports
 The next step is to define a sequence (see [here](@ref sequence) for more details). 
 There are several built-in sequences available, which you can see listed by running:
 ```bash
 mcmr sequence
 ```
+Alternatively, you can skip this step and use a sequence defined using [pulseq](https://pulseq.github.io) instead.
 
 Here, we will create a diffusion-weighted sequence:
 ```bash
