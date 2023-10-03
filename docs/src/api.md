@@ -26,6 +26,8 @@ Modules = [
     MCMRSimulator.Geometries.User.FixSusceptibility,
     MCMRSimulator.Geometries.User.LoadMesh,
     MCMRSimulator.Geometries.User.RandomDistribution,
+    MCMRSimulator.Geometries.User.SplitMesh,
+    MCMRSimulator.Geometries.User.JSON,
     MCMRSimulator.Geometries.Internal,
     MCMRSimulator.Geometries.Internal.RayGridIntersection,
     MCMRSimulator.Geometries.Internal.BoundingBoxes,
@@ -46,6 +48,8 @@ Modules = [
     MCMRSimulator.Geometries.Internal.Susceptibility.Parent,
     MCMRSimulator.Geometries.Internal.Susceptibility.Cylinder,
     MCMRSimulator.Geometries.Internal.Susceptibility.Annulus,
+    MCMRSimulator.Geometries.Internal.Susceptibility.Triangle,
+    MCMRSimulator.Geometries.Internal.IsInsideMesh,
     MCMRSimulator.Spins,
     MCMRSimulator.Sequences,
     MCMRSimulator.Sequences.Methods,
@@ -76,5 +80,9 @@ Modules = [
     MCMRSimulator.Plot.Snapshots,
     MCMRSimulator.Plot.Trajectory,
     MCMRSimulator.Plot.Movie,
+    MCMRSimulator.CLI,
+    MCMRSimulator.CLI.Geometry,
+    MCMRSimulator.CLI.Sequence,
+    MCMRSimulator.CLI.Run,
 ]
 ```
