@@ -2,6 +2,7 @@
 ## Pulseseq sequences
 Pulseq sequences can be generated using matlab (http://pulseq.github.io/) or python (https://pypulseq.readthedocs.io/en/master/).
 They can be loaded into MCMRSimulator using [`read_pulseq`](@ref).
+On the command line they can be provided directly to any call of `mcmr run`, without calling `mcmr sequence` first.
 Developing your sequences in pulseq has the advantage that they can be used both in MCMRSimulator and on your MRI scanner.
 ## Built-in MR sequences
 Simple [`gradient_echo`](@ref) and [`spin_echo`](@ref) sequences are available. A pulsed-gradient spin-echo can be created using [`dwi`](@ref).
