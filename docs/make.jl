@@ -3,10 +3,9 @@ using Documenter
 using DocumenterCitations
 
 DocMeta.setdocmeta!(MCMRSimulator, :DocTestSetup, :(using MCMRSimulator); recursive=true)
-bib = CitationBibliography(joinpath(@__DIR__, "references.bib"), sorting=:nyt)
+bib = CitationBibliography(joinpath(@__DIR__, "references.bib"), style=:authoryear)
 
-makedocs(
-    bib;
+makedocs(;
     modules=[MCMRSimulator],
     authors="Michiel Cottaar <Michiel.cottaar@ndcn.ox.ac.uk>",
     repo="https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/blob/{commit}{path}#{line}",
@@ -26,7 +25,8 @@ makedocs(
         "API" => "api.md",
         "References" => "references.md",
     ],
-    strict=[:example_block],
+    warnonly=Documenter.except(:example_block),
+    plugins=[bib],
 )
 
 deploydocs(repo="git.fmrib.ox.ac.uk:ndcn0236/mcmrsimulator.jl.git", branch="pages", devbranch="main")
