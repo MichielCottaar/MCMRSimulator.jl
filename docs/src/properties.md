@@ -15,6 +15,9 @@ These MRI properties can be locally altered when defining the [geometry](@ref ge
 
 If not set at the global or local level, there will be no longitudinal or transverse relaxation and there will be no off-resonance field.
 
+From the command line interface, the global parameters are set during the `mcmr run` command using `--diffusivity`, `--R1`, and `--R2` keywords.
+Local parameters will already have been set at an earlier stage during the creation of the geometry using `mcmr geometry create/create-random`.
+
 ## Collision properties
 Collision properties determine the behaviour of spins at the time of a collision. Like MRI properties they can be set at the global level ([`GlobalProperties`](@ref)) or overwritten at the local level ([geometry](@ref geometry)). There are four such properties:
 - [`surface_relaxivity`](@ref): the fraction of transverse signal lost (and longitudinal signal regained) at every collision. This fraction is adjusted to take into account the timestep (see [`correct_for_timestep`](@ref)). Note that this is not the recommended way to model magnetisation transfer. Instead, we recommend using the `surface_density` as discussed below.
