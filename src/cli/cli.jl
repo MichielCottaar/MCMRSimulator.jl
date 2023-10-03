@@ -27,7 +27,7 @@ function run_main(args=ARGS)
             println("Invalid mcmr command $(args[1]) given.\n")
         end
     end
-    println("usage: mcmr {run/geometry}")
+    println("usage: mcmr {run/geometry/sequence}")
     return Cint(1)
 end
 end
