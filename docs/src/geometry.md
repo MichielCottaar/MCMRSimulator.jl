@@ -24,7 +24,7 @@ The `rotation` keyword can be used to define these components along other lines/
 
 From the command line all of these keywords are available as flags, which can be seen by running:
 ```bash
-mcmr geometry create Walls/Cylinders/Annuli/Spheres --help
+mcmr geometry create walls/cylinders/annuli/spheres --help
 ```
 
 In Julia, the easiest way to get the documentation for all keywords is to run:
@@ -72,7 +72,7 @@ using Random; Random.seed!(1234) # hide
 nothing # hide
 ```
 
-From the command line this functionality is available by running `mcmr geometry create-random Cylinders/Annuli/Spheres`.
+From the command line this functionality is available by running `mcmr geometry create-random cylinders/annuli/spheres`.
 
 These can be used to produce randomly distributed cylinders:
 ```@example random_distribution
