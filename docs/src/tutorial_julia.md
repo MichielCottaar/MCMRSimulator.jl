@@ -30,7 +30,7 @@ First we will define a geometry formed of regularly packed axons.
 This is represented by a single cylinder with a radius of 1 micrometer that repeats itself every 2.5 micrometer (in both the x-, and y-direction).
 ```@example tutorial
 import Random; Random.seed!(1) # hide
-geometry = cylinders(radius=1., repeats=[2.5, 2.5])
+geometry = Cylinders(radius=1., repeats=[2.5, 2.5])
 
 f = plot(PlotPlane(size=5), geometry)
 f
@@ -107,9 +107,8 @@ Instead of just running the simulation for multiple TRs without readouts,
 we could also visualise the equilibriation process by outputting the signal for multiple TRs:
 ```@example tutorial
 signals = readout(1000, simulation, nTR=6)
-f = figure()
-plot!(f, longitudinal.(signals))
-plot!(f, transverse.(signals))
+f = lines(longitudinal.(signals))
+lines!(transverse.(signals))
 f
 save("tutorial_equil.png") # hide
 nothing # hide
@@ -119,15 +118,15 @@ At each timepoint [`readout`](@ref) by default will return the total MR signal (
 From this one can estimate the [`transverse`](@ref) component, the [`longitudinal`](@ref) component, and the [`phase`](@ref).
 The [`longitudinal`](@ref) and [`transverse`](@ref) functions are used above to get those respective components.
 
-We can also override, when the signal will be read out. 
+We can also override, when the signal will be read out, by passing on the readout times as a third argument to [`readout`](@ref).
 Here we use this to plot the actual transverse signal evolution.
 ```@example tutorial
 times = 0:0.1:100
 # simulate 3000 spins for a single repetition time
-average_signals = signal(3000, simulation, times=times, skip_TR=5)
+average_signals = readout(3000, simulation, times, skip_TR=5)
 f = plot(sequence)
 lines!(times, transverse.(average_signals)/3000.)
-xlims!(f, 0, 100)
+xlims!(0, 100)
 f
 save("tutorial_transverse.png", f) # hide
 nothing # hide
@@ -141,11 +140,10 @@ Instead of returning just the total signal [`readout`](@ref) can also return the
 Note that this is very memory intensive, so is only recommended when you only output a small number of timepoints or a small number of spins.
 
 Here, we use this to visualise the trajectory of spins through the geometry.
-To plot the trajectory we first need to output the state of the all spins at a high temporal resolution,
-which can be done by setting the `times` keyword in [`readout`](@ref):
+To plot the trajectory we first need to output the state of the all spins at a high temporal resolution:
 ```@example tutorial
 # Simulate 2 spins with given starting positions for 3 ms
-snapshots = readout([[0, 0, 0], [1, 1, 0]], simulation, times=0:0.01:3., return_snapshot=true)
+snapshots = readout([[0, 0, 0], [1, 1, 0]], simulation, 0:0.01:3., return_snapshot=true)
 
 pp = PlotPlane(size=5.)
 f = plot(pp, geometry)
@@ -170,7 +168,7 @@ nothing # hide
 We can also use this future to plot the complete [`Snapshot`](@ref) at a specific time. 
 In this example we do not set this time explicitly, so it will default to the time of the sequence [`Readout`](@ref) as discussed above:
 ```@example tutorial
-snapshot = evolve(3000, simulation, return_snapshot=true)
+snapshot = readout(3000, simulation, return_snapshot=true)
 pp = PlotPlane(size=2.5)
 f = plot(pp, snapshot)
 plot!(pp, geometry)
