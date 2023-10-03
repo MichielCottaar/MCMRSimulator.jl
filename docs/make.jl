@@ -19,6 +19,7 @@ makedocs(
     pages=[
         "Home" => "index.md",
         "Tutorial (Julia)" => "tutorial_julia.md",
+        "Tutorial (CLI)" => "tutorial_cli.md",
         "Geometry" => "geometry.md",
         "Sequence" => "sequence.md",
         "MRI/collision properties" => "properties.md",
