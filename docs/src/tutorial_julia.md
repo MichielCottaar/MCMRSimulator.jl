@@ -3,6 +3,7 @@ This tutorial will walk through an example of modelling the MRI signal evolution
 The spins in this simulation will be constrained by regularly packed cylinders.
 This tutorial will use the programatic Julia interface, which you can run in the Julia REPL or in a Jupyter notebook.
 If you would prefer to use the command line interface, you can find a tutorial doing the same analysis [here](@ref tutotial_cli).
+
 After [installation](@ref installation) we can load MCMRSimulator.jl using
 ```@example tutorial
 using MCMRSimulator
@@ -43,7 +44,7 @@ More complicated geometries can be generated as described [here](@ref geometry).
 The next step is to define a sequence (see [here](@ref sequence) for more details). 
 Here we will adopt a single diffusion-weighted MRI sequence.
 ```@example tutorial
-sequence = dwi(bval=2., TR=300, TE=80, scanner=Siemens_Prisma)  # default gradient orientation in the x-direction
+sequence = dwi(bval=2., TR=1000, TE=80, scanner=Siemens_Prisma)  # default gradient orientation in the x-direction
 f = plot(sequence)
 f
 save("tutorial_sequence.png", f); # hide
@@ -57,7 +58,8 @@ simulation = Simulation(sequence, R2=0.012, R1=3e-3, diffusivity=2., off_resonan
 nothing # hide
 ```
 By default there is no T1 or T2 relaxation and spins do not move.
-Enabling spin relaxation and diffusion requires setting the appropriate parameters in the [`Simulation`](@ref).
+Enabling spin relaxation and diffusion requires setting the appropriate parameters in the [`Simulation`](@ref) as seen here.
+The spin relaxation rates can be different in different compartments as described [here](@ref properties).
 
 ## Initialising the simulation
 The current state of the simulation at any time is given by a [`Snapshot`](@ref) object.
@@ -82,20 +84,68 @@ Finally, one could start a simulation using a [`Snapshot`](@ref) from a previous
 !!! note "Deterministic spins"
     Each [`Spin`](@ref) is assigned a random number state at creation, which will be used for its future evolution. This means that after creation of a spin or a [`Snapshot`](@ref) its future is fully determined. This ensures that when a spin is evolved through the same simulation multiple times, it sill follow the same path each time. This allows improved comparisons between simulations with the same geometry, but different sequences/physics. However, it can lead to confusing results (e.g., a simulation initialised with `fill(Spin(), 500)` will contain 500 spins all following the exact same path).
 ## Running the simulation
-Running the simulation is done through 4 functions, for which examples are shown below:
-- [`trajectory`](@ref): follow the full state evolution for a small number of spins
-- [`evolve`](@ref): evolve a large number of spins for a specific time
-- [`readout`](@ref): return the spin states at the time of the sequence readouts
-- [`signal`](@ref): return the average signal at high temporal resolution
-For each of these functions a [`Snapshot`](@ref) object can be passed on or a number. 
-In case of a number an initial [`Snapshot`](@ref) is created on the fly with the appropriate number of spins.
-### Illustrating trajectories
-We will start by illustrating the 2D trajectory for two spins, one inside and one outside of the cylinder.
+The main way to run a simulation is by calling [`readout`](@ref).
+This function takes a [`Snapshot`](@ref) and a [`Simulation`](@ref) as input (or a number of spins, which will be used to generate a new [`Snapshot`](@ref) on the fly).
+There are various ways to define when the output will be read out (as described in the [`readout`](@ref) documentation).
+
+Here, we will illustrate various examples of using this function:
+## Simple signal readouts
+Most sequences will contain one or more [`Readout`](@ref) objects, which define when the sequence will be read out during each repetition time (TR).
+To get the signal at this time, we can simply call:
+```@example tutorial
+readout(1000, simulation)
+```
+
+This signal is not truely representative from what we expect in a true diffusion-weighted MRI sequence,
+because the longitudinal signal has not had a chance to relax across multiple repetition times.
+To see what the signal will look like after such equilibriation, we can delay our readout with several TRs:
+```@example tutorial
+readout(1000, simulation, skip_TR=5)
+```
+
+Instead of just running the simulation for multiple TRs without readouts, 
+we could also visualise the equilibriation process by outputting the signal for multiple TRs:
+```@example tutorial
+signals = readout(1000, simulation, nTR=6)
+f = figure()
+plot!(f, longitudinal.(signals))
+plot!(f, transverse.(signals))
+f
+save("tutorial_equil.png") # hide
+nothing # hide
+```
+
+At each timepoint [`readout`](@ref) by default will return the total MR signal (for each sequence) as a [`SpinOrientation`](@ref) object.
+From this one can estimate the [`transverse`](@ref) component, the [`longitudinal`](@ref) component, and the [`phase`](@ref).
+The [`longitudinal`](@ref) and [`transverse`](@ref) functions are used above to get those respective components.
+
+We can also override, when the signal will be read out. 
+Here we use this to plot the actual transverse signal evolution.
+```@example tutorial
+times = 0:0.1:100
+# simulate 3000 spins for a single repetition time
+average_signals = signal(3000, simulation, times=times, skip_TR=5)
+f = plot(sequence)
+lines!(times, transverse.(average_signals)/3000.)
+xlims!(f, 0, 100)
+f
+save("tutorial_transverse.png", f) # hide
+nothing # hide
+```
+![](tutorial_transverse.png)
+
+Note that by plotting the [`Sequence`](@ref) as well, we make the signal evolution a lot easier to interpret.
+
+## Reading out the full snapshot
+Instead of returning just the total signal [`readout`](@ref) can also return the full spin state in a [`Snapshot`](@ref) object by setting the `return_snapshot` keyword to `true`.
+Note that this is very memory intensive, so is only recommended when you only output a small number of timepoints or a small number of spins.
+
+Here, we use this to visualise the trajectory of spins through the geometry.
 To plot the trajectory we first need to output the state of the all spins at a high temporal resolution,
-which can be done using [`trajectory`](@ref):
+which can be done by setting the `times` keyword in [`readout`](@ref):
 ```@example tutorial
 # Simulate 2 spins with given starting positions for 3 ms
-snapshots = trajectory([[0, 0, 0], [1, 1, 0]], simulation, 0:0.01:3.)
+snapshots = readout([[0, 0, 0], [1, 1, 0]], simulation, times=0:0.01:3., return_snapshot=true)
 
 pp = PlotPlane(size=5.)
 f = plot(pp, geometry)
@@ -117,29 +167,10 @@ nothing # hide
 ```
 ![](tutorial_trajectory3D.png)
 
-When simulating a large number of spins, storing the spin state every timestep would become very memory-intensive.
-To get around this we will typically either store the average signal at a high temporal resolution
-or the full state at a low resolution. Let's have a look of examples for both.
-### Signal evolution
-To store the total signal evolution we can use [`signal`](@ref).
-At each timepoint this will return the total MR signal (for each sequence) as a [`SpinOrientation`](@ref) object.
-From this one can estimate the [`transverse`](@ref) component, the [`longitudinal`](@ref) component, and the [`phase`](@ref).
-Here we plot the transverse component of the signal evolution as an example
+We can also use this future to plot the complete [`Snapshot`](@ref) at a specific time. 
+In this example we do not set this time explicitly, so it will default to the time of the sequence [`Readout`](@ref) as discussed above:
 ```@example tutorial
-times = 0:0.1:sequence.TR
-average_signals = signal(3000, simulation, times)  # simulate 3000 spins for a single repetition time
-f = plot(sequence)
-lines!(times, transverse.(average_signals)/3000.)
-f
-save("tutorial_transverse.png", f) # hide
-nothing # hide
-```
-![](tutorial_transverse.png)
-
-### Readout at specific times
-We can return a [`Snapshot`](@ref) at any time simply by running:
-```@example tutorial
-snapshot = evolve(3000, simulation, 80.)
+snapshot = evolve(3000, simulation, return_snapshot=true)
 pp = PlotPlane(size=2.5)
 f = plot(pp, snapshot)
 plot!(pp, geometry)
@@ -152,26 +183,12 @@ The color encoding is the same as for the trajectory plot above.
 The brightness encodes the size of the transverse component, while
 the color encodes the phase of the MR signal in the transverse plane.
 We can see that outside of the cylinder the signal contribution is significantly reduced.
-The black arrows show the transverse spin for some random spins.
+The black arrows show the transverse spin for some random subset of spins.
 
-The snapshot returned by [`evolve`](@ref) can be used as a starting point for further simulations.
-We can use this to plot the longitudinal signal at the first and third TR using:
-```@example tutorial
-first_TR_start = Snapshot(1000)
-fifth_TR_start = evolve(first_TR_start, simulation, sequence.TR * 2)
+Note that object returned when `return_snapshot=true` is the same [`Snapshot`](@ref) object as was used to initialise this simulation.
+This means that it can be used as an initialisation for future simulations.
 
-f = plot(sequence)
-
-times = 0:0.1:100.
-for start in (first_TR_start, fifth_TR_start)
-    simulated_signals = signal(start, simulation, times .+ start.time)
-    lines!(times, longitudinal.(simulated_signals)/3000., cycle=[:color])
-end
-f
-save("tutorial_longitudinal.png", f) # hide
-nothing # hide
-```
-![](tutorial_longitudinal.png)
-
-Sequences will usually contain one or more [`Readout`](@ref) objects to mark the readout times.
-To get the [`Snapshot`](@ref) at these readouts during one repetition time, you can use [`readout`](@ref).
+One complication with this occurs when running a [`Simulation`](@ref) with multiple sequences.
+Often, these different sequences will readout at different times (because of different [`Readout`](@ref) objects and/or different TRs).
+So, each [`Snapshot`](@ref) object returned by [`readout`](@ref) will only contain the spin magnetisation of the sequence that is readout at that particular time.
+To get a [`Snapshot`](@ref) object with the spin states for all sequences, you can use the [`evolve`](@ref) function instead.
