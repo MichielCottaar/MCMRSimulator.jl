@@ -4,14 +4,14 @@ How the spins behave is determined by the tissue [geometry](@ref geometry), the 
 For example, one such flag is the `diffusivity`, which can be set as a keyword argument while generating the [`Simulation`](@ref).
 ## MRI properties
 MRI properties determine the spin evolution for free and stuck particles. They include:
-- the longitudinal relaxation time `T1` or rate `R1`
-- the transverse relaxation time `T2` or rate `R2`
+- the longitudinal relaxation rate `R1`
+- the transverse relaxation rate `R2`
 - the global `off_resonance` field (i.e., any off-resonance not caused by the sequence or the geometry)
 At the [`Simulation`](@ref) level these parameters can be set by supplying the `R1`, `R2`, or `off_resonance` flags (see [`GlobalProperties`](@ref)), such as:
 ```julia
 simulation = Simulation(sequences, R2=1/80)
 ```
-These MRI properties can be locally overwritten when defining the [geometry](@ref geometry). In the geometry they can be seperately set for spins stuck to the geometry surface or those spins that are inside specific objects in the geometry.
+These MRI properties can be locally altered when defining the [geometry](@ref geometry). In the geometry they can be seperately set for spins stuck to the geometry surface or those spins that are inside specific objects in the geometry. The total relaxation rate (and off-resonance field) is set by the sum of the global value, the value set for any surface the spin is stuck to, and the value set for any obstruction that the spin is inside of. A single spin might be inside of multiple obstructions at once, if they overlap. In that case, only the first one will be considered (in the order that the obstructions are supplied by the user). For the off-resonance field there might also be a contribution of the magnetic suscpetibility of any [`Cylinders`](@ref), [`Annuli`](@ref), or [`Mesh`](@ref).
 
 If not set at the global or local level, there will be no longitudinal or transverse relaxation and there will be no off-resonance field.
 
