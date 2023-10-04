@@ -34,7 +34,7 @@ import .Methods: get_time, get_rotation
 export get_time, get_rotation
 
 import .Sequences: Sequence, InstantRFPulse, Readout, InstantGradient, RFPulse, MRGradients, gradient, rotate_bvec, flip_angle, read_sequence, write_sequence
-export Sequence, InstantRFPulse, Readout, InstantGradient, RFPulse, MRGradients, gradient, rotate_bvec, flip_angle
+export Sequence, InstantRFPulse, Readout, InstantGradient, RFPulse, MRGradients, gradient, rotate_bvec, flip_angle, read_sequence, write_sequence
 
 import .Scanners: Scanner, B0, max_gradient, max_slew_rate, Siemens_Connectom, Siemens_Prisma, Siemens_Terra
 export Scanner, B0, max_gradient, max_slew_rate, Siemens_Connectom, Siemens_Prisma, Siemens_Terra
@@ -64,10 +64,10 @@ import .Geometries:
     random_positions_radii, write_geometry, read_geometry
 export Annuli, Cylinders, Walls, Spheres, Mesh, load_mesh, fix, random_positions_radii, split_mesh
 
-import .Geometries.Internal: BoundingBox, FixedGeometry
+import .Geometries.Internal: BoundingBox, FixedGeometry, surface_relaxivity, surface_density, dwell_time, permeability
 export BoundingBox
 
-import .Properties: GlobalProperties, R1, R2, off_resonance
+import .Properties: GlobalProperties, R1, R2, off_resonance, correct_for_timestep
 export GlobalProperties, R1, R2, off_resonance
 
 import .Sequences: previous_pulse, current_pulse, next_pulse, previous_gradient, current_gradient, next_gradient, previous_instant, current_instant, next_instant
