@@ -11,7 +11,7 @@ module Subsets
 import Base: @kwdef
 import ..Spins: Snapshot, Spin, stuck_to
 import ..Simulations: Simulation
-import ..Geometries.Internal: FixedGeometry, FixedMesh
+import ..Geometries.Internal: FixedGeometry, FixedMesh, isinside
 
 _arguments = """
 - `bound`: set to true to return only bound spins, to false to return only free spins (default: whether spins are bound is not relevant).
@@ -73,23 +73,23 @@ function get_subset(snapshot::Snapshot{N}, geometry::FixedGeometry, subset::Subs
     include = ones(Bool, length(snapshot))
     fixed_geometry_indices = [g.parent_index for g in geometry]
     if ~isnothing(subset.bound)
-        function isbound(spin::Spin)
+        function _isbound(spin::Spin)
             (g_index, o_index) = stuck_to(spin)
             return g_index in fixed_geometry_indices && (isnothing(subset.obstruction_index) || o_index == subset.obstruction_index)
         end
-        include &= (isbound.(snapshot) .== subset.bound)
+        include .&= (_isbound.(snapshot) .== subset.bound)
     end
     if ~isnothing(subset.inside)
-        function isinside(spin::Spin)
+        function _isinside(spin::Spin)
             for g in geometry
                 o_indices = isinside(g, spin.position, spin.reflection)
-                if isnothing(subset.obstruction_index) || subset.obstruction_index in o_indices
+                if length(o_indices) > 0 && (isnothing(subset.obstruction_index) || subset.obstruction_index in o_indices)
                     return true
                 end
             end
             return false
         end
-        include &= (isinside.(snapshot) .== subset.inside)
+        include .&= (_isinside.(snapshot) .== subset.inside)
     end
     return snapshot[include]
 end
