@@ -19,6 +19,7 @@ all_tests = [
     "hierarchical_mri",
     "sequence_IO",
     "various",
+    "subsets",
 ]
 
 if length(ARGS) == 0
