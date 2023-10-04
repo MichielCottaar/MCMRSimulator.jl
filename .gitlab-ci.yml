@@ -87,5 +87,5 @@ build_docker:
     - docker info
     - mkdir -p $HOME/.docker
     - echo $DOCKER_AUTH_CONFIG_MC > $HOME/.docker/config.json
-    - docker build -t "${IMAGE}/${TAG}" .
+    - docker build -t "${IMAGE}:${TAG}" .
     - docker push "${IMAGE}:${TAG}"
