@@ -126,6 +126,24 @@ The columns in this file store the following information:
 - "Sx": signal strength in the x-direction
 - "Sy": signal strength in the y-direction
 
+We can also output the signal of specific subsets of spins. For example, in the following we request to separately the output for just the spins inside the cylinders and just the spins outside of the cylinders.
+```bash
+mcmr run geometry.json dwi.json -o signal.csv --subset inside --subset outside
+```
+
+We can see two additional rows in the output. 
+These new rows are the in same order as the `--subset` flags provided to `mcmr run` and can be distinguished based on the "subset" column.
+```csv
+sequence,TR,readout,subset,nspins,longitudinal,transverse,phase,Sx,Sy
+1,1,1,0,10000,-1.1159961843532074e-12,5766.699443791598,-0.35729630492630804,5766.587317438051,-35.96088693214867
+1,1,1,1,5061,-5.6710192097853e-13,5059.681276894357,-0.012819017299705138,5059.681150258304,-1.1320230186175206
+1,1,1,2,4939,-5.488942633746774e-13,707.7636462536609,-2.820649519317783,706.9061671797538,-34.82886391353121
+```
+We can see in the second row that inside the cylinders the transverse signal is very close to the number of spins (5059.68 out of 5061), 
+indicating that there has been very little dephasing due to the diffusion weighting inside the cylinders.
+On the other hand, we did lose most of the signal outside of the cylinders (707.76 out of 4939).
+All the spins are either inside or outside the cylinders, so in this case the first row is simply the sum of the next two.
+
 A more complete state of all the spins can be produced using the `--output-snapshot` flag.
 For example, the command
 ```bash

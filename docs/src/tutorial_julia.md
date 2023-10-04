@@ -71,7 +71,7 @@ The recommended way to initialise is to call [`Snapshot`](@ref)`(<number of spin
 This will create randomly distributed spins within some [`BoundingBox`](@ref).
 By default this bounding box is an isotropic voxel with a size of 1 mm centered on the origin.
 
-After initialisation or after running the simulation, the [`Snapshot`](@ref) can be later filtered to, for example, only include intra-cellular or extracellular spins (see [`isinside`](@ref)) or only free or stuck spins (see [`stuck`](@ref)).
+After initialisation or after running the simulation, the [`Snapshot`](@ref) can be later filtered to include only spins inside/outside specific compartments or only include free/bound spins using [`get_subset`].
 
 The simulation can also be initialised explicitly using a sequence of positions (i.e., length-3 vectors) with the initial spin positions. 
 Note that such a simulation will start with all spins free and not necessarily randomly distributed, which means it might take some time to reach an equilibrium.
@@ -102,6 +102,17 @@ To see what the signal will look like after such equilibriation, we can delay ou
 ```@example tutorial
 readout(1000, simulation, skip_TR=5)
 ```
+
+In addition, to the total signal, we can also get the signal associated with individual compartments:
+```@example tutorial
+readout(1000, simulation, subsets=[Subset(inside=true), Subset(inside=false)])
+```
+Note that we now get two signal outputs.
+The first respresents teh signal within the cylinders, which is very close to number of spins, 
+indicating that there has been very little dephasing due to the diffusion weighting inside the cylinders.
+On the other hand, we did lose most of the signal outside of the cylinders.
+All the spins are either inside or outside the cylinders, so in this case the first row is simply the sum of the next two.
+
 
 Instead of just running the simulation for multiple TRs without readouts, 
 we could also visualise the equilibriation process by outputting the signal for multiple TRs:
