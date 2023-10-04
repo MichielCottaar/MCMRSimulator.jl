@@ -163,7 +163,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
         df_list = []
         for index in eachindex(IndexCartesian(), result)
             if as_snapshot
-                value = SpinOrientation(result[index])
+                value = SpinOrientationSum(result[index])
             else
                 value = result[index]
             end
@@ -173,7 +173,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 TR=index[3],
                 readout=index[2],
                 subset=index[4] - 1,
-                nspins=length(init_snapshot),
+                nspins=length(value),
                 longitudinal=longitudinal(value),
                 transverse=transverse(value),
                 phase=phase(value),

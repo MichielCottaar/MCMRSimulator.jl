@@ -395,10 +395,29 @@ get_time(s :: Snapshot) = s.time
 function orientation(s :: Snapshot)
     sum(orientation, s.spins, init=zero(SVector{3, Float64}))
 end
-SpinOrientation(s :: Snapshot) = SpinOrientation(orientation(s))
+
+"""
+    SpinOrientationSum(snapshot)
+
+Computes the total signal and the number of spins in a [`Snapshot`](@ref).
+The number of spins can be found by running `length(spin_orientation_sum)`.
+The spin orientation information can be found in the same way as for [`SpinOrientation`](@ref),
+namely by calling [`transverse`](@ref), [`longitudinal`](@ref), or [`phase`](@ref).
+"""
+struct SpinOrientationSum
+    orient :: SpinOrientation
+    nspins :: Int
+end
+SpinOrientationSum(s :: Snapshot) = SpinOrientationSum(SpinOrientation(orientation(s)), length(s))
+
+Base.length(s::SpinOrientationSum) = s.nspins
+
+for param in (:orientation, :longitudinal, :transverse, :phase)
+    @eval $param(s :: SpinOrientationSum) = $param(s.orient)
+end
 
 for param in (:longitudinal, :transverse, :phase)
-    @eval $param(s :: Snapshot) = $param(SpinOrientation(s))
+    @eval $param(s :: Snapshot) = $param(SpinOrientationSum(s))
 end
 
 # Abstract Vector interface (following https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-array)

@@ -9,7 +9,7 @@ module Evolve
 import StaticArrays: SVector, MVector
 import LinearAlgebra: norm, ⋅
 import ..Methods: get_time
-import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientation, get_sequence
+import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence
 import ..Sequences: SequencePart, next_instant, InstantComponent, apply!
 import ..Geometries.Internal: 
     FixedGeometry, empty_reflection, detect_intersection, Intersection,
@@ -39,7 +39,7 @@ Returns the total signal or a full [`Snapshot`](@ref) at every readout time in t
     Even if set to zero (the default), the simulator will still skip the current TR before starting the readout 
     if the starting snapshot is from a time past one of the sequence readouts.
 - `nTR`: number of TRs for which to store the output
-- `return_snapshot`: set to true to output the state of all the spins as a [`Snapshot`](@ref) at each readout instead of a [`SpinOrientation`](@ref) with the total signal.
+- `return_snapshot`: set to true to output the state of all the spins as a [`Snapshot`](@ref) at each readout instead of a [`SpinOrientationSum`](@ref) with the total signal.
 - `subset`: Return the signal/snapshot for a subset of all spins. Can be set to a single or a vector of [`Subset`](@ref) objects. If set to a vector, this will add an attional dimension to the output.
 
 # Returns
@@ -48,7 +48,7 @@ The function returns an up to 3-dimensional (KxLxMxN) array, with the following 
 - `L`: the number of readout times with a single TR. This dimension is skipped if the `readout_times` is set to a scalar number. This dimension might contain `nothing`s for sequences that contain fewer [`Readout`](@ref) objects than the maximum (`M`).
 - `M`: the number of TRs (controlled by the `nTR` keyword). If `nTR` is not explicitly set by the user, this dimension is skipped.
 - `N`: the number of subsets (controlled by the `subset` keyword). If `subset` is set to a single value (<all> by default), this dimension is skipped.
-By default each element of this matrix is either a [`SpinOrientation`](@ref) with the total signal.
+By default each element of this matrix is either a [`SpinOrientationSum`](@ref) with the total signal.
 If `return_snapshot=true` is set, each element is the full [`Snapshot`](@ref) instead.
 """
 function readout(spins, simulation::Simulation{N}, readout_times=nothing; bounding_box=500, skip_TR=0, nTR=nothing, return_snapshot=false, noflatten=false, subset=Subset()) where {N}
@@ -98,7 +98,7 @@ function readout(spins, simulation::Simulation{N}, readout_times=nothing; boundi
         end
     end
 
-    return_type = return_snapshot ? Snapshot{1} : SpinOrientation
+    return_type = return_snapshot ? Snapshot{1} : SpinOrientationSum
     result = convert(Array{Union{Nothing, return_type}}, fill(nothing, (size(store_times)..., length(subsets_vector))))
 
     for time in sort!([actual_readout_times...])
@@ -110,7 +110,7 @@ function readout(spins, simulation::Simulation{N}, readout_times=nothing; boundi
             single_snapshot = get_sequence(snapshot, index[1])
             for (index_selected, select) in enumerate(subsets_vector)
                 selected = get_subset(single_snapshot, simulation, select)
-                value = return_snapshot ? selected : SpinOrientation(selected)
+                value = return_snapshot ? selected : SpinOrientationSum(selected)
                 result[index, index_selected] = value
             end
         end
