@@ -70,6 +70,7 @@ Modules = [
     MCMRSimulator.Timestep,
     MCMRSimulator.Relax,
     MCMRSimulator.Simulations,
+    MCMRSimulator.Subsets,
     MCMRSimulator.Evolve,
     MCMRSimulator.Plot,
     MCMRSimulator.Plot.Utils,
