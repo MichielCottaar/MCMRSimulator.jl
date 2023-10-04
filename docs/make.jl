@@ -34,6 +34,6 @@ makedocs(;
     plugins=[bib],
 )
 
-if get(ENV, "CI_COMMIT_REF_NAME", "") == "main" || length(get(ENV, "CI_COMMIT_TAG", "") > 0)
+if get(ENV, "CI_COMMIT_REF_NAME", "") == "main" || length(get(ENV, "CI_COMMIT_TAG", "")) > 0
     deploydocs(repo="git.fmrib.ox.ac.uk:ndcn0236/mcmrsimulator.jl.git", branch="pages", devbranch="main")
 end
