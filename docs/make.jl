@@ -5,15 +5,20 @@ using DocumenterCitations
 DocMeta.setdocmeta!(MCMRSimulator, :DocTestSetup, :(using MCMRSimulator); recursive=true)
 bib = CitationBibliography(joinpath(@__DIR__, "references.bib"), style=:authoryear)
 
+remote = Remotes.GitLab("git.fmrib.ox.ac.uk", "ndcn0236", "MCMRSimulator.jl")
+
 makedocs(;
     modules=[MCMRSimulator],
     authors="Michiel Cottaar <Michiel.cottaar@ndcn.ox.ac.uk>",
-    repo="https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/blob/{commit}{path}#{line}",
+    repo=remote,
     sitename="MCMRSimulator.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
         edit_link="main",
-        assets=String[],
+        size_threshold_ignore=["api.md"],
+        description="Documentation for MCMRSimulator.jl: a Monte Carlo MRI simulator in Julia",
+        footer=nothing,
+        canonical="https://open.win.ox.ac.uk/pages/ndcn0236/mcmrsimulator.jl/stable/",
     ),
     pages=[
         "Home" => "index.md",
