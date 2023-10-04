@@ -4,27 +4,12 @@ stages:
   - deploy
 
 variables:
-  JULIA_DEPOT_PATH: "$CI_PROJECT_DIR/.julia"
   CI: "true"
 
 default:
   image: julia:latest
   tags:
     - docker
-
-Pre-compile:
-  stage: build
-  script:
-    - julia --project=@. -e "using Pkg; Pkg.build()"
-    - julia -e 'using Pkg; Pkg.add("CairoMakie")'
-  artifacts:
-    paths:
-      - .julia/
-    expire_in: 2 hours
-  rules:
-    - if:   $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: never
-    - when: always
 
 Testing:
   script:
@@ -34,8 +19,6 @@ Testing:
   after_script:
     - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; c, t = get_summary(process_folder()); using Printf; @printf "Test coverage %.2f%%\n" 100c / t'
   timeout: 2h
-  dependencies:
-    - Pre-compile
   rules:
     - if:   $CI_PIPELINE_SOURCE == "merge_request_event"
       when: never
@@ -48,8 +31,6 @@ build_pages:
     - apt-get update
     - apt-get install -y git
     - julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); include("docs/make.jl")'
-  dependencies:
-    - Pre-compile
   rules:
     - if:   $CI_PIPELINE_SOURCE == "merge_request_event"
       when: never
