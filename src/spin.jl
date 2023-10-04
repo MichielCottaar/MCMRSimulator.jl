@@ -411,6 +411,7 @@ end
 SpinOrientationSum(s :: Snapshot) = SpinOrientationSum(SpinOrientation(orientation(s)), length(s))
 
 Base.length(s::SpinOrientationSum) = s.nspins
+Base.show(io::IO, orient::SpinOrientationSum) = print(io, "SpinOrientationSum(longitudinal=$(longitudinal(orient)), transverse=$(transverse(orient)), phase=$(phase(orient))°, nspins=$(length(orient)))")
 
 for param in (:orientation, :longitudinal, :transverse, :phase)
     @eval $param(s :: SpinOrientationSum) = $param(s.orient)
