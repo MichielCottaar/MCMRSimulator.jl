@@ -105,7 +105,7 @@ readout(1000, simulation, skip_TR=5)
 
 In addition, to the total signal, we can also get the signal associated with individual compartments:
 ```@example tutorial
-readout(1000, simulation, subsets=[Subset(inside=true), Subset(inside=false)])
+readout(1000, simulation, subset=[Subset(inside=true), Subset(inside=false)])
 ```
 Note that we now get two signal outputs.
 The first respresents teh signal within the cylinders, which is very close to number of spins, 
