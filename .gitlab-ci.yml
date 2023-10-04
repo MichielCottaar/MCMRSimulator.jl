@@ -1,8 +1,3 @@
-stages:
-  - build
-  - test
-  - deploy
-
 variables:
   CI: "true"
 
@@ -42,7 +37,6 @@ build_pages:
 
 
 build_docker:
-  stage: build
   image: docker:latest
   tags:
     - docker_build
