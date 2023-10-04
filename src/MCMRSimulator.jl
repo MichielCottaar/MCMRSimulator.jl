@@ -49,8 +49,8 @@ export TimeController, propose_times
 import .Simulations: Simulation
 export Simulation
 
-import .Subsets: Subset, subset
-export Subset, subset
+import .Subsets: Subset, get_subset
+export Subset, get_subset
 
 import .Evolve: evolve, readout
 export evolve, readout
