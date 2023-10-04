@@ -73,9 +73,9 @@ build_pages:
     - when: never
 
 
-build:
+build_docker:
   stage: build
-  image: quay.io/buildah/stable
+  image: docker:latest
   tags:
     - docker_build
   services:
