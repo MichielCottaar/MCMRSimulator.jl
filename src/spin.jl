@@ -349,6 +349,9 @@ function Snapshot(positions :: AbstractVector{<:AbstractVector{<:Real}}; time ::
 end
 
 function Snapshot(nspins::Integer, bounding_box=500, geometry=nothing; time::Real=0., kwargs...)
+    if iszero(nspins)
+        return Snapshot(Spin{get(kwargs, :nsequences, 1)}[], time)
+    end
     bounding_box = BoundingBox(bounding_box)
     sz = (upper(bounding_box) - lower(bounding_box))
     free_spins = map(i->Spin(; position=rand(SVector{3, Float64}) .* sz .+ lower(bounding_box), kwargs...), 1:nspins)
