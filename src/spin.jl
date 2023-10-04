@@ -348,7 +348,7 @@ function Snapshot(positions :: AbstractVector{<:AbstractVector{<:Real}}; time ::
     Snapshot(map(p -> Spin(; position=p, kwargs...), positions), time)
 end
 
-function Snapshot(nspins::Integer, bounding_box=500, geometry=nothing; time::Real=0., kwargs...)
+function Snapshot(nspins::Integer, bounding_box=500, geometry=(); time::Real=0., kwargs...)
     if iszero(nspins)
         return Snapshot(Spin{get(kwargs, :nsequences, 1)}[], time)
     end
