@@ -111,7 +111,7 @@ mcmr run geometry.json dwi.json -o signal.csv
 This produces the CSV file, which looks like
 ```csv
 sequence,TR,readout,subset,nspins,longitudinal,transverse,phase,Sx,Sy
-1,1,1,1,10000,-1.1262102361797588e-12,9997.399612964802,-0.006154308518773632,9997.399555292097,-1.0738501510661669
+1,1,1,0,10000,-1.1262102361797588e-12,9997.399612964802,-0.006154308518773632,9997.399555292097,-1.0738501510661669
 ```
 
 The columns in this file store the following information:

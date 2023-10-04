@@ -164,7 +164,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 sequence=index[1],
                 TR=index[3],
                 readout=index[2],
-                subset=1,
+                subset=0,
                 nspins=length(init_snapshot),
                 longitudinal=longitudinal(value),
                 transverse=transverse(value),
