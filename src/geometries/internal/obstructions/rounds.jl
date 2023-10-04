@@ -71,7 +71,7 @@ end
 
 function random_surface_positions(s::Sphere, density::Number)
     surface = 4π * s.radius * s.radius
-    nspins = random(Poisson(surface * density))
+    nspins = rand(Poisson(surface * density))
     normals = [random_on_sphere() for _ in 1:nspins]
     positions = normals .* (-s.radius)
     return (positions, normals)
