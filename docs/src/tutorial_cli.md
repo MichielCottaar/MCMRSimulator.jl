@@ -118,8 +118,7 @@ The columns in this file store the following information:
 - "sequence": integer; index of the sequence (always 1 if only single sequence used)
 - "TR": integer; index of the repetition time that this data was acquired (between 1 and the value of `--nTR`)
 - "readout": integer; index of the readout within a TR.
-- "subset": integer; index of the subset of the total signal (e.g., intra-axonal) that has been output (see the `--subset` flag). The total signal will always be included with "subset of 0.
-- "time": time of the readout in ms (since start of simulation)
+- "subset": integer; index of the subset of the total signal (e.g., intra-axonal) that has been output (see the `--subset` flag). The total signal will always be included with "subset" of 0.
 - "nspins": total number of spins contributing to the signal (might change for certain subsets of spins)
 - "longitudinal": average longitudinal signal
 - "transverse": average transverse signal
