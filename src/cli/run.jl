@@ -11,6 +11,7 @@ import ...Sequences.JSON: read_sequence
 import ...Simulations: Simulation
 import ...Spins: Snapshot, BoundingBox, longitudinal, transverse, phase, orientation, position
 import ...Evolve: readout
+import ...Subsets: Subset, get_subset
 
 
 """Add simulation definition parameters to an argument parser."""
@@ -66,8 +67,14 @@ function add_readout_flags!(parser)
             arg_type = Int
             default = 0
         "--subset"
-            help = "Can be provided multiple times. For each time it is provided, the signal will be computed at each readout for a specific subset of spins. Each flag should have 4 values: all/bound/free all/inside/outside <geometry_index> <obstruction_index>."
-            nargs = 4
+            help = """Can be provided multiple times. For each time it is provided, the signal will be computed at each readout for a specific subset of spins.  This subset is defined by one or two values from bound/free/inside/outside. Afterwards they can include an integer value to select a specific geometry to consider the bound/inside state of. An additional integer value could be given to select a specific obstruciton within that geometry.
+            For example:
+            - `--subset free`: include any free spins
+            - `--subset inside`: include any spins inside any geometry
+            - `--subset outside 2`: include any spins outside of the second obstruction group in the geometry
+            - `--subset inside bound 2 3`: include any spins stuck to the inside surface of the 3rd obstruction in the second obstruction group of the geometry.
+            """
+            nargs = '+'
             action = :append_arg
     end
 end
@@ -143,12 +150,13 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     if !isnothing(args["init"])
         error("Reading snapshots not yet implemented!")
     else
-        bb = BoundingBox(args["voxel-size"]/2)
+        bb = BoundingBox(args["voxel-size"] * 1000/2)
         init_snapshot = Snapshot(args["Nspins"], simulation, bb; longitudinal=args["longitudinal"], transverse=args["transverse"])
     end
     as_snapshot = !isnothing(args["output-snapshot"])
     readout_times = iszero(length(args["times"])) ? nothing : args["times"]
-    result = readout(init_snapshot, simulation, readout_times; skip_TR=args["skip-TR"], nTR=args["nTR"], noflatten=true, return_snapshot=as_snapshot)
+    subsets = [Subset(), parse_subset.(args["subset"])...]
+    result = readout(init_snapshot, simulation, readout_times; skip_TR=args["skip-TR"], nTR=args["nTR"], noflatten=true, return_snapshot=as_snapshot, subset=subsets)
 
     # convert to tabular format
     if !isnothing(args["output-signal"])
@@ -164,7 +172,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 sequence=index[1],
                 TR=index[3],
                 readout=index[2],
-                subset=0,
+                subset=index[4] - 1,
                 nspins=length(init_snapshot),
                 longitudinal=longitudinal(value),
                 transverse=transverse(value),
@@ -208,5 +216,66 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     return Cint(0)
 end
 
+
+function parse_subset(arguments)
+    arg, others... = arguments
+    kwargs = Dict{Symbol, Any}()
+    if arg == "bound"
+        kwargs[:bound] = true
+    elseif arg == "free"
+        kwargs[:bound] = false
+    elseif arg == "inside"
+        kwargs[:inside] = true
+    elseif arg == "outside"
+        kwargs[:inside] = false
+    else
+        error("First argument of --subset should be bound, free, inside, or outside; not $inside_str")
+    end
+    if length(others) == 0
+        return Subset(; kwargs...)
+    end
+
+    arg, others... = others
+    if arg in ["bound", "free"]
+        if :bound in keys(kwargs)
+            error("Second argument of --subset cannot be bound or free, if the first argument is already bound or free.")
+        end
+        kwargs[:bound] = arg == "bound"
+    elseif arg in ["inside", "outside"]
+        if :inside in keys(kwargs)
+            error("Second argument of --subset cannot be inside or outside, if the first argument is already inside or outside.")
+        end
+        kwargs[:inside] = arg == "inside"
+    else
+        try
+            kwargs[:geometry_index] = parse(Int, arg)
+        catch
+            error("Second argument should be one of bound/free/inside/outside or parse to an integer. Instead, '$index' was received.")
+        end
+        if length(others) > 1
+            error("Too many arguments provided to --subset.")
+        elseif length(others) == 1
+            kwargs[:obstruction_index] = parse(Int, others[1])
+        end
+        return Subset(kwargs...)
+    end
+
+    if length(others) == 0
+        return Subset(kwargs...)
+    end
+    arg, others... = others
+    kwargs[:geometry_index] = parse(arg, Int)
+
+    if length(others) == 0
+        return Subset(kwargs...)
+    end
+    arg, others... = others
+    kwargs[:obstruction_index] = parse(arg, Int)
+    if length(others) > 0
+        error("Too many arguments provided to --subset.")
+    end
+    @assert length(others) == 0
+    return Subset(kwargs...)
+end
 
 end

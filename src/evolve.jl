@@ -67,7 +67,7 @@ function readout(spins, simulation::Simulation{N}, readout_times=nothing; boundi
     use_nTR = isnothing(nTR) ? 1 : nTR
     single_subset = ~(subset isa AbstractVector)
     subsets_vector = single_subset ? [subset] : subset
-    store_times = fill(-1., (N, nreadout_per_TR, use_nTR, length(subsets_vector)))
+    store_times = fill(-1., (N, nreadout_per_TR, use_nTR))
 
     for (i, seq) in enumerate(simulation.sequences)
         current_TR = Int(div(get_time(snapshot), seq.TR, RoundDown))
@@ -99,7 +99,7 @@ function readout(spins, simulation::Simulation{N}, readout_times=nothing; boundi
     end
 
     return_type = return_snapshot ? Snapshot{1} : SpinOrientation
-    result = convert(Array{Union{Nothing, return_type}}, fill(nothing, size(store_times)))
+    result = convert(Array{Union{Nothing, return_type}}, fill(nothing, (size(store_times)..., length(subsets_vector))))
 
     for time in sort!([actual_readout_times...])
         snapshot = evolve_to_time(snapshot, simulation, time)
@@ -110,7 +110,7 @@ function readout(spins, simulation::Simulation{N}, readout_times=nothing; boundi
             single_snapshot = get_sequence(snapshot, index[1])
             for (index_selected, select) in enumerate(subsets_vector)
                 selected = get_subset(single_snapshot, simulation, select)
-                value = return_snapshot ? single_snapshot : SpinOrientation(single_snapshot)
+                value = return_snapshot ? selected : SpinOrientation(selected)
                 result[index, index_selected] = value
             end
         end

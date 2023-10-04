@@ -393,7 +393,7 @@ end
 get_time(s :: Snapshot) = s.time
 
 function orientation(s :: Snapshot)
-    sum(orientation, s.spins)
+    sum(orientation, s.spins, init=zero(SVector{3, Float64}))
 end
 SpinOrientation(s :: Snapshot) = SpinOrientation(orientation(s))
 
