@@ -20,9 +20,10 @@ import ..Simulations: Simulation, _to_snapshot
 import ..Relax: relax!, transfer!
 import ..Timestep: propose_times
 import ..Properties: GlobalProperties, correct_for_timestep, stick_probability
+import ..Subsets: Subset, get_subset
 
 """
-    readout(spins, simulation[, readout_times]; bounding_box=<1x1x1 mm box>, skip_TR=0, nTR=1, snapshot=false)
+    readout(spins, simulation[, readout_times]; bounding_box=<1x1x1 mm box>, skip_TR=0, nTR=1, return_snapshot=false, subset=<all>)
 
 Evolves a set of spins through the [`Simulation`](@ref).
 Returns the total signal or a full [`Snapshot`](@ref) at every readout time in the simulated sequences over one or more repetition times (TRs).
@@ -38,17 +39,19 @@ Returns the total signal or a full [`Snapshot`](@ref) at every readout time in t
     Even if set to zero (the default), the simulator will still skip the current TR before starting the readout 
     if the starting snapshot is from a time past one of the sequence readouts.
 - `nTR`: number of TRs for which to store the output
-- `return_snapshot`: set to true to output the the state of all the spins as a [`Snapshot`](@ref) at each readout instead of a [`SpinOrientation`](@ref) with the total signal.
+- `return_snapshot`: set to true to output the state of all the spins as a [`Snapshot`](@ref) at each readout instead of a [`SpinOrientation`](@ref) with the total signal.
+- `subset`: Return the signal/snapshot for a subset of all spins. Can be set to a single or a vector of [`Subset`](@ref) objects. If set to a vector, this will add an attional dimension to the output.
 
 # Returns
-The function returns an up to 3-dimensional (NxMxL) array, with the following dimensions:
-- `N`: the number of sequences. This dimension is not included if the simulation only contains a single sequencen (and this single sequence is not passed into the [`Simulation`](@ref) as a vector).
-- `M`: the number of readout times with a single TR. This dimension is skipped if the `readout_times` is set to a scalar number. This dimension might contain `nothing`s for sequences that contain fewer [`Readout`](@ref) objects than the maximum (`M`).
-- `L`: the number of TRs (controlled by the `nTR` keyword). If `nTR` is not explicitly set by the user, this dimension is skipped.
+The function returns an up to 3-dimensional (KxLxMxN) array, with the following dimensions:
+- `K`: the number of sequences. This dimension is not included if the simulation only contains a single sequencen (and this single sequence is not passed into the [`Simulation`](@ref) as a vector).
+- `L`: the number of readout times with a single TR. This dimension is skipped if the `readout_times` is set to a scalar number. This dimension might contain `nothing`s for sequences that contain fewer [`Readout`](@ref) objects than the maximum (`M`).
+- `M`: the number of TRs (controlled by the `nTR` keyword). If `nTR` is not explicitly set by the user, this dimension is skipped.
+- `N`: the number of subsets (controlled by the `subset` keyword). If `subset` is set to a single value (<all> by default), this dimension is skipped.
 By default each element of this matrix is either a [`SpinOrientation`](@ref) with the total signal.
 If `return_snapshot=true` is set, each element is the full [`Snapshot`](@ref) instead.
 """
-function readout(spins, simulation::Simulation{N}, readout_times=nothing; bounding_box=500, skip_TR=0, nTR=nothing, return_snapshot=false, noflatten=false) where {N}
+function readout(spins, simulation::Simulation{N}, readout_times=nothing; bounding_box=500, skip_TR=0, nTR=nothing, return_snapshot=false, noflatten=false, subset=Subset()) where {N}
     snapshot = _to_snapshot(spins, simulation, bounding_box)
 
     if isnothing(readout_times)
@@ -62,7 +65,9 @@ function readout(spins, simulation::Simulation{N}, readout_times=nothing; boundi
     end
     actual_readout_times = Set{Float64}()
     use_nTR = isnothing(nTR) ? 1 : nTR
-    store_times = fill(-1., (N, nreadout_per_TR, use_nTR))
+    single_subset = ~(subset isa AbstractVector)
+    subsets_vector = single_subset ? [subset] : subset
+    store_times = fill(-1., (N, nreadout_per_TR, use_nTR, length(subsets_vector)))
 
     for (i, seq) in enumerate(simulation.sequences)
         current_TR = Int(div(get_time(snapshot), seq.TR, RoundDown))
@@ -103,8 +108,11 @@ function readout(spins, simulation::Simulation{N}, readout_times=nothing; boundi
                 continue
             end
             single_snapshot = get_sequence(snapshot, index[1])
-            value = return_snapshot ? single_snapshot : SpinOrientation(single_snapshot)
-            result[index] = value
+            for (index_selected, select) in enumerate(subsets_vector)
+                selected = get_subset(single_snapshot, simulation, select)
+                value = return_snapshot ? single_snapshot : SpinOrientation(single_snapshot)
+                result[index, index_selected] = value
+            end
         end
     end
 
@@ -124,6 +132,7 @@ function readout(spins, simulation::Simulation{N}, readout_times=nothing; boundi
         (isnothing(readout_times) && isone(nreadout_per_TR)) || readout_times isa Number ? 1 : :,
         # remove third dimension if nTR is not explicitly set by the user
         isnothing(nTR) ? 1 : :,
+        single_subset ? 1 : :,
     ]
 end
 

@@ -23,6 +23,7 @@ include("sequence_builder/sequence_builder.jl")
 include("timestep.jl")
 include("relax.jl")
 include("simulations.jl")
+include("subsets.jl")
 include("evolve.jl")
 include("plot/plot.jl")
 include("cli/cli.jl")
@@ -47,6 +48,9 @@ export TimeController, propose_times
 
 import .Simulations: Simulation
 export Simulation
+
+import .Subsets: Subset, subset
+export Subset, subset
 
 import .Evolve: evolve, readout
 export evolve, readout
