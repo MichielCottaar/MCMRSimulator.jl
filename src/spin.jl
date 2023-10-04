@@ -370,8 +370,6 @@ function Snapshot(nspins::Integer, bounding_box=500, geometry=nothing; time::Rea
     return Snapshot(spins, time)
 end
 
-Snapshot(nspins :: Int; kwargs...) = Snapshot(rand(nspins, 3) .* 1000 .- 500; kwargs...)
-
 Base.show(io::IO, snap::Snapshot{1}) = print(io, "Snapshot($(length(snap)) spins with total magnetisation of $(repr(SpinOrientation(snap), context=io)) at t=$(get_time(snap))ms)")
 Base.show(io::IO, snap::Snapshot{N}) where {N} = print(io, "Snapshot($(length(snap)) spins with magnetisations for $N sequences at t=$(get_time(snap))ms)")
 
