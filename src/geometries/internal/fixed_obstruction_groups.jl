@@ -39,6 +39,7 @@ struct FixedObstructionGroup{
     }
     obstructions :: Vector{O}
     parent_index :: Int
+    original_index :: Int
 
     # rotations
     rotation :: SMatrix{3, N, Float64, K}
@@ -57,11 +58,11 @@ struct FixedObstructionGroup{
 
     # empty vector if this is not a mesh
     vertices :: Vector{SVector{3, Float64}}
-    function FixedObstructionGroup(obstructions, parent_index, rotation, grid, bounding_boxes, volume, surface, vertices)
+    function FixedObstructionGroup(obstructions, parent_index, original_index, rotation, grid, bounding_boxes, volume, surface, vertices)
         new{
             length(obstructions), size(rotation, 2), grid.repeating, eltype(obstructions),
             typeof(bounding_boxes), typeof(volume), typeof(surface), 3 * size(rotation, 2)
-        }(obstructions, parent_index, rotation, transpose(rotation), grid, bounding_boxes, volume, surface, vertices)
+        }(obstructions, parent_index, original_index, rotation, transpose(rotation), grid, bounding_boxes, volume, surface, vertices)
     end
 end
 

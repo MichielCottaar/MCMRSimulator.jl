@@ -12,20 +12,20 @@ Creates a fixed version of the user-created geometry that will be used internall
 """
 function fix(geometry::AbstractVector; kwargs...)
     result = FixedObstructionGroup[]
-    for og in geometry
-        append!(result, fix(og, length(result) + 1; kwargs...))
+    for (original_index, og) in enumerate(geometry)
+        append!(result, fix(og, length(result) + 1, original_index; kwargs...))
     end
     return Tuple(result)
 end
 
-function fix(geometry::ObstructionGroup, index::Int=1; permeability=0., density=0., dwell_time=0., relaxivity=0.)
+function fix(geometry::ObstructionGroup, index::Int=1, original_index::Int=1; permeability=0., density=0., dwell_time=0., relaxivity=0.)
     for key in propertynames(geometry)
         field_value = getproperty(geometry, key)
         if field_value.field.required && any(isnothing.(field_value.value))
             error("Missing value for required field $field_value")
         end
     end
-    result = fix_type(geometry, index; permeability=permeability, density=density, dwell_time=dwell_time, relaxivity=relaxivity)
+    result = fix_type(geometry, index, original_index; permeability=permeability, density=density, dwell_time=dwell_time, relaxivity=relaxivity)
     return result isa FixedObstructionGroup ? (result, ) : Tuple(result)
 end
 
@@ -42,56 +42,56 @@ Shifts, collision properties, and volumetric and surface MRI properties can be a
 """
 function fix_type end
 
-function fix_type(walls::Walls, index::Int; kwargs...)
+function fix_type(walls::Walls, index::Int, original_index::Int; kwargs...)
     base_obstructions = fill(Internal.Wall(), length(walls))
-    apply_properties(walls, base_obstructions, index; surface="surface", kwargs...)
+    apply_properties(walls, base_obstructions, index, original_index; surface="surface", kwargs...)
 end
 
-function fix_type(cylinders::Cylinders, index::Int; kwargs...)
+function fix_type(cylinders::Cylinders, index::Int, original_index::Int; kwargs...)
     if isglobal(cylinders.radius)
         base_obstructions = fill(Internal.Cylinder(cylinders.radius.value), length(cylinders))
     else
         base_obstructions = [Internal.Cylinder(r) for r in cylinders.radius.value]
     end
-    apply_properties(cylinders, base_obstructions, index; surface="surface", volume="inside", kwargs...)
+    apply_properties(cylinders, base_obstructions, index, original_index; surface="surface", volume="inside", kwargs...)
 end
 
-function fix_type(spheres::Spheres, index::Int; kwargs...)
+function fix_type(spheres::Spheres, index::Int, original_index::Int; kwargs...)
     if isglobal(spheres.radius)
         base_obstructions = fill(Internal.Sphere(spheres.radius.value), length(spheres))
     else
         base_obstructions = [Internal.Sphere(r) for r in spheres.radius.value]
     end
-    apply_properties(spheres, base_obstructions, index; surface="surface", volume="inside", kwargs...)
+    apply_properties(spheres, base_obstructions, index, original_index; surface="surface", volume="inside", kwargs...)
 end
 
-function fix_type(annuli::Annuli, index::Int; kwargs...)
+function fix_type(annuli::Annuli, index::Int, original_index::Int; kwargs...)
     if isglobal(annuli.inner)
         base_inner = fill(Internal.Cylinder(annuli.inner.value), length(annuli))
     else
         base_inner = [Internal.Cylinder(r) for r in annuli.inner.value]
     end
-    inner_cylinders = apply_properties(annuli, base_inner, index; surface="inner_surface", volume="inner_volume", kwargs...)
+    inner_cylinders = apply_properties(annuli, base_inner, index, original_index; surface="inner_surface", volume="inner_volume", kwargs...)
 
     if isglobal(annuli.outer)
         base_outer = fill(Internal.Cylinder(annuli.outer.value), length(annuli))
     else
         base_outer = [Internal.Cylinder(r) for r in annuli.outer.value]
     end
-    outer_cylinders = apply_properties(annuli, base_outer, index + 1; surface="outer_surface", volume="outer_volume", kwargs...)
+    outer_cylinders = apply_properties(annuli, base_outer, index + 1, original_index; surface="outer_surface", volume="outer_volume", kwargs...)
     return (inner_cylinders, outer_cylinders)
 end
 
-function fix_type(mesh::Mesh, index::Int; kwargs...)
-    [fix_type_single(m, index + i - 1; kwargs...) for (i, m) in enumerate(split_mesh(mesh))]
+function fix_type(mesh::Mesh, index::Int, original_index::Int; kwargs...)
+    [fix_type_single(m, index + i - 1, original_index; kwargs...) for (i, m) in enumerate(split_mesh(mesh))]
 end
 
-function fix_type_single(mesh::Mesh, index::Int; kwargs...)
+function fix_type_single(mesh::Mesh, index::Int, original_index::Int; kwargs...)
     base_obstructions = [Internal.IndexTriangle(index) for index in mesh.triangles.value]
     if ~mesh.save_memory.value
         base_obstructions = [Internal.FullTriangle(it, SVector{3}.(mesh.vertices.value)) for it in base_obstructions]
     end
-    apply_properties(mesh, base_obstructions, index; surface="surface", volume="inside", kwargs...)
+    apply_properties(mesh, base_obstructions, index, original_index; surface="surface", volume="inside", kwargs...)
 end
 
 """
@@ -106,7 +106,7 @@ This function applies (if appropriate):
 - repeats
 - mesh vertices
 """
-function apply_properties(user_obstructions::ObstructionGroup, internal_obstructions::Vector{<:Internal.FixedObstruction}, index::Int; surface=nothing, volume=nothing, kwargs...)
+function apply_properties(user_obstructions::ObstructionGroup, internal_obstructions::Vector{<:Internal.FixedObstruction}, index::Int, original_index::Int; surface=nothing, volume=nothing, kwargs...)
     # apply shifts
     if hasproperty(user_obstructions, :position)
         shifts = isglobal(user_obstructions.position) ? fill(user_obstructions.position.value, length(user_obstructions)) : user_obstructions.position.value
@@ -159,6 +159,7 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
     result = FixedObstructionGroup(
         internal_obstructions,
         index,
+        original_index,
         rotation,
         grid,
         bounding_boxes,
@@ -171,6 +172,7 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
         result = FixedObstructionGroup(
             internal_obstructions,
             index,
+            original_index,
             rotation,
             grid,
             bounding_boxes,
