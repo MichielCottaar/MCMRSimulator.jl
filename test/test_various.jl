@@ -114,7 +114,7 @@ end
         spin = mr.Spin(position=SA[2, 2, 2], transverse=1., phase=90.)
         @test mr.phase(spin) ≈ Float64(90.)
         mr.apply!(mr.InstantGradient(qvec=SA[0.01, 0, 0]), spin)
-        @test mr.phase(spin) ≈ Float64(90. + 0.02 * 360)
+        @test mr.phase(spin) ≈ Float64(90. + 0.02 * 360 / 2π)
     end
 end
 @testset "Random generator number control" begin

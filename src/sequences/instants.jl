@@ -110,7 +110,7 @@ struct InstantGradient <: InstantComponent
 end
 
 function Base.show(io::IO, pulse::InstantGradient)
-    print(io, "InstantGradient: t=$(start_time(pulse))ms, q=$(qvec(pulse))/um;")
+    print(io, "InstantGradient: t=$(start_time(pulse))ms, q=$(qvec(pulse))rad/um;")
 end
 
 InstantGradient(; qvec::AbstractVector=[0., 0., 0.], q_origin=0., time :: Real=0.) = InstantGradient(SVector{3}(qvec), q_origin, time)
@@ -120,7 +120,7 @@ qval(pulse::InstantGradient) = norm(qvec(pulse))
 
 function apply!(pulse :: InstantGradient, orient :: SpinOrientation, pos::SVector{3, Float64})
     adjustment = (pos ⋅ pulse.qvec) + pulse.q_origin
-    orient.phase += 360 * adjustment
+    orient.phase += 360 * adjustment / 2π
 end
 
 apply!(pulse :: InstantComponent, orient :: SpinOrientation, pos::SVector{3, Float64}) = apply!(pulse, orient)
