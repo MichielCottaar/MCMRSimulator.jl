@@ -13,7 +13,7 @@
             ]
                 nspins = 300
                 sequence = mr.dwi(bval=2., TE=80., gradient_duration=δ, diffusion_time=Δ)
-                sim = mr.Simulation(sequence)
+                sim = mr.Simulation(sequence, diffusivity=0.)
                 snap = mr.readout(nspins, sim, return_snapshot=true)
                 @test snap.time == 80.
                 @test mr.transverse(snap) ≈ nspins rtol=1e-2

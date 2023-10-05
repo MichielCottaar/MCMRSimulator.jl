@@ -57,7 +57,7 @@ Once we have both a geometry and one or more sequences, we can put them together
 simulation = Simulation(sequence, R2=0.012, R1=3e-3, diffusivity=2., off_resonance=0.1, geometry=geometry)
 nothing # hide
 ```
-By default there is no T1 or T2 relaxation and spins do not move.
+By default there is no T1 or T2 relaxation and a diffusivity of 3 um^2/ms.
 Enabling spin relaxation and diffusion requires setting the appropriate parameters in the [`Simulation`](@ref) as seen here.
 The spin relaxation rates can be different in different compartments as described [here](@ref properties).
 

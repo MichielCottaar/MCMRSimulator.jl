@@ -86,7 +86,7 @@ end
 
 function Simulation(
     sequences;
-    diffusivity=0,
+    diffusivity=3,
     geometry=[],
     max_timestep=nothing,
     gradient_precision=1.,

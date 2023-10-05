@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Off-resonance fields can now be calculated for meshes. Set `myelin=true` for the mesh to enable this.
 - `split_mesh` function that splits a mesh into connected components (and fixes the mesh normals)
 ### Changed
+- Default diffusivity changed from 0 to 3 um^2/ms
 - Replaced `readout`, `trajectory`, and `signal` with a single, improved `readout` function. This new function can:
     - return the total signal or snapshots using on `return_snapshot` keyword
     - either return the signal at the `Readout` objects in the sequence or at any times set when calling the `readout` function

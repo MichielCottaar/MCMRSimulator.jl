@@ -87,7 +87,7 @@
     end
     @testset "Basic diffusion has no effect in constant fields" begin
         sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=2.)
-        no_diff = mr.Simulation([sequence], R2=0.3)
+        no_diff = mr.Simulation([sequence], diffusivity=0., R2=0.3)
         with_diff = mr.Simulation([sequence], diffusivity=1., R2=0.3)
         spin_no_diff = mr.evolve(mr.Spin(), no_diff).spins[1]
         spin_with_diff = mr.evolve(mr.Spin(), with_diff).spins[1]
