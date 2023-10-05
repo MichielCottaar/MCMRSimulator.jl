@@ -18,7 +18,7 @@
             s2 = mr.dwi(bval=1.)
 
             kwargs = Dict(
-                :diffusivity = 0.,
+                :diffusivity => 0.,
                 :gradient_precision => 1.,
                 :max_timestep => Inf,
             )
