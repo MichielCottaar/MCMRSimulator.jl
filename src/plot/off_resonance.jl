@@ -1,6 +1,7 @@
 module OffResonance
 using Makie
 import StaticArrays: SVector
+import ..PlotPlanes: PlotPlane
 import ...Geometries.Internal: FixedSusceptibility, susceptibility_off_resonance
 import ...Geometries: fix_susceptibility
 

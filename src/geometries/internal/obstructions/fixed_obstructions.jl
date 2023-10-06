@@ -3,7 +3,7 @@ Types:
 - [`FixedObstruction`](@ref)
 
 Methods:
-- [`detect_collision`](@ref)
+- [`detect_intersection`](@ref)
 - [`has_inside`](@ref)
 - [`isinside`](@ref)
 - [`radius`](@ref)
@@ -21,7 +21,7 @@ Parent type of all individual obstructions.
 N represents the intrinsic dimensionality of the obstruction (e.g., 1 for walls, 2 for cylinders, 3 for spheres/meshes)
 
 Required interface for each obstruction:
-- [`detect_collision`](@ref)(obstruction, start, dest) -> [`Collision`](@ref)
+- [`detect_intersection`](@ref)(obstruction, start, dest) -> [`ObstructionIntersection`](@ref)
 - [`has_inside`](@ref)(obstruction_type) -> Boolean
 - [`isinside`](@ref)(obstruction, position) -> Boolean
 - At least one of these two:
@@ -29,6 +29,7 @@ Required interface for each obstruction:
     - [`BoundingBox`](@ref)(obstruction): returns a Bounding box surrounding the obstruction
 """
 abstract type FixedObstruction{N} end
+import ..ObstructionIntersections: ObstructionIntersection
 
 
 """

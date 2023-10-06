@@ -2,7 +2,7 @@ module Diffusion
 import ...Scanners: max_gradient, max_slew_rate, Scanner
 import ...Sequences: MRGradients, rotate_bvec, InstantGradient
 import ...Methods: get_rotation
-import ..BuildingBlocks: isempty_block, duration
+import ..BuildingBlocks: isempty_block, duration, BuildingBlock
 
 """
     add_linear_diffusion_weighting(blocks, replace1, replace2, refocus=true, bval/qval/gradient_strength, diffusion_time=max, gradient_duration=max, scanner=3T, orientation=:x)

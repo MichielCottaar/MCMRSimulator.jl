@@ -22,7 +22,7 @@ function end_time end
 """
     add_TR(shape/gradient/rf_pulse, TR)
 
-Shifts the generic [`Shape`], [`MRGradients`], or [`RFPulse`] by a time `TR`.
+Shifts the generic `Shape`, `MRGradients`, or `RFPulse` by a time `TR`.
 """
 function add_TR end
 

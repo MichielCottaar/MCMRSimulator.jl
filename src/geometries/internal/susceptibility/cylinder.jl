@@ -6,7 +6,7 @@ import ..Base: BaseSusceptibility, single_susceptibility, single_susceptibility_
     CylinderSusceptibility(radius, g_ratio, chi_I, chi_A, b0_field)
 
 Creates a cylindrical susceptibility source, which produces the intra- and extra-axonal field expected for a myelin sheath.
-More realistic myelin sheaths with a finite width can be modeled using [`AnnulusSusceptibility`](@ref).
+More realistic myelin sheaths with a finite width can be modeled using `AnnulusSusceptibility`.
 """
 struct CylinderSusceptibility <: BaseSusceptibility{2}
     rsq :: Float64

@@ -6,10 +6,6 @@ Methods:
 - [`R1`](@ref)
 - [`R2`](@ref)
 - [`off_resonance`](@ref)
-- [`permeability`](@ref)
-- [`surface_relaxivity`](@ref)
-- [`surface_density`](@ref)
-- [`dwell_time`](@ref)
 - [`correct_for_timestep`](@ref)
 - [`stick_probability`](@ref)
 """
@@ -69,7 +65,7 @@ correct_for_timestep(probability, timestep) = 1 - (1 - probability)^sqrt(timeste
     stick_probability(properties, diffusivity, timestep)
 
 Computes the probability of a spin getting stuck at the surface given
-a [`surface_density`](@ref) and [`dwell_time`](@ref) from a [`CollisionProperties`](@ref)
+a [`surface_density`](@ref) and [`dwell_time`](@ref)
 as well as the diffusivity (in um^2/ms) and the timestep (in ms).
 """
 function stick_probability(surface_density::Number, dwell_time::Number, diffusivity::Number, timestep::Number)

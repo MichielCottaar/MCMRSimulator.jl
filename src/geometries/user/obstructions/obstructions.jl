@@ -6,6 +6,7 @@ import StaticArrays: MVector
 import .ObstructionTypes: ObstructionType, fields
 import .Fields: Field, FieldValue, isglobal, description
 import .ObstructionGroups: ObstructionGroup, IndexedObstruction, key_value_pairs
+import ....Methods: get_rotation
 
 function field_to_docs(key::Symbol, field_value::FieldValue{T}) where {T}
     key_txt = replace(String(key), "_"=>"\\_")

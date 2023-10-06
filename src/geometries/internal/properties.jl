@@ -1,12 +1,12 @@
 """
 Methods to extract properties from the [`FixedGeometry`](@ref).
 
-Using [`MRIProperties`](@ref):
+MRI properties (using [`MRIProperties`](@ref)):
 - [`R1`](@ref)
 - [`R2`](@ref)
 - [`off_resonance`](@ref)
 
-Using [`collision_property`](@ref):
+Collision properties:
 - [`permeability`](@ref)
 - [`surface_relaxivity`](@ref)
 - [`surface_density`](@ref)

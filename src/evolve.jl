@@ -10,7 +10,7 @@ import StaticArrays: SVector, MVector
 import LinearAlgebra: norm, ⋅
 import ..Methods: get_time
 import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence
-import ..Sequences: SequencePart, next_instant, InstantComponent, apply!
+import ..Sequences: SequencePart, next_instant, InstantComponent, apply!, Readout
 import ..Geometries.Internal: 
     FixedGeometry, empty_reflection, detect_intersection, Intersection,
     empty_intersection, direction, Reflection, has_intersection, previous_hit,

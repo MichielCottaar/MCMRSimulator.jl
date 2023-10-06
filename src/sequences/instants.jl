@@ -1,7 +1,7 @@
 module Instants
 import LinearAlgebra: ⋅, norm
 import StaticArrays: SVector
-import ...Spins: Spin, SpinOrientation
+import ...Spins: Spin, SpinOrientation, Snapshot
 import ...Methods: get_time
 import ..Methods: start_time, end_time
 

@@ -16,7 +16,7 @@ end
 """
     ray_grid_intersections(origin, destination)
 
-Computes all voxels crossed by a ray between `origin` and `destination` with a [`GridShape`](@ref) (default infinitely extending 1x1x1 grid).
+Computes all voxels crossed by a ray between `origin` and `destination` with an inifinitely extending 1x1x1 grid.
 Both origin and destination are length-3 vectors.
 The returned object is an iterator returning a tuple with:
 - N-length vector with the voxel that we are crossing through

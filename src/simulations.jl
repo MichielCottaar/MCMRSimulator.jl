@@ -6,7 +6,7 @@ import ..Sequences: Sequence
 import ..Timestep: TimeController, propose_times
 import ..Spins: Spin, Snapshot, SpinOrientation
 import ..Methods: get_time, B0
-import ..Properties: GlobalProperties, R1, R2, off_resonance
+import ..Properties: GlobalProperties, R1, R2, off_resonance, correct_for_timestep
 
 """
     Simulation(
@@ -28,11 +28,11 @@ These parameters determine the evolution and relaxation of the spin magnetisatio
 - `R1`/`T1`: sets the longitudinal relaxation rate (R1 in kHz) or relaxation time (T1=1/R1 in ms). This determines how fast the longitudinal magnetisation returns to its equilibrium value of 1.
 - `R2`/`T2`: sets the transverse relaxation rate (R2 in kHz) or relaxation time (T2=1/R2 in ms). This determines how fast the transverse magnetisation is lost.
 - `off_resonance`: Size of the off-resonance field in this voxel in kHz.
-These MRI properties can be overriden for spins inside the [`BaseObstruction`](@ref) objects of the `geoemtry`.
+These MRI properties can be overriden for spins inside the [`ObstructionGroup`](@ref) objects of the `geoemtry`.
 
 ## Collision parameters
-These parameters determine how parameters behave when hitting the [`BaseObstruction`](@ref) objects of the `geoemtry`.
-They can be overriden for individual [`BaseObstruction`] objects.
+These parameters determine how parameters behave when hitting the [`ObstructionGroup`](@ref) objects of the `geoemtry`.
+They can be overriden for individual objects for each [`ObstructionGroup`].
 - `MT_fraction`: the fraction of magnetisation transfered between the obstruction and the water spin at each collision.
 - `permeability`: the probability that the spin will pass through the obstruction.
 - `surface_density`: Density of spins stuck on the surface relative to the volume density of hte free water.
@@ -46,8 +46,8 @@ For more details on how to adjust them, see [`TimeController`](@ref).
 
 # Running the simulation
 To run a [`Snapshot`](@ref) of spins through the simulations you can use one of the following functions:
-- [`evolve`](@ref): evolves the spins in the snapshot until a single given time and returns that state in a new [`Snapshot`](@ref).
-- [`readout`](@ref): evolves the spins to particular times in each TR and return the total signal at that time (or a [`Snaphshot`](@ref)).
+- `evolve`: evolves the spins in the snapshot until a single given time and returns that state in a new [`Snapshot`](@ref).
+- `readout`: evolves the spins to particular times in each TR and return the total signal at that time (or a [`Snapshot`](@ref)).
 """
 struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, S<:Sequence, O<:FixedSusceptibility}
     # N sequences, datatype T

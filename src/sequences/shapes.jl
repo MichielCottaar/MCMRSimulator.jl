@@ -7,7 +7,7 @@ import ..Methods: start_time, end_time, add_TR
 Defines a [`Shape`](@ref) profile for an RF pulse or gradient profile.
 The `Shape` is parametrised by the number of control points `N` and the type of the amplitude object `T`.
 This amplitude type will be `Float64` for the amplitude and phase of the [`RFPulse`](@ref).
-It will be `SVector{3, Float64}` for [`MRGradients`](@ref).
+It will be `SVector{3, Float64}` for `MRGradients`.
 """
 struct Shape{T}
     times :: Vector{Float64}
@@ -153,11 +153,6 @@ function sample_integral(shape::Shape, t0::T, times::AbstractVector{T}) where {T
     return totals
 end
 
-"""
-    add_TR(shape/gradient/rf_pulse, TR)
-
-Shifts the generic [`Shape`], [`MRGradients`], or [`RFPulse`] by a time `TR`.
-"""
 add_TR(shape::Shape, TR::Number) = Shape(shape.times .+ TR, shape.amplitudes)
 
 start_time(shape::Shape) = iszero(length(shape)) ? 0 : shape.times[1]

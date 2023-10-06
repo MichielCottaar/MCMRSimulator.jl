@@ -1,6 +1,6 @@
 module SpinEcho
 import ....Scanners: Scanner
-import ....Sequences: InstantRFPulse, Readout
+import ....Sequences: InstantRFPulse, Readout, RFPulse, InstantGradient
 import ...DefineSequence: define_sequence
 import ...Diffusion: add_linear_diffusion_weighting
 import ...BuildingBlocks: duration
@@ -37,8 +37,8 @@ function spin_echo(TE;
 end
 
 """
-    spin_echo(TE; 
-        TR=<TE>, scanner=<3T scanner>, 
+    dwi(; 
+        TE=80., TR=<TE>, scanner=<3T scanner>, 
         excitation_pulse=Instant, excitation_time=<half pulse duration>, 
         refocus_pulse=Instant, refocus_time=<half pulse duration>,
         readout_time=0, diffusion_time=<maximum>, gradient_duration=<maximum>,

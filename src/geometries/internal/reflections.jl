@@ -12,6 +12,7 @@ module Reflections
 import StaticArrays: SVector
 import LinearAlgebra: ⋅, norm
 import ..Intersections: Intersection, has_intersection
+import ..Obstructions: detect_intersection
 """
     Reflection(intersection, direction, timestep, ratio_displaced, time_moved, distance_moved, permeable=false)
 
@@ -56,7 +57,6 @@ end
     Reflection(ratio_displaced)
 
 Creates a "virtual" Reflection that represents the movement of a free particle as drawn at the start of a timestep.
-It is used in [`draw_step!`](@ref).
 """
 Reflection(ratio_displaced) = Reflection(0, 0, false, zero(SVector{3, Float64}), ratio_displaced, 0, 0)
 

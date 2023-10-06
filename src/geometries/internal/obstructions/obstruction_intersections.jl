@@ -6,7 +6,7 @@ Attributes:
 - [`empty_obstruction_intersections`](@ref)
 
 Methods:
-- [`no_intersection`](@ref)
+- [`has_intersection`](@ref)
 """
 module ObstructionIntersections
 import StaticArrays: SVector

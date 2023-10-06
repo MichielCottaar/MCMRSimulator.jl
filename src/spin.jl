@@ -11,7 +11,6 @@ Methods:
 - [`phase`](@ref)
 - [`orientation`](@ref)
 - [`isinside`](@ref)
-- [`update_isinside`](@ref)
 - [`stuck`](@ref)
 - [`stuck_to`](@ref)
 - [`get_sequence`](@ref)
@@ -242,7 +241,7 @@ end
     get_sequence(spin, sequence_index)
     get_sequence(snapshot, sequence_index)
 
-Extracts the spin orientation corresponding to a specific sequence, where the sequence index uses the order in which the sequences where provided in the [`Simulation`](@ref).
+Extracts the spin orientation corresponding to a specific sequence, where the sequence index uses the order in which the sequences where provided in the `Simulation`.
 """
 get_sequence(spin::Spin, index) = Spin(spin.position, SVector{1}([spin.orientations[index]]), spin.reflection, spin.rng)
 

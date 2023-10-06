@@ -1,11 +1,10 @@
 """
 Types:
-- [`BaseObstruction`](@ref)
-- [`PropertiedObstruction`](@ref)
+- [`ObstructionType`](@ref)
 
 Methods:
-- [`has_inside`](@ref)
-- [`has_surface`](@ref)
+- [`fields`](@ref)
+- [`key_value_pairs`](@ref)
 """
 module ObstructionTypes
 

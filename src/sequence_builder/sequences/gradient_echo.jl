@@ -1,7 +1,7 @@
 module GradientEcho
 import ...DefineSequence: define_sequence
 import ....Scanners: Scanner
-import ....Sequences: InstantRFPulse, Readout
+import ....Sequences: InstantRFPulse, Readout, RFPulse
 import ...BuildingBlocks: duration
 
 """
