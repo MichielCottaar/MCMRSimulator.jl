@@ -7,6 +7,14 @@ bib = CitationBibliography(joinpath(@__DIR__, "references.bib"), style=:authorye
 
 remote = Remotes.GitLab("git.fmrib.ox.ac.uk", "ndcn0236", "MCMRSimulator.jl")
 
+raw_src_files = ["installation.md"]
+install_version = "CI_COMMIT_TAG" in keys(ENV) ? ("#" * ENV["CI_COMMIT_TAG"]) : ""
+for fn in raw_src_files
+    text = read("docs/raw_src/$fn", String)
+    text = replace(text, "{install_version}" => install_version)
+    write("docs/src/$fn", text)
+end
+
 makedocs(;
     modules=[MCMRSimulator],
     authors="Michiel Cottaar <Michiel.cottaar@ndcn.ox.ac.uk>",
@@ -34,6 +42,10 @@ makedocs(;
     warnonly=Documenter.except(:example_block),
     plugins=[bib],
 )
+for fn in raw_src_files
+    rm("docs/src/$fn")
+end
+
 
 if get(ENV, "CI_COMMIT_REF_NAME", "") == "main" || length(get(ENV, "CI_COMMIT_TAG", "")) > 0
     deploydocs(repo="git.fmrib.ox.ac.uk:ndcn0236/mcmrsimulator.jl.git", branch="pages", devbranch="main")
