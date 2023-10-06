@@ -4,6 +4,7 @@ All notable changes to MCMRSimulator.jl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+## [v0.7.0]
 ### Added
 - New command line interface. See the tutorial in the documentation on how to use it.
 - `isinside` now works for meshes. This can be used to filter intra- or extra-cellular water as well as to set a different T1/T2/off-resonance in the intra-cellular space.
@@ -85,7 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added citation instructions
 
 
-[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.6.0...main
+[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.7.0...main
+[v0.7.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.6.0...v0.7.0
 [v0.6.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.5.0...v0.6.0
 [v0.5.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.4.0...v0.5.0
 [v0.4.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.3.0...v0.4.0
