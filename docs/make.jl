@@ -22,6 +22,7 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "Installation" => "installation.md",
         "Tutorial (Julia)" => "tutorial_julia.md",
         "Tutorial (CLI)" => "tutorial_cli.md",
         "Geometry" => "geometry.md",
