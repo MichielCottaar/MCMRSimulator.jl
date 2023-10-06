@@ -28,9 +28,21 @@ import ..Gridify: Grid, get_indices
 
 """
 Collection of L base [`FixedObstruction`](@ref) objects.
+
+This is the main internal representation of a group of identical [`FixedObstruction`](@ref) objects.
+
+Properties:
+- `obstructions`: vector of the actual [`FixedObstruction`](@ref) objects.
+- `parent_index`: Index of this group within the larger [`FixedGeometry`](@ref).
+- `original_index`: Index of this group within the original user-provided geometry.
+- `rotation`: rotation from global 3-dimensional space to the 1, 2, or 3-dimensional space of the obstructions.
+- `inv_rotation`: inverse of the rotation above
+- `grid`: [`Grid`](@ref) object on which the obstruction intersections have been precomputed. This speeds up the detection of intersections.
+- `bounding_boxes`: vector of [`BoundingBox`](@ref) objects for each obstruction. These are used to predect whether a spin could intersect with the obstruction.
+- `volume`: R1, R2, and off-resonance properties of the spins inside the obstructions.
+- `surface`: R1, R2, off-resonance, surface_density and dwell_time properties of particles stuck to the surface. Also, contains the permeability and surface relaxivity to process collsions.
+- `vertices`: vector of vertices (only used for a mesh).
 """
-
-
 struct FixedObstructionGroup{
     L, N, R, O <: FixedObstruction{N},
     B <: Union{Nothing, Vector{BoundingBox{N}}},
@@ -123,7 +135,7 @@ end
 """
     BoundingBox(obstruction_group)
 
-Finds the bounding box containing all the obstructions in the [`FixedObstructionGroup`] ignoring any repeats or rotation.
+Finds the bounding box containing all the obstructions in the [`FixedObstructionGroup`](@ref) ignoring any repeats or rotation.
 """
 BoundingBox(group::FixedObstructionGroup) = BoundingBox(group.obstructions, group.vertices)
 BoundingBox(obstructions::Vector{<:FixedObstruction}, vertices::Vector{SVector{3, Float64}}) = BoundingBox(BoundingBox.(obstructions)...)
