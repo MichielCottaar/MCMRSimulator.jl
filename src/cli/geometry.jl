@@ -184,7 +184,7 @@ function parse_user_argument(field_value::FieldValue{T}, value::Vector, n_object
         if length(value) == nt
             return value
         elseif length(value) == nt * n_objects
-            return [value[1 + i * nt: nt * (i + 1) for i in 0:n_objects-1]]
+            return [value[1 + i * nt: nt * (i + 1)] for i in 0:n_objects-1]
         else
             error("Expected $nt or $(nt * n_objects) values for $(field_value.field.name). Got $(length(value)) instead.")
         end
