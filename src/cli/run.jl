@@ -103,8 +103,8 @@ function add_init_flags!(parser)
             help = "Initial value of the phase of the transverse magnetisation for each spin in degrees."
             arg_type = Float64
             default = 0.
-        "--init"
-            help = "Continues the simulation with the spin states stored in a JSON file (produced using the 'mcmr pre-run' command). If used all other initialisation flags (except for --seed) are ignored."
+        #"--init"
+        #    help = "Continues the simulation with the spin states stored in a JSON file (produced using the 'mcmr pre-run' command). If used all other initialisation flags (except for --seed) are ignored."
         "--seed"
             help = "Initialisation for random number seed. Supply this to get reproducible results. If --init is also set, this flag will override the seed stored in this initialisation file."
             arg_type = Int
