@@ -19,6 +19,8 @@ if docker_tag_exists $tag-amd64 ; then
     docker push michielc/mcmr:$tag-arm64
     docker manifest create michielc/mcmr:$tag michielc/mcmr:$tag-arm64 michielc/mcmr:$tag-arm64
     docker manifest push michielc/mcmr:$tag
+    docker manifest create michielc/mcmr:latest michielc/mcmr:$tag-arm64 michielc/mcmr:$tag-arm64
+    docker manifest push michielc/mcmr:latest
 else
     echo "ARM64 image for '$tag' has not been uploaded yet. Please wait for the gitlab pipeline to run before running this script."
     exit 1
