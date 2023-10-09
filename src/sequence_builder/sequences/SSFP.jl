@@ -1,3 +1,4 @@
+module SSFP
 """
     dwssfp(TR; TE=<TR>, scanner=<3T scanner>, excitation_pulse=Instant, excitation_time=<half pulse duration>, flip_angle=90, gradient_strength=0, gradient_duration=0, gradient_time=nothing)
 
@@ -78,5 +79,7 @@ function dwssfp(TR;
             Readout()
         ]
     end
+
+end
 
 end

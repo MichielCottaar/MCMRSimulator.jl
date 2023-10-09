@@ -1,3 +1,7 @@
+module BuildingBlocks
+import ...Sequences: RFPulse, MRGradients, InstantComponent, Readout, Sequence, start_time, end_time, add_TR
+import ...Scanners: Scanner
+
 """
     BuildingBlock(; components=vector of pulses/gradients, duration=minimum)
 
@@ -5,14 +9,14 @@ Creates a sequence building block by overlapping zero or more pulses/gradients.
 """
 struct BuildingBlock
     components :: Vector
-    duration :: Float
+    duration :: Float64
     function BuildingBlock(; components=RFPulse[], duration=nothing)
         min_duration = length(components) == 0 ? 0 : maximum(end_time.(components))
         if isnothing(duration)
             duration = min_duration
         end
         @assert duration >= min_duration
-        new(components, Float(duration))
+        new(components, Float64(duration))
     end
 end
 
@@ -85,3 +89,4 @@ isempty_block(blocks::AbstractVector) = all(is_empty.(blocks))
 isempty_block(number::Number) = true
 isempty_block(block::BuildingBlock) = (length(block.pulses) == 0) && (length(block.instants) == 0) && (length(block.gradients) == 0)
 isempty_block(other::BuildingBlockLike) = false
+end

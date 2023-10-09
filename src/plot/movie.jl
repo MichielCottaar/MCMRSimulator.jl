@@ -1,14 +1,19 @@
+module Movie
+using Makie
+import ...Simulations: Simulation
+import ...Evolve: readout
+
 function simulator_movie(filename, simulator::Simulation{N}, times, repeats; resolution=(1600, 800), trajectory_init=30, signal_init=10000, framerate=50, plane_orientation=:z) where {N}
     if isa(trajectory_init, Integer)
         trajectory_init = [rand(3) .* repeats .- repeats ./ 2 for _ in 1:trajectory_init]
     end
-    sig = signal(signal_init, simulator, times)
+    sig = readout(signal_init, simulator, times)
     if N == 1
         trans = [transverse.(sig) ./ signal_init]
     else
         trans = [transverse.([s[index] for s in sig]) ./ signal_init for index in 1:N]
     end
-    traj = trajectory(trajectory_init, simulator, times);
+    traj = readout(trajectory_init, simulator, times, return_snapshot=true);
     pp = PlotPlane(plane_orientation, sizex=repeats[1], sizey=repeats[2])
 
     index = Observable(1)
@@ -41,4 +46,6 @@ function simulator_movie(filename, simulator::Simulation{N}, times, repeats; res
             framerate=framerate) do i
         index[] = i
     end
+end
+
 end

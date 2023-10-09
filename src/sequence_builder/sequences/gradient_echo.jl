@@ -1,3 +1,9 @@
+module GradientEcho
+import ...DefineSequence: define_sequence
+import ....Scanners: Scanner
+import ....Sequences: InstantRFPulse, Readout, RFPulse
+import ...BuildingBlocks: duration
+
 """
     gradient_echo(TE; TR=<TE>, scanner=<3T scanner>, excitation_pulse=Instant, excitation_time=<half pulse duration>)
 
@@ -14,7 +20,7 @@ function gradient_echo(
     excitation_time=nothing
 )
     excitation_time = isnothing(excitation_time) ? duration(excitation_pulse) / 2 : excitation_time
-    use_scanner(scanner) do 
+    define_sequence(scanner, TR) do 
         [
             excitation_pulse,
             TE - duration(excitation_pulse) + excitation_time,
@@ -22,4 +28,5 @@ function gradient_echo(
             TR - TE - excitation_time
         ]
     end
+end
 end

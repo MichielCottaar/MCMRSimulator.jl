@@ -1,6 +1,5 @@
 using Test
 import MCMRSimulator as mr
-import MCMRSimulator: Float
 using StaticArrays
 using LinearAlgebra
 import Random
@@ -18,8 +17,9 @@ all_tests = [
     "permeability",
     "radio_frequency",
     "hierarchical_mri",
-    "pulseq",
+    "sequence_IO",
     "various",
+    "subsets",
 ]
 
 if length(ARGS) == 0
@@ -38,28 +38,11 @@ Splits the given movement from point A to point B into multiple steps that bounc
 This function assumes perfect reflection rather than the diffuse reflection used in [`draw_step`](@ref).
 It is used to test the collision detection and resolution, but not actually used in the simulations.
 """
-correct_collisions(to_try :: mr.Movement, geometry) = correct_collisions(to_try, mr.Geometry(geometry))
-correct_collisions(to_try :: mr.Movement, geometry::mr.Geometry{0}) = [to_try.origin, to_try.destination]
-function correct_collisions(to_try :: mr.Movement, geometry::mr.Geometry)
-    steps = mr.PosVector[to_try.origin]
-    collision = mr.empty_collision
-    while true
-        collision = mr.detect_collision(to_try, geometry, collision)
-        if collision === mr.empty_collision
-            push!(steps, to_try.destination)
-            break
-        end
-        new_pos = collision.distance * to_try.destination + (1 - collision.distance) * to_try.origin
-        push!(steps, new_pos)
-        if length(steps) >= 100
-            error()
-        end
-        direction = to_try.destination .- to_try.origin
-        reflection = - 2 * (collision.normal ⋅ direction) * collision.normal / norm(collision.normal) ^ 2 .+ direction
-        new_dest = new_pos .+ reflection / norm(reflection) * norm(direction) * (1 - collision.distance)
-        to_try = mr.Movement(new_pos, new_dest)
-    end
-    steps
+function correct_collisions(start, dest, geometry)
+    simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
+    spin = mr.Spin(nsequences=0, position=start)
+    parts = SVector{0, mr.SequencePart}()
+    return mr.draw_step!(spin, simulation, parts, 1., dest)
 end
 
 @testset "MCMRSimulator tests" begin

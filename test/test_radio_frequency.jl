@@ -5,7 +5,7 @@
             @test rf.max_amplitude ≈ 1/36
             seq = mr.Sequence(components=[rf], TR=100.)
             sim = mr.Simulation(seq)
-            signal = mr.signal(100, sim, 0:0.1:10)
+            signal = mr.readout(100, sim, 0:0.1:10)
             @test all(mr.propose_times(sim, 0, 9) .== 0:0.1:9)
             @test all(mr.propose_times(mr.Simulation(seq, rf_rotation=10), 0, 9) .== 0:1:9)
             increasing = signal[1:90]
@@ -22,7 +22,7 @@
         @test rf.max_amplitude ≈ sqrt(1 + (90 / (360 * 9))^2)
         seq = mr.Sequence(components=[rf], TR=100.)
         sim = mr.Simulation(seq, off_resonance=1)
-        signal = mr.signal(100, sim, 0:0.1:10)
+        signal = mr.readout(100, sim, 0:0.1:10)
         increasing = signal[1:90]
         constant = signal[91:end]
         @test all(abs.(mr.longitudinal.(constant)) .<= 3)

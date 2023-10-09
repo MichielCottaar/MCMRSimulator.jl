@@ -13,10 +13,8 @@
             ]
                 nspins = 300
                 sequence = mr.dwi(bval=2., TE=80., gradient_duration=δ, diffusion_time=Δ)
-                sim = mr.Simulation(sequence)
-                readout = mr.readout(nspins, sim)
-                @test length(readout) == 1
-                snap = readout[1]
+                sim = mr.Simulation(sequence, diffusivity=0.)
+                snap = mr.readout(nspins, sim, return_snapshot=true)
                 @test snap.time == 80.
                 @test mr.transverse(snap) ≈ nspins rtol=1e-2
             end
@@ -36,8 +34,7 @@
                 TE = 80.
                 sequence = mr.dwi(bval=0.3, TE=TE, gradient_duration=δ, diffusion_time=Δ)
                 sim = mr.Simulation(sequence, diffusivity=0.5)
-                readout = mr.readout(nspins, sim)
-                snap = readout[1]
+                snap = mr.readout(nspins, sim, return_snapshot=true)
                 @test snap.time == TE
                 @test mr.transverse(snap) ≈ nspins * exp(-0.15) rtol=0.05
             end
@@ -46,13 +43,12 @@
             nspins = 30000
             sequence = mr.dwi(bval=2, scanner=mr.Siemens_Prisma)
             sim = mr.Simulation(sequence, diffusivity=0.5)
-            readout = mr.readout(nspins, sim)
-            snap = readout[1]
+            snap = mr.readout(nspins, sim)
             @test mr.transverse(snap) ≈ nspins * exp(-1) rtol=0.05
         end
         @testset "Diffusion within the sphere" begin
             for radius in (0.5, 1.)
-                sphere = mr.Sphere(radius)
+                sphere = mr.Spheres(radius=radius)
                 all_pos = [rand(3) .* 2 .- 1 for _ in 1:30000]
                 snap = mr.Snapshot([mr.Spin(position=pos .* radius) for pos in all_pos if norm(pos) < 1.])
                 @testset "Stejskal-Tanner approximation at long diffusion times" begin
@@ -60,9 +56,8 @@
                     qvals = [0.01, 0.1, 1.]
                     sequences = [mr.dwi(TE=101, diffusion_time=100, qval=qval, gradient_duration=0) for qval in qvals]
                     simulation = mr.Simulation(sequences; geometry=sphere, diffusivity=3.)
-                    at_readout = mr.readout(snap, simulation)
-                    for (qval, readouts) in zip(qvals, at_readout)
-                        readout = readouts[1]
+                    at_readout = mr.readout(snap, simulation, return_snapshot=true)
+                    for (qval, readout) in zip(qvals, at_readout)
                         factor = qval * radius
                         expected = 9 * (factor * cos(factor) - sin(factor)) ^2 / factor^6
                         @test readout.time == 101
@@ -73,7 +68,7 @@
         end
         @testset "Diffusion between two planes" begin
             for distance in [0.5, 1]
-                walls = mr.walls(positions=[0., distance])
+                walls = mr.Walls(position=[0., distance])
                 Random.seed!(1234)
                 snap = mr.Snapshot([mr.Spin(position=rand(3) * distance) for _ in 1:5000])
                 @testset "Stejskal-Tanner approximation at long diffusion times for a=$distance" begin
@@ -81,14 +76,13 @@
                     qvals = [0.01, 0.1, 1.]
                     sequences = [mr.dwi(TE=101, diffusion_time=100, qval=qval, orientation=[1., 0., 0.], gradient_duration=0) for qval in qvals]
                     simulation = mr.Simulation(sequences; geometry=walls, diffusivity=3.)
-                    at_readout = mr.readout(snap, simulation)
-                    for (qval, readouts) in zip(qvals, at_readout)
-                        readout = readouts[1]
+                    at_readout = mr.readout(snap, simulation, return_snapshot=true)
+                    for (qval, readout) in zip(qvals, at_readout)
                         factor = qval * distance
                         #factor = 2 * π * qval * distance
                         expected = 2 * (1 - cos(factor)) / factor^2
                         @test readout.time == 101
-                        @test log(mr.transverse(readout) / length(readout.spins)) ≈ log(expected) rtol=0.05
+                        @test log(mr.transverse(readout) / length(snap)) ≈ log(expected) rtol=0.05
                     end
                 end
                 @testset "Mitra approximation at long diffusion times" begin
@@ -103,8 +97,8 @@
 
                     for (dt, readout_dt) in zip(diffusion_times, at_readout)
                         effective_diffusion = 1. - 4 / 3 * sqrt(π * dt) / distance
-                        signal = mr.transverse(readout_dt[1])
-                        @test log(signal / length(readout_dt[1])) ≈ -2. * effective_diffusion rtol=0.2
+                        signal = mr.transverse(readout_dt)
+                        @test log(signal / length(snap)) ≈ -2. * effective_diffusion rtol=0.2
                     end
                 end
             end

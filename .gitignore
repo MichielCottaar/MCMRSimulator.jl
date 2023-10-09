@@ -7,3 +7,4 @@ Manifest.toml
 /.julia
 /local
 /examples/annulus.jl
+/compile/mcmr

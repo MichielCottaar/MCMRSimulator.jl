@@ -1,3 +1,10 @@
+module Timestep
+import LinearAlgebra: norm
+import ..Geometries.Internal: FixedGeometry, FixedSusceptibility, max_timestep_sticking, size_scale, off_resonance_gradient
+import ..Sequences: Sequence, control_points, start_time, end_time, gradient, current_pulse
+import ..Methods: get_time
+import ..Properties: GlobalProperties
+
 """
     TimeController(geometry, B0, diffusivity; max_stepsize=<see docs>, gradient_precision=1, rf_rotation=1)
 
@@ -14,23 +21,23 @@ Stores the settings controlling the maximum timestep during the simulation, name
 More details about how these settings are used can be found in [`propose_times`](@ref).
 """
 struct TimeController
-    max_timestep :: Float
-    gradient_precision :: Float
-    rf_rotation :: Float
+    max_timestep :: Float64
+    gradient_precision :: Float64
+    rf_rotation :: Float64
 end
 
-function TimeController(geometry::Geometry, B0::Number, diffusivity::Number, default_properties::GlobalProperties; max_timestep=nothing, gradient_precision=1., rf_rotation=1.)
-    mt_stick = max_timestep_sticking(geometry, default_properties, diffusivity)
+function TimeController(geometry::FixedGeometry, susceptibility::FixedSusceptibility, B0::Number, diffusivity::Number; max_timestep=nothing, gradient_precision=1., rf_rotation=1.)
+    mt_stick = max_timestep_sticking(geometry, diffusivity)
     if isnothing(max_timestep)
         max_timestep = min(
             size_scale(geometry),
-            max_timestep_internal_gradient(geometry, gradient_precision, diffusivity, B0),
+            max_timestep_internal_gradient(susceptibility, gradient_precision, diffusivity, B0),
             mt_stick
         )
     elseif max_timestep > mt_stick
         throw(DomainError("Maximum timestep is set by the user to $(max_timestep)ms. However, it can not be longer than $(mt_stick)ms, because the probability of particles sticking to the surface would be larger than 1."))
     end
-    TimeController(Float(max_timestep), Float(gradient_precision), Float(rf_rotation))
+    TimeController(Float64(max_timestep), Float64(gradient_precision), Float64(rf_rotation))
 end
 
 """
@@ -51,7 +58,7 @@ Additional timepoints will be added to ensure that at any step the timestep is l
 - During an [`RFPulse`](@ref) the rotation around the maximum magnetic field will be at most `simulation.time_controller.rf_rotation` degrees. 
 """
 function propose_times(time_controller::TimeController, t_start::Number, t_end::Number, sequences::AbstractVector{<:Sequence}, diffusivity::Number)
-    timepoints = Float[t_start, t_end]
+    timepoints = Float64[t_start, t_end]
     for sequence in sequences
         first_TR = all_control_points(sequence)
 
@@ -118,11 +125,11 @@ function max_timestep_sequence_gradient(sequence::Sequence, gradient_precision::
     return (360 * diffusivity * grad * grad) ^ (-1/3) / gradient_precision
 end
 
-function max_timestep_internal_gradient(geom::Geometry, gradient_precision::Number, diffusivity::Number, B0)
+function max_timestep_internal_gradient(susc::FixedSusceptibility, gradient_precision::Number, diffusivity::Number, B0)
     if iszero(gradient_precision)
         return Inf
     end
-    grad = off_resonance_gradient(geom, B0)
+    grad = off_resonance_gradient(susc, B0)
     return (360 * diffusivity * grad * grad) ^ (-1/3) / gradient_precision
 end
 
@@ -135,4 +142,5 @@ function max_timestep_pulse(sequence::Sequence, rf_rotation::Number, t_start::Nu
         return Inf
     end
     return rf_rotation / (current.max_amplitude * 360)
+end
 end

@@ -18,6 +18,7 @@
             s2 = mr.dwi(bval=1.)
 
             kwargs = Dict(
+                :diffusivity => 0.,
                 :gradient_precision => 1.,
                 :max_timestep => Inf,
             )
@@ -38,7 +39,7 @@
     end
     @testset "Empty environment and sequence" begin
         simulation = mr.Simulation(mr.Sequence(TR=2.8))
-        snaps = mr.trajectory(zeros(3), simulation, 0:0.5:2.8)
+        snaps = mr.readout(zeros(3), simulation, 0:0.5:2.8, return_snapshot=true)
         time = 0.
         for snap in snaps
             @test snap.time == time
@@ -50,7 +51,7 @@
         @test length(snaps) == 6
 
         simulation = mr.Simulation(mr.Sequence(TR=2.8))
-        snaps= mr.trajectory([mr.Spin(), mr.Spin()], simulation, 0:0.5:2.8)
+        snaps= mr.readout([mr.Spin(), mr.Spin()], simulation, 0:0.5:2.8, return_snapshot=true)
         time = 0.
         for snap in snaps
             @test snap.time == time
@@ -63,7 +64,7 @@
     end
     @testset "Gradient echo sequence" begin
         simulation = mr.Simulation(mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=2.8))
-        snaps = mr.trajectory(zeros(3), simulation, 0:0.5:2.8)
+        snaps = mr.readout(zeros(3), simulation, 0:0.5:2.8)
         @test mr.orientation(snaps[1]) ≈ SA[0., 0., 1.]
         for snap in snaps[2:end]
             @test mr.orientation(snap) ≈ SA[0., 1., 0.]
@@ -71,9 +72,7 @@
         @test length(snaps) == 6
     end
     @testset "Ensure data is stored at requested time" begin
-        simulation = mr.Simulation([mr.Sequence(TR=2.8)])
-        snaps = mr.trajectory(mr.Spin(), simulation, 0:0.5:2.8)
-        @test length(snaps) == 6
+        simulation = mr.Simulation(mr.Sequence(TR=2.8))
 
         snaps = mr.evolve(mr.Spin(), simulation, 2.3)
         @test mr.get_time(snaps) == 2.3
@@ -81,12 +80,15 @@
         snaps = mr.evolve(snaps, simulation)
         @test mr.get_time(snaps) == 2.8
 
+        snaps = mr.evolve(snaps, simulation)
+        @test mr.get_time(snaps) == 5.6
+
         snaps = mr.evolve(mr.Spin(), simulation)
         @test mr.get_time(snaps) == 2.8
     end
     @testset "Basic diffusion has no effect in constant fields" begin
         sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=2.)
-        no_diff = mr.Simulation([sequence], R2=0.3)
+        no_diff = mr.Simulation([sequence], diffusivity=0., R2=0.3)
         with_diff = mr.Simulation([sequence], diffusivity=1., R2=0.3)
         spin_no_diff = mr.evolve(mr.Spin(), no_diff).spins[1]
         spin_with_diff = mr.evolve(mr.Spin(), with_diff).spins[1]
@@ -94,14 +96,15 @@
         @test spin_with_diff.position != SA[0, 0, 0]
         @test mr.orientation.(spin_with_diff.orientations) == mr.orientation.(spin_no_diff.orientations)
         @test mr.transverse(spin_no_diff) ≈ exp(-0.6)
-        @test abs(mr.longitudinal(spin_no_diff)) < Float(1e-6)
+        @test abs(mr.longitudinal(spin_no_diff)) < Float64(1e-6)
     end
     @testset "Basic diffusion run within sphere" begin
         sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=2.)
-        sphere = mr.Sphere(1.)
+        sphere = mr.Spheres(radius=1.)
         Random.seed!(12)
-        diff = mr.Simulation([mr.Sequence(TR=20.)], diffusivity=2., geometry=sphere)
-        snaps = mr.trajectory([mr.Spin(), mr.Spin()], diff, 0:0.5:sequence.TR)
+        diff = mr.Simulation(mr.Sequence(TR=20.), diffusivity=2., geometry=sphere)
+        snaps = mr.readout([mr.Spin(), mr.Spin()], diff, 0:0.5:sequence.TR, return_snapshot=true)
+        @test size(snaps) == (5, )
         for snap in snaps
             @test length(snap.spins) == 2
             for spin in snap.spins
@@ -118,7 +121,8 @@
         ]
         all_snaps = mr.Simulation(sequences, diffusivity=1., R2=1.)
 
-        readouts = [r[1] for r in mr.readout(mr.Spin(), all_snaps)]
+        readouts = mr.readout(mr.Spin(), all_snaps)
+        @assert size(readouts) == (3,)
 
         # check relaxation
         @test mr.transverse(readouts[1]) ≈ 0. atol=1e-12

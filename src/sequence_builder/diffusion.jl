@@ -1,3 +1,9 @@
+module Diffusion
+import ...Scanners: max_gradient, max_slew_rate, Scanner
+import ...Sequences: MRGradients, rotate_bvec, InstantGradient
+import ...Methods: get_rotation
+import ..BuildingBlocks: isempty_block, duration, BuildingBlock
+
 """
     add_linear_diffusion_weighting(blocks, replace1, replace2, refocus=true, bval/qval/gradient_strength, diffusion_time=max, gradient_duration=max, scanner=3T, orientation=:x)
 
@@ -10,7 +16,7 @@ The timings are determined by:
 - `gradient_duration`: defaults to the largest value possible. Setting the `gradient_duration` to zero will cause [`InstantGradient`] objects to be used.
 - `ramp_time`: defaults to the maximum gradient / maximum slew rate of the scanner.
 
-The gradient strength is set by `bval`, `qval`, or `gradient_strength`. At least one of these should be provided.
+The gradient strength is set by `bval` (ms/um^2), `qval` (rad/um), or `gradient_strength` (kHz/um). At least one of these should be provided.
 
 By default, the timings of the existing [`BuildingBlock`](@ref) objects are respected.
 If `max_bval` or `max_qval` are set these timings are adjusted to the minimum duration required to reach that b-value or q-value.
@@ -98,7 +104,7 @@ function get_diffusion_trapeziums(
         elseif !isnothing(bval)
             qval = sqrt(bval / diffusion_time)
         end
-        grad = InstantGradient(qvec=qval .* get_rotation(orientation, 1)[:, 1] / 2π)
+        grad = InstantGradient(qvec=qval .* get_rotation(orientation, 1)[:, 1])
         return (
             [
                 t1,
@@ -158,11 +164,12 @@ function fit_time(
         t1 = duration1 - (total_duration - duration_wait)/2
         t2 = (total_duration - duration_wait)/2 - gradient_duration - ramp_time
     elseif duration1 < duration2
-        t1 = zero(Float)
+        t1 = 0.
         t2 = diffusion_time - (duration1 + duration_wait)
     else
-        t2 = zero(Float)
+        t2 = 0.
         t1 = duration1 - (diffusion_time - duration_wait)
     end
     return (t1, t2)
+end
 end
