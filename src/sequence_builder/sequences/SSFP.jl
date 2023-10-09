@@ -1,7 +1,8 @@
 module SSFP
 import StaticArrays: SVector
+import ....Methods: get_rotation
 import ....Scanners: Scanner, max_gradient, max_slew_rate
-import ....Sequences: InstantRFPulse, Readout, RFPulse, InstantGradient, constant_pulse, get_rotation, rotate_bvec
+import ....Sequences: InstantRFPulse, Readout, RFPulse, InstantGradient, constant_pulse, rotate_bvec
 import ...DefineSequence: define_sequence
 """
     dwssfp(TR; TE=<TR>, scanner=<3T scanner>, excitation_pulse=Instant, excitation_time=<half pulse duration>, flip_angle=90, gradient_strength=0, gradient_duration=0, gradient_time=nothing)
