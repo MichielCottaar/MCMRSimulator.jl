@@ -41,7 +41,7 @@ function dwssfp(TR;
         if qval == 0 || isnothing(qval)
             gradient = []
         else
-            gradient = InstantGradient(qvec=qval .* get_rotation(gradient_orientation, 1)[:, 1] / 2π) # gradient_strength ignored when duration is 0
+            gradient = InstantGradient(qvec=qval .* get_rotation(gradient_orientation, 1)[:, 1]) # gradient_strength ignored when duration is 0
         end
 
         @assert gradient_delay < TE "gradient delay too long"
