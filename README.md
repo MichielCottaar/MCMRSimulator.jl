@@ -56,4 +56,7 @@ This software can be cited using the information in the CITATION.cff file.
   - Upload spanshot (.zip) to zenodo
   - Update version number in zenodo
   - Press "Save" and then "Process" buttons at the bottom of the zenodo page.
-- Check if documentation updated correctly
+- After pipelines finish:
+  - Check if documentation updated correctly
+  - Run `./local_docker_build.sh v<version number>` to build docker ARM64 image
+  - Build singularity image on https://cloud.sylabs.io/builder (copy build instructions from last time and update version number in "%labels" section and "From:" statement)
