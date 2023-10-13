@@ -198,11 +198,9 @@ struct SequencePart
 end
 
 function SequencePart(sequence::Sequence, t1::Number, t2::Number)
-    t1_norm = mod(t1, sequence.TR)
-    t2_norm = mod(t2, sequence.TR)
-    if iszero(t2_norm)
-        t2_norm = sequence.TR
-    end
+    nTR = Int(div((t1 + t2) / 2, sequence.TR, RoundDown))
+    t1_norm = t1 - nTR * sequence.TR
+    t2_norm = t2 - nTR * sequence.TR
     pulse = current_pulse(sequence, (t1_norm + t2_norm) / 2)
     if isnothing(pulse)
         amp = phase = ShapePart(zero(Float64), zero(Float64), zero(Float64))
