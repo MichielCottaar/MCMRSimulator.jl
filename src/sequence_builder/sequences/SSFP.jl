@@ -26,7 +26,7 @@ function dwssfp(TR;
                 gradient_duration=0, # Use instant gradient by default
                 qval = nothing,
                 gradient_delay=0.1, # have a small delay to separate RF pulse and gradient by default
-                gradient_orientation=SVector{3, Float}([1., 0., 0.]))
+                gradient_orientation=SVector{3, Float64}([1., 0., 0.]))
     
     if isnothing(TE)
         TE = TR - 10^(-6) # Leave a small interval between readout and end of TR (TE) so that it always happens before the RF pulse of the next TR.
