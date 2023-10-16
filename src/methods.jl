@@ -4,7 +4,7 @@ Defines methods shared across multiple sub-modules.
 module Methods
 
 import Rotations
-import LinearAlgebra: norm, cross, ⋅
+import LinearAlgebra: norm, cross, ⋅, I
 import StaticArrays: SMatrix
 
 """
@@ -92,32 +92,19 @@ function get_rotation(rotation::AbstractVector{<:Number}, ndim::Int)
     angle = acos(normed ⋅ reference)
     vec_rotation = cross(reference, normed)
     if iszero(norm(vec_rotation))
-        return get_rotation(abs(angle) < 1 ? I(3) : -I(3), 3)
+        return get_rotation(abs(angle) < 1 ? I(3) : -I(3), ndim)
     end
     return get_rotation(Rotations.AngleAxis(angle, vec_rotation...), ndim)
 end
 
 function get_rotation(rotation::Symbol, ndim::Int)
-    orig_dimension = ndim == 1 ? 1 : 3
     target_dimension = Dict(
-        :x => 1,
-        :y => 2,
-        :z => 3,
-        :I => orig_dimension,
+        :x => [1, 0, 0],
+        :y => [0, 1, 0],
+        :z => [0, 0, 1],
+        :I => (ndim == 2 ? [0, 0, 1] : [1, 0, 0]),
     )[rotation]
-    target = zeros(Float64, 3, ndim)
-    if orig_dimension <= ndim
-        target[target_dimension, orig_dimension] = one(Float64)
-    end
-    if target_dimension <= ndim
-        target[orig_dimension, target_dimension] = one(Float64)
-    end
-    for d in 1:ndim
-        if d != target_dimension && d != orig_dimension
-            target[d, d] = one(Float64)
-        end
-    end
-    SMatrix{3, ndim, Float64}(target)
+    return get_rotation(target_dimension, ndim)
 end
 
 end
