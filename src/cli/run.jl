@@ -186,7 +186,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 push!(all_sequences, sequence)
             end
         end
-        if (length(all_sequences) == length(sequences)) && size(bvecs, 1) > 1
+        if all(iszero.(bvec_indices))
             @warn "None of the input sequences include bvec-dependent gradients, so the `--bvec` flag will have no effect."
         end
     end
