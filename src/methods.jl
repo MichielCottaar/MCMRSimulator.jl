@@ -4,7 +4,7 @@ Defines methods shared across multiple sub-modules.
 module Methods
 
 import Rotations
-import LinearAlgebra: norm, cross
+import LinearAlgebra: norm, cross, ⋅
 import StaticArrays: SMatrix
 
 """
@@ -47,12 +47,17 @@ end
 function off_resonance end
 
 """
+    get_rotation(rotation_mat, ndim)
+
+Returns a (3, `ndim`) rotation matrix, that is the relevant part of the full 3x3 `rotation_mat` to map to the x-axis (if `ndim` is 1) or the x-y plance (if `ndim` is 2).
+If `ndim` is 3, the full rotation matrix `rotation_mat` is returned.
+
     get_rotation(vector, ndim)
 
-Returns the (3, `ndim`) rotation matrix mapping the x-direction to `vector` (if `ndim` is 1) or the z-direction to `vector` (if `ndim` is 3).
+Returns the (3, `ndim`) rotation matrix mapping the `vector` to the x-direction (if `ndim` is 1 or 3) or the z-direction (if `ndim` is 2).
 Vector can be a length 3 array or one of the symbols :x, :y, or :z (representing vectors in those cardinal directions).
 """
-get_rotation(rotation::Rotations.Rotation, ndim::Int) = get_rotation(Rotations.RotMatrix(rotation.mat), ndim)
+get_rotation(rotation::Rotations.Rotation, ndim::Int) = get_rotation(Rotations.RotMatrix(rotation), ndim)
 get_rotation(rotation::Rotations.RotMatrix, ndim::Int) = get_rotation(rotation.mat, ndim)
 function get_rotation(rotation::AbstractMatrix, ndim::Int)
     if size(rotation) == (3, 3) && ndim < 3
@@ -82,10 +87,14 @@ function get_rotation(rotation::AbstractVector{<:Number}, ndim::Int)
         try_vec = [1., 0, 0]
         vec1 = cross(normed, try_vec)
     end
-    vec2 = cross(normed, vec1)
-    vec1 = vec1 ./ norm(vec1)
-    vec2 = vec2 ./ norm(vec2)
-    return get_rotation(hcat(vec1, vec2, normed), ndim)
+    reference = ndim == 2 ? [0, 0, 1.] : [1., 0., 0.]
+    # rotate reference to normed
+    angle = acos(normed ⋅ reference)
+    vec_rotation = cross(reference, normed)
+    if iszero(norm(vec_rotation))
+        return get_rotation(abs(angle) < 1 ? I(3) : -I(3), 3)
+    end
+    return get_rotation(Rotations.AngleAxis(angle, vec_rotation...), ndim)
 end
 
 function get_rotation(rotation::Symbol, ndim::Int)
