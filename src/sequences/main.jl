@@ -258,4 +258,17 @@ function rotate_bvec(sequence::Sequence{I, P, R, G}, bvec) where {I, P, R, G}
     )
 end
 
+
+"""
+    can_rotate_bvec(sequence)
+
+Checks whether [`rotate_bvec`](@ref) will have any effect on the sequence (i.e., `apply_bvec` has been set to true for any non-zero gradients in the sequence).
+"""
+function can_rotate_bvec(sequence::Sequence)
+    can_rotate(grad::MRGradients) = grad.apply_bvec && any(norm.(grad.shape.amplitude) .> 0)
+    can_rotate(grad::InstantGradient) = grad.apply_bvec && norm(grad.qvec) > 0
+    can_rotate(no_grad::InstantRFPulse) = false
+    return any(can_rotate.(sequence.gradients)) || any(can_rotate.(sequence.instants))
+end
+
 end
