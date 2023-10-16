@@ -1,66 +1,75 @@
 module Gradients
-import ..Shapes: Shape, sample, control_points
 import StaticArrays: SVector
-import ..Methods: start_time, end_time, add_TR
 import ...Methods: get_rotation
+import ..Shapes: Shape, sample, control_points
+import ..Methods: start_time, end_time, add_TR
+import ..Instants: rotate_bvec, InstantGradient
 
 """
-    MRGradients(times, amplitudes; origin=[0, 0, 0])
-    MRGradients([(time0, amplitude0), (time1, amplitude1), ...]; origin=[0, 0, 0])
+    MRGradients(times, amplitudes; origin=[0, 0, 0], apply_bvec=false)
+    MRGradients([(time0, amplitude0), (time1, amplitude1), ...]; origin=[0, 0, 0], apply_bvec=false)
 
 Defines a gradient profile with the gradients (unit: kHz/um) linearly interpolated between the given times (unit: ms).
-Amplitudes can be a 3D vector or a single value. In the latter case the gradients are assumed to point in the z-direction (can be rotated using [`rotate_bvec`](@ref)).
+Amplitudes can be a 3D vector or a single value. In the latter case the gradients are assumed to point in the x-direction (can be rotated later using [`rotate_bvec`](@ref) if `apply_bvec` is set to true).
 The gradients are centered on given `origin` (unit: um).
 They can be sampled using [`gradient`](@ref).
 
-    MRGradients(Gx, Gy, Gz; origin=[0, 0, 0])
+If `apply_bvec` is set to true, the gradients will be rotated with the user-provided bvecs file (using `rotate_bvec`).
+This should be true for diffusion-weighted gradients, but false for slice-selective, crusher, or readout gradients.
+
+    MRGradients(Gx, Gy, Gz; origin=[0, 0, 0], apply_bvec=false)
 
 Builds the MR gradients out of 3 [`Shape`](@ref) objects each describing the gradient profile in 1 dimension.
+
+An instantaneous version of MRI gradients is available as [`InstantGradient`](@ref).
 """
 struct MRGradients
     shape::Shape{SVector{3, Float64}}
     origin::SVector{3, Float64}
+    apply_bvec::Bool
 end
 
 function MRGradients()
     MRGradients(
         Shape{SVector{3, Float64}}(),
-        zero(SVector{3, Float64})
+        zero(SVector{3, Float64}),
+        false
     )
 end
 
-function MRGradients(controls::AbstractVector{<:Tuple{<:Number, <:Any}}; origin=zero(SVector{3, Float64}))
+function MRGradients(controls::AbstractVector{<:Tuple{<:Number, <:Any}}; kwargs...)
     times = [c[1] for c in controls]
     amplitudes = [c[2] for c in controls]
-    MRGradients(times, amplitudes; origin=origin)
+    MRGradients(times, amplitudes; kwargs...)
 end
 
-function MRGradients(Gx::Shape, Gy::Shape, Gz::Shape; origin=zero(SVector{3, Float64}))
+function MRGradients(Gx::Shape, Gy::Shape, Gz::Shape; kwargs...)
     gradients = [Gx, Gy, Gz]
     times = sort(unique(vcat(control_points.(gradients)...)))
     amplitudes = [SVector{3, Float64}([sample(G, t) for G in gradients]) for t in times]
-    return MRGradients(times, amplitudes; origin=origin)
+    return MRGradients(times, amplitudes; kwargs...)
 end
 
-function MRGradients(times::AbstractVector{<:Number}, amplitudes::AbstractVector{<:Number}; origin=zero(SVector{3, Float64}))
+function MRGradients(times::AbstractVector{<:Number}, amplitudes::AbstractVector{<:Number}; kwargs...)
     MRGradients(
         times,
-        [SVector{3, Float64}(0, 0, a) for a in amplitudes],
-        origin=SVector{3, Float64}(origin)
+        [SVector{3, Float64}(a, 0, 0) for a in amplitudes];
+        kwargs...
     )
 end
 
-function MRGradients(times::AbstractVector{<:Number}, amplitudes::AbstractVector{<:AbstractVector{<:Number}}; origin=zero(SVector{3, Float64}))
+function MRGradients(times::AbstractVector{<:Number}, amplitudes::AbstractVector{<:AbstractVector{<:Number}}; origin=zero(SVector{3, Float64}), apply_bvec=false)
     MRGradients(
         Shape(times, SVector{3, Float64}.(amplitudes)),
-        SVector{3, Float64}(origin)
+        SVector{3, Float64}(origin),
+        apply_bvec
     )
 end
 
 start_time(g::MRGradients) = start_time(g.shape)
 end_time(g::MRGradients) = end_time(g.shape)
 
-add_TR(g::MRGradients, TR::Number) = MRGradients(add_TR(g.shape, TR), g.origin)
+add_TR(g::MRGradients, TR::Number) = MRGradients(add_TR(g.shape, TR), g.origin, g.apply_bvec)
 
 control_points(g::MRGradients) = control_points(g.shape)
 
@@ -85,13 +94,12 @@ end
 """
     rotate_bvec(gradients, bvec)
 
-Rotates the gradients in `gradients` to align with `bvec`.
-"""
-function rotate_bvec(gradients::AbstractVector{<:Tuple{Real, Real}}, bvec)
-    rotation = get_rotation(bvec, 1)
-    MRGradients([(time, rotation * [grad]) for (time, grad) in gradients])
-end
+Rotates the gradients in `gradients` by `bvec`.
+When `rotate_bvec` is called directly on an [`MRGradients`](@ref) or [`InstantGradient`](@ref) object the rotation is applied, whether `apply_bvec` is true or not.
 
+`bvec` can be a full rotation matrix or a vector.
+In the latter case the x-axis of the gradients will be rotated to the vector using a minimal rotation (see [`get_rotation`](@ref)).
+"""
 function rotate_bvec(gradients::MRGradients, bvec)
     rotation = get_rotation(bvec, 3)
     MRGradients(
@@ -99,7 +107,8 @@ function rotate_bvec(gradients::MRGradients, bvec)
             gradients.shape.times,
             [rotation * g for g in gradients.shape.amplitudes],
         ),
-        gradients.origin
+        gradients.origin,
+        gradients.apply_bvec
     )
 end
 

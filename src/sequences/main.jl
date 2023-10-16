@@ -3,8 +3,8 @@ import StaticArrays: SVector
 import Accessors: @set
 import LinearAlgebra: ⋅
 import ....Scanners: Scanner
-import ...Methods: get_time, B0
-import ..Gradients: MRGradients, gradient
+import ...Methods: get_time, B0, get_rotation
+import ..Gradients: MRGradients, gradient, rotate_bvec
 import ..Instants: InstantComponent, Readout, InstantRFPulse, InstantGradient
 import ..RadioFrequency: RFPulse, effective_pulse
 import ..Shapes: ShapePart, sample_integral, sample
@@ -36,35 +36,36 @@ struct Sequence{NI, NP, NR, NG}
     pulses :: SVector{NP, RFPulse}
     TR :: Float64
     readout_times :: SVector{NR, Float64}
-    function Sequence(scanner::Scanner, components::AbstractVector, TR :: Real)
-        @assert all([p isa Union{InstantComponent, Readout, RFPulse, MRGradients} for p in components])
-    
-        instants = sort([p for p in components if p isa InstantComponent], by=get_time)
-        @assert length(instants) == 0 || (get_time(instants[end]) <= TR && get_time(instants[1]) >= 0)
-        @assert length(instants) == length(unique(get_time.(instants)))
+end
 
-        readout_times = sort([get_time(p) for p in components if p isa Readout])
-        @assert length(readout_times) == 0 || (readout_times[end] <= TR && readout_times[1] >= 0)
-    
-        gradients = sort([p for p in components if p isa MRGradients], by=start_time)
-        for (p1, p2) in zip(gradients[1:end-1], gradients[2:end])
-            @assert end_time(p1) <= start_time(p2)
-        end
-        for pulse in gradients
-            @assert start_time(pulse) >= 0
-            @assert end_time(pulse) <= TR
-        end
+function Sequence(scanner::Scanner, components::AbstractVector, TR :: Real)
+    @assert all([p isa Union{InstantComponent, Readout, RFPulse, MRGradients} for p in components])
 
-        rf_pulses = sort([p for p in components if p isa RFPulse], by=start_time)
-        for (p1, p2) in zip(rf_pulses[1:end-1], rf_pulses[2:end])
-            @assert end_time(p1) <= start_time(p2)
-        end
-        for pulse in rf_pulses
-            @assert start_time(pulse) >= 0
-            @assert end_time(pulse) <= TR
-        end
-        new{length(instants), length(rf_pulses), length(readout_times), length(gradients)}(scanner, gradients, instants, rf_pulses, Float64(TR), readout_times)
+    instants = sort([p for p in components if p isa InstantComponent], by=get_time)
+    @assert length(instants) == 0 || (get_time(instants[end]) <= TR && get_time(instants[1]) >= 0)
+    @assert length(instants) == length(unique(get_time.(instants)))
+
+    readout_times = sort([get_time(p) for p in components if p isa Readout])
+    @assert length(readout_times) == 0 || (readout_times[end] <= TR && readout_times[1] >= 0)
+
+    gradients = sort([p for p in components if p isa MRGradients], by=start_time)
+    for (p1, p2) in zip(gradients[1:end-1], gradients[2:end])
+        @assert end_time(p1) <= start_time(p2)
     end
+    for pulse in gradients
+        @assert start_time(pulse) >= 0
+        @assert end_time(pulse) <= TR
+    end
+
+    rf_pulses = sort([p for p in components if p isa RFPulse], by=start_time)
+    for (p1, p2) in zip(rf_pulses[1:end-1], rf_pulses[2:end])
+        @assert end_time(p1) <= start_time(p2)
+    end
+    for pulse in rf_pulses
+        @assert start_time(pulse) >= 0
+        @assert end_time(pulse) <= TR
+    end
+    Sequence{length(instants), length(rf_pulses), length(readout_times), length(gradients)}(scanner, gradients, instants, rf_pulses, Float64(TR), readout_times)
 end
 
 function Sequence(; scanner=nothing, components::AbstractVector=[], TR::Real, B0::Real=3.)
@@ -225,5 +226,36 @@ gradient(position, part::SequencePart, t0, t1) = sample(part.gradients, t0, t1) 
 
 effective_pulse(part::SequencePart, t0::Number, t1::Number) = InstantRFPulse(flip_angle=sample_integral(part.rf_amplitude, t0, t1) * part.total_time * 360., phase=sample(part.rf_phase, t0, t1))
 B0(part::SequencePart) = part.B0
+
+"""
+    rotate_bvec(sequence, bvec)
+
+Rotates diffusion-weighting gradients in `sequence` by `bvec`.
+The rotation is only applied to [`MRGradients`](@ref) and [`InstantGradient`](@ref) objects in the sequence for which `apply_bvec` is true.
+This should include any diffusion-weighted gradients, but not slice-selection, crusher, or readout gradients.
+
+`bvec` can be a full rotation matrix or a vector.
+In the latter case the x-axis of the gradients will be rotated to the vector using a minimal rotation (see [`get_rotation`](@ref)).
+"""
+function rotate_bvec(sequence::Sequence{I, P, R, G}, bvec) where {I, P, R, G}
+    rotation = get_rotation(bvec, 3)
+    function apply_rotation(grad::MRGradients)
+        return grad.apply_bvec ? rotate_bvec(grad, rotation) : grad
+    end
+    function apply_rotation(instant_grad::InstantGradient)
+        return instant_grad.apply_bvec ? rotate_bvec(instant_grad, rotation) : instant_grad
+    end
+    function apply_rotation(pulse::InstantRFPulse)
+        return pulse
+    end
+    return Sequence{I, P, R, G}(
+        sequence.scanner,
+        apply_rotation.(sequence.gradients),
+        apply_rotation.(sequence.instants),
+        sequence.pulses,
+        sequence.TR,
+        sequence.readout_times
+    )
+end
 
 end

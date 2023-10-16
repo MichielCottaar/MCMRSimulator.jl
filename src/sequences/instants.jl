@@ -2,7 +2,7 @@ module Instants
 import LinearAlgebra: ⋅, norm
 import StaticArrays: SVector
 import ...Spins: Spin, SpinOrientation, Snapshot
-import ...Methods: get_time
+import ...Methods: get_time, get_rotation
 import ..Methods: start_time, end_time
 
 # defining the sequence
@@ -94,26 +94,30 @@ Readout(;time=0.) = Readout(time)
 
 
 """
-    InstantGradient(; qvec=[0, 0, 0], q_origin=0, time=0.)
+    InstantGradient(; qvec=[0, 0, 0], q_origin=0, time=0., apply_bvec=false)
 
 Infinitely short gradient pulse that encodes phase information given by `qvec` (units: number of rotations/um) and `q_origin` (units: number of rotations).
 
 The number of time a spins at given `position` is rotated is given by `qvec ⋅ position + q_origin`.
 
 The pulse is applied at given `time` (in milliseconds). Retrieve this time using [`get_time`](@ref).
+
+If `apply_bvec` is set to true, the gradients will be rotated with the user-provided bvecs file (using [`rotate_bvec`](@ref)).
+This should be true for diffusion-weighted gradients, but will typically be false for crusher gradients.
 """
 struct InstantGradient <: InstantComponent
     qvec :: SVector{3, Float64}
     q_origin :: Float64
     time :: Float64
-    InstantGradient(qvec, q_origin, time) = new(SVector{3, Float64}(qvec), Float64(q_origin), Float64(time))
+    apply_bvec :: Bool
+    InstantGradient(qvec, q_origin, time, apply_bvec) = new(SVector{3, Float64}(qvec), Float64(q_origin), Float64(time), Bool(apply_bvec))
 end
 
 function Base.show(io::IO, pulse::InstantGradient)
     print(io, "InstantGradient: t=$(start_time(pulse))ms, q=$(qvec(pulse))rad/um;")
 end
 
-InstantGradient(; qvec::AbstractVector=[0., 0., 0.], q_origin=0., time :: Real=0.) = InstantGradient(SVector{3}(qvec), q_origin, time)
+InstantGradient(; qvec::AbstractVector=[0., 0., 0.], q_origin=0., time :: Real=0., apply_bvec=false) = InstantGradient(SVector{3}(qvec), q_origin, time, apply_bvec)
 qvec(pulse::InstantGradient) = pulse.qvec
 q_origin(pulse::InstantGradient) = pulse.q_origin
 qval(pulse::InstantGradient) = norm(qvec(pulse))
@@ -147,4 +151,15 @@ end
 for cls in (:InstantRFPulse, :Readout, :InstantGradient)
     @eval get_time(p::$cls) = p.time
 end
+
+function rotate_bvec(gradient::InstantGradient, bvec)
+    rotation = get_rotation(bvec, 3)
+    InstantGradient(
+        rotation * gradient.qvec,
+        gradient.q_origin,
+        gradient.time,
+        gradient.apply_bvec
+    )
+end
+
 end

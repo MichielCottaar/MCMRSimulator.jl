@@ -1,6 +1,6 @@
 module SpinEcho
 import ....Scanners: Scanner
-import ....Sequences: InstantRFPulse, Readout, RFPulse, InstantGradient
+import ....Sequences: InstantRFPulse, Readout, RFPulse, InstantGradient, rotate_bvec
 import ...DefineSequence: define_sequence
 import ...Diffusion: add_linear_diffusion_weighting
 import ...BuildingBlocks: duration
@@ -57,7 +57,9 @@ The timings of the RF pulses is set by `TE` and `TR`. The gradient timings will 
 - By default the gradient durations are set to the maximum value possible within the echo time (`TE`) keeping in mind the time needed for the MR readout (`readout_time`) and the time needed to ramp to the maximum gradient strength (set by the `scanner`).
 - When gradient_duration is set to 0, the gradient pulses are assumed to be instanteneous (i.e., using [`InstantGradient`](@ref)). The time between these instant gradients can be set using diffusion_time (defaults to TE/2).
 
-The strength of the diffusion gradients is set by one of `bval` (units: ms/um^2), `qval` (units: 1/um), or `gradient_strength` (units: kHz/um). If the resulting gradient strength exceeds the maximum allowed for the `scanner` an AssertionError is raised. The gradient orientation is set by `orientation`.
+The strength of the diffusion gradients is set by one of `bval` (units: ms/um^2), `qval` (units: 1/um), or `gradient_strength` (units: kHz/um). If the resulting gradient strength exceeds the maximum allowed for the `scanner` an AssertionError is raised. 
+
+The gradient orientation is set by `orientation`.  If the gradient orientation is not set during construction, it can be later applied using [`rotate_bvec`](@ref).
 
 For more details of how the diffusion weighting is inserted in the [`spin_echo`](@ref) sequence, see [`add_linear_diffusion_weighting`](@ref).
 """
@@ -75,7 +77,7 @@ function dwi(;
     gradient_strength=nothing, # in mT/m
     gradient_duration=nothing,
     readout_time=0.,
-    orientation=SVector{3, Float64}([1., 0., 0.]),
+    orientation=:x,
 )
     define_sequence(scanner, TR) do
         sequence = spin_echo(

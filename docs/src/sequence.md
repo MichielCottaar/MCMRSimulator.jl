@@ -58,10 +58,10 @@ base_trapezium = MRGradients([
     (1, 0.01),  # 1 ms rise time to 0.01 kHz/um
     (39, 0.01), # constant amplitude for 38 ms
     (40, 0),    # total duration of 40 ms
-])
-trapezium = rotate_bvec(base_trapezium, [0, 1, 1])  # point +y/+z diagonal
+], apply_bvec=true  # allow rotation using a `bvec`
+)
 
-sequence = Sequence([
+unrotated_sequence = Sequence([
     constant_pulse(2, 90),          # start with 2 ms excitation pulse
     trapezium,                      # followed immediated by MR gradients
     2,                              # wait for 2 ms
@@ -70,6 +70,10 @@ sequence = Sequence([
     3,
     Readout(),                      # Readout 90 ms after middle of excitation pulse
 ], TR=130, scanner=Scanner(B0=3.))
+
+# rotate any gradients in the sequence for which `apply_bvec` is true from the +x into the +y/+z axis.
+sequence = rotate_bvec(unrotated_sequence, [0, 1, 1])
+
 using CairoMakie # hide
 f = plot(sequence) # hide
 save("custom_dwi.png", f) # hide

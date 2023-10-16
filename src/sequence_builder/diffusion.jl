@@ -20,6 +20,8 @@ The gradient strength is set by `bval` (ms/um^2), `qval` (rad/um), or `gradient_
 
 By default, the timings of the existing [`BuildingBlock`](@ref) objects are respected.
 If `max_bval` or `max_qval` are set these timings are adjusted to the minimum duration required to reach that b-value or q-value.
+
+If the gradient orientation is not set during construction, it can be later applied using [`rotate_bvec`](@ref).
 """
 function add_linear_diffusion_weighting(
     blocks, replace1, replace2;
@@ -40,7 +42,8 @@ function add_linear_diffusion_weighting(
                 trap2[2].shape.times,
                 -trap2[2].shape.amplitudes,
             ),
-            trap2[2].shape.PosVector
+            trap2[2].shape.PosVector,
+            true
         )
     end
 
@@ -104,7 +107,7 @@ function get_diffusion_trapeziums(
         elseif !isnothing(bval)
             qval = sqrt(bval / diffusion_time)
         end
-        grad = InstantGradient(qvec=qval .* get_rotation(orientation, 1)[:, 1])
+        grad = InstantGradient(qvec=qval .* get_rotation(orientation, 1)[:, 1], apply_bvec=true)
         return (
             [
                 t1,
@@ -126,12 +129,12 @@ function get_diffusion_trapeziums(
     end
     @assert gradient_strength <= max_gradient(scanner) "Requested gradient strength exceeds scanner limits"
 
-    trapezium = rotate_bvec([
+    trapezium = rotate_bvec(MRGradients([
         (0, 0.), 
         (ramp_time, gradient_strength),
         (gradient_duration, gradient_strength),
         (gradient_duration + ramp_time, 0.), 
-    ], orientation)
+    ], apply_bvec=true), orientation)
     return (
         [
             t1,
