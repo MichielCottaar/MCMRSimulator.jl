@@ -9,7 +9,7 @@ import CSV
 import Tables
 import ...Geometries.User.JSON: read_geometry
 import ...Sequences.JSON: read_sequence
-import ...Sequences.main: can_rotate_bvec, rotate_bvec
+import ...Sequences.Main: can_rotate_bvec, rotate_bvec
 import ...Simulations: Simulation
 import ...Spins: Snapshot, BoundingBox, longitudinal, transverse, phase, orientation, position
 import ...Evolve: readout
