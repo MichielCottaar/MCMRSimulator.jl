@@ -7,7 +7,6 @@ Methods:
 - [`has_inside`](@ref)
 - [`isinside`](@ref)
 - [`detect_intersection`](@ref)
-- [`property_values`](@ref)
 - [`size_scale`](@ref)
 """
 module FixedObstructionGroups

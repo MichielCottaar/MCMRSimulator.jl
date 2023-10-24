@@ -114,10 +114,9 @@ mutable struct Spin{N}
     position :: SVector{3, Float64}
     orientations :: SVector{N, SpinOrientation}
     reflection :: Reflection
-    inside :: Vector{Tuple{Int, Int}}
     rng :: FixedXoshiro
     function Spin(position::AbstractArray{<:Real}, orientations::AbstractArray{SpinOrientation}, reflection=empty_reflection, rng::FixedXoshiro=FixedXoshiro()) 
-        new{length(orientations)}(SVector{3, Float64}(position), SVector{length(orientations)}(deepcopy.(orientations)), reflection, Tuple{Int, Int}[], rng)
+        new{length(orientations)}(SVector{3, Float64}(position), SVector{length(orientations)}(deepcopy.(orientations)), reflection, rng)
     end
 end
 
@@ -264,24 +263,6 @@ isinside(geometry, position::AbstractVector) = isinside(geometry, Spin(nsequence
 isinside(geometry, spin::Spin) = length(isinside(fix(geometry), spin))
 
 isinside(geometry::FixedGeometry, spin::Spin) = isinside(geometry, spin.position, spin.reflection)
-
-"""
-    property_values(spin, T, symbol, geometry[, global_properties])
-
-Get sequence of values for property `symbol` of type `T` for the given [`Spin`](@ref).
-In order this will return:
-1. The surface MRI properties (only if the spin is stuck).
-2. Any obstructions in the geometry that the spin is inside. These will be applied in the order that they appear in the [`FixedGeometry`](@ref).
-3. The global property
-Any values of `nothing` will be filtered out.
-"""
-function property_values(spin::Spin, ::Type{T}, symbol::Symbol, geometry::FixedGeometry, global_properties::GlobalProperties=GlobalProperties()) where {T}
-    result = property_values(T, symbol, geometry, spin.inside, stuck_to(spin))
-    if hasproperty(global_properties, symbol) && ~isnothing(getproperty(global_properties, symbol))
-        push!(result, getproperty(global_properties, symbol))
-    end
-    return result
-end
 
 
 for symbol in (:R1, :R2, :off_resonance)
