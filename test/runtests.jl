@@ -20,6 +20,7 @@ all_tests = [
     "sequence_IO",
     "various",
     "subsets",
+    "gen_sequence"
 ]
 
 if length(ARGS) == 0
