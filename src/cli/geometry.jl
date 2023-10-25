@@ -16,10 +16,11 @@ field_type(::Field{T}) where {T} = T
 
 Returns the parser of arguments for `mcmr geometry`
 """
-function get_parser()
+function get_parser(; kwargs...)
     parser = ArgParseSettings(
         prog="mcmr geometry", 
-        description="Various commands to manipulate the geometry used in MCMR simulations",
+        description="Various commands to manipulate the geometry used in MCMR simulations";
+        kwargs...
     )
     @add_arg_table! parser begin
         "create"
@@ -220,8 +221,8 @@ The supplied arguments can be provided as a sequence of strings (as provided by 
 or as a dictionary (as provided by `ArgParse` after parsing).
 By default it is set to `ARGS`.
 """
-function run_main(args=ARGS::AbstractVector[<:AbstractString])
-    parser = get_parser()
+function run_main(args=ARGS::AbstractVector[<:AbstractString]; kwargs...)
+    parser = get_parser(; kwargs...)
     return run_main(parse_args(args, parser))
 end
 

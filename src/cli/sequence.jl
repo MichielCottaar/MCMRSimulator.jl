@@ -10,8 +10,8 @@ import ...Sequences: InstantRFPulse, constant_pulse, write_sequence
 import ...Scanners: Scanner
 
 
-function known_sequence_parser(name)
-    parser = ArgParseSettings(prog="mcmr sequence $name")
+function known_sequence_parser(name; kwargs...)
+    parser = ArgParseSettings(prog="mcmr sequence $name"; kwargs...)
     @add_arg_table! parser begin
         "output-file"
             help = "Create a sequence JSON file containing the $name sequence"
@@ -93,8 +93,8 @@ function get_pulse(arguments, pulse_name)
 end
 
 
-function run_dwi(args=ARGS::AbstractVector[<:AbstractString])
-    parser = known_sequence_parser("dw-pgse")
+function run_dwi(args=ARGS::AbstractVector[<:AbstractString]; kwargs...)
+    parser = known_sequence_parser("dw-pgse"; kwargs...)
     parser.description = "Implement diffusion-weighted (DW) pulsed-gradient spin-echo (PGSE) sequence."
 
     @add_arg_table! parser begin
@@ -128,8 +128,8 @@ function run_dwi(args=ARGS::AbstractVector[<:AbstractString])
 end
 
 
-function run_spin_echo(args=ARGS::AbstractVector[<:AbstractString])
-    parser = known_sequence_parser("spin_echo")
+function run_spin_echo(args=ARGS::AbstractVector[<:AbstractString]; kwargs...)
+    parser = known_sequence_parser("spin_echo"; kwargs...)
     parser.description = "Implement spin echo sequence with single readout."
 
     @add_arg_table! parser begin
@@ -153,8 +153,8 @@ function run_spin_echo(args=ARGS::AbstractVector[<:AbstractString])
 end
 
 
-function run_gradient_echo(args=ARGS::AbstractVector[<:AbstractString])
-    parser = known_sequence_parser("gradient_echo")
+function run_gradient_echo(args=ARGS::AbstractVector[<:AbstractString]; kwargs...)
+    parser = known_sequence_parser("gradient_echo"; kwargs...)
     parser.description = "Implement gradient echo sequence with single readout."
 
     @add_arg_table! parser begin
@@ -182,7 +182,7 @@ Runs the `mcmr sequence` command line interface.
 Arguments are provided as a sequence of strings.
 By default it is set to `ARGS`.
 """
-function run_main(args=ARGS::AbstractVector[<:AbstractString])
+function run_main(args=ARGS::AbstractVector[<:AbstractString]; kwargs...)
     pre_created = Dict(
         "dwi" => run_dwi,
         "dw-pgse" => run_dwi,
@@ -190,16 +190,16 @@ function run_main(args=ARGS::AbstractVector[<:AbstractString])
         "gradient-echo" => run_gradient_echo,
     )
     if length(args) == 0
-        println("No mcmr sequence sub-command given.\n")
+        println(stderr, "No mcmr sequence sub-command given.\n")
     else
         if haskey(pre_created, args[1])
-            return pre_created[args[1]](args[2:end])
+            return pre_created[args[1]](args[2:end]; kwargs...)
         else
-            println("Invalid mcmr command sequence  $(args[1]) given.\n")
+            println(stderr, "Invalid mcmr command sequence  $(args[1]) given.\n")
         end
     end
     names = join(keys(pre_created), "/")
-    println("usage: mcmr sequence {$names}")
+    println(stderr, "usage: mcmr sequence {$names}")
     return Cint(1)
 
 end

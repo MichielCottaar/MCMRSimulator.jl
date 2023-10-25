@@ -38,7 +38,7 @@ function add_simulation_definition!(parser)
             help = "Transverse relaxation in 1/ms. This relaxation rate will at the very least be applied to free, extra-cellular spins. It might be overriden in the 'geometry' for bound spins or spins inside any obstructions."
             arg_type = Float64
             default = 0.
-        "--bvec"
+        "--bvecs"
             help = "ASCII text file with gradient orientations in FSL format (https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FDT/UserGuide#Processing_pipeline)."
     end
 end
@@ -120,8 +120,8 @@ end
 
 Returns the parser of arguments for `mcmr run`
 """
-function get_parser()
-    parser = ArgParseSettings(prog="mcmr run", description="Runs a Monte Carlo simulation of the MRI signal evolution for spins interacting with the geometry.")
+function get_parser(; kwargs...)
+    parser = ArgParseSettings(prog="mcmr run", description="Runs a Monte Carlo simulation of the MRI signal evolution for spins interacting with the geometry."; kwargs...)
     add_simulation_definition!(parser)
     add_output_flags!(parser)
     add_readout_flags!(parser)
@@ -155,8 +155,8 @@ The supplied arguments can be provided as a sequence of strings (as provided by 
 or as a dictionary (as provided by `ArgParse` after parsing).
 By default it is set to `ARGS`.
 """
-function run_main(args=ARGS::AbstractVector[<:AbstractString])
-    parser = get_parser()
+function run_main(args=ARGS::AbstractVector[<:AbstractString]; kwargs...)
+    parser = get_parser(; kwargs...)
     run_main(parse_args(args, parser))
 end
 
@@ -166,7 +166,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     geometry = read_geometry(args["geometry"])
     sequences = read_sequence.(args["sequence"])
 
-    if isnothing(args["bvec"])
+    if isnothing(args["bvecs"])
         sequence_indices = 1:length(sequences)
         bvec_indices = zeros(Int, length(sequences))
         all_sequences = sequences
@@ -174,7 +174,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
         sequence_indices = Int[]
         bvec_indices = Int[]
         all_sequences = Sequence[]
-        bvecs = read_bvecs(args["bvec"])
+        bvecs = read_bvecs(args["bvecs"])
         for (index_seq, sequence) in enumerate(sequences)
             if can_rotate_bvec(sequence)
                 append!(sequence_indices, fill(index_seq, size(bvecs, 1)))
@@ -195,12 +195,8 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     simulation = Simulation(all_sequences; geometry=geometry, R1=args["R1"], R2=args["R2"], diffusivity=args["diffusivity"])
 
     # initial state
-    if !isnothing(args["init"])
-        error("Reading snapshots not yet implemented!")
-    else
-        bb = BoundingBox(args["voxel-size"] * 1000/2)
-        init_snapshot = Snapshot(args["Nspins"], simulation, bb; longitudinal=args["longitudinal"], transverse=args["transverse"])
-    end
+    bb = BoundingBox(args["voxel-size"] * 1000/2)
+    init_snapshot = Snapshot(args["Nspins"], simulation, bb; longitudinal=args["longitudinal"], transverse=args["transverse"])
     as_snapshot = !isnothing(args["output-snapshot"])
     readout_times = iszero(length(args["times"])) ? nothing : args["times"]
     subsets = [Subset(), parse_subset.(args["subset"])...]
