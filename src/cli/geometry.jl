@@ -265,9 +265,9 @@ function run_create_random(args::Dict{<:AbstractString, <:Any})
     flags = args[obstruction_type]
     output_file = pop!(flags, "output_file")
     (constructor, ndim) = Dict(
-        "cylinders" => (cylinders, 2),
-        "spheres" => (spheres, 3),
-        "annuli" => (annuli, 2),
+        "cylinders" => (Cylinders, 2),
+        "spheres" => (Spheres, 3),
+        "annuli" => (Annuli, 2),
     )[obstruction_type]
     (positions, radius) = random_positions_radii(
         flags["repeats"], pop!(flags, "target-density"), ndim; 
