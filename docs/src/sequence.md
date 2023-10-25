@@ -53,7 +53,7 @@ Such custom sequences cannot be generated using the command line yet.
 For example, a simple pulsed-gradient spin echo sequence could be generated in the following way (rather than call [`dwi`](@ref)):
 ```@example
 using MCMRSimulator # hide
-base_trapezium = MRGradients([
+trapezium = MRGradients([
     (0, 0),
     (1, 0.01),  # 1 ms rise time to 0.01 kHz/um
     (39, 0.01), # constant amplitude for 38 ms
@@ -72,7 +72,7 @@ unrotated_sequence = Sequence([
 ], TR=130, scanner=Scanner(B0=3.))
 
 # rotate any gradients in the sequence for which `apply_bvec` is true from the +x into the +y/+z axis.
-sequence = rotate_bvec(unrotated_sequence, [0, 1, 1])
+sequence = rotate_bvec(unrotated_sequence, [0, 0.5, 1])
 
 using CairoMakie # hide
 f = plot(sequence) # hide
