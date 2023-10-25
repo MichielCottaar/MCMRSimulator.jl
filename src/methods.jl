@@ -52,10 +52,11 @@ function off_resonance end
 Returns a (3, `ndim`) rotation matrix, that is the relevant part of the full 3x3 `rotation_mat` to map to the x-axis (if `ndim` is 1) or the x-y plance (if `ndim` is 2).
 If `ndim` is 3, the full rotation matrix `rotation_mat` is returned.
 
-    get_rotation(vector, ndim)
+    get_rotation(vector, ndim; reference_dimension)
 
-Returns the (3, `ndim`) rotation matrix mapping the `vector` to the x-direction (if `ndim` is 1 or 3) or the z-direction (if `ndim` is 2).
-Vector can be a length 3 array or one of the symbols :x, :y, or :z (representing vectors in those cardinal directions).
+Returns the (3, `ndim`) rotation matrix mapping the `vector` to the `reference_dimension`.
+By default, the `reference_dimension is the x-direction (if `ndim` is 1 or 3) or the z-direction (if `ndim` is 2).
+`vector` and `reference_dimension` can be a length 3 array or one of the symbols :x, :y, or :z (representing vectors in those cardinal directions).
 """
 get_rotation(rotation::Rotations.Rotation, ndim::Int) = get_rotation(Rotations.RotMatrix(rotation), ndim)
 get_rotation(rotation::Rotations.RotMatrix, ndim::Int) = get_rotation(rotation.mat, ndim)
@@ -75,7 +76,7 @@ function get_rotation(rotation::AbstractVector{<:AbstractVector}, ndim::Int)
     return get_rotation(hcat(rotation...), ndim)
 end
 
-function get_rotation(rotation::AbstractVector{<:Number}, ndim::Int)
+function get_rotation(rotation::AbstractVector{<:Number}, ndim::Int; reference_dimension=nothing)
     @assert length(rotation)==3
     normed = rotation / norm(rotation)
     if ndim == 1
@@ -87,7 +88,14 @@ function get_rotation(rotation::AbstractVector{<:Number}, ndim::Int)
         try_vec = [1., 0, 0]
         vec1 = cross(normed, try_vec)
     end
-    reference = ndim == 2 ? [0, 0, 1.] : [1., 0., 0.]
+    if isnothing(reference_dimension)
+        reference = dimension_symbol_to_vec(:I, ndim)
+    elseif isa(reference_dimension, Symbol)
+        reference = dimension_symbol_to_vec(reference_dimension, ndim)
+    else
+        reference = reference_dimension
+    end
+
     # rotate reference to normed
     angle = acos(normed ⋅ reference)
     vec_rotation = cross(reference, normed)
@@ -97,14 +105,17 @@ function get_rotation(rotation::AbstractVector{<:Number}, ndim::Int)
     return get_rotation(Rotations.AngleAxis(angle, vec_rotation...), ndim)
 end
 
-function get_rotation(rotation::Symbol, ndim::Int)
-    target_dimension = Dict(
+function get_rotation(rotation::Symbol, ndim::Int; reference_dimension=nothing)
+    return get_rotation(dimension_symbol_to_vec(rotation, ndim), ndim; reference_dimension=reference_dimension)
+end
+
+function dimension_symbol_to_vec(s::Symbol, ndim)
+    return Dict(
         :x => [1, 0, 0],
         :y => [0, 1, 0],
         :z => [0, 0, 1],
         :I => (ndim == 2 ? [0, 0, 1] : [1, 0, 0]),
-    )[rotation]
-    return get_rotation(target_dimension, ndim)
+    )[s]
 end
 
 end
