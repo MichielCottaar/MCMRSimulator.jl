@@ -93,7 +93,7 @@ mcmr run geometry.json dwi.json -o signal.csv
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run geometry.json dwi.json -o signal.csv")
+run_main_docs("run geometry.json dwi.json -o signal.csv --seed=1")
 ```
 
 This produces the CSV file, which looks like
@@ -122,7 +122,7 @@ mcmr run geometry.json dwi.json -o signal.csv --subset inside --subset outside
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run geometry.json dwi.json -o signal2.csv --subset inside --subset outside")
+run_main_docs("run geometry.json dwi.json -o signal2.csv --subset inside --subset outside --seed=2")
 ```
 
 We can see two additional rows in the output. 
@@ -144,7 +144,7 @@ mcmr run geometry.json dwi.json --output-snapshot snapshot.csv
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run geometry.json dwi.json --output-snapshot snapshot.csv")
+run_main_docs("run geometry.json dwi.json --output-snapshot snapshot.csv --seed=3")
 ```
 will produce a file named "snapshot.csv" with:
 ```@eval
@@ -164,6 +164,7 @@ As a more involved example, we will run the simulations for a single-shell diffu
 We presume we have a set of gradient orientations for the single shell, which is stored in a file named "bvecs".
 This file contains:
 ```@eval
+import Markdown
 bvecs = "1  0  0  
 0.6745407374  -0.01795697854  -0.7380192006  
 0.7236803088  0.6359626605  -0.2680266875  
@@ -177,33 +178,35 @@ bvecs = "1  0  0
 open("bvecs", "w") do f
   write(f, bvecs)
 end
-Markdown.parse(```\n$(bvecs)\n```)
+Markdown.parse("```\n$(bvecs)\n```")
 ```
 
 We then define two sequences, one for the b0 and the other for the diffusion-weighted MRI:
 ```bash
+mcmr sequence dwi b0.json --bval=0 --TR=1000 --TE=80 --B0=3
 mcmr sequence dwi dwi.json --bval=2 --TR=1000 --TE=80 --B0=3
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("sequence dwi dwi2.json --bval=2 --TR=1000 --TE=80 --B0=3")
-```
-
-```bash
-mcmr sequence dwi b0.json --bval=0 --TR=1000 --TE=80 --B0=3
-```
-```@eval
-import MCMRSimulator.CLI: run_main_docs
 run_main_docs("sequence dwi b0.json --bval=0 --TR=1000 --TE=80 --B0=3")
+run_main_docs("sequence dwi dwi2.json --bval=2 --TR=1000 --TE=80 --B0=3")
+nothing
 ```
 
 Let's evaluate these sequences for some randomly distributed cylinders:
 ```bash
-mcmr geometry create-random cylinders 0.7 random_cylinders.json --mean-radius=1. --var-radius=0.1
+mcmr geometry create-random cylinders 0.6 random_cylinders.json --mean-radius=1. --var-radius=0.1 --repeats 5 5
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("geometry create-random cylinders 0.7 random_cylinders.json --mean-radius=1. --var-radius=0.1")
+run_main_docs("geometry create-random cylinders 0.6 random_cylinders.json --mean-radius=1. --var-radius=0.1 --repeats 5 5 --seed=4")
+```
+
+The resulting cylinder JSON file look like:
+```@eval
+import Markdown
+text = read("random_cylinders.json", String)
+Markdown.parse("```json\n$(text)\n```")
 ```
 
 And, finally run the simulation:
@@ -212,7 +215,13 @@ mcmr run random_cylinders.json b0.json dwi.json --bvecs=bvecs -o full_dwi.csv
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run random_cylinders.json b0.json dwi2.json --bvecs=bvecs -o full_dwi.csv")
+run_main_docs("run random_cylinders.json b0.json dwi2.json --bvecs=bvecs -o full_dwi.csv --seed=5")
+```
+
+```@eval
+import Markdown
+text = read("full_dwi.csv", String)
+Markdown.parse("```\n$(text)\n```")
 ```
 
 Note that the multiple gradient orientations are only applied to the sequence with diffusion-weighted gradients, not the b0 sequence.

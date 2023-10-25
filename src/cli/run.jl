@@ -7,6 +7,7 @@ import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_group!, parse_args
 import DataFrames: DataFrame
 import CSV
 import Tables
+import Random
 import ...Geometries.User.JSON: read_geometry
 import ...Sequences.JSON: read_sequence
 import ...Sequences.Main: can_rotate_bvec, rotate_bvec
@@ -163,6 +164,9 @@ end
 run_main(::Nothing) = Cint(1)
 
 function run_main(args::Dict{<:AbstractString, <:Any})
+    if "seed" in keys(args)
+        Random.seed!(args["seed"])
+    end
     geometry = read_geometry(args["geometry"])
     sequences = read_sequence.(args["sequence"])
 
