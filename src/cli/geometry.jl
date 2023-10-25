@@ -5,6 +5,7 @@ module Geometry
 
 import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, parse_args, ArgParseError, usage_string
 import StaticArrays: StaticVector
+import Random
 import ...Geometries.User.Obstructions: Walls, Spheres, Cylinders, Annuli, fields, field_to_docs, Field, ObstructionGroup, FieldValue
 import ...Geometries.User.JSON: write_geometry, read_geometry
 import ...Geometries.User.RandomDistribution: random_positions_radii
@@ -77,6 +78,10 @@ function get_parser(; kwargs...)
                         :arg_type => Float64,
                         :help => "Variance of the $as_string radius distribution (um^2).",
                         :default => 0.,
+                    ),
+                    "--seed", Dict(
+                        :arg_type => Int64,
+                        :help => "Initialisation for random number seed. Supply this to get reproducible results.",
                     ),
                 )
                 if as_string == "annuli"
@@ -263,6 +268,9 @@ end
 function run_create_random(args::Dict{<:AbstractString, <:Any})
     obstruction_type = args["%COMMAND%"]
     flags = args[obstruction_type]
+    if "seed" in keys(flags)
+        Random.seed!(pop!(flags, "seed"))
+    end
     output_file = pop!(flags, "output_file")
     (constructor, ndim) = Dict(
         "cylinders" => (Cylinders, 2),
