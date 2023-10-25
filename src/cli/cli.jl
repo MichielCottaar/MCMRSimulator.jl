@@ -56,18 +56,20 @@ function run_main_test(cmd::AbstractString)
     Base.is_interactive = false
 
     try
-        run_main(split(cmd), exc_handler=cmdline_debug_handler, exit_after_help=false)
-    catch err
-        if length(err.msg) > 0
-            rethrow(err)
+        try
+            run_main(split(cmd), exc_handler=cmdline_debug_handler, exit_after_help=false)
+        catch err
+            if hasproperty(err, :msg) && length(err.msg) > 0
+                rethrow(err)
+            end
         end
+    finally
+        close(err_rd)
+        redirect_stderr(original_stderr)
+        close(out_rd)
+        redirect_stdout(original_stdout)
+        Base.is_interactive = prev_interactive
     end
-
-    close(err_rd)
-    redirect_stderr(original_stderr)
-    close(out_rd)
-    redirect_stdout(original_stdout)
-    Base.is_interactive = prev_interactive
 
     return (fetch(out_text), fetch(err_text))
 end
