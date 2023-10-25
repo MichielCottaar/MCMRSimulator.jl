@@ -4,10 +4,14 @@ All notable changes to MCMRSimulator.jl will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+### Added
+- New `mcmr run --bvecs` flag and `rotate_bvecs` function that apply a rotation to all diffusion-weighted gradeints in an MRI sequences
 ### Changed
 - For a 3D geometry (i.e., mesh or spheres) if the orientation is set as a vector, this vector represents the new orientation of the geometry x-axis (previously it was the z-axis).
 ### Fixed
 - Playing out the sequence occassionally broke down after multiple repetition times. This has been fixed.
+- The `--seed` flag is now actually used in `mcmr run` and also available in `mcmr create-random`
+- Fixed an issue that caused `mcmr create-random` to crash
 ## [v0.7.1]
 ### Fixed
 - Fix parsing of `position` flag in CLI.
