@@ -6,7 +6,7 @@ module Sequence
 import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, add_arg_group!, parse_args
 import ...SequenceBuilder.Sequences.SpinEcho: spin_echo, dwi
 import ...SequenceBuilder.Sequences.GradientEcho: gradient_echo
-import ...SequenceBuilder.Diffusion: gen_crusher
+import ...SequenceBuilder.Diffusion: gen_crusher, duration
 import ...Sequences: InstantRFPulse, constant_pulse, write_sequence
 import ...Scanners: Scanner, predefined_scanners, max_gradient
 
@@ -153,17 +153,18 @@ end
 
 function get_pulse(arguments, pulse_name, scanner::Scanner)
     addition = iszero(length(pulse_name)) ? "" : "$(pulse_name)-"
-    duration = pop!(arguments, "$(addition)duration")
+    pulse_duration = pop!(arguments, "$(addition)duration")
     fa = pop!(arguments, "$(addition)flip-angle")
     phase = pop!(arguments, "$(addition)phase")
-    if iszero(duration)
+    if iszero(pulse_duration)
         pulse = InstantRFPulse(flip_angle=fa, phase=phase)
     else
-        pulse = constant_pulse(duration, fa; phase0=phase)
+        pulse = constant_pulse(pulse_duration, fa; phase0=phase)
     end
     if "$(addition)crusher-qval" in keys(arguments)
         crusher = get_crusher(arguments, "$(pulse_name)-crusher", scanner; default_qval=0.)
-        return [crusher, pulse, crusher]
+        intermediate_time = iszero(duration(crusher)) && iszero(duration(pulse)) ? 1e-6 : 0.
+        return [crusher, intermediate_time, pulse, intermediate_time, crusher]
     else
         return pulse
     end
