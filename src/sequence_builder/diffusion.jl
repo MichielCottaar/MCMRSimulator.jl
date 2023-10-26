@@ -27,6 +27,12 @@ An [`InstantGradient`](@ref) is returned if `δ` or `total_duration` is set to z
 """
 function trapezium_gradient(; qval=nothing, total_duration=nothing, δ=nothing, gradient_strength=nothing, ramp_time=nothing, scanner=Scanner(B0=3.), origin=zero(SVector{3, Float64}), apply_bvec=false, orientation=[1., 0., 0.])
     orientation = orientation ./ norm(orientation)
+    if apply_bvec
+        maxima = (max_gradient(scanner), max_slew_rate(scanner))
+    else
+        maxima = (max_gradient(scanner) / maximum(abs.(orientation)), max_slew_rate(scanner) / maximum(abs.(orientation)))
+    end
+
     if total_duration == 0 || δ == 0.
         if isnothing(qval)
             error("Need to set qval for trapezium gradient when having a gradient duration of 0")
@@ -37,10 +43,10 @@ function trapezium_gradient(; qval=nothing, total_duration=nothing, δ=nothing, 
             return [total_duration / 2, InstantGradient(qvec=qval .* orientation, origin=origin, apply_bvec=apply_bvec), total_duration/2]
         end
     end
-    if isinf(max_slew_rate(scanner))
+    if isinf(maxima[2])
         min_ramp_time = 0.
     else
-        min_ramp_time = max_gradient(scanner) / max_slew_rate(scanner)
+        min_ramp_time = maxima[1] / maxima[2]
     end
 
     # determine timings
@@ -50,7 +56,7 @@ function trapezium_gradient(; qval=nothing, total_duration=nothing, δ=nothing, 
                 error("Need to set at least one of qval, total_duration, or δ when calling `get_trapezium`")
             end
             if isnothing(gradient_strength)
-                gradient_strength = max_gradient(scanner)
+                gradient_strength = maxima[1]
                 if isinf(gradient_strength)
                     return InstantGradient(qval .* orientation, origin, apply_bvec=apply_bvec)
                 end
@@ -82,10 +88,10 @@ function trapezium_gradient(; qval=nothing, total_duration=nothing, δ=nothing, 
     # determine gradient strength
     if isnothing(qval)
         if isnothing(gradient_strength)
-            if isinf(max_slew_rate(scanner))
-                gradient_strength = max_gradient(scanner)
+            if isinf(maxima[2])
+                gradient_strength = maxima[1]
             else
-                gradient_strength = min(max_gradient(scanner), ramp_time * max_slew_rate(scanner))
+                gradient_strength = min(maxima[1], ramp_time * maxima[2])
             end
             if isinf(gradient_strength)
                 error("Trying to define a trapezium purely on its timings, however the q-value can be infintely largely because scanner does not have a max_gradient.")
@@ -97,8 +103,8 @@ function trapezium_gradient(; qval=nothing, total_duration=nothing, δ=nothing, 
     end
     @assert ramp_time + δ ≈ total_duration
     @assert qval ≈ gradient_strength * δ
-    @assert gradient_strength <= max_gradient(scanner)
-    @assert iszero(ramp_time) || (gradient_strength / ramp_time <= max_slew_rate(scanner))
+    @assert gradient_strength <= maxima[1] * 1.00001
+    @assert iszero(ramp_time) || (gradient_strength / ramp_time <= maxima[2] * 1.00001)
     return MRGradients([0, ramp_time, δ, δ + ramp_time], [a * orientation for a in [0., gradient_strength, gradient_strength, 0.]], origin=origin, apply_bvec=apply_bvec)
 end
 
