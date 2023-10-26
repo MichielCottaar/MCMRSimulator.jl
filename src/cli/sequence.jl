@@ -254,6 +254,7 @@ function run_gradient_echo(args=ARGS::AbstractVector[<:AbstractString]; kwargs..
             required = true
     end
     add_pulse_to_parser!(parser, "excitation"; flip_angle=90, phase=-90, duration=0)
+    add_crusher_to_parser!(parser, "crusher"; description="crusher gradient after readout")
 
 
     as_dict = parse_args(args, parser)
@@ -261,6 +262,7 @@ function run_gradient_echo(args=ARGS::AbstractVector[<:AbstractString]; kwargs..
     scanner = get_scanner(as_dict)
     as_dict["scanner"] = scanner
     as_dict["excitation_pulse"] = get_pulse(as_dict, "excitation", scanner)
+    as_dict["crusher"] = get_crusher(as_dict, "crusher", scanner)
     TE = pop!(as_dict, "TE")
     sequence = gradient_echo(TE; Dict(Symbol(replace(k, "-"=>"_")) => v for (k, v) in as_dict)...)
     write_sequence(output_file, sequence)
