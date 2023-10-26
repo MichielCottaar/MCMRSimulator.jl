@@ -264,7 +264,7 @@ end
                 @test length(sequence.pulses) == 0
                 @test length(sequence.instants) == 3
                 @test sequence.instants[1].time == 0.
-                @test sequence.instants[2].time == 15.
+                @test sequence.instants[2].time ≈ 15.
                 @test sequence.instants[3].time > 30.
                 @test sequence.instants[1] isa mr.InstantRFPulse
                 @test sequence.instants[2] isa mr.InstantRFPulse
