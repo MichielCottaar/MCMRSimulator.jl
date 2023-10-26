@@ -178,7 +178,6 @@ end
                     @test sequence.instants[1] isa mr.InstantRFPulse
                     @test length(sequence.gradients) == 1
                     grad = sequence.gradients[1]
-                    @show grad
                     @test grad.shape.times[1] == 30.5
                     # maximum amplitude has not been reached
                     @test grad.shape.times[2] ≈ 31
