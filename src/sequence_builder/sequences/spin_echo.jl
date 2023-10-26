@@ -1,8 +1,8 @@
 module SpinEcho
-import ....Scanners: Scanner
+import ....Scanners: Scanner, max_gradient
 import ....Sequences: InstantRFPulse, Readout, RFPulse, InstantGradient, rotate_bvec
 import ...DefineSequence: define_sequence
-import ...Diffusion: add_linear_diffusion_weighting
+import ...Diffusion: add_linear_diffusion_weighting, trapezium_gradient
 import ...BuildingBlocks: duration
 import StaticArrays: SVector
 """
@@ -22,16 +22,28 @@ function spin_echo(TE;
     excitation_time=nothing,
     refocus_pulse=InstantRFPulse(flip_angle=180, phase=90),
     refocus_time=nothing,
+    readout_time=0.,
+    crusher=5.,
 )
     excitation_time = isnothing(excitation_time) ? duration(excitation_pulse) / 2 : excitation_time
     refocus_time = isnothing(refocus_time) ? duration(refocus_pulse) / 2 : refocus_time
+    if crusher isa Number
+        qval = nothing
+        if isinf(max_gradient(scanner))
+            qval = 10.
+        end
+        crusher = trapezium_gradient(total_duration=crusher, scanner=scanner, qval=qval)
+    end
     define_sequence(scanner, TR) do 
         [
             excitation_pulse,
             TE/2 - duration(excitation_pulse) + excitation_time - refocus_time,
             refocus_pulse,
-            TE/2 - duration(refocus_pulse) + refocus_time,
-            Readout()
+            TE/2 - duration(refocus_pulse) + refocus_time - readout_time/2,
+            readout_time/2,
+            Readout(),
+            readout_time/2,
+            crusher,
         ]
     end
 end
@@ -78,23 +90,15 @@ function dwi(;
     gradient_duration=nothing,
     readout_time=0.,
     orientation=:x,
+    crusher=5.
 )
     define_sequence(scanner, TR) do
         sequence = spin_echo(
             TE;
             excitation_pulse=excitation_pulse, excitation_time=excitation_time,
-            refocus_pulse=refocus_pulse, refocus_time=refocus_time, scanner=scanner
+            refocus_pulse=refocus_pulse, refocus_time=refocus_time, scanner=scanner,
+            readout_time=readout_time, crusher=crusher
         )
-
-        if !iszero(readout_time)
-            sequence[4] -= readout_time/2
-            sequence[5] = [
-                readout_time/2,
-                Readout(),
-                readout_time/2
-            ]
-            sequence[6] -= readout_time/2
-        end
 
         return add_linear_diffusion_weighting(
             sequence, 2, 4,

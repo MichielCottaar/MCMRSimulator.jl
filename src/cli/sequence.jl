@@ -6,8 +6,9 @@ module Sequence
 import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, add_arg_group!, parse_args
 import ...SequenceBuilder.Sequences.SpinEcho: spin_echo, dwi
 import ...SequenceBuilder.Sequences.GradientEcho: gradient_echo
+import ...SequenceBuilder.Diffusion: trapezium_gradient
 import ...Sequences: InstantRFPulse, constant_pulse, write_sequence
-import ...Scanners: Scanner, predefined_scanners
+import ...Scanners: Scanner, predefined_scanners, max_gradient
 
 
 function known_sequence_parser(name; kwargs...)
@@ -67,7 +68,7 @@ function get_scanner(arguments)
     return Scanner(B0=B0, gradient=grad, slew_rate=slew, units=units)
 end
 
-function add_pulse_to_parser!(parser, pulse_name; flip_angle=90., phase=0., duration=0.)
+function add_pulse_to_parser!(parser, pulse_name; flip_angle=90., phase=0., duration=0., crusher_qval=nothing, crusher_duration=nothing)
     if iszero(length(pulse_name))
         addition = "-"
     else
@@ -91,17 +92,72 @@ function add_pulse_to_parser!(parser, pulse_name; flip_angle=90., phase=0., dura
             :default => Float64(phase),
         ),
     )
+    if ~isnothing(crusher_qval) || ~isnothing(crusher_duration)
+        add_crusher_to_parser!(parser, pulse_name * "-crusher"; qval=crusher_qval, duration=crusher_duration, description="crusher around $caps pulse")
+    end
 end
 
-function get_pulse(arguments, pulse_name)
+function add_crusher_to_parser!(parser, crusher_name; qval=nothing, duration=nothing, description=nothing)
+    if isnothing(description)
+        description = crusher_name * " gradients"
+    end
+    if iszero(length(crusher_name))
+        addition = "-"
+    else
+        addition = "--$crusher_name"
+    end
+    if isnothing(qval)
+        qval = Inf
+    end
+    if isnothing(duration)
+        duration = Inf
+    end
+    add_arg_table!(parser,
+        "$(addition)-qval", Dict(
+            :help => "Strength of $description (rad/um).",
+            :arg_type => Float64,
+            :default => Float64(qval),
+        ),
+        "$(addition)-duration", Dict(
+            :help => "Duration of $description (ms).",
+            :arg_type => Float64,
+            :default => Float64(duration),
+        ),
+    )
+end
+
+function get_crusher(arguments, crusher_name, scanner)
+    addition = iszero(length(crusher_name)) ? "" : "$(crusher_name)-"
+
+    qval = pop!(arguments, "$(addition)qval")
+    duration = pop!(arguments, "$(addition)duration")
+    if isinf(qval)
+        qval = nothing
+        if isinf(max_gradient(scanner))
+            qval = 10.
+        end
+    end
+    if isinf(duration)
+        duration = nothing
+    end
+    return trapezium_gradient(qval=qval, total_duration=duration, orientation=[1, 1, 1], apply_bvec=false, scanner=scanner)
+end
+
+function get_pulse(arguments, pulse_name, scanner::Scanner)
     addition = iszero(length(pulse_name)) ? "" : "$(pulse_name)-"
     duration = pop!(arguments, "$(addition)duration")
     fa = pop!(arguments, "$(addition)flip-angle")
     phase = pop!(arguments, "$(addition)phase")
     if iszero(duration)
-        return InstantRFPulse(flip_angle=fa, phase=phase)
+        pulse = InstantRFPulse(flip_angle=fa, phase=phase)
     else
-        return constant_pulse(duration, fa; phase0=phase)
+        pulse = constant_pulse(duration, fa; phase0=phase)
+    end
+    if "$(addition)crusher-qval" in keys(arguments)
+        crusher = get_crusher(arguments, "$(pulse_name)-crusher", scanner)
+        return [crusher, pulse, crusher]
+    else
+        return pulse
     end
 end
 
@@ -128,14 +184,17 @@ function run_dwi(args=ARGS::AbstractVector[<:AbstractString]; kwargs...)
             default = 0.
     end
     add_pulse_to_parser!(parser, "excitation"; flip_angle=90, phase=-90, duration=0)
-    add_pulse_to_parser!(parser, "refocus"; flip_angle=180, phase=0, duration=0)
+    add_pulse_to_parser!(parser, "refocus"; flip_angle=180, phase=0, duration=0, crusher_duration=2.)
+    add_crusher_to_parser!(parser, "crusher"; duration=5., description="crusher gradient after readout")
 
 
     as_dict = parse_args(args, parser)
     output_file = pop!(as_dict, "output-file")
-    as_dict["excitation_pulse"] = get_pulse(as_dict, "excitation")
-    as_dict["refocus_pulse"] = get_pulse(as_dict, "refocus")
-    as_dict["scanner"] = get_scanner(as_dict)
+    scanner = get_scanner(as_dict)
+    as_dict["scanner"] = scanner
+    as_dict["excitation_pulse"] = get_pulse(as_dict, "excitation", scanner)
+    as_dict["refocus_pulse"] = get_pulse(as_dict, "refocus", scanner)
+    as_dict["crusher"] = get_crusher(as_dict, "crusher", scanner)
     sequence = dwi(; Dict(Symbol(replace(k, "-"=>"_")) => v for (k, v) in as_dict)...)
     write_sequence(output_file, sequence)
 end
@@ -150,16 +209,23 @@ function run_spin_echo(args=ARGS::AbstractVector[<:AbstractString]; kwargs...)
             help = "Spin echo time in ms."
             arg_type = Float64
             required = true
+        "--readout-time"
+            help = "Duration of the readout (ms). The actual signal readout will happen half-way this period."
+            arg_type = Float64
+            default = 0.
     end
     add_pulse_to_parser!(parser, "excitation"; flip_angle=90, phase=-90, duration=0)
     add_pulse_to_parser!(parser, "refocus"; flip_angle=180, phase=0, duration=0)
+    add_crusher_to_parser!(parser, "crusher"; duration=5., description="crusher gradient after readout")
 
 
     as_dict = parse_args(args, parser)
     output_file = pop!(as_dict, "output-file")
-    as_dict["excitation_pulse"] = get_pulse(as_dict, "excitation")
-    as_dict["refocus_pulse"] = get_pulse(as_dict, "refocus")
-    as_dict["scanner"] = get_scanner(as_dict)
+    scanner = get_scanner(as_dict)
+    as_dict["scanner"] = scanner
+    as_dict["excitation_pulse"] = get_pulse(as_dict, "excitation", scanner)
+    as_dict["refocus_pulse"] = get_pulse(as_dict, "refocus", scanner)
+    as_dict["crusher"] = get_crusher(as_dict, "crusher", scanner)
     TE = pop!(as_dict, "TE")
     sequence = spin_echo(TE; Dict(Symbol(replace(k, "-"=>"_")) => v for (k, v) in as_dict)...)
     write_sequence(output_file, sequence)
