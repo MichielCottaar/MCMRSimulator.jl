@@ -22,6 +22,7 @@ function known_sequence_parser(name; kwargs...)
     @add_arg_table! parser begin
         "--scanner"
             help = "predefined scanners. One of $(join(keys(predefined_scanners), ", ", ", or ")). If set all other scanner parameter are ignored."
+            range_tester = (x -> x in keys(predefined_scanners))
         "--B0"
             help = "Magnetic field strength in Tesla."
             arg_type = Float64
