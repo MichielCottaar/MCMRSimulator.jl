@@ -5,10 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 ### Added
-- Crusher gradients have been added to the pre-defined sequences (`gradient_echo`, `spin_echo`, and `dwi`).
 - New `mcmr run --bvecs` flag and `rotate_bvecs` function that apply a rotation to all diffusion-weighted gradeints in an MRI sequences
 - New `mcmr sequence <name> --scanner` flag to select one of the predefined scanners.
 ### Changed
+- Crusher gradients have been added to the pre-defined sequences (`gradient_echo`, `spin_echo`, and `dwi`).
 - For a 3D geometry (i.e., mesh or spheres) if the orientation is set as a vector, this vector represents the new orientation of the geometry x-axis (previously it was the z-axis).
 ### Fixed
 - Greatly speed up generation of Snapshots for simulations with large voxels.
