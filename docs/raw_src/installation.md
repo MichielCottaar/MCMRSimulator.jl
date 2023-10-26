@@ -20,7 +20,9 @@ After this installation process, you can run MCMRSimulator in one of the followi
 - *Jupyter notebook*: Make sure that you install `IJulia` using the instructions above. This will allow you to start a notebook in jupyter running in Julia. Within this notebook, you can follow the steps in the [MCMRSimulator tutorial using Julia](@ref tutorial_julia).
 - *Command line interface*: You can now run the command line interface using `julia --project=<project_dir> -e 'import MCMRSimulator.CLI: run_main; run_main()' -- [args]`. This is a lot to type, so I would recommend adding an alias for this to your ".bashrc" file (or equivalent): `alias mcmr="julia --project=<project_dir> -e 'import MCMRSimulator.CLI: run_main; run_main()' -- "`. With this alias set up, you can now follow [the command line tutorial](@ref tutorial_cli)
 
-## Upgrading MCMRSimulator
+## Updating MCMRSimulator
+First check the [changelog](https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl/-/blob/main/CHANGELOG.md) to find a list of changes since your current version.
+If you decide to update:
 1. Start the julia REPL again in a terminal (`$ julia --project=<project_dir>`)
 2. Enter the package manager by pressing "]"
 3. Update all installed packages using by typing `update` and pressing enter (`pkg> update`).
