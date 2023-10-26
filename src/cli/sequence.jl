@@ -7,7 +7,7 @@ import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, add_arg_grou
 import ...SequenceBuilder.Sequences.SpinEcho: spin_echo, dwi
 import ...SequenceBuilder.Sequences.GradientEcho: gradient_echo
 import ...Sequences: InstantRFPulse, constant_pulse, write_sequence
-import ...Scanners: Scanner
+import ...Scanners: Scanner, predefined_scanners
 
 
 function known_sequence_parser(name; kwargs...)
@@ -20,6 +20,8 @@ function known_sequence_parser(name; kwargs...)
 
     add_arg_group!(parser, "Scanner parameters", :scanner)
     @add_arg_table! parser begin
+        "--scanner"
+            help = "predefined scanners. One of $(join(keys(predefined_scanners), ", ", ", or ")). If set all other scanner parameter are ignored."
         "--B0"
             help = "Magnetic field strength in Tesla."
             arg_type = Float64
@@ -47,6 +49,15 @@ function known_sequence_parser(name; kwargs...)
 end
 
 function get_scanner(arguments)
+    if "scanner" in keys(arguments)
+        for (field, ref_value) in [("kHz", false), ("B0", 3.), ("max-gradient", Inf), ("max-slew-rate", Inf)]
+            value = pop!(arguments, field)
+            if value != ref_value
+                @warn "--$field flag will be ignored, because --scanner is set."
+            end
+        end
+        return predefined_scanners[arguments["scanner"]]
+    end
     units = pop!(arguments, "kHz") ? :kHz : :Tesla
     B0 = pop!(arguments, "B0")
     grad = pop!(arguments, "max-gradient")

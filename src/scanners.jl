@@ -76,4 +76,10 @@ Siemens_Terra = Scanner(B0=7., gradient=80, slew_rate=200, units=:Tesla)
 Siemens 3T Connectom MRI scanner ([fan22_MappingHumanConnectome](@cite)).
 """
 Siemens_Connectom = Scanner(B0=3., gradient=300, slew_rate=200, units=:Tesla)
+
+predefined_scanners = Dict(
+    "Siemens_Prisma" => Siemens_Prisma,
+    "Siemens_Terra" => Siemens_Terra,
+    "Siemens_Connectom" => Siemens_Connectom,
+)
 end

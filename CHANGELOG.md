@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - New `mcmr run --bvecs` flag and `rotate_bvecs` function that apply a rotation to all diffusion-weighted gradeints in an MRI sequences
+- New `mcmr sequence <name> --scanner` flag to select one of the predefined scanners.
 ### Changed
 - For a 3D geometry (i.e., mesh or spheres) if the orientation is set as a vector, this vector represents the new orientation of the geometry x-axis (previously it was the z-axis).
 ### Fixed

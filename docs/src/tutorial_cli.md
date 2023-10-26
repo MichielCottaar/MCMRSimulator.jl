@@ -183,15 +183,16 @@ Markdown.parse("```\n$(bvecs)\n```")
 
 We then define two sequences, one for the b0 and the other for the diffusion-weighted MRI:
 ```bash
-mcmr sequence dwi b0.json --bval=0 --TR=1000 --TE=80 --B0=3
-mcmr sequence dwi dwi.json --bval=2 --TR=1000 --TE=80 --B0=3
+mcmr sequence dwi b0.json --bval=0 --TR=1000 --TE=80 --scanner=Siemens_Prisma
+mcmr sequence dwi dwi.json --bval=2 --TR=1000 --TE=80 --scanner=Siemens_Prisma
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("sequence dwi b0.json --bval=0 --TR=1000 --TE=80 --B0=3")
-run_main_docs("sequence dwi dwi2.json --bval=2 --TR=1000 --TE=80 --B0=3")
+run_main_docs("sequence dwi b0.json --bval=0 --TR=1000 --TE=80 --scanner=Siemens_Prisma")
+run_main_docs("sequence dwi dwi2.json --bval=2 --TR=1000 --TE=80 --scanner=Siemens_Prisma")
 nothing
 ```
+Here we set the scanner to `Siemens_Prisma`, which is used to set the B0 field as well as the maximum gradient and slew rate.
 
 Let's evaluate these sequences for some randomly distributed cylinders:
 ```bash
