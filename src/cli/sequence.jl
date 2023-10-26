@@ -258,8 +258,9 @@ function run_gradient_echo(args=ARGS::AbstractVector[<:AbstractString]; kwargs..
 
     as_dict = parse_args(args, parser)
     output_file = pop!(as_dict, "output-file")
-    as_dict["excitation_pulse"] = get_pulse(as_dict, "excitation")
-    as_dict["scanner"] = get_scanner(as_dict)
+    scanner = get_scanner(as_dict)
+    as_dict["scanner"] = scanner
+    as_dict["excitation_pulse"] = get_pulse(as_dict, "excitation", scanner)
     TE = pop!(as_dict, "TE")
     sequence = gradient_echo(TE; Dict(Symbol(replace(k, "-"=>"_")) => v for (k, v) in as_dict)...)
     write_sequence(output_file, sequence)
