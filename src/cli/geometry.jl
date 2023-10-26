@@ -143,7 +143,7 @@ function get_parser(; kwargs...)
                 end
 
                 if sub_command == "create-random"
-                    if unique_key in [:radius, :position]
+                    if unique_key in [:radius, :position, :inner, :outer]
                         continue
                     end
                     if unique_key == :repeats
