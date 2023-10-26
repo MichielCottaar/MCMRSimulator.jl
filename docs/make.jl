@@ -15,8 +15,6 @@ for fn in raw_src_files
     write("docs/src/$fn", text)
 end
 
-cp("CHANGELOG.md", "docs/src/changelog.md")
-
 makedocs(;
     modules=[MCMRSimulator],
     authors="Michiel Cottaar <Michiel.cottaar@ndcn.ox.ac.uk>",
@@ -38,7 +36,6 @@ makedocs(;
         "Geometry" => "geometry.md",
         "Sequence" => "sequence.md",
         "MRI/collision properties" => "properties.md",
-        "Change log" => "changelog.md",
         "API" => "api.md",
         "References" => "references.md",
     ],
@@ -48,7 +45,6 @@ makedocs(;
 for fn in raw_src_files
     rm("docs/src/$fn")
 end
-rm("docs/src/changelog.md")
 
 
 if get(ENV, "CI_COMMIT_REF_NAME", "") == "main" || length(get(ENV, "CI_COMMIT_TAG", "")) > 0
