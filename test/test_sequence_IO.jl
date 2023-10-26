@@ -145,7 +145,7 @@
                 else
                     @test i1 isa mr.InstantGradient
                     @test i2 isa mr.InstantGradient
-                    @test all(i1.q_origin .== i2.q_origin)
+                    @test all(i1.origin .== i2.origin)
                     @test all(i1.qvec .== i2.qvec)
                 end
             end
