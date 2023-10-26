@@ -360,21 +360,16 @@ function random_surface_positions(group::FixedObstructionGroup{L, N}, bb::Boundi
         nrepeats_lower = div.([bb.lower ⋅ abs.(n) for n in normals], group.grid.size, RoundDown) .- 5
         nrepeats_upper = div.([bb.upper ⋅ abs.(n) for n in normals], group.grid.size, RoundUp) .+ 5
 
-        sub_draws = [(SVector{N, Float64}[], SVector{N, Float64}[]) for _ in 1:L]
-        for int_shift in Iterators.product(UnitRange.(nrepeats_lower, nrepeats_upper)...)
-            shift = int_shift .* repeats
-            inner_draws = random_surface_positions.(group.obstructions, normed_surface_density)
-
-            for (upper, inner) in zip(sub_draws, inner_draws)
-                append!(upper[1], [p .+ shift for p in inner[1]])
-                append!(upper[2], inner[2])
-            end
-        end
+        total_repeats = prod(nrepeats_upper .- nrepeats_lower)
+        sub_draws = random_surface_positions.(group.obstructions, normed_surface_density .* total_repeats)
+        (base_positions, normals) = vcat.(sub_draws...)
+        shifts = SVector{3, Float64}.(zip(rand.(UnitRange.(nrepeats_lower, nrepeats_upper), length(base_positions))...))
+        positions = base_positions .+ shifts
     else
         sub_draws = random_surface_positions.(group.obstructions, normed_surface_density)
+        (positions, normals) = vcat.(sub_draws...)
     end
 
-    (positions, normals) = vcat.(sub_draws...)
     global_normals = [rotate_to_global(group, n) for n in normals]
     unrotated_positions = [rotate_to_global(group, p) for p in positions]
     if N == 3
