@@ -73,7 +73,7 @@ function parse_instant(d::Dict)
     if haskey(d, "flip_angle")
         InstantRFPulse(; time=d["time"], flip_angle=d["flip_angle"], phase=d["phase"])
     else
-        InstantGradient(; qvec=d["qvec"], q_origin=d["q_origin"], time=d["time"], apply_bvec=d["apply_bvec"])
+        InstantGradient(; qvec=d["qvec"], origin=d["origin"], time=d["time"], apply_bvec=d["apply_bvec"])
     end
 end
 
