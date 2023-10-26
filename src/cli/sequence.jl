@@ -49,14 +49,15 @@ function known_sequence_parser(name; kwargs...)
 end
 
 function get_scanner(arguments)
-    if "scanner" in keys(arguments)
+    scanner_name = pop!(arguments, "scanner")
+    if ~isnothing(scanner_name)
         for (field, ref_value) in [("kHz", false), ("B0", 3.), ("max-gradient", Inf), ("max-slew-rate", Inf)]
             value = pop!(arguments, field)
             if value != ref_value
                 @warn "--$field flag will be ignored, because --scanner is set."
             end
         end
-        return predefined_scanners[pop!(arguments, "scanner")]
+        return predefined_scanners[scanner_name]
     end
     units = pop!(arguments, "kHz") ? :kHz : :Tesla
     B0 = pop!(arguments, "B0")
