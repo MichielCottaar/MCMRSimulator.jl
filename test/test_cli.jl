@@ -138,6 +138,61 @@ end
                 @test sequence.readout_times == [30.]
             end
         end
+
+        @testset "Test controls of crusher gradients" begin
+            @testset "Spin echo sequence crushers" begin
+                in_tmpdir() do
+                    _, err = run_main_test("sequence spin-echo seq.json --TE 30 --TR 100 --refocus-crusher-duration 2 --crusher-duration=1 --scanner=Siemens_Prisma --readout-time=1")
+                    @test length(err) == 0
+                    sequence = mr.read_sequence("seq.json")
+                    @test length(sequence.pulses) == 0
+                    @test length(sequence.instants) == 2
+                    @test sequence.instants[1].time == 0.
+                    @test sequence.instants[2].time == 15.
+                    @test sequence.instants[1] isa mr.InstantRFPulse
+                    @test sequence.instants[2] isa mr.InstantRFPulse
+                    @test length(sequence.gradients) == 3
+                    @test sequence.gradients[1].shape.times[1] == 13.
+                    @test sequence.gradients[1].shape.times[end] == 15
+                    @test sequence.gradients[2].shape.times[1] == 15.
+                    @test sequence.gradients[2].shape.times[end] == 17.
+                    @test sequence.gradients[3].shape.times[1] == 30.5
+                    @test sequence.gradients[3].shape.times[end] == 31.5
+                    for grad in sequence.gradients
+                        amplitude = norm(grad.shape.amplitudes[2])
+                        @test amplitude ≈ √3 * mr.max_gradient(mr.Siemens_Prisma)
+                        @test amplitude / (grad.shape.times[2] - grad.shape.times[1]) ≈ √3 * mr.max_slew_rate(mr.Siemens_Prisma)
+                    end
+                    @test sequence.TR == 100
+                    @test sequence.readout_times == [30.]
+                end
+            end
+            @testset "gradient echo crushers" begin
+                in_tmpdir() do
+                    _, err = run_main_test("sequence gradient-echo seq.json --TE 30 --TR 100 --crusher-duration=1 --scanner=Siemens_Connectom --readout-time=1")
+                    @test length(err) == 0
+                    sequence = mr.read_sequence("seq.json")
+                    @test length(sequence.pulses) == 0
+                    @test length(sequence.instants) == 1
+                    @test sequence.instants[1].time == 0.
+                    @test sequence.instants[1] isa mr.InstantRFPulse
+                    @test length(sequence.gradients) == 1
+                    grad = sequence.gradients[1]
+                    @show grad
+                    @test grad.shape.times[1] == 30.5
+                    # maximum amplitude has not been reached
+                    @test grad.shape.times[2] ≈ 31
+                    @test grad.shape.times[3] ≈ 31
+                    @test grad.shape.times[end] == 31.5
+                    amplitude = norm(grad.shape.amplitudes[2])
+                    # maximum amplitude has not been reached
+                    @test amplitude < √3 * mr.max_gradient(mr.Siemens_Connectom)
+                    @test amplitude / (grad.shape.times[2] - grad.shape.times[1]) ≈ √3 * mr.max_slew_rate(mr.Siemens_Connectom)
+                    @test sequence.TR == 100
+                    @test sequence.readout_times == [30.]
+                end
+            end
+        end
         @testset "spin_echo with finite pulses" begin
             in_tmpdir() do
                 _, err = run_main_test("sequence spin-echo seq.json --TE 30 --TR 100 --excitation-duration 2 --refocus-duration 4")
