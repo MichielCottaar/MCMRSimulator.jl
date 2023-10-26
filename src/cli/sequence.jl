@@ -131,7 +131,6 @@ function get_crusher(arguments, crusher_name, scanner; default_qval=1.)
 
     qval = pop!(arguments, "$(addition)qval")
     duration = pop!(arguments, "$(addition)duration")
-    @show crusher_name qval duration
     if isinf(qval) && (isinf(duration) || isinf(max_gradient(scanner)))
         qval = default_qval
         if isinf(duration)
@@ -149,9 +148,7 @@ function get_crusher(arguments, crusher_name, scanner; default_qval=1.)
     if isinf(duration)
         duration = nothing
     end
-    result = gen_crusher(qval=qval, duration=duration, scanner=scanner)
-    @show result
-    return result
+    return gen_crusher(qval=qval, duration=duration, scanner=scanner)
 end
 
 function get_pulse(arguments, pulse_name, scanner::Scanner)
@@ -226,7 +223,7 @@ function run_spin_echo(args=ARGS::AbstractVector[<:AbstractString]; kwargs...)
             default = 0.
     end
     add_pulse_to_parser!(parser, "excitation"; flip_angle=90, phase=-90, duration=0)
-    add_pulse_to_parser!(parser, "refocus"; flip_angle=180, phase=0, duration=0)
+    add_pulse_to_parser!(parser, "refocus"; flip_angle=180, phase=0, duration=0, with_crusher=true)
     add_crusher_to_parser!(parser, "crusher"; description="crusher gradient after readout")
 
 
