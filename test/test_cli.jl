@@ -190,20 +190,53 @@ end
         end
     end
     @testset "Setting R1" begin
-        _, err = run_main_test("geometry create spheres 1 spheres.json --radius 1 --repeats 2.2 2.2 2.2 --R1_inside=0.02")
-        @test length(err) == 0
-        _, err = run_main_test("sequence gradient-echo ge.json --TE 30 --TR 100")
-        @test length(err) == 0
-        _, err = run_main_test("run spheres.json ge.json --R1 0.01 -N 100 -o R1.csv --subset inside --subset outside")
-        @test length(err) == 0
-        result = DataFrame(CSV.File("R1.csv"))
-        @test size(result, 1) == 3
-        @test result[1, :nspins] == 100
-        @test result[2, :nspins] < 100
-        @test result[3, :nspins] < 100
-        @test result[2, :longitudinal] / result[2, :nspins] ≈ 1. - exp(-0.9)
-        @test result[3, :longitudinal] / result[3, :nspins] ≈ 1. - exp(-0.3)
-        @test all(result[!, :sequence] .== 1)
+        in_tmpdir() do
+            _, err = run_main_test("geometry create spheres 1 spheres.json --radius 1 --repeats 2.2 2.2 2.2 --R1_inside=0.02")
+            @test length(err) == 0
+            _, err = run_main_test("sequence gradient-echo ge.json --TE 30 --TR 100")
+            @test length(err) == 0
+            _, err = run_main_test("run spheres.json ge.json --R1 0.01 -N 100 -o R1.csv --subset inside --subset outside")
+            @test length(err) == 0
+            result = DataFrame(CSV.File("R1.csv"))
+            @test size(result, 1) == 3
+            @test result[1, :nspins] == 100
+            @test result[2, :nspins] < 100
+            @test result[3, :nspins] < 100
+            @test result[2, :longitudinal] / result[2, :nspins] ≈ 1. - exp(-0.9)
+            @test result[3, :longitudinal] / result[3, :nspins] ≈ 1. - exp(-0.3)
+            @test all(result[!, :sequence] .== 1)
+        end
+    end
+    @testset "Setting diffusivity" begin
+        in_tmpdir() do
+            _, err = run_main_test("geometry create walls 1 walls.json --repeats 1")
+            @test length(err) == 0
+            _, err = run_main_test("sequence dwi dwi.json --bval 0.5 --TE 80 --TR 1000")
+            @test length(err) == 0
+            open("bvecs", "w") do f
+                write(f, "1 0
+                0 1
+                0 0")
+            end
+            _, err = run_main_test("run walls.json dwi.json -o with_diff.csv --diffusivity 3.")
+            @test length(err) == 0
+            with_diff = DataFrame(CSV.File("with_diff.csv"))
+            @test size(with_diff, 1) == 2
+            @test with_diff[!, :sequence] == [1, 1]
+            @test with_diff[!, :bvec] == [1, 2]
+            @test with_diff[1, :transverse] > exp(-1) * with_diff[1, :nspins]
+            @test with_diff[2, :transverse] ≈ with_diff[2, :nspins] * exp(-1.5) rtol=0.1
+
+            _, err = run_main_test("run walls.json dwi.json -o no_diff.csv --diffusivity 0.")
+            @test length(err) == 0
+            no_diff = DataFrame(CSV.File("no_diff.csv"))
+            @test size(no_diff, 1) == 2
+            @test no_diff[!, :sequence] == [1, 1]
+            @test no_diff[!, :bvec] == [1, 2]
+            @test no_diff[1, :transverse] == no_diff[1, :nspins]
+            @test no_diff[2, :transverse] == no_diff[2, :nspins]
+        end
+        
     end
 end
 
