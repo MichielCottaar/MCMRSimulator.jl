@@ -252,6 +252,10 @@ function run_gradient_echo(args=ARGS::AbstractVector[<:AbstractString]; kwargs..
             help = "Gradient echo time in ms."
             arg_type = Float64
             required = true
+        "--readout-time"
+            help = "Duration of the readout (ms). The actual signal readout will happen half-way this period."
+            arg_type = Float64
+            default = 0.
     end
     add_pulse_to_parser!(parser, "excitation"; flip_angle=90, phase=-90, duration=0)
     add_crusher_to_parser!(parser, "crusher"; description="crusher gradient after readout")
