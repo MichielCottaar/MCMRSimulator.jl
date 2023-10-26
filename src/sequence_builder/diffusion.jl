@@ -58,7 +58,7 @@ function trapezium_gradient(; qval=nothing, total_duration=nothing, δ=nothing, 
             if isnothing(gradient_strength)
                 gradient_strength = maxima[1]
                 if isinf(gradient_strength)
-                    return InstantGradient(qval .* orientation, origin, apply_bvec=apply_bvec)
+                    return InstantGradient(qvec=qval .* orientation, origin=origin, apply_bvec=apply_bvec)
                 end
             end
             δ = qval / gradient_strength
