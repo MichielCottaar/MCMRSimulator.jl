@@ -32,7 +32,7 @@ function spin_echo(TE;
         if isinf(max_gradient(scanner))
             qval = 10.
         end
-        crusher = trapezium_gradient(total_duration=crusher, scanner=scanner, qval=qval)
+        crusher = trapezium_gradient(total_duration=crusher, scanner=scanner, qval=qval, orientation=[1, 1, 1])
     end
     define_sequence(scanner, TR) do 
         [
