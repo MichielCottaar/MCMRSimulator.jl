@@ -94,11 +94,11 @@ Readout(;time=0.) = Readout(time)
 
 
 """
-    InstantGradient(; qvec=[0, 0, 0], q_origin=0, time=0., apply_bvec=false)
+    InstantGradient(; qvec=[0, 0, 0], q_origin=0, origin=[0, 0, 0], time=0., apply_bvec=false)
 
-Infinitely short gradient pulse that encodes phase information given by `qvec` (units: number of rotations/um) and `q_origin` (units: number of rotations).
+Infinitely short gradient pulse that encodes phase information given by `qvec` (units: rad/um) and `q_origin` (units: rad) or `origin` (units: um).
 
-The number of time a spins at given `position` is rotated is given by `qvec ⋅ position + q_origin`.
+The number of time a spins at given `position` is rotated is given by `qvec ⋅ position + q_origin` or `qvec ⋅ (position - origin)`.
 
 The pulse is applied at given `time` (in milliseconds). Retrieve this time using [`get_time`](@ref).
 
@@ -107,23 +107,35 @@ This should be true for diffusion-weighted gradients, but will typically be fals
 """
 struct InstantGradient <: InstantComponent
     qvec :: SVector{3, Float64}
-    q_origin :: Float64
+    origin :: SVector{3, Float64}
     time :: Float64
     apply_bvec :: Bool
-    InstantGradient(qvec, q_origin, time, apply_bvec) = new(SVector{3, Float64}(qvec), Float64(q_origin), Float64(time), Bool(apply_bvec))
+    InstantGradient(qvec, origin, time, apply_bvec) = new(SVector{3, Float64}(qvec), SVector{3, Float64}(origin), Float64(time), Bool(apply_bvec))
 end
 
 function Base.show(io::IO, pulse::InstantGradient)
     print(io, "InstantGradient: t=$(start_time(pulse))ms, q=$(qvec(pulse))rad/um;")
 end
 
-InstantGradient(; qvec::AbstractVector=[0., 0., 0.], q_origin=0., time :: Real=0., apply_bvec=false) = InstantGradient(SVector{3}(qvec), q_origin, time, apply_bvec)
+function InstantGradient(; qvec::AbstractVector=[0., 0., 0.], q_origin=nothing, origin=nothing, time :: Real=0., apply_bvec=false)
+    if isnothing(origin)
+        if isnothing(q_origin)
+            origin = zero(SVector{3, Float64})
+        else
+            dist = q_origin ./ norm(qvec)
+            origin = dist .* qvec
+        end
+    elseif ~isnothing(q_origin)
+        @assert q_origin ≈ origin ⋅ qvec
+    end
+    InstantGradient(SVector{3}(qvec), origin, time, apply_bvec)
+end
 qvec(pulse::InstantGradient) = pulse.qvec
-q_origin(pulse::InstantGradient) = pulse.q_origin
+q_origin(pulse::InstantGradient) = pulse.origin ⋅ pulse.qvec
 qval(pulse::InstantGradient) = norm(qvec(pulse))
 
 function apply!(pulse :: InstantGradient, orient :: SpinOrientation, pos::SVector{3, Float64})
-    adjustment = (pos ⋅ pulse.qvec) + pulse.q_origin
+    adjustment = (pos ⋅ pulse.qvec) + q_origin(pulse)
     orient.phase += 360 * adjustment / 2π
 end
 
@@ -156,7 +168,7 @@ function rotate_bvec(gradient::InstantGradient, bvec)
     rotation = get_rotation(bvec, 3)
     InstantGradient(
         rotation * gradient.qvec,
-        gradient.q_origin,
+        gradient.origin,
         gradient.time,
         gradient.apply_bvec
     )
