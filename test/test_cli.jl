@@ -167,6 +167,58 @@ end
                     @test sequence.readout_times == [30.]
                 end
             end
+            @testset "Spin echo sequence crushers using q-val" begin
+                @testset "Using infinite scanner" begin
+                    in_tmpdir() do
+                        _, err = run_main_test("sequence spin-echo seq.json --TE 30 --TR 100 --refocus-crusher-qval 2 --crusher-duration=4 --readout-time=1")
+                        @test length(err) == 0
+                        sequence = mr.read_sequence("seq.json")
+                        @test length(sequence.instants) == 4
+                        @test sequence.instants[1].time == 0.
+                        @test 14.99 < sequence.instants[2].time < 15.
+                        @test sequence.instants[3].time == 15.
+                        @test 15. < sequence.instants[4].time < 15.01
+                        @test sequence.instants[1] isa mr.InstantRFPulse
+                        @test sequence.instants[2] isa mr.InstantGradient
+                        @test sequence.instants[3] isa mr.InstantRFPulse
+                        @test sequence.instants[4] isa mr.InstantGradient
+                        @test length(sequence.gradients) == 1
+                        grad = sequence.gradients[1]
+                        @test grad.shape.times[1] == 30.5
+                        @test 0 < (grad.shape.times[2] - 30.5) < 1e-3
+                        @test -1e-3 < (grad.shape.times[3] - 34.5) < 0
+                        @test grad.shape.times[end] == 34.5
+                        @test sequence.TR == 100
+                        @test sequence.readout_times == [30.]
+                    end
+                end
+                @testset "Using finite scanner" begin
+                    in_tmpdir() do
+                        _, err = run_main_test("sequence spin-echo seq.json --TE 30 --TR 100 --refocus-crusher-qval 0.02 --crusher-duration=4 --readout-time=1 --scanner=Siemens_Prisma")
+                        @test length(err) == 0
+                        sequence = mr.read_sequence("seq.json")
+                        @test length(sequence.instants) == 2
+                        @test sequence.instants[1].time == 0.
+                        @test sequence.instants[2].time == 15.
+                        @test sequence.instants[1] isa mr.InstantRFPulse
+                        @test sequence.instants[2] isa mr.InstantRFPulse
+                        @test length(sequence.gradients) == 3
+                        @test sequence.gradients[1].shape.times[end] == 15.
+                        @test sequence.gradients[2].shape.times[1] == 15.
+                        for grad in sequence.gradients[1:2]
+                            amplitude = norm(grad.shape.amplitudes[2])
+                            @test amplitude ≈ √3 * mr.max_gradient(mr.Siemens_Prisma)
+                            qval = (grad.shape.times[3] - grad.shape.times[1]) * amplitude
+                            @test qval ≈ 0.02
+                        end
+                        grad = sequence.gradients[3]
+                        @test grad.shape.times[1] ≈ 30.5
+                        @test grad.shape.times[end] == 34.5
+                        @test sequence.TR == 100
+                        @test all(sequence.readout_times .≈ [30.])
+                    end
+                end
+            end
             @testset "gradient echo crushers" begin
                 in_tmpdir() do
                     _, err = run_main_test("sequence gradient-echo seq.json --TE 30 --TR 100 --crusher-duration=1 --scanner=Siemens_Connectom --readout-time=1")
