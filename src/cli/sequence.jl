@@ -56,7 +56,7 @@ function get_scanner(arguments)
                 @warn "--$field flag will be ignored, because --scanner is set."
             end
         end
-        return predefined_scanners[arguments["scanner"]]
+        return predefined_scanners[pop!(arguments, "scanner")]
     end
     units = pop!(arguments, "kHz") ? :kHz : :Tesla
     B0 = pop!(arguments, "B0")
