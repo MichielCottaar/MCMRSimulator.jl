@@ -109,6 +109,20 @@ function trapezium_gradient(; qval=nothing, total_duration=nothing, δ=nothing, 
 end
 
 """
+    gen_crusher(qval=<maximum>, duration=<minimum>, scanner=<scanner with infinite gradients>)
+
+Generate a crusher gradient with the user-defined q-value (rad/um) and duration (ms).
+If not provided, the q-value will be as large as possible, while the duration will be as small as possible given the constraints of the scanner (might be 0 for infinitely strong scanners).
+For scanners with infinitely strong gradients (default) or durations of 0 ms, the q-value is set to 1 rad/um.
+"""
+function gen_crusher(; qval=nothing, duration=nothing, scanner=Scanner())
+    if isnothing(qval) && (isinf(max_gradient(scanner)) || duration == 0)
+        qval = 1.
+    end
+    return trapezium_gradient(total_duration=duration, scanner=scanner, qval=qval, orientation=[1, 1, 1], apply_bvec=false)
+end
+
+"""
     add_linear_diffusion_weighting(blocks, replace1, replace2, refocus=true, bval/qval/gradient_strength, diffusion_time=max, gradient_duration=max, scanner=3T, orientation=:x)
 
 Replaces two empty [`BuildingBlock`](@ref)-like objects with diffusion-weighting gradients.

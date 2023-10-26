@@ -2,7 +2,7 @@ module SpinEcho
 import ....Scanners: Scanner, max_gradient
 import ....Sequences: InstantRFPulse, Readout, RFPulse, InstantGradient, rotate_bvec
 import ...DefineSequence: define_sequence
-import ...Diffusion: add_linear_diffusion_weighting, trapezium_gradient
+import ...Diffusion: add_linear_diffusion_weighting, gen_crusher
 import ...BuildingBlocks: duration
 import StaticArrays: SVector
 """
@@ -13,6 +13,8 @@ Creates a gradient echo sequence consisting of:
 - a delay
 - `refocus_pulse`: by default this is an [`InstantRFPulse`](@ref), but can be replaced with an [`RFPulse`](@ref). If the refocus does not take place halfway the RF pulse, `refocus_time` should be set as well.
 - a readout `TE` ms after the excitation.
+- a delay of readout_time/2
+- crusher gradient (default: instant with q-value of 1 rad/um). Set `crusher` to a positive number to change the duration or to any MR gradient (see [`gen_crusher`](@ref)).
 The refocus time is always halfway the excitation time and the readout.
 """
 function spin_echo(TE;
@@ -23,16 +25,12 @@ function spin_echo(TE;
     refocus_pulse=InstantRFPulse(flip_angle=180, phase=90),
     refocus_time=nothing,
     readout_time=0.,
-    crusher=5.,
+    crusher=0.,
 )
     excitation_time = isnothing(excitation_time) ? duration(excitation_pulse) / 2 : excitation_time
     refocus_time = isnothing(refocus_time) ? duration(refocus_pulse) / 2 : refocus_time
     if crusher isa Number
-        qval = nothing
-        if isinf(max_gradient(scanner))
-            qval = 10.
-        end
-        crusher = trapezium_gradient(total_duration=crusher, scanner=scanner, qval=qval, orientation=[1, 1, 1])
+        crusher = gen_crusher(duration=crusher, scanner=scanner)
     end
     define_sequence(scanner, TR) do 
         [
@@ -42,8 +40,9 @@ function spin_echo(TE;
             TE/2 - duration(refocus_pulse) + refocus_time - readout_time/2,
             readout_time/2,
             Readout(),
-            readout_time/2,
+            max(readout_time/2, 1e-6),
             crusher,
+            1e-6
         ]
     end
 end
@@ -90,7 +89,7 @@ function dwi(;
     gradient_duration=nothing,
     readout_time=0.,
     orientation=:x,
-    crusher=5.
+    crusher=0.
 )
     define_sequence(scanner, TR) do
         sequence = spin_echo(

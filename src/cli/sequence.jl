@@ -6,7 +6,7 @@ module Sequence
 import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, add_arg_group!, parse_args
 import ...SequenceBuilder.Sequences.SpinEcho: spin_echo, dwi
 import ...SequenceBuilder.Sequences.GradientEcho: gradient_echo
-import ...SequenceBuilder.Diffusion: trapezium_gradient
+import ...SequenceBuilder.Diffusion: gen_crusher
 import ...Sequences: InstantRFPulse, constant_pulse, write_sequence
 import ...Scanners: Scanner, predefined_scanners, max_gradient
 
@@ -68,7 +68,7 @@ function get_scanner(arguments)
     return Scanner(B0=B0, gradient=grad, slew_rate=slew, units=units)
 end
 
-function add_pulse_to_parser!(parser, pulse_name; flip_angle=90., phase=0., duration=0., crusher_qval=nothing, crusher_duration=nothing)
+function add_pulse_to_parser!(parser, pulse_name; flip_angle=90., phase=0., duration=0., with_crusher=false, crusher_qval=nothing, crusher_duration=nothing)
     if iszero(length(pulse_name))
         addition = "-"
     else
@@ -92,7 +92,7 @@ function add_pulse_to_parser!(parser, pulse_name; flip_angle=90., phase=0., dura
             :default => Float64(phase),
         ),
     )
-    if ~isnothing(crusher_qval) || ~isnothing(crusher_duration)
+    if with_crusher
         add_crusher_to_parser!(parser, pulse_name * "-crusher"; qval=crusher_qval, duration=crusher_duration, description="crusher around $caps pulse")
     end
 end
@@ -126,21 +126,32 @@ function add_crusher_to_parser!(parser, crusher_name; qval=nothing, duration=not
     )
 end
 
-function get_crusher(arguments, crusher_name, scanner)
+function get_crusher(arguments, crusher_name, scanner; default_qval=1.)
     addition = iszero(length(crusher_name)) ? "" : "$(crusher_name)-"
 
     qval = pop!(arguments, "$(addition)qval")
     duration = pop!(arguments, "$(addition)duration")
+    @show crusher_name qval duration
+    if isinf(qval) && (isinf(duration) || isinf(max_gradient(scanner)))
+        qval = default_qval
+        if isinf(duration)
+            duration = 0.
+        end
+    end
+    if iszero(qval)
+        println(duration)
+        return isinf(duration) ? 0. : duration
+    end
+
     if isinf(qval)
         qval = nothing
-        if isinf(max_gradient(scanner))
-            qval = 10.
-        end
     end
     if isinf(duration)
         duration = nothing
     end
-    return trapezium_gradient(qval=qval, total_duration=duration, orientation=[1, 1, 1], apply_bvec=false, scanner=scanner)
+    result = gen_crusher(qval=qval, duration=duration, scanner=scanner)
+    @show result
+    return result
 end
 
 function get_pulse(arguments, pulse_name, scanner::Scanner)
@@ -154,7 +165,7 @@ function get_pulse(arguments, pulse_name, scanner::Scanner)
         pulse = constant_pulse(duration, fa; phase0=phase)
     end
     if "$(addition)crusher-qval" in keys(arguments)
-        crusher = get_crusher(arguments, "$(pulse_name)-crusher", scanner)
+        crusher = get_crusher(arguments, "$(pulse_name)-crusher", scanner; default_qval=0.)
         return [crusher, pulse, crusher]
     else
         return pulse
@@ -184,8 +195,8 @@ function run_dwi(args=ARGS::AbstractVector[<:AbstractString]; kwargs...)
             default = 0.
     end
     add_pulse_to_parser!(parser, "excitation"; flip_angle=90, phase=-90, duration=0)
-    add_pulse_to_parser!(parser, "refocus"; flip_angle=180, phase=0, duration=0, crusher_duration=2.)
-    add_crusher_to_parser!(parser, "crusher"; duration=5., description="crusher gradient after readout")
+    add_pulse_to_parser!(parser, "refocus"; flip_angle=180, phase=0, duration=0, with_crusher=true)
+    add_crusher_to_parser!(parser, "crusher"; description="crusher gradient after readout")
 
 
     as_dict = parse_args(args, parser)
@@ -216,7 +227,7 @@ function run_spin_echo(args=ARGS::AbstractVector[<:AbstractString]; kwargs...)
     end
     add_pulse_to_parser!(parser, "excitation"; flip_angle=90, phase=-90, duration=0)
     add_pulse_to_parser!(parser, "refocus"; flip_angle=180, phase=0, duration=0)
-    add_crusher_to_parser!(parser, "crusher"; duration=5., description="crusher gradient after readout")
+    add_crusher_to_parser!(parser, "crusher"; description="crusher gradient after readout")
 
 
     as_dict = parse_args(args, parser)
