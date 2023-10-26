@@ -4,7 +4,6 @@
 Manifest.toml
 /docs/build/
 /docs/src/installation.md
-/docs/src/changelog.md
 /lcov.info
 /.julia
 /local
