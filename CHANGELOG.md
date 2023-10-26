@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - For a 3D geometry (i.e., mesh or spheres) if the orientation is set as a vector, this vector represents the new orientation of the geometry x-axis (previously it was the z-axis).
 ### Fixed
+- Greatly speed up generation of Snapshots for simulations with large voxels.
 - Playing out the sequence occassionally broke down after multiple repetition times. This has been fixed.
 - The `--seed` flag is now actually used in `mcmr run` and also available in `mcmr create-random`
 - Fixed an issue that caused `mcmr create-random` to crash
