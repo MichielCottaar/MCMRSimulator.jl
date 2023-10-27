@@ -24,7 +24,7 @@ This software can be cited using the information in the CITATION.cff file.
   month        = nov,
   year         = 2022,
   publisher    = {Zenodo},
-  version      = {V0.7},
+  version      = {V0.8},
   doi          = {10.5281/zenodo.7318657},
   url          = {https://doi.org/10.5281/zenodo.7318657}
 }
@@ -41,7 +41,7 @@ This software can be cited using the information in the CITATION.cff file.
 - Login into [zenodo](https://doi.org/10.5281/zenodo.7318656)
   - In the MCMRSimulator.jl repository click "New version"
   - Click "Reserve doi" (should already be clicked)
-  - Add new citation information to CITATION.cff
+  - Add new citation information to CITATION.cff (do not update doi in README)
     ```
       - description: "This is the archived snapshot of version <version number> of MCMRSimulator.jl"
         type: doi
