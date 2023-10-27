@@ -94,6 +94,9 @@
                 (0.5, 1.),
                 (0.8, 1.6),
                 (0., 11.3),
+                (0., 10.7),
+                (0.1, 1.6),
+                (0.1, 11.3),
             ]
                 @testset "$(repeats) um repeating wall placed at $position um" begin
                     Random.seed!(1234)
