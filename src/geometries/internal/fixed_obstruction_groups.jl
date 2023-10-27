@@ -224,7 +224,7 @@ function detect_intersection(g::FixedObstructionGroup{L, N}, start::SVector{3}, 
     else
         (index, intersection) = detect_intersection_non_repeating(g, rotated_start, rotated_dest, previous_index, prev_inside)
     end
-    if iszero(index)
+    if intersection.distance > 1.
         return empty_intersection
     end
     return Intersection(
@@ -255,7 +255,7 @@ function detect_intersection_non_repeating(g::FixedObstructionGroup{L, N}, start
             return (found_intersection_index, found_intersection)
         end
     end
-    return (zero(Int32), empty_obstruction_intersections[N])
+    return (found_intersection_index, found_intersection)
 end
 
 function detect_intersection_loop(g::FixedObstructionGroup{L, N, R, O}, start, dest, prev_index, prev_inside, voxel) where {L, N, R, O}
@@ -297,14 +297,20 @@ function detect_intersection_repeating(g::FixedObstructionGroup{L, N}, start::SV
         voxel_f2 = voxel_f .* repeats
         return detect_intersection_non_repeating(g, start .- voxel_f2, dest .- voxel_f2, prev_index, prev_inside)
     end
-    for (voxel, _, _, _, _) in ray_grid_intersections(grid_start .+ 0.5, grid_dest .+ 0.5)
+    found_index = zero(Int32)
+    found_intersection = empty_obstruction_intersections[N]
+    for (voxel, _, _, t2, _) in ray_grid_intersections(grid_start .+ 0.5, grid_dest .+ 0.5)
         scaled_voxel = voxel .* repeats
         (index, intersection) = detect_intersection_non_repeating(g, start .- scaled_voxel, dest .- scaled_voxel, prev_index, prev_inside)
-        if ~iszero(index)
-            return (index, intersection)
+        if found_intersection.distance > intersection.distance
+            found_intersection = intersection
+            found_index = index
+        end
+        if found_intersection.distance < t2
+            return (found_index, found_intersection)
         end
     end
-    return (zero(Int32), empty_obstruction_intersections[N])
+    return (found_index, found_intersection)
 end
 
 
