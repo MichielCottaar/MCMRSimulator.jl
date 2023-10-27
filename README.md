@@ -54,6 +54,7 @@ This software can be cited using the information in the CITATION.cff file.
 - Add tag `v<version number>`
 - git push
 - Create and auto-merge merge request from version branch back into main
+  -  Ensure "delete branch after merge" is not selected!
 - Create release on gitlab (https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl/-/releases)
   - title: `v<version number>`; Release notes: "See CHANGELOG.md for list of changes.";
   - Upload spanshot (.zip) to zenodo
