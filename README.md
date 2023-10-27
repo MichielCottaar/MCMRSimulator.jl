@@ -32,6 +32,8 @@ This software can be cited using the information in the CITATION.cff file.
 
 ## Developer documentation
 ### Release procedure
+- Check out the branch "v<major>.<minor>" (might already exist if this is a patch update)
+  - Rebase the main branch into the version branch
 - Update the version number in "Project.toml" and "README.md" citation section.
 - Update the "CHANGELOG.md"
   - Check `[Unreleased]` link for any missing additions to the Changelog
@@ -51,6 +53,7 @@ This software can be cited using the information in the CITATION.cff file.
 - Commit changes
 - Add tag `v<version number>`
 - git push
+- Create and auto-merge merge request from version branch back into main
 - Create release on gitlab (https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl/-/releases)
   - title: `v<version number>`; Release notes: "See CHANGELOG.md for list of changes.";
   - Upload spanshot (.zip) to zenodo
