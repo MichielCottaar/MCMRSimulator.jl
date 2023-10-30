@@ -89,8 +89,10 @@ function Base.show(io::IO, og::ObstructionGroup)
             else
                 push!(not_set, key)
             end
-        else
+        elseif (isglobal(fv) && key != :vertices) || og.n_obstructions < 5
             print(io, "$key = $(fv.value), ")
+        else
+            print(io, "$key = <unique values>, ")
         end
     end
     print(io, ")")
