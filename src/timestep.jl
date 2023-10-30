@@ -82,9 +82,7 @@ function propose_times(time_controller::TimeController, t_start::Number, t_end::
         end
         Ntimepoints = Int(div(t1 - t0, mt, RoundUp))
         if Ntimepoints > 1
-            for new_timepoint in range(t0, t1, length=Ntimepoints+1)[2:end-1]
-                push!(timepoints, new_timepoint)
-            end
+            append!(timepoints, range(t0, t1, length=Ntimepoints+1)[2:end-1])
         end
     end
     return sort(unique(timepoints))
