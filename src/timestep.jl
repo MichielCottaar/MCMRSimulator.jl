@@ -30,7 +30,7 @@ function TimeController(geometry::FixedGeometry, susceptibility::FixedSusceptibi
     mt_stick = max_timestep_sticking(geometry, diffusivity)
     if isnothing(max_timestep)
         max_timestep = min(
-            size_scale(geometry),
+            size_scale(geometry)^2 / diffusivity,
             max_timestep_internal_gradient(susceptibility, gradient_precision, diffusivity, B0),
             mt_stick
         )
