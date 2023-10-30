@@ -189,7 +189,7 @@ mcmr sequence dwi dwi.json --bval=2 --TR=1000 --TE=80 --scanner=Siemens_Prisma
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
 run_main_docs("sequence dwi b0.json --bval=0 --TR=1000 --TE=80 --scanner=Siemens_Prisma")
-run_main_docs("sequence dwi dwi2.json --bval=2 --TR=1000 --TE=80 --scanner=Siemens_Prisma")
+run_main_docs("sequence dwi dwi.json --bval=2 --TR=1000 --TE=80 --scanner=Siemens_Prisma")
 nothing
 ```
 Here we set the scanner to `Siemens_Prisma`, which is used to set the B0 field as well as the maximum gradient and slew rate.
@@ -216,7 +216,7 @@ mcmr run random_cylinders.json b0.json dwi.json --bvecs=bvecs -o full_dwi.csv
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run random_cylinders.json b0.json dwi2.json --bvecs=bvecs -o full_dwi.csv --seed=5")
+run_main_docs("run random_cylinders.json b0.json dwi.json --bvecs=bvecs -o full_dwi.csv --seed=5")
 ```
 
 ```@eval
