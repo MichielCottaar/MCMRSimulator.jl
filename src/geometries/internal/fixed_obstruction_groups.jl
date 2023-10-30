@@ -137,8 +137,8 @@ end
 Finds the bounding box containing all the obstructions in the [`FixedObstructionGroup`](@ref) ignoring any repeats or rotation.
 """
 BoundingBox(group::FixedObstructionGroup) = BoundingBox(group.obstructions, group.vertices)
-BoundingBox(obstructions::Vector{<:FixedObstruction}, vertices::Vector{SVector{3, Float64}}) = BoundingBox(BoundingBox.(obstructions)...)
-BoundingBox(obstructions::Vector{IndexTriangle}, vertices::Vector{SVector{3, Float64}}) = BoundingBox([BoundingBox(o, vertices) for o in obstructions]...)
+BoundingBox(obstructions::Vector{<:FixedObstruction}, vertices::Vector{SVector{3, Float64}}) = BoundingBox(BoundingBox.(obstructions))
+BoundingBox(obstructions::Vector{IndexTriangle}, vertices::Vector{SVector{3, Float64}}) = BoundingBox([BoundingBox(o, vertices) for o in obstructions])
 
 """
     isinside(obstruction_group, position[, stuck_to])
