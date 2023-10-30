@@ -302,7 +302,8 @@ end
                     @test result[3, :nspins] < 100
                     @test result[2, :transverse] / result[2, :nspins] ≈ exp(-9.)
                     @test result[3, :transverse] / result[3, :nspins] ≈ exp(-3.)
-                    @test all(result[!, :sequence] .== 1)
+                    @test all(result[!, :sequence] .== "ge.json")
+                    @test all(result[!, :sequence_index] .== 1)
                 end
             end
         end
@@ -322,7 +323,8 @@ end
             @test result[3, :nspins] < 100
             @test result[2, :longitudinal] / result[2, :nspins] ≈ 1. - exp(-0.9)
             @test result[3, :longitudinal] / result[3, :nspins] ≈ 1. - exp(-0.3)
-            @test all(result[!, :sequence] .== 1)
+            @test all(result[!, :sequence] .== "ge.json")
+            @test all(result[!, :sequence_index] .== 1)
         end
     end
     @testset "Setting diffusivity" begin
@@ -336,11 +338,12 @@ end
                 0 1
                 0 0")
             end
-            _, err = run_main_test("run walls.json dwi.json -o with_diff.csv --diffusivity 3. --bvecs=bvecs")
+            _, err = run_main_test("run walls.json ./dwi.json -o with_diff.csv --diffusivity 3. --bvecs=bvecs")
             @test length(err) == 0
             with_diff = DataFrame(CSV.File("with_diff.csv"))
             @test size(with_diff, 1) == 2
-            @test with_diff[!, :sequence] == [1, 1]
+            @test with_diff[!, :sequence] == ["./dwi.json", "./dwi.json"]
+            @test with_diff[!, :sequence_index] == [1, 1]
             @test with_diff[!, :bvec] == [1, 2]
             @test with_diff[1, :transverse] > exp(-1) * with_diff[1, :nspins]
             @test with_diff[2, :transverse] ≈ with_diff[2, :nspins] * exp(-1.5) rtol=0.1
@@ -348,7 +351,8 @@ end
             _, err = run_main_test("run walls.json dwi.json -o no_diff.csv --diffusivity 0. --bvecs=bvecs")
             no_diff = DataFrame(CSV.File("no_diff.csv"))
             @test size(no_diff, 1) == 2
-            @test no_diff[!, :sequence] == [1, 1]
+            @test no_diff[!, :sequence] == ["dwi.json", "dwi.json"]
+            @test no_diff[!, :sequence_index] == [1, 1]
             @test no_diff[!, :bvec] == [1, 2]
             @test no_diff[1, :transverse] ≈ no_diff[1, :nspins]
             @test no_diff[2, :transverse] ≈ no_diff[2, :nspins]
