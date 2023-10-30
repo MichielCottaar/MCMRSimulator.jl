@@ -174,7 +174,7 @@ function connected_components(m::SparseMatrixCSC)
         result[new_component] .= component_index
         component_index += 1
     end
-    #@assert all(result .> 0)
+    @assert all(result .> 0)
     return result
 end
 
