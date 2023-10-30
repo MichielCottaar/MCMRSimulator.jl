@@ -399,12 +399,14 @@ function random_surface_positions(group::FixedObstructionGroup{L, N}, bb::Boundi
 
         total_repeats = prod(nrepeats_upper .- nrepeats_lower .+ 1)
         sub_draws = random_surface_positions(group.obstructions, normed_surface_density .* total_repeats)
-        (base_positions, normals) = vcat.(sub_draws...)
+        base_positions = [p for s in sub_draws for p in s[1]]
+        normals = [p for s in sub_draws for p in s[2]]
         shifts = SVector{N, Float64}.(zip(rand.(UnitRange.(nrepeats_lower, nrepeats_upper), length(base_positions))...))
         positions = base_positions .+ [s .* repeats for s in shifts]
     else
         sub_draws = get_random_pos.(group.obstructions, normed_surface_density)
-        (positions, normals) = vcat.(sub_draws...)
+        positions = [p for s in sub_draws for p in s[1]]
+        normals = [p for s in sub_draws for p in s[2]]
     end
 
     global_normals = [rotate_to_global(group, n) for n in normals]
