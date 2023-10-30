@@ -15,6 +15,6 @@ import .ObstructionIntersections: ObstructionIntersection, empty_obstruction_int
 import .FixedObstructions: FixedObstruction, BoundingBox, isinside, has_inside, detect_intersection, obstruction_type, radius, size_scale, random_surface_positions
 import .Walls: Wall
 import .Rounds: Round, Cylinder, Sphere
-import .Triangles: Triangle, FullTriangle, IndexTriangle
+import .Triangles: Triangle, FullTriangle, IndexTriangle, curvature
 import .Shifts: Shift, get_quadrant
 end

@@ -14,9 +14,10 @@ module FixedObstructionGroups
 import Random: rand
 import LinearAlgebra: inv, transpose, norm, cross, ⋅
 import StaticArrays: SVector, SMatrix
+import Statistics: median
 import ..Obstructions:
     FixedObstruction, has_inside, isinside, obstruction_type, random_surface_positions,
-    IndexTriangle, FullTriangle, size_scale, Shift, Wall,
+    IndexTriangle, FullTriangle, size_scale, Shift, Wall, curvature,
     ObstructionIntersection, empty_obstruction_intersections, detect_intersection
 import ..BoundingBoxes: BoundingBox, could_intersect
 import ..Intersections: Intersection, empty_intersection
@@ -97,9 +98,12 @@ rotate_to_global(g::FixedObstructionGroup{L, N}, pos::SVector{N}) where {L, N} =
 has_inside(::Type{<:FixedObstructionGroup{L, N, R, O}}) where {L, N, R, O} = has_inside(O)
 has_inside(::Type{<:FixedMesh}) = true
 
+curvature(g::FixedMesh) = median(curvature(g.obstructions, g.vertices))
+curvature(g::FixedMesh{1}) = Inf
+
 function size_scale(g::FixedObstructionGroup{L}) where {L}
     if g isa FixedMesh
-        min_radius = minimum([size_scale(o, g.vertices) for o in g.obstructions])
+        min_radius = curvature(g)
     else
         min_radius = minimum(size_scale.(g.obstructions))
     end
