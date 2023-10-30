@@ -48,7 +48,7 @@ BoundingBox(bb::BoundingBox) = bb
 lower(bb::BoundingBox{N}) where {N} = bb.lower
 upper(bb::BoundingBox{N}) where {N} = bb.upper
 
-function BoundingBox(bounding_boxes::AbstractVector{<:BoundingBox})
+function BoundingBox(bounding_boxes::Union{AbstractVector{<:BoundingBox}, NTuple{N, BoundingBox}}) where {N}
     lowers = map(lower, bounding_boxes)
     uppers = map(upper, bounding_boxes)
     BoundingBox(
