@@ -133,6 +133,10 @@ end
 Splits the mesh represented by `triangles` into a sequences of meshes that are actually internally connected.
 """
 function connected_components(triangles::AbstractVector, nvertices=nothing)
+    connected_components(SVector{3, Int}.(triangles), nvertices)
+end
+
+function connected_components(triangles::AbstractVector{SVector{3, Int}}, nvertices=nothing)
     m = connectivity_matrix(triangles, nvertices)
     vertex_indices = connected_components(m)
     indices = [vertex_indices[t[1]] for t in triangles]
@@ -141,9 +145,17 @@ function connected_components(triangles::AbstractVector, nvertices=nothing)
         triangle_index = (1:length(indices))[indices .== i]
         new_index = zeros(Int, length(vertex_indices))
         new_index[vertex_indices .== i] = 1:length(vertex_index)
-        return (triangle_index, vertex_index, [MVector{3, Int}(new_index[t]) for t in triangles])
+        return (triangle_index, vertex_index, MVector{3, Int}.([(new_index[t[1]], new_index[t[2]], new_index[t[3]]) for t in triangles[indices .== i]]))
     end
     return get_index.(1:maximum(indices))
+end
+
+function get_index(i, triangles, indices, vertex_indices)
+    vertex_index = (1:length(vertex_indices))[vertex_indices .== i]
+    triangle_index = (1:length(indices))[indices .== i]
+    new_index = zeros(Int, length(vertex_indices))
+    new_index[vertex_indices .== i] = 1:length(vertex_index)
+    return (triangle_index, vertex_index, [(new_index[t[1]], new_index[t[2]], new_index[t[3]]) for t in triangles[indices .== i]])
 end
 
 """
