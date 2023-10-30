@@ -136,8 +136,12 @@ end
 function Base.show(io::IO, sim::Simulation{N}) where {N}
     function print_geometry()
         print(io, "Geometry(")
-        for obstruction in sim.geometry
-            print(io, string(obstruction), ", ")
+        if length(sim.geometry) > 20
+            print(io, "$(length(sim.geometry)) groups of obstructions")
+        else
+            for obstruction in sim.geometry
+                print(io, string(obstruction), ", ")
+            end
         end
         print(io, ")")
     end

@@ -87,6 +87,7 @@ const FixedGeometry{N} = NTuple{N, FixedObstructionGroup}
 const FixedMesh{L, R, B, V, S} = FixedObstructionGroup{L, 3, R, IndexTriangle, B, V, S}
 
 repeating(::FixedObstructionGroup{L, N, R}) where {L, N, R} = R
+repeating(::Type{<:FixedObstructionGroup{L, N, R}}) where {L, N, R} = R
 
 obstruction_type(::Type{<:FixedObstructionGroup{L, N, R, O}}) where {L, N, R, O} = obstruction_type(O)
 
@@ -123,13 +124,35 @@ size_scale(g::FixedGeometry) = minimum(size_scale.(g))
 size_scale(g::FixedGeometry{0}) = Inf
 
 function Base.show(io::IO, geom::FixedObstructionGroup{L}) where {L}
-    print(io, "$(L) ")
-    if repeating(geom)
-        print(io, "repeating ")
-    end
-    print(io, String(nameof(obstruction_type(typeof(geom)))) * " objects")
+    print(io, typeof(geom))
 end
 
+function Base.show(io::IO, geom_type::Type{<:FixedObstructionGroup{L}}) where {L}
+    print(io, "$(L) ")
+    if repeating(geom_type)
+        print(io, "repeating ")
+    end
+    print(io, String(nameof(obstruction_type(geom_type))) * " objects")
+end
+
+function Base.show(io::IO, geom::FixedGeometry{L}) where {L}
+    print(io, typeof(geom))
+end
+
+function Base.show(io::IO, geom_type::Type{<:FixedGeometry{L}}) where {L}
+    if iszero(L)
+        print(io, "empty geometry")
+    elseif L > 20
+        print(io, "$(L) obstruction groups")
+    else
+        for (index, ft) in enumerate(fieldtypes(geom_type))
+            print(io, ft)
+            if index != L
+                print(io, ", ")
+            end
+        end
+    end
+end
 
 """
     BoundingBox(obstruction_group)
