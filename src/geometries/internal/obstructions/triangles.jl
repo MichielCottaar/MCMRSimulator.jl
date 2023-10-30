@@ -60,7 +60,7 @@ end
 
 has_inside(::Type{Triangle}) = false
 isinside(::Triangle, ::SVector{3, Float64}) = false
-size_scale(ft::FullTriangle) = triangle_size(ft.a, ft.b, ft.c)
+size_scale(ft::FullTriangle) = sqrt(triangle_size(ft.a, ft.b, ft.c))
 size_scale(it::IndexTriangle, vertices) = size_scale(FullTriangle(it, vertices))
 
 """
