@@ -27,7 +27,7 @@ import ..Gridify: Grid, get_indices
 
 
 """
-Collection of L base [`FixedObstruction`](@ref) objects.
+Collection of multiple base [`FixedObstruction`](@ref) objects.
 
 This is the main internal representation of a group of identical [`FixedObstruction`](@ref) objects.
 
@@ -44,7 +44,7 @@ Properties:
 - `vertices`: vector of vertices (only used for a mesh).
 """
 struct FixedObstructionGroup{
-    L, N, R, O <: FixedObstruction{N},
+    N, R, O <: FixedObstruction{N},
     B <: Union{Nothing, Vector{BoundingBox{N}}},
     V <: NamedTuple{(:R1, :R2, :off_resonance)},
     S <: NamedTuple{(:R1, :R2, :off_resonance, :permeability, :surface_density, :dwell_time, :surface_relaxivity)}, K
@@ -72,7 +72,7 @@ struct FixedObstructionGroup{
     vertices :: Vector{SVector{3, Float64}}
     function FixedObstructionGroup(obstructions, parent_index, original_index, rotation, grid, bounding_boxes, volume, surface, vertices)
         new{
-            length(obstructions), size(rotation, 2), grid.repeating, eltype(obstructions),
+            size(rotation, 2), grid.repeating, eltype(obstructions),
             typeof(bounding_boxes), typeof(volume), typeof(surface), 3 * size(rotation, 2)
         }(obstructions, parent_index, original_index, rotation, transpose(rotation), grid, bounding_boxes, volume, surface, vertices)
     end
@@ -85,30 +85,29 @@ A collection of [`FixedObstructionGroup`](@ref) objects each reperesenting part 
 """
 const FixedGeometry{N} = NTuple{N, FixedObstructionGroup}
 
-const FixedMesh{L, R, B, V, S} = FixedObstructionGroup{L, 3, R, IndexTriangle, B, V, S}
+const FixedMesh{R, B, V, S} = FixedObstructionGroup{3, R, IndexTriangle, B, V, S}
 
-repeating(::FixedObstructionGroup{L, N, R}) where {L, N, R} = R
-repeating(::Type{<:FixedObstructionGroup{L, N, R}}) where {L, N, R} = R
+repeating(::FixedObstructionGroup{N, R}) where {N, R} = R
+repeating(::Type{<:FixedObstructionGroup{N, R}}) where {N, R} = R
 
-obstruction_type(::Type{<:FixedObstructionGroup{L, N, R, O}}) where {L, N, R, O} = obstruction_type(O)
+obstruction_type(::Type{<:FixedObstructionGroup{N, R, O}}) where {N, R, O} = obstruction_type(O)
 
 rotate_from_global(g::FixedObstructionGroup, pos::SVector{3}) = g.inv_rotation * pos
-rotate_to_global(g::FixedObstructionGroup{L, N}, pos::SVector{N}) where {L, N} = g.rotation * pos
+rotate_to_global(g::FixedObstructionGroup{N}, pos::SVector{N}) where {N} = g.rotation * pos
 
-has_inside(::Type{<:FixedObstructionGroup{L, N, R, O}}) where {L, N, R, O} = has_inside(O)
+has_inside(::Type{<:FixedObstructionGroup{N, R, O}}) where {N, R, O} = has_inside(O)
 has_inside(::Type{<:FixedMesh}) = true
 
-curvature(g::FixedMesh) = median(curvature(g.obstructions, g.vertices))
-curvature(g::FixedMesh{1}) = Inf
+curvature(g::FixedMesh) = length(g.obstructions) == 1 ? Inf : median(curvature(g.obstructions, g.vertices))
 
-function size_scale(g::FixedObstructionGroup{L}) where {L}
+function size_scale(g::FixedObstructionGroup)
     if g isa FixedMesh
         min_radius = curvature(g)
     else
         min_radius = minimum(size_scale.(g.obstructions))
     end
     if g.obstructions[1] isa Shift
-        for i in 1:L
+        for i in 1:length(g.obstructions)
             for j in 1:i-1
                 distance = norm(g.obstructions[i].shift .- g.obstructions[j].shift)
                 if distance < min_radius && distance > 0
@@ -127,35 +126,16 @@ end
 size_scale(g::FixedGeometry) = minimum(size_scale.(g))
 size_scale(g::FixedGeometry{0}) = Inf
 
-function Base.show(io::IO, geom::FixedObstructionGroup{L}) where {L}
+function Base.show(io::IO, geom::FixedObstructionGroup)
+    print(io, length(geom.obstructions), " ")
     print(io, typeof(geom))
 end
 
-function Base.show(io::IO, geom_type::Type{<:FixedObstructionGroup{L}}) where {L}
-    print(io, "$(L) ")
+function Base.show(io::IO, geom_type::Type{<:FixedObstructionGroup})
     if repeating(geom_type)
         print(io, "repeating ")
     end
     print(io, String(nameof(obstruction_type(geom_type))) * " objects")
-end
-
-function Base.show(io::IO, geom::FixedGeometry{L}) where {L}
-    print(io, typeof(geom))
-end
-
-function Base.show(io::IO, geom_type::Type{<:FixedGeometry{L}}) where {L}
-    if iszero(L)
-        print(io, "empty geometry")
-    elseif L > 20
-        print(io, "$(L) obstruction groups")
-    else
-        for (index, ft) in enumerate(fieldtypes(geom_type))
-            print(io, ft)
-            if index != L
-                print(io, ", ")
-            end
-        end
-    end
 end
 
 """
@@ -173,11 +153,11 @@ BoundingBox(obstructions::Vector{IndexTriangle}, vertices::Vector{SVector{3, Flo
 Returns a vector of indices with all the obstructions in [`FixedObstructionGroup`](@ref) containing the `position` (in order).
 For obstructions with only a single inside, will return an empty vector ("[]") if the particle is outside and a "[0]" if inside.
 """
-function isinside(g::FixedObstructionGroup{L}, pos::SVector{3}, stuck_to::Reflection=empty_reflection) where {L}
+function isinside(g::FixedObstructionGroup, pos::SVector{3}, stuck_to::Reflection=empty_reflection)
     isinside(g, pos, stuck_to.geometry_index == g.parent_index ? stuck_to.obstruction_index : 0, stuck_to.inside)
 end
 
-function isinside(g::FixedObstructionGroup{L}, pos::SVector{3}, stuck_to, inside::Bool) where {L}
+function isinside(g::FixedObstructionGroup, pos::SVector{3}, stuck_to, inside::Bool)
     if ~has_inside(typeof(g))
         return Int[]
     end
@@ -235,7 +215,7 @@ end
 
 Find the closest intersection between the line from `start` to `dest` and an obstruction in the `geometry(ies)`.
 """
-function detect_intersection(g::FixedObstructionGroup{L, N}, start::SVector{3}, dest::SVector{3}, previous_hit::Tuple{Int, Int, Bool}=(0, 0, false)) where {L, N}
+function detect_intersection(g::FixedObstructionGroup{N}, start::SVector{3}, dest::SVector{3}, previous_hit::Tuple{Int, Int, Bool}=(0, 0, false)) where {N}
     rotated_start = rotate_from_global(g, start)
     rotated_dest = rotate_from_global(g, dest)
 
@@ -263,7 +243,7 @@ function detect_intersection(g::FixedObstructionGroup{L, N}, start::SVector{3}, 
     )
 end
 
-function detect_intersection_non_repeating(g::FixedObstructionGroup{L, N}, start::SVector{N}, dest::SVector{N}, prev_index::Int, prev_inside::Bool) where {L, N}
+function detect_intersection_non_repeating(g::FixedObstructionGroup{N}, start::SVector{N}, dest::SVector{N}, prev_index::Int, prev_inside::Bool) where {N}
     if prod(size(g.grid.indices)) == 1
         return detect_intersection_loop(g, start, dest, prev_index, prev_inside, zero(SVector{N, Int}) .+ 1)
     end
@@ -285,7 +265,7 @@ function detect_intersection_non_repeating(g::FixedObstructionGroup{L, N}, start
     return (found_intersection_index, found_intersection)
 end
 
-function detect_intersection_loop(g::FixedObstructionGroup{L, N, R, O}, start, dest, prev_index, prev_inside, voxel) where {L, N, R, O}
+function detect_intersection_loop(g::FixedObstructionGroup{N, R, O}, start, dest, prev_index, prev_inside, voxel) where {N, R, O}
     new_indices = g.grid.indices[voxel...]
     intersection_index = zero(Int32)
     intersection = empty_obstruction_intersections[N]
@@ -315,7 +295,7 @@ function detect_intersection_loop(g::FixedObstructionGroup{L, N, R, O}, start, d
     return (intersection_index, intersection)
 end
 
-function detect_intersection_repeating(g::FixedObstructionGroup{L, N}, start::SVector{N}, dest::SVector{N}, prev_index::Int, prev_inside::Bool) where {L, N}
+function detect_intersection_repeating(g::FixedObstructionGroup{N}, start::SVector{N}, dest::SVector{N}, prev_index::Int, prev_inside::Bool) where {N}
     repeats = g.grid.size
     grid_start = start ./ repeats
     grid_dest = dest ./ repeats
@@ -366,12 +346,12 @@ For each drawn position will return a tuple with:
 - geometry_index: index of the group
 - obstruction_index: index of the obstruction within the group that the position is on the surface of
 """
-function random_surface_positions(group::FixedObstructionGroup{L, N}, bb::BoundingBox{3}, volume_density::Number) where {L, N}
+function random_surface_positions(group::FixedObstructionGroup{N}, bb::BoundingBox{3}, volume_density::Number) where {N}
     local_surface_density = group.surface.surface_density
     if local_surface_density isa Vector
         surface_density = [isnothing(sd) ? default_surface_density : sd for sd in local_surface_density]
     else
-        surface_density = fill(local_surface_density, L)
+        surface_density = fill(local_surface_density, length(group.obstructions))
     end
 
     if N == 1
