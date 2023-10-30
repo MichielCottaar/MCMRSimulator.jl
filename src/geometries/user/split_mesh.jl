@@ -159,11 +159,11 @@ function connected_components(m::SparseMatrixCSC)
     while any(not_assigned)
         start_index = findfirst(not_assigned)
         new_component = fill(0, nvertices)
-        new_component[start_index] = true
+        new_component[start_index] = 1
         ncomponents = 0
         while ncomponents != sum(new_component .> 0)
             ncomponents = sum(new_component .> 0)
-            new_component = m * new_component
+            new_component = (m * new_component) .> 0
         end
         @assert sum(not_assigned .& (new_component .> 0)) == ncomponents "new component includes elements already assigned to previous components"
         not_assigned[new_component .> 0] .= false
