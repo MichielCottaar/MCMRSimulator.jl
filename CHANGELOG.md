@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Fixed
 - Fixed occasional leakage through walls that are exactly at the edge of a grid cell or repeat.
+### Changed
+- CSV output files now contain the name of the sequence file (CLI)
 ## [v0.8.0]
 ### Added
 - New `mcmr run --bvecs` flag and `rotate_bvecs` function that apply a rotation to all diffusion-weighted gradeints in an MRI sequences
