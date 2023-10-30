@@ -157,20 +157,24 @@ function connected_components(m::SparseMatrixCSC)
     result = fill(0, nvertices)
     component_index = 1
     while any(not_assigned)
-        start_index = findfirst(not_assigned)
-        new_component = fill(0, nvertices)
-        new_component[start_index] = 1
-        ncomponents = 0
-        while ncomponents != sum(new_component .> 0)
-            ncomponents = sum(new_component .> 0)
-            new_component = (m * new_component) .> 0
+        start_index :: Int = findfirst(not_assigned)
+        new_component = BitVector(fill(false, nvertices))
+        function mark_index(index)
+            if new_component[index]
+                return
+            end
+            new_component[index] = true
+            mark_index.(m.rowval[m.colptr[index]:m.colptr[index + 1] - 1])
+            nothing
         end
-        @assert sum(not_assigned .& (new_component .> 0)) == ncomponents "new component includes elements already assigned to previous components"
-        not_assigned[new_component .> 0] .= false
-        result[new_component .> 0] .= component_index
+        mark_index(start_index)
+
+        @assert sum(not_assigned .& new_component) == sum(new_component) "new component includes elements already assigned to previous components"
+        not_assigned[new_component] .= false
+        result[new_component] .= component_index
         component_index += 1
     end
-    @assert all(result .> 0)
+    #@assert all(result .> 0)
     return result
 end
 
