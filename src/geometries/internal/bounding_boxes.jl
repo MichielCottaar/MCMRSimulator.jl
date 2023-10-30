@@ -48,12 +48,12 @@ BoundingBox(bb::BoundingBox) = bb
 lower(bb::BoundingBox{N}) where {N} = bb.lower
 upper(bb::BoundingBox{N}) where {N} = bb.upper
 
-function BoundingBox(bounding_boxes::Union{AbstractVector{<:BoundingBox}, NTuple{N, BoundingBox}}) where {N}
+function BoundingBox(bounding_boxes::Union{AbstractVector{<:BoundingBox{M}}, NTuple{N, BoundingBox{M}}}) where {N, M}
     lowers = map(lower, bounding_boxes)
     uppers = map(upper, bounding_boxes)
     BoundingBox(
-        [minimum([l[i] for l in lowers]) for i in 1:3], 
-        [maximum([u[i] for u in uppers]) for i in 1:3]
+        [minimum([l[i] for l in lowers]) for i in 1:M], 
+        [maximum([u[i] for u in uppers]) for i in 1:M]
     )
 end
 
