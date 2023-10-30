@@ -195,6 +195,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
         end
     end
 
+    sequence_names = [args["sequence"][i] for i in sequence_indices]
 
     simulation = Simulation(all_sequences; geometry=geometry, R1=args["R1"], R2=args["R2"], diffusivity=args["diffusivity"])
 
@@ -217,7 +218,8 @@ function run_main(args::Dict{<:AbstractString, <:Any})
             end
             orient_as_vec = orientation(value)
             push!(df_list, (
-                sequence=sequence_indices[index[1]],
+                sequence=sequence_names[index[1]],
+                sequence_index=sequence_indices[index[1]],
                 bvec=bvec_indices[index[1]],
                 TR=index[3],
                 readout=index[2],
@@ -243,7 +245,8 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 orient_as_vec = orientation(spin)
                 pos =  position(spin)
                 push!(df_list, (
-                    sequence=sequence_indices[index[1]],
+                    sequence=sequence_names[index[1]],
+                    sequence_index=sequence_indices[index[1]],
                     bvec=bvec_indices[index[1]],
                     TR=index[3],
                     readout=index[2],
