@@ -28,6 +28,8 @@ struct Grid{N}
 end
 
 
+BoundingBox(grid::Grid) = BoundingBox(grid.lower, grid.lower .+ grid.size)
+
 """
     get_indices(grid, position)
 

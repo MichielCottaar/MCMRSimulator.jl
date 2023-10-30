@@ -247,6 +247,9 @@ function detect_intersection_non_repeating(g::FixedObstructionGroup{N}, start::S
     if prod(size(g.grid.indices)) == 1
         return detect_intersection_loop(g, start, dest, prev_index, prev_inside, zero(SVector{N, Int}) .+ 1)
     end
+    if ~could_intersect(BoundingBox(g.grid), start, dest)
+        return (0, empty_intersection)
+    end
     found_intersection = empty_obstruction_intersections[N]
     found_intersection_index = zero(Int32)
     for (voxel, _, _, t2, _) in ray_grid_intersections((start .- g.grid.lower) ./ g.grid.resolution, (dest .- g.grid.lower) ./ g.grid.resolution)
