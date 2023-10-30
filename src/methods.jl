@@ -78,7 +78,11 @@ end
 
 function get_rotation(rotation::AbstractVector{<:Number}, ndim::Int; reference_dimension=nothing)
     @assert length(rotation)==3
-    normed = rotation / norm(rotation)
+    nr = norm(rotation)
+    if iszero(nr)
+        error("Cannot rotate to vector of [0, 0, 0]")
+    end
+    normed = rotation / nr
     if ndim == 1
         return reshape(normed, 3, 1)
     end
