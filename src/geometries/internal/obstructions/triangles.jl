@@ -151,6 +151,10 @@ function detect_intersection_partial(triangle::FullTriangle, start::SVector{N}, 
     ), partial)
 end
 
+function random_surface_positions(triangle::IndexTriangle, vertices, density::Number)
+    random_surface_positions(FullTriangle(triangle, vertices), density)
+end
+
 function random_surface_positions(ft::FullTriangle, density::Number)
     surface = triangle_size(ft.a, ft.b, ft.c)
     nspins = rand(Poisson(surface * density))

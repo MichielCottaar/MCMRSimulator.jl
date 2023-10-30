@@ -93,12 +93,14 @@ size_scale(o::FixedObstruction) = radius(o)
 
 
 """
-    random_surface_positions(obstruction, surface_density)
+    random_surface_positions(obstruction[, vertices], surface_density)
 
 Returns a vector of positions and normals on the normals of a specific obstruction.
 Normals should always assume that the particle is on the inside.
 """
-function random_surface_positions end
+function random_surface_positions(obstruction::FixedObstruction, vertices, surface_density::Number)
+    random_surface_positions(obstruction, surface_density)
+end
 
 
 end
