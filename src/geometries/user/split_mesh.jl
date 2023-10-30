@@ -46,7 +46,7 @@ function split_mesh(old_mesh::Mesh)
             end
         end
 
-        push!(result, Mesh(; kwargs...))
+        push!(result, Mesh(; number=length(triangles), kwargs...))
     end
     return result
 end
