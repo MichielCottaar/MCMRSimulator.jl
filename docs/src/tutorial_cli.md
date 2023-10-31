@@ -14,11 +14,11 @@ We will look through each of these steps below.
 First we will define a geometry formed of regularly packed axons.
 This is represented by a single cylinder pointing in the z-direction with a radius of 1 micrometer that repeats itself every 2.5 micrometer (in both the x-, and y-direction).
 ```bash
-mcmr geometry create cylinders 1 geometry.json --radius 1 --repeats 2.5 2.5
+mcmr geometry create cylinders 1 geometry.json --radius 1 --repeats 2.5,2.5
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("geometry create cylinders 1 geometry.json --radius 1 --repeats 2.5 2.5")
+run_main_docs("geometry create cylinders 1 geometry.json --radius 1 --repeats 2.5,2.5")
 ```
 
 This will create a JSON file with the full information on the geometry:
@@ -196,11 +196,11 @@ Here we set the scanner to `Siemens_Prisma`, which is used to set the B0 field a
 
 Let's evaluate these sequences for some randomly distributed cylinders:
 ```bash
-mcmr geometry create-random cylinders 0.6 random_cylinders.json --mean-radius=1. --var-radius=0.1 --repeats 5 5
+mcmr geometry create-random cylinders 0.6 random_cylinders.json --mean-radius=1. --var-radius=0.1 --repeats 5,5
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("geometry create-random cylinders 0.6 random_cylinders.json --mean-radius=1. --var-radius=0.1 --repeats 5 5 --seed=4")
+run_main_docs("geometry create-random cylinders 0.6 random_cylinders.json --mean-radius=1. --var-radius=0.1 --repeats 5,5 --seed=4")
 ```
 
 The resulting cylinder JSON file look like:

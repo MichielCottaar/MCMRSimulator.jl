@@ -3,14 +3,101 @@ Defines command line interface for `mcmr geometry`
 """
 module Geometry
 
-import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, parse_args, ArgParseError, usage_string
-import StaticArrays: StaticVector
+import ArgParse: ArgParse, ArgParseSettings, @add_arg_table!, add_arg_table!, parse_args, ArgParseError, usage_string
+import StaticArrays: StaticVector, MMatrix, MVector
 import Random
+import CSV
+import Tables
 import ...Geometries.User.Obstructions: Walls, Spheres, Cylinders, Annuli, fields, field_to_docs, Field, ObstructionGroup, FieldValue
 import ...Geometries.User.JSON: write_geometry, read_geometry
 import ...Geometries.User.RandomDistribution: random_positions_radii
+import ...Methods: get_rotation
+
 
 field_type(::Field{T}) where {T} = T
+
+struct FieldParser{T}
+    value :: Union{T, Vector{T}}
+end
+
+value_as_vector(fp::FieldParser{T}) where {T} = fp.value isa T ? [fp.value] : fp.value
+
+function ArgParse.parse_item(::Type{FieldParser{T}}, text::AbstractString) where {T<:Number}
+    try
+        return FieldParser{T}(parse(T, text))
+    catch
+    end
+    for dlm in (',', ';')
+        if dlm in text
+            try
+                return FieldParser{T}([parse(T, x) for x in split(text, dlm)])
+            catch
+            end
+        end
+    end
+    as_mat = CSV.read(text, Tables.matrix, delim=' ', ignorerepeated=true, header=false)
+    if size(as_mat) == (1, 1)
+        return FieldParser{T}(T(as_mat[1, 1]))
+    elseif size(as_mat, 1) == 1
+        as_vec = as_mat[1, :]
+    elseif size(as_mat, 2) == 1
+        as_vec = as_mat[:, 1]
+    else
+        error("Expected just a row or column of numbers in $(text), got a whole table instead.")
+    end
+    return FieldParser{T}(T.(as_vec))
+end
+
+function ArgParse.parse_item(::Type{FieldParser{MVector{1, T}}}, text::AbstractString) where {T}
+    sub_parse = ArgParse.parse_item(FieldParser{T}, text).value
+    @show sub_parse
+    if sub_parse isa T
+        @show MVector{1, T}([sub_parse])
+        FieldParser{MVector{1, T}}(MVector{1, T}([sub_parse]))
+    else
+        FieldParser{MVector{1, T}}([MVector{1, T}([s]) for s in sub_parse])
+    end
+end
+
+function ArgParse.parse_item(::Type{FieldParser{T}}, text::AbstractString) where {T<:AbstractVector}
+    @show T
+    if ';' in text && ',' in text
+        return FieldParser{T}([T([parse(eltype(T), x) for x in split(sub, ',')]) for sub in split(text, ';')])
+    end
+    for dlm in (',', ';')
+        if dlm in text
+            return FieldParser{T}(T([parse(eltype(T), x) for x in split(text, dlm)]))
+        end
+    end
+    as_mat = CSV.read(text, Tables.matrix, delim=' ', ignorerepeated=true, header=false)
+    return FieldParser{T}(T.(eachrow(as_mat)))
+end
+
+struct RotationParser{N}
+    value :: MMatrix{3, N, Float64}
+end
+
+function ArgParse.parse_item(::Type{RotationParser{N}}, text::AbstractString) where {N}
+    if length(text) == 1
+        base = Symbol(text)
+    else
+        try
+            if ',' in text
+                base = parse.(Float64, split(text, ','))
+            end
+        catch
+            as_mat = CSV.read(text, Tables.matrix, delim=' ', ignorerepeated=true, header=false)
+            if size(as_mat, 1) == 1
+                base = as_mat[1, :]
+            elseif size(as_mat, 2) == 1
+                base = as_mat[:, 1]
+            else
+                base = as_mat
+            end
+        end
+    end
+    return RotationParser(get_rotation(base, N))
+end
 
 """
     get_parser()
@@ -107,9 +194,11 @@ function get_parser(; kwargs...)
                     :dest_name => String(unique_key),
                     :help => field_to_docs(field_value),
                     :required => field_value.field.required && isnothing(field_value.field.default_value),
-                    :default => field_value.field.default_value,
-                    :arg_type => field_type(field_value.field),
+                    :arg_type => FieldParser{field_type(field_value.field)},
                 )
+                if ~isnothing(field_value.field.default_value)
+                    as_dict[:default] = FieldParser{field_type(field_value.field)}(field_value.field.default_value)
+                end
                 flag = "--" * String(unique_key)
                 if field_type(field_value.field) == Bool
                     for s in (:required, :default, :arg_type)
@@ -121,25 +210,9 @@ function get_parser(; kwargs...)
                     else
                         as_dict[:action] = :store_true
                     end
-                elseif field_type(field_value.field) <: AbstractArray
-                    if (field_value.field.only_group || sub_command == "create-random") && field_type(field_value.field) <: StaticVector
-                        as_dict[:nargs] = size(field_type(field_value.field))[1]
-                    else
-                        as_dict[:nargs] = '+'
-                    end
-                    if !isnothing(as_dict[:default])
-                        as_dict[:default] = [as_dict[:default]...]
-                    end
-                    as_dict[:arg_type] = eltype(field_type(field_value.field))
-                    if field_value.field.name == :rotation
-                        pop!(as_dict, :arg_type)
-                        as_dict[:default] = ["I"]
-                    end
-                elseif sub_command == "create" && !field_value.field.only_group
-                    as_dict[:nargs] = '+'
-                    if !isnothing(as_dict[:default])
-                        as_dict[:default] = [as_dict[:default]]
-                    end
+                elseif field_value.field.name == :rotation
+                    as_dict[:arg_type] = RotationParser{group.type.ndim}
+                    as_dict[:default] = RotationParser{group.type.ndim}(get_rotation(:I, group.type.ndim))
                 end
 
                 if sub_command == "create-random"
@@ -171,39 +244,20 @@ function get_parser(; kwargs...)
 end
 
 """
-    parse_user_argument(field_value, value, n_objects)
+    parse_user_argument(value, n_objects)
 
 Parse the user argument to something that can actually be used internally by Julia.
 """
-parse_user_argument(field_value::FieldValue{T}, value, n_objects) where {T} = value
-function parse_user_argument(field_value::FieldValue{T}, value::Vector, n_objects) where {T}
-    if field_value.field.name == :rotation
-        return parse_user_rotation(value)
-    end
-    if length(value) == 0
-        return nothing
-    elseif T <: StaticVector
-        if eltype(value) <: AbstractArray
-            return value
-        end
-        nt = size(T)[1]
-        if length(value) == nt
-            return value
-        elseif length(value) == nt * n_objects
-            return [value[1 + i * nt: nt * (i + 1)] for i in 0:n_objects-1]
-        else
-            error("Expected $nt or $(nt * n_objects) values for $(field_value.field.name). Got $(length(value)) instead.")
-        end
+parse_user_argument(value, n_objects) = value
+function parse_user_argument(value::FieldParser{T}, n_objects) where {T}
+    if value.value isa T
+        return value.value
     else
-        if length(value) == 1
-            return value[1]
-        elseif length(value) == n_objects
-            return value
-        else
-            error("Expected 1 or $(n_objects) values for $(field_value.field.name). Got $(length(value)) instead.")
-        end
+        @assert length(value.value) == n_objects
+        return value.value
     end
 end
+parse_user_argument(value::RotationParser, n_objects) = value.value
 
 
 function parse_user_rotation(value::Vector)
@@ -257,9 +311,8 @@ function run_create(args::Dict{<:AbstractString, <:Any})
         "spheres" => Spheres,
         "annuli" => Annuli,
     )[obstruction_type]
-    test_group = constructor(number=0)
     number = pop!(flags, "number")
-    symbol_flags = Dict(Symbol(k) => parse_user_argument(getproperty(test_group, Symbol(k)), v, number) for (k, v) in flags)
+    symbol_flags = Dict(Symbol(k) => parse_user_argument(v, number) for (k, v) in flags)
     filtered = Dict(k=>v for (k, v) in symbol_flags if ~isnothing(v))
     result = constructor(;number=number, filtered...)
     write_geometry(output_file, result)
@@ -278,7 +331,7 @@ function run_create_random(args::Dict{<:AbstractString, <:Any})
         "annuli" => (Annuli, 2),
     )[obstruction_type]
     (positions, radius) = random_positions_radii(
-        flags["repeats"], pop!(flags, "target-density"), ndim; 
+        flags["repeats"].value, pop!(flags, "target-density"), ndim; 
         mean=pop!(flags, "mean-radius"), variance=pop!(flags, "var-radius"), min_radius=0.
     )
     flags["position"] = positions
@@ -288,12 +341,10 @@ function run_create_random(args::Dict{<:AbstractString, <:Any})
     else
         flags["radius"] = radius
     end
-    test_group = constructor(number=0)
     number = length(radius)
-    symbol_flags = Dict(Symbol(k) => parse_user_argument(getproperty(test_group, Symbol(k)), v, number) for (k, v) in flags)
+    symbol_flags = Dict(Symbol(k) => parse_user_argument(v, number) for (k, v) in flags)
     filtered = Dict(k=>v for (k, v) in symbol_flags if ~isnothing(v))
     result = constructor(;number=number, filtered...)
-    @show result
     write_geometry(output_file, result)
 end
 

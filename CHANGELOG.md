@@ -4,6 +4,10 @@ All notable changes to MCMRSimulator.jl will be documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+### Added
+- Text files can be used to set geometry positions/radii/etc. from the command line
+### Changed
+- Multiple values passed on the `mcmr geometry` on the command line should now be separated by commas and semi-colons rather than spaces
 ### Fixed
 - Fixed occasional leakage through walls that are exactly at the edge of a grid cell or repeat.
 ### Changed
