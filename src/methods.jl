@@ -84,7 +84,7 @@ function get_rotation(rotation::AbstractVector{<:Number}, ndim::Int; reference_d
     end
     normed = rotation / nr
     if ndim == 1
-        return reshape(normed, 3, 1)
+        return get_rotation(reshape(normed, 3, 1), 1)
     end
     try_vec = [0., 1., 0.]
     vec1 = cross(normed, try_vec)
