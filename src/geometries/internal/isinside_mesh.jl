@@ -72,9 +72,17 @@ function isinside(mesh::FixedMesh{R, O}, pos::SVector{3}, stuck_to::Reflection=e
     end
 
     nhit = 0
-    for (index, _) in mesh.grid.indices[grid_index...]
+    for (index, shift_index) in mesh.grid.indices[grid_index...]
         obstruction = FullTriangle(mesh.obstructions[index], mesh.vertices)
-        (new_intersection, partial) = detect_intersection_partial(obstruction, centre, normed)
+        if iszero(shift_index)
+            centre_use = centre
+            normed_use = normed
+        else
+            centre_use = centre .- mesh.grid.shifts[shift_index]
+            normed_use = normed .- mesh.grid.shifts[shift_index]
+        end
+
+        (new_intersection, partial) = detect_intersection_partial(obstruction, centre_use, normed_use)
 
         if (new_intersection.distance >= 0) && (new_intersection.distance < 1)
             if partial
