@@ -130,10 +130,10 @@ function single_susceptibility(triangle::TriangleSusceptibility, position::Abstr
 end
 
 
-function single_susceptibility_gradient(t::TriangleSusceptibility) 
+function single_susceptibility_gradient(triangle::TriangleSusceptibility) 
     a = triangle.e2_shift
     (b, c) = triangle.e3_shift
-    return t.susceptibility / max(a * a, b * b + c * c)^(3//2)
+    return triangle.susceptibility / max(a * a, b * b + c * c)^(3//2)
 end
 
 end
