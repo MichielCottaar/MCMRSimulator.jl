@@ -88,9 +88,6 @@ end
 
 function fix_type_single(mesh::Mesh, index::Int, original_index::Int; kwargs...)
     base_obstructions = [Internal.IndexTriangle(index) for index in mesh.triangles.value]
-    if ~mesh.save_memory.value
-        base_obstructions = [Internal.FullTriangle(it, SVector{3}.(mesh.vertices.value)) for it in base_obstructions]
-    end
     apply_properties(mesh, base_obstructions, index, original_index; surface="surface", volume="inside", kwargs...)
 end
 

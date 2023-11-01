@@ -52,7 +52,6 @@ for obstruction_type in (
             Field{Bool}(:myelin, "Whether the mesh is myelinated.", false, required=true), 
             Field{Float64}(:susceptibility_iso, "Isotropic component of the myelin susceptibility (in ppm).", -0.1),
             Field{Float64}(:susceptibility_aniso, "Ansotropic component of the myelin susceptibility (in ppm).", -0.1),
-            Field{Bool}(:save_memory, "If true the internal triangle representation will contain the indices of the vertices rather than the actual corner coordinates. This will save memory, but slow down the algorithm as more memory lookups will have to take place.", true, required=true, only_group=true),
             Field{Float64}(:lorentz_radius, "Only compute field explicitly for triangles with this Lorentz radius.", 5.),
         ]),
     ObstructionType(
