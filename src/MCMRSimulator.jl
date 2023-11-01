@@ -46,8 +46,8 @@ export position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientatio
 import .Timestep: TimeController, propose_times
 export TimeController, propose_times
 
-import .Simulations: Simulation
-export Simulation
+import .Simulations: Simulation, susceptibility_off_resonance
+export Simulation, susceptibility_off_resonance
 
 import .Subsets: Subset, get_subset
 export Subset, get_subset

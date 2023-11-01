@@ -1,7 +1,7 @@
 module Simulations
 import StaticArrays: SVector
 import ..Geometries: ObstructionGroup, fix, fix_susceptibility
-import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility
+import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility, susceptibility_off_resonance
 import ..Sequences: Sequence
 import ..Timestep: TimeController, propose_times
 import ..Spins: Spin, Snapshot, SpinOrientation
@@ -189,5 +189,15 @@ for symbol in (:R1, :R2, :off_resonance)
         end
     end
 end
+
+"""
+    susceptibility_off_resonance(simulation, spin)
+
+Computes the susceptibility off-resonance caused by all susceptibility sources in the [`Simulation`](@ref) affecting the [`Spin`](@ref)
+
+The field is computed in ppm. Knowledge of the scanner [`B0`](@ref) is needed to convert it into KHz.
+"""
+susceptibility_off_resonance(simulation::Simulation, spin::Spin) = susceptibility_off_resonance(simulation, spin.position, stuck(spin) ? spin.reflection.inside : nothing)
+susceptibility_off_resonance(simulation::Simulation, position::AbstractVector, inside::Union{Nothing, Bool}=nothing) = susceptibility_off_resonance(simulation.susceptibility, SVector{3, Float64}(position), inside)
 
 end
