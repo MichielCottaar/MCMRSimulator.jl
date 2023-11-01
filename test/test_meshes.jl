@@ -152,7 +152,7 @@ end
 
 @testset "Stay inside/outside a cylinder" begin
     Random.seed!(1)
-    bendy_cylinder = mr.BendyCylinder(control_point=[1e-6, 1e-6, 1e-6], radius=1., repeats=[2., 2., 2.], nclosed=[0, 0, 1])
+    bendy_cylinder = mr.BendyCylinder(control_point=[0, 0, 0], radius=1., repeats=[2., 2., 2.], nclosed=[0, 0, 1])
     snap = mr.Snapshot(rand(100, 3) .* 2 .- 1.)
 
     real_inside(spin) = norm(spin.position[1:2]) .< 1.
@@ -168,8 +168,8 @@ end
 end
 
 @testset "Compare mesh cylinder with perfect one" begin
-    bendy_cylinder = mr.BendyCylinder(control_point=[1e-6, 1e-6, 1e-6], radius=1., repeats=[2., 2., 2.], nclosed=[1, 0, 0])
-    cylinder = mr.Cylinders(position=[1e-6, 1e-6], radius=1., repeats=[2., 2.], rotation=:x)
+    bendy_cylinder = mr.BendyCylinder(control_point=[0, 0, 0], radius=1., repeats=[2., 2., 2.], nclosed=[1, 0, 0])
+    cylinder = mr.Cylinders(position=[0, 0], radius=1., repeats=[2., 2.], rotation=:x)
     fmesh = mr.fix(bendy_cylinder)
     fcylinder = mr.fix(cylinder)
     @testset "Compare inside" begin
