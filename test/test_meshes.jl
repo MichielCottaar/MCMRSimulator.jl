@@ -159,9 +159,7 @@ end
         Random.seed!(1)
         for _ in 1:1000
             position = rand(3) .* 1000.
-            if length(isinside(fmesh, position)) != length(isinside(fcylinder, position))
-                @show position
-            end
+            @test length(isinside(fmesh, position)) == length(isinside(fcylinder, position))
         end
     end
 end
