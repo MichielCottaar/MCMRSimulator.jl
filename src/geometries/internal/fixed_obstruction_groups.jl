@@ -97,12 +97,13 @@ rotate_to_global(g::FixedObstructionGroup{N}, pos::SVector{N}) where {N} = g.rot
 has_inside(::Type{<:FixedObstructionGroup{N, R, O}}) where {N, R, O} = has_inside(O)
 has_inside(::Type{<:FixedMesh}) = true
 
-curvature(g::FixedMesh) = length(g.obstructions) == 1 ? Inf : curvature(g.obstructions, g.vertices)
+curvature(g::FixedMesh) = length(g.obstructions) == 1 ? 0. : curvature(g.obstructions, g.vertices)
 
 
 function size_scale(g::FixedObstructionGroup)
     if g isa FixedMesh
-        min_radius = curvature(g)
+        # the division by 2 is to take into account that for cylindrical meshes, the curvature along one of 2 dimensions is zero
+        min_radius = 1 / (2 * curvature(g))
     else
         min_radius = minimum(size_scale.(g.obstructions))
     end
