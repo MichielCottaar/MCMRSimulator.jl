@@ -53,7 +53,7 @@ function isinside_grid(mesh::FixedMesh)
     return inside_arr
 end
 
-function isinside(mesh::FixedMesh{L, R, O}, pos::SVector{3}, stuck_to::Reflection=empty_reflection) where {L, R, O}
+function isinside(mesh::FixedMesh{R, O}, pos::SVector{3}, stuck_to::Reflection=empty_reflection) where {R, O}
     rotated = rotate_from_global(mesh, pos)
 
     if R
