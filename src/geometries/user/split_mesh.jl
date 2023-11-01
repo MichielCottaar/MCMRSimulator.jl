@@ -22,7 +22,7 @@ function split_mesh(old_mesh::Mesh)
     result = Mesh[]
     for (triangle_indices, vertex_indices, triangles) in connected_components(old_mesh.triangles.value)
         make_normals_consistent!(triangles)
-        if mean(sign.(curvature(triangles, old_mesh.vertices.value[vertex_indices]))) < 0
+        if curvature(triangles, old_mesh.vertices.value[vertex_indices]) < 0
             # flip all triangles
             for t in triangles
                 v = t[1]

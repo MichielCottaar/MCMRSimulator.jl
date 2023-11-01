@@ -176,7 +176,7 @@ end
     curvature(triangles, vertices[index1, index2])
 
 Computes the curvature between two neighbouring triangles (`index1` and `index2`).
-If no indices are provided computes the curvature between any neighbouring triangles.
+If no indices are provided computes the mean curvature over the whole surface.
 """
 function curvature(triangles, vertices, index1, index2)
     pos1 = map(i->vertices[i], triangles[index1])
@@ -186,7 +186,11 @@ function curvature(triangles, vertices, index1, index2)
     return (pos_offset ⋅ normal_offset) / norm(pos_offset)^2
 end
 
-curvature(triangles, vertices) = [curvature(triangles, vertices, i1, i2) for (i1, i2) in neighbours(triangles)]
+function curvature(triangles, vertices) 
+    sizes = [triangle_size(vertices[t[1]], vertices[t[2]], vertices[t[3]]) ./ 3 for t in triangles]
+    all_curv = [(sizes[i1] + sizes[i2], curvature(triangles, vertices, i1, i2)) for (i1, i2) in neighbours(triangles)]
+    return sum([w .* c for (w, c) in all_curv]) / sum([w for (w, _) in all_curv])
+end
 
 curvature(triangles::AbstractVector{IndexTriangle}, vertices) = curvature([t.indices for t in triangles], vertices)
 
