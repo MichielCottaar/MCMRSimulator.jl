@@ -14,6 +14,9 @@ import ...Obstructions.Triangles: FullTriangle, normal
 
 Computes the field produced by a triangular susceptibility source
 One triangle vertex is assumed to be at the origin.
+Within the coordinate system defined by `rotation` the other two points are at:
+- (0, `e2_shift`, 0)
+- (`e3_shift[1]`, `e3_shift[2]`, 0)
 """
 struct TriangleSusceptibility <: BaseSusceptibility{3}
     rotation :: MRP{Float64}
@@ -26,6 +29,7 @@ end
 function TriangleSusceptibility(ft::FullTriangle, chi_I::Number, chi_A::Number, b0_field::AbstractVector)
     n = normal(ft)
     e1 = ft.b .- ft.a
+    a = norm(e1)
     e1 = e1 ./ norm(e1)
     e2 = cross(e1, n)
     rot = inv(MRP(hcat(e2, e1, n)))
@@ -35,7 +39,6 @@ function TriangleSusceptibility(ft::FullTriangle, chi_I::Number, chi_A::Number, 
         cos_thetasq = (n ⋅ b0_field)^2
         susceptibility = (chi_I + chi_A * (3 * cos_thetasq - 1)) / 4π
     end
-    a = (rot * e1)[2]
     (b, c, _) = rot * (ft.c .- ft.a)
     return TriangleSusceptibility(rot, a, SVector{2}((b, c)), susceptibility)
 end
