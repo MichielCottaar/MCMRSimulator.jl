@@ -32,8 +32,7 @@ function TriangleSusceptibility(ft::FullTriangle, chi_I::Number, chi_A::Number, 
     if iszero(chi_A)
         susceptibility = chi_I / 4π
     else
-        b0_field = rot * b0_field
-        cos_thetasq = b0_field[3] * b0_field[3]
+        cos_thetasq = (n ⋅ b0_field)^2
         susceptibility = (chi_I + chi_A * (3 * cos_thetasq - 1)) / 4π
     end
     a = (rot * e1)[2]
