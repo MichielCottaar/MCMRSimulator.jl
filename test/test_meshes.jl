@@ -150,6 +150,23 @@ end
     @test all(map(spin -> all(abs.(mr.position(spin) .<= 0.5)), final.spins))
 end
 
+@testset "Stay inside/outside a cylinder" begin
+    Random.seed!(1)
+    bendy_cylinder = mr.BendyCylinder(control_point=[1e-6, 1e-6, 1e-6], radius=1., repeats=[2., 2., 2.], nclosed=[0, 0, 1])
+    snap = mr.Snapshot(rand(100, 3) .* 2 .- 1.)
+
+    real_inside(spin) = norm(spin.position[1:2]) .< 1.
+
+    starts_inside = isinside(bendy_cylinder, snap)
+    @test all(real_inside.(snap) .== starts_inside)
+
+    new_snap = mr.evolve(snap, mr.Simulation([], geometry=bendy_cylinder), 10.)
+    @show isinside(bendy_cylinder, snap)
+
+    @test all(real_inside.(snap) .== starts_inside)
+    @test all(isinside(bendy_cylinder, snap) .== starts_inside)
+end
+
 @testset "Compare mesh cylinder with perfect one" begin
     bendy_cylinder = mr.BendyCylinder(control_point=[1e-6, 1e-6, 1e-6], radius=1., repeats=[2., 2., 2.], nclosed=[1, 0, 0])
     cylinder = mr.Cylinders(position=[1e-6, 1e-6], radius=1., repeats=[2., 2.], rotation=:x)
