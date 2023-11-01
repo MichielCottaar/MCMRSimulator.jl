@@ -103,14 +103,10 @@ function single_susceptibility_helper(triangle::TriangleSusceptibility, position
 
     field = 0.
 
-    function add_to_field!(a, b, c, positive)
+    function add_to_field(a, b, c, positive, b0_x, b0_y)
         (fx, fy, fz) = right_angle_triangle_field(a, b, c)
         new_f = (b0_x * fx + b0_y * fy + b0_z * fz)
-        if positive
-            field += new_f
-        else
-            field -= new_f
-        end
+        return positive ? new_f : -new_f
     end
 
     a = triangle.e2_shift
@@ -121,8 +117,8 @@ function single_susceptibility_helper(triangle::TriangleSusceptibility, position
         if ~iszero(x)
             # Note that whether the right triangle has a positive contribution is determined by
             # xor, not by an and statement as implied in the paper.
-            add_to_field!(-x, a - y, height, xor(inside_plane, (y > a)))
-            add_to_field!(-x, -y, height, xor(inside_plane, (y < 0)))
+            field += add_to_field(-x, a - y, height, xor(inside_plane, (y > a)), b0_x, b0_y)
+            field += add_to_field(-x, -y, height, xor(inside_plane, (y < 0)), b0_x, b0_y)
         end
 
         if dim != 3
@@ -130,10 +126,10 @@ function single_susceptibility_helper(triangle::TriangleSusceptibility, position
             shift = -a
             angle_rotate = atan(b, c + shift)
             rotate = RotMatrix2(Angle2d(angle_rotate))
-            (x, y) = rotate * SVector{2}((x, y + shift))
-            (b0_x, b0_y) = rotate * SVector{2}((b0_x, b0_y))
-            (t, a) = rotate * SVector{2}((b, c + shift))
-            (b, c) = rotate * SVector{2}((0, shift))
+            (x, y) = rotate * SVector{2, Float64}(x, y + shift)
+            (b0_x, b0_y) = rotate * SVector{2, Float64}(b0_x, b0_y)
+            (t, a) = rotate * SVector{2, Float64}(b, c + shift)
+            (b, c) = rotate * SVector{2, Float64}(0., shift)
             @assert abs(t) < 1e-8
         end
     end
