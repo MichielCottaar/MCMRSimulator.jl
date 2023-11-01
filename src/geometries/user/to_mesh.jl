@@ -66,7 +66,10 @@ function Mesh(bendy_cylinder::BendyCylinder)
         vec_theta0 .-= direction .* (direction ⋅ vec_theta0)
         vec_theta0 ./= norm(vec_theta0)
         centroid = fpos(dist)
-        radius = frad(dist)
+        radius_uncorrected = frad(dist)
+        # correct radius to preserve final volume
+        half_theta_step = π / nsamples
+        radius = radius_uncorrected * (half_theta_step / (sin(half_theta_step) * cos(half_theta_step)))
         last_vec = cross(direction, vec_theta0)
         return [SVector{3}((radius * sin(t)) .* last_vec .+ (radius * cos(t)) .* vec_theta0 .+ centroid) for t in theta]
     end
