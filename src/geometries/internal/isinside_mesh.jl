@@ -39,10 +39,8 @@ function isinside_grid(mesh::FixedMesh)
         while ~iszero(new_index)
             triangle_index = Int(new_index)
             (new_index, _) = detect_intersection_non_repeating(mesh, mean_triangles[triangle_index], centre, triangle_index, true)
-            @show mean_triangles[triangle_index]
             ntry += 1
             if ntry > 1000
-                @show triangle_index, new_index
                 error("Grid voxel centre $centre falls exactly on the edge between triangles. Please shift the mesh a tiny amount to fix this.")
             end
         end

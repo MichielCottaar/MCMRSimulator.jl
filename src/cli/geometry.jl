@@ -50,9 +50,7 @@ end
 
 function ArgParse.parse_item(::Type{FieldParser{MVector{1, T}}}, text::AbstractString) where {T}
     sub_parse = ArgParse.parse_item(FieldParser{T}, text).value
-    @show sub_parse
     if sub_parse isa T
-        @show MVector{1, T}([sub_parse])
         FieldParser{MVector{1, T}}(MVector{1, T}([sub_parse]))
     else
         FieldParser{MVector{1, T}}([MVector{1, T}([s]) for s in sub_parse])
@@ -60,7 +58,6 @@ function ArgParse.parse_item(::Type{FieldParser{MVector{1, T}}}, text::AbstractS
 end
 
 function ArgParse.parse_item(::Type{FieldParser{T}}, text::AbstractString) where {T<:AbstractVector}
-    @show T
     if ';' in text && ',' in text
         return FieldParser{T}([T([parse(eltype(T), x) for x in split(sub, ',')]) for sub in split(text, ';')])
     end
