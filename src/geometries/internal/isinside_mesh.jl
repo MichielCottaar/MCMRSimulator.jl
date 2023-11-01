@@ -26,7 +26,7 @@ function isinside_grid(mesh::FixedMesh)
     mean_triangles = map(o->mean(mesh.vertices[o.indices]), mesh.obstructions)
     if repeating(mesh)
         sz = mesh.grid.size
-        mean_triangles = [@. mod(t + sz/2, sz) + sz/2 for t in mean_triangles]
+        mean_triangles = [@. mod(t + sz/2, sz) - sz/2 for t in mean_triangles]
     end
     tree = KDTree(mean_triangles)
     inside_arr = zeros(Bool, size(mesh.grid.indices))
@@ -39,9 +39,11 @@ function isinside_grid(mesh::FixedMesh)
         while ~iszero(new_index)
             triangle_index = Int(new_index)
             (new_index, _) = detect_intersection_non_repeating(mesh, mean_triangles[triangle_index], centre, triangle_index, true)
+            @show mean_triangles[triangle_index]
             ntry += 1
-            if ntry > 1000
-                error("Grid voxel centre falls exactly on the edge between triangles. Please shift the mesh a tiny amount to fix this.")
+            if ntry > 100
+                @show triangle_index, new_index
+                error("Grid voxel centre $centre falls exactly on the edge between triangles. Please shift the mesh a tiny amount to fix this.")
             end
         end
         inpr = (centre - mean_triangles[triangle_index]) ⋅ normal(FullTriangle(mesh.obstructions[triangle_index], mesh.vertices))
