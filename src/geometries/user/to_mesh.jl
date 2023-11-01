@@ -76,8 +76,8 @@ function Mesh(bendy_cylinder::BendyCylinder)
     single_triangle_set = [
         SVector{3}(nsamples, 1, nsamples * 2),
         [SVector{3}((add, 1 + add, nsamples + add)) for add in 1:nsamples-1]...,
-        SVector{3}(nsamples, nsamples * 2, nsamples + 1),
-        [SVector{3}((add, nsamples + add, nsamples + add + 1)) for add in 1:nsamples-1]...,
+        SVector{3}(1, nsamples * 2, nsamples + 1),
+        [SVector{3}((add + 1, nsamples + add, nsamples + add + 1)) for add in 1:nsamples-1]...,
     ]
 
     triangles = [t .+ index * nsamples for index in 0:length(dist_eval)-2 for t in single_triangle_set]
