@@ -92,7 +92,7 @@ function fix_type_single(mesh::Mesh, index::Int, original_index::Int; kwargs...)
     apply_properties(mesh, base_obstructions, index, original_index; surface="surface", volume="inside", kwargs...)
 end
 
-fix_type(bendy_cylinder::BendyCylinder, args...; kwargs...) = fix_type(bendy_cylinder, args...; kwargs...)
+fix_type(bendy_cylinder::BendyCylinder, args...; kwargs...) = fix_type(Mesh(bendy_cylinder), args...; kwargs...)
 
 """
     apply_properties(user_obstructions, internal_obstructions, index; surface, volume)
