@@ -16,7 +16,8 @@ import .Obstructions: ObstructionGroup, IndexedObstruction,
     Cylinder, Cylinders,
     Sphere, Spheres,
     Annulus, Annuli,
-    Triangle, Mesh
+    Triangle, Mesh,
+    Ring, BendyCylinder
 import .SplitMesh: split_mesh
 import .RandomDistribution: random_positions_radii
 import .LoadMesh: load_mesh

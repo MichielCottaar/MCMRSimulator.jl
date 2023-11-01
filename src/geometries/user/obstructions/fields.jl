@@ -100,6 +100,8 @@ mutable struct FieldValue{T}
     end
 end
 
+value_as_vector(fv::FieldValue{T}) where {T} = fv.value isa Union{Nothing, T} ? fill(fv.value, fv.n_obstructions) : fv.value
+
 description(fv::FieldValue{T}) where {T} = (
     description(fv.field) * 
     (isnothing(fv.category) ? "" : " $(uppercasefirst(String(fv.category))) property.") *
