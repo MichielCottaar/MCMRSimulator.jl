@@ -55,6 +55,15 @@ for obstruction_type in (
             Field{Bool}(:save_memory, "If true the internal triangle representation will contain the indices of the vertices rather than the actual corner coordinates. This will save memory, but slow down the algorithm as more memory lookups will have to take place.", true, required=true, only_group=true),
             Field{Float64}(:lorentz_radius, "Only compute field explicitly for triangles with this Lorentz radius.", 5.),
         ]),
+    ObstructionType(
+        :Ring; plural=:BendyCylinder, ndim=3, include_shift=false, fields=[
+            Field{MVector{3, Float64}}(:control_point, "Control points defining the path of the cylinder.", required=true), 
+            Field{Float64}(:radius, "Radius at each control point.", required=true), 
+            Field{Int}(:nsamples, "Number of mesh vertices along each ring.", 100, only_group=true),
+            Field{Bool}(:myelin, "Whether the rings are mylinated.", false, required=true, only_group=true), 
+            Field{Float64}(:susceptibility_iso, "Isotropic component of the myelin susceptibility (in ppm).", -0.1),
+            Field{Float64}(:susceptibility_aniso, "Ansotropic component of the myelin susceptibility (in ppm).", -0.1),
+        ]),
 )
     name_string = String(obstruction_type.singular)
     (unique_keys, field_values) = key_value_pairs(obstruction_type, 0)
