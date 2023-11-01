@@ -59,7 +59,7 @@ for obstruction_type in (
             Field{MVector{3, Float64}}(:control_point, "Control points defining the path of the cylinder.", required=true), 
             Field{Float64}(:radius, "Radius at each control point.", required=true), 
             Field{Int}(:nsamples, "Number of mesh vertices along each ring.", 100, only_group=true),
-            Field{Bool}(:myelin, "Whether the rings are mylinated.", false, required=true, only_group=true), 
+            Field{Bool}(:myelin, "Whether the cylinder is myelinated.", false, required=true, only_group=true), 
             Field{Float64}(:susceptibility_iso, "Isotropic component of the myelin susceptibility (in ppm).", -0.1),
             Field{Float64}(:susceptibility_aniso, "Ansotropic component of the myelin susceptibility (in ppm).", -0.1),
         ]),
