@@ -102,8 +102,6 @@ function fix_type(bendy_cylinder::BendyCylinder, index::Int, original_index::Int
     dist = [0, cumsum(norm.(full_control_points[2:end] .- full_control_points[1:end-1]))...]
     dist .-= dist[nadd * length(control_points) + 1]  # set first of original control points to reference point with distance of 0
 
-    @show dist
-    @show full_control_points
     fpos = interpolate(dist, full_control_points, BSplineOrder(bendy_cylinder.spline_order.value))
     frad = interpolate(dist, full_radii, BSplineOrder(bendy_cylinder.spline_order.value))
 
@@ -119,7 +117,6 @@ function fix_type(bendy_cylinder::BendyCylinder, index::Int, original_index::Int
         for (d1, d2) in zip(dist_control[1:end-1], dist_control[2:end])
         for d in range(start=d1, stop=d2, length=max(Int(div(d2 - d1, triangle_size, RoundUp)), 2))[2:end]
     ]...]
-    @show dist_eval
 
     vertices = SVector{3, Float64}[]
     triangles = SVector{3, Int}[]
