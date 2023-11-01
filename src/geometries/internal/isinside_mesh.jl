@@ -24,14 +24,14 @@ This function assumes that the mesh has been normalised (i.e., all normals point
 """
 function isinside_grid(mesh::FixedMesh)
     mean_triangles = map(o->mean(mesh.vertices[o.indices]), mesh.obstructions)
+    if repeating(mesh)
+        sz = mesh.grid.size
+        mean_triangles = [@. mod(t + sz/2, sz) + sz/2 for t in mean_triangles]
+    end
     tree = KDTree(mean_triangles)
-    bb = BoundingBox(mesh)
     inside_arr = zeros(Bool, size(mesh.grid.indices))
     for index in Tuple.(eachindex(IndexCartesian(), inside_arr))
         centre = @. (index - 0.5) * mesh.grid.resolution + mesh.grid.lower
-        if ~isinside(bb, centre)
-            continue
-        end
 
         triangle_index = nn(tree, centre)[1]
         new_index = triangle_index
