@@ -113,8 +113,8 @@
             for t in ([1, 2, 3], [2, 1, 3])
                 for v in [[1, 0, 1], [0, 0, 1]]
                     mesh = mr.Mesh(vertices=[[0, 0, 0], [1, 0, 0], v], triangles=[t], myelin=true, susceptibility_iso=1., susceptibility_aniso=0., lorentz_radius=1e7, grid_resolution=Inf)
-                    @test field(mesh, [1e-5, 1e-5, 20.]) ≈ 0.5 / 4π / 20^2 rtol=0.1
-                    @test field(mesh, [1e-5, 1e-5, -20.]) ≈ -0.5 / 4π / 20^2 rtol=0.1
+                    @test field(mesh, [1e-3, 1e-3, 20.]) ≈ 1 / 4π / 20^3 rtol=0.1
+                    @test field(mesh, [1e-3, 1e-3, -20.]) ≈ 1 / 4π / 20^3 rtol=0.1
                 end
             end
         end
