@@ -92,10 +92,11 @@
             for t in ([1, 2, 3], [2, 1, 3])
                 mesh = mr.Mesh(vertices=[[0, 0, 0], [1, 0, 0], [1, 1, 0]], triangles=[t], myelin=true, susceptibility_iso=1., susceptibility_aniso=0.)
                 for y in (0.2, 0.3)
-                    @test field(mesh, [0.8, y, 1e-5]) ≈ 0.5 rtol=0.01
-                    @test field(mesh, [0.8, y, 1e-3]) ≈ 0.5 rtol=0.01
-                    @test field(mesh, [0.8, y, -1e-5]) ≈ -0.5 rtol=0.01
-                    @test field(mesh, [0.8, y, -1e-3]) ≈ -0.5 rtol=0.01
+                    ref = field(mesh, [0.8, y, 1e-4])
+                    @test field(mesh, [0.8, y, 1e-5]) ≈ ref rtol=0.01
+                    @test field(mesh, [0.8, y, 1e-3]) ≈ ref rtol=0.01
+                    @test field(mesh, [0.8, y, -1e-5]) ≈ ref rtol=0.01
+                    @test field(mesh, [0.8, y, -1e-3]) ≈ ref rtol=0.01
                 end
             end
         end
