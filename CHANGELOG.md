@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 ### Added
-- Text files can be used to set geometry positions/radii/etc. from the command line
+- Text files can be used to set geometry positions/radii/etc from the command line.
 - New obstruction type: `BendyCylinder`. This cylinder can follow an arbitrary path (defined using splines) and vary in diameter.
 ### Changed
 - Multiple values passed on the `mcmr geometry` on the command line should now be separated by commas and semi-colons rather than spaces
@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Off-resonance fields generated from meshes are now correctly modelled using magnetic dipoles rather than magnetic monopoles.
 - Size calculation of meshes has been fixed (used in the calculation of the maximum timestep).
 - Determining the inside of meshes has been fixed.
-- Fixed printing of arrays of `Snapshot`
+- Fixed printing of arrays of `Snapshot`.
 ### Changed
 - CSV output files now contain the name of the sequence file (CLI)
 ## [v0.8.0]
