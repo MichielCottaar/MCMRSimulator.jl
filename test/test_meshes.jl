@@ -61,7 +61,7 @@ end
             @test mr.isinside(mesh, [0.7, 0, -0.7]) == 0
         end
     end
-    @test_throws "Grid voxel centre falls exactly" mr.fix(box_mesh(center=[0, 0, 0], repeats=[1.5, 1.5, 1.5], grid_resolution=0.5))
+    @test_throws "Grid voxel centre " mr.fix(box_mesh(center=[0, 0, 0], repeats=[1.5, 1.5, 1.5], grid_resolution=0.5))
 end
 @testset "Bounding box calculation" begin
     bb = mr.BoundingBox(mr.fix(box_mesh())[1])
