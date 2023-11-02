@@ -20,7 +20,7 @@ end
     @testset "mcmr geometry create" begin
         @testset "create cylinders" begin
             in_tmpdir() do 
-                _, err = run_main_test("geometry create cylinders 2 test.json --radius 1,2 --position 0,1;2,3 --R1_surface 1.5")
+                _, err = run_main_test("geometry create cylinders 2 test.json --radius 1,2 --position 0,1:2,3 --R1_surface 1.5")
                 @test length(err) == 0
                 result = JSON.parse(open("test.json", "r"))
                 @test result["type"] == "Cylinders"
@@ -33,7 +33,7 @@ end
         end
         @testset "create spheres" begin
             in_tmpdir() do 
-                _, err = run_main_test("geometry create spheres 2 test.json --radius 1,2 --position 0,1,2;3,4,5 --R1_surface 1.5")
+                _, err = run_main_test("geometry create spheres 2 test.json --radius 1,2 --position 0,1,2:3,4,5 --R1_surface 1.5")
                 @test length(err) == 0
                 result = JSON.parse(open("test.json", "r"))
                 @test result["type"] == "Spheres"
@@ -71,7 +71,7 @@ end
         end
         @testset "create bendy cylinder" begin
             in_tmpdir() do 
-                _, err = run_main_test("geometry create bendy-cylinder 2 test.json --control-point 0,0,0;0,0.5,1 --radius 0.4,0.6 --closed 0,0,1 --repeats 1.3,2,2")
+                _, err = run_main_test("geometry create bendy-cylinder 2 test.json --control_point 0,0,0:0,0.5,1 --radius 0.4,0.6 --closed 0,0,1 --repeats 1.3,2,2")
                 @test length(err) == 0
                 result = JSON.parse(open("test.json", "r"))
                 @test result["type"] == "BendyCylinder"

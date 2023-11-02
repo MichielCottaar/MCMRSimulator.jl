@@ -27,7 +27,7 @@ function ArgParse.parse_item(::Type{FieldParser{T}}, text::AbstractString) where
         return FieldParser{T}(parse(T, text))
     catch
     end
-    for dlm in (',', ';')
+    for dlm in (',', ':')
         if dlm in text
             try
                 return FieldParser{T}([parse(T, x) for x in split(text, dlm)])
@@ -58,10 +58,10 @@ function ArgParse.parse_item(::Type{FieldParser{MVector{1, T}}}, text::AbstractS
 end
 
 function ArgParse.parse_item(::Type{FieldParser{T}}, text::AbstractString) where {T<:AbstractVector}
-    if ';' in text && ',' in text
-        return FieldParser{T}([T([parse(eltype(T), x) for x in split(sub, ',')]) for sub in split(text, ';')])
+    if ':' in text && ',' in text
+        return FieldParser{T}([T([parse(eltype(T), x) for x in split(sub, ',')]) for sub in split(text, ':')])
     end
-    for dlm in (',', ';')
+    for dlm in (',', ':')
         if dlm in text
             return FieldParser{T}(T([parse(eltype(T), x) for x in split(text, dlm)]))
         end
