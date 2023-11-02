@@ -4,7 +4,7 @@ import ..Geometries: ObstructionGroup, fix, fix_susceptibility
 import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility, susceptibility_off_resonance
 import ..Sequences: Sequence
 import ..Timestep: TimeController, propose_times
-import ..Spins: Spin, Snapshot, SpinOrientation
+import ..Spins: Spin, Snapshot, SpinOrientation, stuck
 import ..Methods: get_time, B0
 import ..Properties: GlobalProperties, R1, R2, off_resonance, correct_for_timestep
 
