@@ -6,10 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Text files can be used to set geometry positions/radii/etc. from the command line
+- New obstruction type: `BendyCylinder`. This cylinder can follow an arbitrary path (defined using splines) and vary in diameter.
 ### Changed
 - Multiple values passed on the `mcmr geometry` on the command line should now be separated by commas and semi-colons rather than spaces
+- The `save_memory` option has been removed from meshes, because it did not work properly.
 ### Fixed
-- Fixed occasional leakage through walls that are exactly at the edge of a grid cell or repeat.
+- Fixed occasional leakage through `Walls` that are exactly at the edge of a grid cell or repeat.
+- Creation of large meshes has been sped up (and no longer leads to `StackOverflow` errors for very large meshes).
+- Off-resonance fields generated from meshes are now correctly modelled using magnetic dipoles rather than magnetic monopoles.
+- Size calculation of meshes has been fixed (used in the calculation of the maximum timestep).
+- Determining the inside of meshes has been fixed.
 ### Changed
 - CSV output files now contain the name of the sequence file (CLI)
 ## [v0.8.0]
