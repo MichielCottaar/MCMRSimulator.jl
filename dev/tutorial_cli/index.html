@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Tutorial (CLI) · MCMRSimulator.jl</title><meta name="title" content="Tutorial (CLI) · MCMRSimulator.jl"/><meta property="og:title" content="Tutorial (CLI) · MCMRSimulator.jl"/><meta property="twitter:title" content="Tutorial (CLI) · MCMRSimulator.jl"/><meta name="description" content="Documentation for MCMRSimulator.jl: a Monte Carlo MRI simulator in Julia"/><meta property="og:description" content="Documentation for MCMRSimulator.jl: a Monte Carlo MRI simulator in Julia"/><meta property="twitter:description" content="Documentation for MCMRSimulator.jl: a Monte Carlo MRI simulator in Julia"/><meta property="og:url" content="https://open.win.ox.ac.uk/pages/ndcn0236/mcmrsimulator.jl/stable/tutorial_cli/"/><meta property="twitter:url" content="https://open.win.ox.ac.uk/pages/ndcn0236/mcmrsimulator.jl/stable/tutorial_cli/"/><link rel="canonical" href="https://open.win.ox.ac.uk/pages/ndcn0236/mcmrsimulator.jl/stable/tutorial_cli/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">MCMRSimulator.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../installation/">Installation</a></li><li><a class="tocitem" href="../tutorial_julia/">Tutorial (Julia)</a></li><li class="is-active"><a class="tocitem" href>Tutorial (CLI)</a><ul class="internal"><li><a class="tocitem" href="#Defining-the-geometry"><span>Defining the geometry</span></a></li><li><a class="tocitem" href="#Defining-the-sequence"><span>Defining the sequence</span></a></li><li><a class="tocitem" href="#Running-the-simulation"><span>Running the simulation</span></a></li><li><a class="tocitem" href="#Full-diffusion-weighted-MRI-acquisition"><span>Full diffusion-weighted MRI acquisition</span></a></li></ul></li><li><a class="tocitem" href="../geometry/">Geometry</a></li><li><a class="tocitem" href="../sequence/">Sequence</a></li><li><a class="tocitem" href="../properties/">MRI/collision properties</a></li><li><a class="tocitem" href="../api/">API</a></li><li><a class="tocitem" href="../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Tutorial (CLI)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Tutorial (CLI)</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl" title="View the repository"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">Repository</span></a><a class="docs-navbar-link" href="https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/tree/main/docs/src/tutorial_cli.md" title="Edit source"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="tutorial_cli"><a class="docs-heading-anchor" href="#tutorial_cli">Tutorial</a><a id="tutorial_cli-1"></a><a class="docs-heading-anchor-permalink" href="#tutorial_cli" title="Permalink"></a></h1><p>This tutorial will walk through an example of modelling the MRI signal evolution for a diffusion-weighted sequence. The spins in this simulation will be constrained by regularly packed cylinders. This tutorial will use the command line interface, which we assume is available through the <code>mcmr</code> command (see <a href="../installation/#installation">installation instructions</a>). If you would prefer to interact with MCMRSimulator in Julia, you can find a tutorial doing the same analysis <a href="../tutorial_julia/#tutorial_julia">here</a>.</p><p>In general, running a simulation will consist of the following three steps:</p><ul><li>Creating a geometry using one or more calls to <code>mcmr geometry</code> (<a href="../geometry/#geometry">full description</a>)</li><li>Defining a sequence using <code>mcmr sequence</code> (<a href="../sequence/#sequence">full description</a>)</li><li>Running the actual simulation using <code>mcmr run</code></li></ul><p>We will look through each of these steps below.</p><h2 id="Defining-the-geometry"><a class="docs-heading-anchor" href="#Defining-the-geometry">Defining the geometry</a><a id="Defining-the-geometry-1"></a><a class="docs-heading-anchor-permalink" href="#Defining-the-geometry" title="Permalink"></a></h2><p>First we will define a geometry formed of regularly packed axons. This is represented by a single cylinder pointing in the z-direction with a radius of 1 micrometer that repeats itself every 2.5 micrometer (in both the x-, and y-direction).</p><pre><code class="language-bash hljs">mcmr geometry create cylinders 1 geometry.json --radius 1 --repeats 2.5 2.5</code></pre><p>This will create a JSON file with the full information on the geometry:</p><pre><code class="language-json hljs">  {
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Tutorial (CLI) · MCMRSimulator.jl</title><meta name="title" content="Tutorial (CLI) · MCMRSimulator.jl"/><meta property="og:title" content="Tutorial (CLI) · MCMRSimulator.jl"/><meta property="twitter:title" content="Tutorial (CLI) · MCMRSimulator.jl"/><meta name="description" content="Documentation for MCMRSimulator.jl: a Monte Carlo MRI simulator in Julia"/><meta property="og:description" content="Documentation for MCMRSimulator.jl: a Monte Carlo MRI simulator in Julia"/><meta property="twitter:description" content="Documentation for MCMRSimulator.jl: a Monte Carlo MRI simulator in Julia"/><meta property="og:url" content="https://open.win.ox.ac.uk/pages/ndcn0236/mcmrsimulator.jl/stable/tutorial_cli/"/><meta property="twitter:url" content="https://open.win.ox.ac.uk/pages/ndcn0236/mcmrsimulator.jl/stable/tutorial_cli/"/><link rel="canonical" href="https://open.win.ox.ac.uk/pages/ndcn0236/mcmrsimulator.jl/stable/tutorial_cli/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">MCMRSimulator.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../installation/">Installation</a></li><li><a class="tocitem" href="../tutorial_julia/">Tutorial (Julia)</a></li><li class="is-active"><a class="tocitem" href>Tutorial (CLI)</a><ul class="internal"><li><a class="tocitem" href="#Defining-the-geometry"><span>Defining the geometry</span></a></li><li><a class="tocitem" href="#Defining-the-sequence"><span>Defining the sequence</span></a></li><li><a class="tocitem" href="#Running-the-simulation"><span>Running the simulation</span></a></li><li><a class="tocitem" href="#Full-diffusion-weighted-MRI-acquisition"><span>Full diffusion-weighted MRI acquisition</span></a></li></ul></li><li><a class="tocitem" href="../geometry/">Geometry</a></li><li><a class="tocitem" href="../sequence/">Sequence</a></li><li><a class="tocitem" href="../properties/">MRI/collision properties</a></li><li><a class="tocitem" href="../api/">API</a></li><li><a class="tocitem" href="../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Tutorial (CLI)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Tutorial (CLI)</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl" title="View the repository"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">Repository</span></a><a class="docs-navbar-link" href="https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/tree/main/docs/src/tutorial_cli.md" title="Edit source"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="tutorial_cli"><a class="docs-heading-anchor" href="#tutorial_cli">Tutorial</a><a id="tutorial_cli-1"></a><a class="docs-heading-anchor-permalink" href="#tutorial_cli" title="Permalink"></a></h1><p>This tutorial will walk through an example of modelling the MRI signal evolution for a diffusion-weighted sequence. The spins in this simulation will be constrained by regularly packed cylinders. This tutorial will use the command line interface, which we assume is available through the <code>mcmr</code> command (see <a href="../installation/#installation">installation instructions</a>). If you would prefer to interact with MCMRSimulator in Julia, you can find a tutorial doing the same analysis <a href="../tutorial_julia/#tutorial_julia">here</a>.</p><p>In general, running a simulation will consist of the following three steps:</p><ul><li>Creating a geometry using one or more calls to <code>mcmr geometry</code> (<a href="../geometry/#geometry">full description</a>)</li><li>Defining a sequence using <code>mcmr sequence</code> (<a href="../sequence/#sequence">full description</a>)</li><li>Running the actual simulation using <code>mcmr run</code></li></ul><p>We will look through each of these steps below.</p><h2 id="Defining-the-geometry"><a class="docs-heading-anchor" href="#Defining-the-geometry">Defining the geometry</a><a id="Defining-the-geometry-1"></a><a class="docs-heading-anchor-permalink" href="#Defining-the-geometry" title="Permalink"></a></h2><p>First we will define a geometry formed of regularly packed axons. This is represented by a single cylinder pointing in the z-direction with a radius of 1 micrometer that repeats itself every 2.5 micrometer (in both the x-, and y-direction).</p><pre><code class="language-bash hljs">mcmr geometry create cylinders 1 geometry.json --radius 1 --repeats 2.5,2.5</code></pre><p>This will create a JSON file with the full information on the geometry:</p><pre><code class="language-json hljs">  {
      &quot;type&quot;: &quot;Cylinders&quot;,
      &quot;number&quot;: 1,
     &quot;#radius_description&quot;: &quot;Radius of the cylinder. Field is required. Expected type: Float64.&quot;,
@@ -43,27 +43,24 @@
     &quot;#relaxivity_description&quot;: &quot;Fraction of transverse spin lost each time it hits the obstruction. Surface property. Field can be null. Expected type: Float64.&quot;,
     &quot;relaxivity&quot;: null
   }
-</code></pre><p>You can see how that the <code>repeats</code> and <code>radius</code> keywords have been set to our predefined values. You can alter these and other geometry properties by editing this JSON directly or using the flags when creating the geometry. For a full overview of these flags, you can run:</p><pre><code class="nohighlight hljs">mcmr geometry create cylinders --help</code></pre><pre><code class="language-stdout hljs">usage: mcmr geometry create cylinders --radius RADIUS [RADIUS...]
-                        [--rotation ROTATION [ROTATION...]]
+</code></pre><p>You can see how that the <code>repeats</code> and <code>radius</code> keywords have been set to our predefined values. You can alter these and other geometry properties by editing this JSON directly or using the flags when creating the geometry. For a full overview of these flags, you can run:</p><pre><code class="nohighlight hljs">mcmr geometry create cylinders --help</code></pre><pre><code class="language-stdout hljs">usage: mcmr geometry create cylinders --radius RADIUS
+                        [--rotation ROTATION]
                         [--grid_resolution GRID_RESOLUTION]
-                        [--R1_surface R1_SURFACE [R1_SURFACE...]]
-                        [--R1_inside R1_INSIDE [R1_INSIDE...]]
-                        [--R2_surface R2_SURFACE [R2_SURFACE...]]
-                        [--R2_inside R2_INSIDE [R2_INSIDE...]]
-                        [--off_resonance_surface OFF_RESONANCE_SURFACE [OFF_RESONANCE_SURFACE...]]
-                                                [--off_resonance_inside OFF_RESONANCE_INSIDE [OFF_RESONANCE_INSIDE...]]
-                        [--position POSITION [POSITION...]]
-                        [--g_ratio G_RATIO [G_RATIO...]]
-                        [--susceptibility_iso SUSCEPTIBILITY_ISO [SUSCEPTIBILITY_ISO...]]
-                                                [--susceptibility_aniso SUSCEPTIBILITY_ANISO [SUSCEPTIBILITY_ANISO...]]
-                                                [--lorentz_radius LORENTZ_RADIUS [LORENTZ_RADIUS...]]
-                        [--repeats REPEATS REPEATS]
-                        [--no-use_boundingbox]
-                        [--dwell_time DWELL_TIME [DWELL_TIME...]]
-                        [--density DENSITY [DENSITY...]]
-                        [--permeability PERMEABILITY [PERMEABILITY...]]
-                        [--relaxivity RELAXIVITY [RELAXIVITY...]] [-h]
-                        number output_file
+                        [--R1_surface R1_SURFACE]
+                        [--R1_inside R1_INSIDE]
+                        [--R2_surface R2_SURFACE]
+                        [--R2_inside R2_INSIDE]
+                        [--off_resonance_surface OFF_RESONANCE_SURFACE]
+                        [--off_resonance_inside OFF_RESONANCE_INSIDE]
+                        [--position POSITION] [--g_ratio G_RATIO]
+                        [--susceptibility_iso SUSCEPTIBILITY_ISO]
+                        [--susceptibility_aniso SUSCEPTIBILITY_ANISO]
+                        [--lorentz_radius LORENTZ_RADIUS]
+                        [--repeats REPEATS] [--no-use_boundingbox]
+                        [--dwell_time DWELL_TIME] [--density DENSITY]
+                        [--permeability PERMEABILITY]
+                        [--relaxivity RELAXIVITY] [-h] number
+                        output_file
 
 Create a geometry JSON file filled with only cylinders with any
 properties defined by the flags.
@@ -74,104 +71,115 @@ positional arguments:
   output_file           Geometry JSON output filename.
 
 optional arguments:
-  --radius RADIUS [RADIUS...]
-                        Radius of the cylinder. Field is required.
-                        Expected type: Float64. (type: Float64)
-  --rotation ROTATION [ROTATION...]
-                        Rotation applied to all obstructions in group.
+  --radius RADIUS       Radius of the cylinder. Field is required.
+                        Expected type: Float64. (type:
+                        FieldParser{Float64})
+  --rotation ROTATION   Rotation applied to all obstructions in group.
                         Can be set to a matrix or one of :x, :y, or,
                         :z (see [`get_rotation`](@ref)). Field is
                         required. Expected type:
                         StaticArraysCore.SMatrix{3, 2, Float64, 6}.
                         default value: [1.0 0.0; 0.0 1.0; 0.0 0.0]
-                        (default: [&quot;I&quot;])
+                        (type: RotationParser{2}, default:
+                        RotationParser{2}([1.0 0.0; 0.0 1.0; 0.0
+                        0.0]))
   --grid_resolution GRID_RESOLUTION
                         Resolution of the grid that the volume is
                         split up into (um). Field is required.
                         Expected type: Float64.  default value: 1.0
-                        (type: Float64, default: 1.0)
-  --R1_surface R1_SURFACE [R1_SURFACE...]
+                        (type: FieldParser{Float64}, default:
+                        FieldParser{Float64}(1.0))
+  --R1_surface R1_SURFACE
                         Additional longitudinal relaxation rate (kHz).
                         Surface property. Field is required. Expected
                         type: Float64.  default value: 0.0 (type:
-                        Float64, default: [0.0])
-  --R1_inside R1_INSIDE [R1_INSIDE...]
+                        FieldParser{Float64}, default:
+                        FieldParser{Float64}(0.0))
+  --R1_inside R1_INSIDE
                         Additional longitudinal relaxation rate (kHz).
                         Inside property. Field is required. Expected
                         type: Float64.  default value: 0.0 (type:
-                        Float64, default: [0.0])
-  --R2_surface R2_SURFACE [R2_SURFACE...]
+                        FieldParser{Float64}, default:
+                        FieldParser{Float64}(0.0))
+  --R2_surface R2_SURFACE
                         Additional transverse relaxation rate (kHz).
                         Surface property. Field is required. Expected
                         type: Float64.  default value: 0.0 (type:
-                        Float64, default: [0.0])
-  --R2_inside R2_INSIDE [R2_INSIDE...]
+                        FieldParser{Float64}, default:
+                        FieldParser{Float64}(0.0))
+  --R2_inside R2_INSIDE
                         Additional transverse relaxation rate (kHz).
                         Inside property. Field is required. Expected
                         type: Float64.  default value: 0.0 (type:
-                        Float64, default: [0.0])
-  --off_resonance_surface OFF_RESONANCE_SURFACE [OFF_RESONANCE_SURFACE...]
+                        FieldParser{Float64}, default:
+                        FieldParser{Float64}(0.0))
+  --off_resonance_surface OFF_RESONANCE_SURFACE
                         Additional off-resonance field offset (kHz).
                         Surface property. Field is required. Expected
                         type: Float64.  default value: 0.0 (type:
-                        Float64, default: [0.0])
-  --off_resonance_inside OFF_RESONANCE_INSIDE [OFF_RESONANCE_INSIDE...]
+                        FieldParser{Float64}, default:
+                        FieldParser{Float64}(0.0))
+  --off_resonance_inside OFF_RESONANCE_INSIDE
                         Additional off-resonance field offset (kHz).
                         Inside property. Field is required. Expected
                         type: Float64.  default value: 0.0 (type:
-                        Float64, default: [0.0])
-  --position POSITION [POSITION...]
-                        Spatial offset of obstruction from origin.
+                        FieldParser{Float64}, default:
+                        FieldParser{Float64}(0.0))
+  --position POSITION   Spatial offset of obstruction from origin.
                         Field is required. Expected type:
                         StaticArraysCore.MVector{2, Float64}.  default
-                        value: [0.0, 0.0] (type: Float64, default:
-                        [0.0, 0.0])
-  --g_ratio G_RATIO [G_RATIO...]
-                        Inner/outer radius used for susceptibility
+                        value: [0.0, 0.0] (type:
+                        FieldParser{MVector{2, Float64}}, default:
+                        FieldParser{MVector{2, Float64}}([0.0, 0.0]))
+  --g_ratio G_RATIO     Inner/outer radius used for susceptibility
                         calculation Field can be null. Expected type:
-                        Float64.  default value: 1.0 (type: Float64,
-                        default: [1.0])
-  --susceptibility_iso SUSCEPTIBILITY_ISO [SUSCEPTIBILITY_ISO...]
+                        Float64.  default value: 1.0 (type:
+                        FieldParser{Float64}, default:
+                        FieldParser{Float64}(1.0))
+  --susceptibility_iso SUSCEPTIBILITY_ISO
                         Isotropic component of the susceptibility (in
                         ppm). Field can be null. Expected type:
-                        Float64.  default value: -0.1 (type: Float64,
-                        default: [-0.1])
-  --susceptibility_aniso SUSCEPTIBILITY_ANISO [SUSCEPTIBILITY_ANISO...]
+                        Float64.  default value: -0.1 (type:
+                        FieldParser{Float64}, default:
+                        FieldParser{Float64}(-0.1))
+  --susceptibility_aniso SUSCEPTIBILITY_ANISO
                         Ansotropic component of the susceptibility (in
                         ppm). Field can be null. Expected type:
-                        Float64.  default value: -0.1 (type: Float64,
-                        default: [-0.1])
-  --lorentz_radius LORENTZ_RADIUS [LORENTZ_RADIUS...]
+                        Float64.  default value: -0.1 (type:
+                        FieldParser{Float64}, default:
+                        FieldParser{Float64}(-0.1))
+  --lorentz_radius LORENTZ_RADIUS
                         Only compute field explicitly for cylinders
                         with this Lorentz radius. Field can be null.
                         Expected type: Float64.  default value: 5.0
-                        (type: Float64, default: [5.0])
-  --repeats REPEATS REPEATS
-                        Length scale on which the obstructions are
+                        (type: FieldParser{Float64}, default:
+                        FieldParser{Float64}(5.0))
+  --repeats REPEATS     Length scale on which the obstructions are
                         repeated (um). Field can be null. Expected
                         type: StaticArraysCore.MVector{2, Float64}.
-                        (type: Float64)
+                        (type: FieldParser{MVector{2, Float64}})
   --no-use_boundingbox  Use bounding boxes for an initial filtering of
                         possible intersections. Field can be null.
                         Expected type: Bool.  default value: true
-  --dwell_time DWELL_TIME [DWELL_TIME...]
+  --dwell_time DWELL_TIME
                         Average time a particle stays stuck to the
                         surface (ms). Surface property. Field can be
-                        null. Expected type: Float64. (type: Float64)
-  --density DENSITY [DENSITY...]
-                        Surface density of stuck particles relative to
+                        null. Expected type: Float64. (type:
+                        FieldParser{Float64})
+  --density DENSITY     Surface density of stuck particles relative to
                         the volume density (um). Surface property.
                         Field can be null. Expected type: Float64.
-                        (type: Float64)
-  --permeability PERMEABILITY [PERMEABILITY...]
+                        (type: FieldParser{Float64})
+  --permeability PERMEABILITY
                         Probability of particle passing through the
                         obstruction. Surface property. Field can be
-                        null. Expected type: Float64. (type: Float64)
-  --relaxivity RELAXIVITY [RELAXIVITY...]
+                        null. Expected type: Float64. (type:
+                        FieldParser{Float64})
+  --relaxivity RELAXIVITY
                         Fraction of transverse spin lost each time it
                         hits the obstruction. Surface property. Field
                         can be null. Expected type: Float64. (type:
-                        Float64)
+                        FieldParser{Float64})
   -h, --help            show this help message and exit
 
 </code></pre><p>How these various properties affect the simulation is described <a href="../properties/#properties">here</a>.</p><p>The procedure to create <a href="../api/#MCMRSimulator.Geometries.User.Obstructions.Walls"><code>Walls</code></a>, <a href="../api/#MCMRSimulator.Geometries.User.Obstructions.Spheres"><code>Spheres</code></a>, or <a href="../api/#MCMRSimulator.Geometries.User.Obstructions.Annuli"><code>Annuli</code></a> is very similar as for the <a href="../api/#MCMRSimulator.Geometries.User.Obstructions.Cylinders"><code>Cylinders</code></a> illustrated above. Randomly distributed cylinders, annuli, and spheres can be created using <code>mcmr geometry create-random</code>.</p><h2 id="Defining-the-sequence"><a class="docs-heading-anchor" href="#Defining-the-sequence">Defining the sequence</a><a id="Defining-the-sequence-1"></a><a class="docs-heading-anchor-permalink" href="#Defining-the-sequence" title="Permalink"></a></h2><p>The next step is to define a sequence (see <a href="../sequence/#sequence">here</a> for more details).  There are several built-in sequences available, which you can see listed by running:</p><pre><code class="language-bash hljs">mcmr sequence</code></pre><pre><code class="language-stderr hljs">No mcmr sequence sub-command given.
@@ -293,25 +301,25 @@ Initialisation flags. These control the spins initial state:
  Row │ sequence   sequence_index  bvec   TR     readout  subset  nspins  longitudinal  transverse  phase     Sx       Sy
      │ SubStrin…  Int64           Int64  Int64  Int64    Int64   Int64   Float64       Float64     Float64   Float64  Float64
 ─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-   1 │ dwi.json                1      0      1        1       0   10000  -1.10845e-12      5669.1  0.287026  5669.03  28.3995
+   1 │ dwi.json                1      0      1        1       0   10000  -1.10334e-12     5462.62  0.254285  5462.56  24.2436
 </code></pre><p>This produces the CSV file, which looks like</p><pre><code class="nohighlight hljs">sequence,sequence_index,bvec,TR,readout,subset,nspins,longitudinal,transverse,phase,Sx,Sy
-dwi.json,1,0,1,1,0,10000,-1.1084466677857563e-12,5669.0988856076,0.2870257259118387,5669.027751233977,28.39948126950405
+dwi.json,1,0,1,1,0,10000,-1.1033396418724806e-12,5462.617619182086,0.2542852377663869,5462.5638210589395,24.24364363133534
 </code></pre><p>The columns in this file store the following information:</p><ul><li>&quot;sequence&quot;: integer; index of the sequence (always 1 if only single sequence used)</li><li>&quot;bvec&quot;: integer; index of the gradient orientation (if a <code>--bvec</code> flag is provided)</li><li>&quot;TR&quot;: integer; index of the repetition time that this data was acquired (between 1 and the value of <code>--nTR</code>)</li><li>&quot;readout&quot;: integer; index of the readout within a TR.</li><li>&quot;subset&quot;: integer; index of the subset of the total signal (e.g., intra-axonal) that has been output (see the <code>--subset</code> flag). The total signal will always be included with &quot;subset&quot; of 0.</li><li>&quot;nspins&quot;: total number of spins contributing to the signal (might change for certain subsets of spins)</li><li>&quot;longitudinal&quot;: average longitudinal signal</li><li>&quot;transverse&quot;: average transverse signal</li><li>&quot;phase&quot;: average phase of the signal (in degrees)</li><li>&quot;Sx&quot;: signal strength in the x-direction</li><li>&quot;Sy&quot;: signal strength in the y-direction</li></ul><p>We can also output the signal of specific subsets of spins. For example, in the following we request to separately the output for just the spins inside the cylinders and just the spins outside of the cylinders.</p><pre><code class="language-bash hljs">mcmr run geometry.json dwi.json -o signal.csv --subset inside --subset outside</code></pre><pre><code class="language-stdout hljs">df = 3×12 DataFrame
  Row │ sequence   sequence_index  bvec   TR     readout  subset  nspins  longitudinal  transverse  phase       Sx        Sy
      │ SubStrin…  Int64           Int64  Int64  Int64    Int64   Int64   Float64       Float64     Float64     Float64   Float64
-─────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-   1 │ dwi.json                1      0      1        1       0   10000  -1.11799e-12     5794.79  -0.238387   5794.74   -24.11
-   2 │ dwi.json                1      0      1        1       1    5049  -5.82423e-13     5047.67   0.0153565  5047.67     1.35288
-   3 │ dwi.json                1      0      1        1       2    4951  -5.35572e-13      747.5   -1.9521      747.066  -25.4628
+─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   1 │ dwi.json                1      0      1        1       0   10000  -1.1271e-12     5493.98   -0.31526    5493.9    -30.2295
+   2 │ dwi.json                1      0      1        1       1    5049  -5.81535e-13    5048.21   -0.0235654  5048.21    -2.0763
+   3 │ dwi.json                1      0      1        1       2    4951  -5.45564e-13     446.576  -3.61445     445.688  -28.1532
 </code></pre><p>We can see two additional rows in the output.  These new rows are the in same order as the <code>--subset</code> flags provided to <code>mcmr run</code> and can be distinguished based on the &quot;subset&quot; column.</p><pre><code class="nohighlight hljs">sequence,sequence_index,bvec,TR,readout,subset,nspins,longitudinal,transverse,phase,Sx,Sy
-dwi.json,1,0,1,1,0,10000,-1.1179945857975326e-12,5794.788482981153,-0.23838702417026525,5794.7383265154795,-24.109950302468455
-dwi.json,1,0,1,1,1,5049,-5.824229987183571e-13,5047.672179779177,0.015356468900184066,5047.6719984788415,1.3528818453610547
-dwi.json,1,0,1,1,2,4951,-5.355715870791755e-13,747.5001366602886,-1.9521001203447668,747.0663280366487,-25.462832147829438
+dwi.json,1,0,1,1,0,10000,-1.127098414599459e-12,5493.98022824417,-0.3152598050471056,5493.897061836786,-30.22949352856606
+dwi.json,1,0,1,1,1,5049,-5.81534820298657e-13,5048.209443575351,-0.023565430827829914,5048.209016590107,-2.076300001568857
+dwi.json,1,0,1,1,2,4951,-5.455635943008019e-13,446.5763495546476,-3.6144537377667234,445.68804524665705,-28.153193526997125
 </code></pre><p>We can see in the second row that inside the cylinders the transverse signal is very close to the number of spins,  indicating that there has been very little dephasing due to the diffusion weighting inside the cylinders. On the other hand, we did lose most of the signal outside of the cylinders (i.e., the transverse signal is much lower than the number of spins in the third row). All the spins are either inside or outside the cylinders, so in this case the first row is simply the sum of the next two.</p><p>A more complete state of all the spins can be produced using the <code>--output-snapshot</code> flag. For example, the command</p><pre><code class="language-bash hljs">mcmr run geometry.json dwi.json --output-snapshot snapshot.csv</code></pre><p>will produce a file named &quot;snapshot.csv&quot; with:</p><pre><code class="language-csv hljs">sequence,sequence_index,bvec,TR,readout,spin,x,y,z,longitudinal,transverse,phase,Sx,Sy
-dwi.json,1,0,1,1,1,-159.8924832528234,459.2200267718358,511.5871271575148,-2.220446049250313e-16,0.9999999999999938,0.13972755943489146,0.9999970263580685,0.0024387035506349924
-dwi.json,1,0,1,1,2,206.07806869417163,-6.5941234780367886,451.9245228328072,-2.220446049250313e-16,0.9999999999999933,58.193221857843085,0.5270563348776588,0.8498303476961245
-dwi.json,1,0,1,1,3,290.78495740203937,23.744974532243457,-184.73495262980703,0.0,0.9999999999999948,-109.18338047984787,-0.32859270204804597,-0.9444717233251367
-dwi.json,1,0,1,1,4,-193.81643728249838,-240.0978400916987,448.36478877125603,-2.220446049250313e-16,0.9999999999999946,-13.598580565729776,0.9719668256443157,-0.2351180338615085
+dwi.json,1,0,1,1,1,-159.63739614816723,459.17594249877567,485.50634884205965,-2.220446049250313e-16,0.9999999999999841,-0.6721371618707508,0.9999311925323291,-0.011730737438136978
+dwi.json,1,0,1,1,2,196.50078446288504,-13.095761658022013,429.7144391383118,-2.220446049250313e-16,0.9999999999999876,-96.16417986488892,-0.10737781204081026,-0.9942182886475704
+dwi.json,1,0,1,1,3,307.950804571473,6.329628620538541,-156.5479804730677,-2.220446049250313e-16,0.9999999999999895,149.4903931512938,-0.8615440487939133,0.5076828261698144
+dwi.json,1,0,1,1,4,-202.379381961288,-223.52848049077693,424.6887539753649,-2.220446049250313e-16,0.999999999999989,-76.79381179199623,0.22845601978291252,-0.9735542342493959
 ...</code></pre><p>Each row corresponds to the state of a single spin. In addition to all the columns listed above, we now have 4 more columns:</p><ul><li>&quot;spin&quot;: integer; index of the spin</li><li>&quot;x&quot;/&quot;y&quot;/&quot;z&quot;: floats; position of the spin at the time of the readout</li></ul><p>The readout times can be adjusted using the <code>--nTR</code>, <code>--time</code>, and <code>--skip-TR</code> flags.</p><h2 id="Full-diffusion-weighted-MRI-acquisition"><a class="docs-heading-anchor" href="#Full-diffusion-weighted-MRI-acquisition">Full diffusion-weighted MRI acquisition</a><a id="Full-diffusion-weighted-MRI-acquisition-1"></a><a class="docs-heading-anchor-permalink" href="#Full-diffusion-weighted-MRI-acquisition" title="Permalink"></a></h2><p>As a more involved example, we will run the simulations for a single-shell diffusion-weighted MRI sequence. We presume we have a set of gradient orientations for the single shell, which is stored in a file named &quot;bvecs&quot;. This file contains:</p><pre><code class="nohighlight hljs">1  0  0  
 0.6745407374  -0.01795697854  -0.7380192006  
 0.7236803088  0.6359626605  -0.2680266875  
@@ -322,9 +330,7 @@ dwi.json,1,0,1,1,4,-193.81643728249838,-240.0978400916987,448.36478877125603,-2.
 -0.2765856448  -0.4727794531  -0.8366480561  
 -0.7236803023  0.1008527628  -0.6827265487  
 -0.01390247052  -0.2692289608  0.9629758502</code></pre><p>We then define two sequences, one for the b0 and the other for the diffusion-weighted MRI:</p><pre><code class="language-bash hljs">mcmr sequence dwi b0.json --bval=0 --TR=1000 --TE=80 --scanner=Siemens_Prisma
-mcmr sequence dwi dwi.json --bval=2 --TR=1000 --TE=80 --scanner=Siemens_Prisma</code></pre><p>Here we set the scanner to <code>Siemens_Prisma</code>, which is used to set the B0 field as well as the maximum gradient and slew rate.</p><p>Let&#39;s evaluate these sequences for some randomly distributed cylinders:</p><pre><code class="language-bash hljs">mcmr geometry create-random cylinders 0.6 random_cylinders.json --mean-radius=1. --var-radius=0.1 --repeats 5 5</code></pre><pre><code class="language-stdout hljs">result = 6 cylinders(radius = Union{Nothing, Float64}[1.6006095218906675, 0.5954719859556001, 0.8415783050893212, 0.7943961842415931, 0.6139404193762205, 1.168978446464613], rotation = [1.0 0.0; 0.0 1.0; 0.0 0.0], grid_resolution = 1.0, R1_surface = 0.0, R1_inside = 0.0, R2_surface = 0.0, R2_inside = 0.0, off_resonance_surface = 0.0, off_resonance_inside = 0.0, position = Union{Nothing, StaticArraysCore.MVector{2, Float64}}[[-0.23631965921838338, -0.33853219923971345], [1.0010387470592685, 1.885613593261187], [-0.45188348777746246, 2.11703536546249], [2.3726197970155916, 0.9838864274409342], [1.9792776732541384, -0.36853439125176646], [-2.437679331963513, -2.0601440601786045]], g_ratio = 1.0, susceptibility_iso = -0.1, susceptibility_aniso = -0.1, lorentz_radius = 5.0, repeats = [5.0, 5.0], use_boundingbox = true, )
-Not set: dwell_time, density, permeability and relaxivity
-</code></pre><p>The resulting cylinder JSON file look like:</p><pre><code class="language-json hljs">  {
+mcmr sequence dwi dwi.json --bval=2 --TR=1000 --TE=80 --scanner=Siemens_Prisma</code></pre><p>Here we set the scanner to <code>Siemens_Prisma</code>, which is used to set the B0 field as well as the maximum gradient and slew rate.</p><p>Let&#39;s evaluate these sequences for some randomly distributed cylinders:</p><pre><code class="language-bash hljs">mcmr geometry create-random cylinders 0.6 random_cylinders.json --mean-radius=1. --var-radius=0.1 --repeats 5,5</code></pre><p>The resulting cylinder JSON file look like:</p><pre><code class="language-json hljs">  {
      &quot;type&quot;: &quot;Cylinders&quot;,
      &quot;number&quot;: 6,
     &quot;#radius_description&quot;: &quot;Radius of the cylinder. Field is required. Expected type: Float64.&quot;,
@@ -369,30 +375,30 @@ Not set: dwell_time, density, permeability and relaxivity
     &quot;relaxivity&quot;: null
   }
 </code></pre><p>And, finally run the simulation:</p><pre><code class="language-bash hljs">mcmr run random_cylinders.json b0.json dwi.json --bvecs=bvecs -o full_dwi.csv</code></pre><pre><code class="language-stdout hljs">df = 11×12 DataFrame
- Row │ sequence   sequence_index  bvec   TR     readout  subset  nspins  longitudinal  transverse  phase        Sx         Sy
-     │ SubStrin…  Int64           Int64  Int64  Int64    Int64   Int64   Float64       Float64     Float64      Float64    Float64
-─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-   1 │ b0.json                 1      0      1        1       0   10000   0.0           10000.0      0.0        10000.0      -6.12323e-13
-   2 │ dwi.json                2      1      1        1       0   10000  -1.08269e-12    9743.81     0.127047    9743.79     21.6058
-   3 │ dwi.json                2      2      1        1       0   10000  -1.11289e-12     380.054   21.1362       354.486   137.042
-   4 │ dwi.json                2      3      1        1       0   10000  -1.11511e-12    6231.97     0.349363    6231.85     37.9995
-   5 │ dwi.json                2      4      1        1       0   10000  -1.11e-12       1579.22    -3.16663     1576.81    -87.2362
-   6 │ dwi.json                2      5      1        1       0   10000  -1.10068e-12    8230.46    -0.0109588   8230.46     -1.57421
-   7 │ dwi.json                2      6      1        1       0   10000  -1.11533e-12    6540.09    -0.198461    6540.05    -22.6535
-   8 │ dwi.json                2      7      1        1       0   10000  -1.12066e-12    2132.07     3.06971     2129.01    114.174
-   9 │ dwi.json                2      8      1        1       0   10000  -1.12066e-12     173.292   35.9176       140.342   101.657
-  10 │ dwi.json                2      9      1        1       0   10000  -1.11822e-12     623.53    11.881        610.173   128.372
-  11 │ dwi.json                2     10      1        1       0   10000  -1.11933e-12     106.575  -77.2781        23.47   -103.959
+ Row │ sequence   sequence_index  bvec   TR     readout  subset  nspins  longitudinal  transverse  phase       Sx          Sy
+     │ SubStrin…  Int64           Int64  Int64  Int64    Int64   Int64   Float64       Float64     Float64     Float64     Float64
+─────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   1 │ b0.json                 1      0      1        1       0   10000   0.0          10000.0       0.0       10000.0      -6.12323e-13
+   2 │ dwi.json                2      1      1        1       0   10000  -1.08247e-12   9593.07      0.23729    9592.98     39.7294
+   3 │ dwi.json                2      2      1        1       0   10000  -1.10933e-12    323.679    -5.64476     322.11    -31.8372
+   4 │ dwi.json                2      3      1        1       0   10000  -1.10489e-12   5962.06     -0.822485   5961.45    -85.583
+   5 │ dwi.json                2      4      1        1       0   10000  -1.11267e-12   1509.07      2.71284    1507.38     71.425
+   6 │ dwi.json                2      5      1        1       0   10000  -1.0838e-12    7967.18      0.477044   7966.9      66.3339
+   7 │ dwi.json                2      6      1        1       0   10000  -1.11022e-12   6208.03      0.71724    6207.55     77.7113
+   8 │ dwi.json                2      7      1        1       0   10000  -1.10489e-12   1989.63     -1.78773    1988.66    -62.0698
+   9 │ dwi.json                2      8      1        1       0   10000  -1.10933e-12    115.537   -38.0619       90.9676  -71.2302
+  10 │ dwi.json                2      9      1        1       0   10000  -1.12133e-12    560.905    -3.98847     559.547   -39.0142
+  11 │ dwi.json                2     10      1        1       0   10000  -1.11822e-12     50.3528  130.504       -32.7042   38.2863
 </code></pre><pre><code class="nohighlight hljs">sequence,sequence_index,bvec,TR,readout,subset,nspins,longitudinal,transverse,phase,Sx,Sy
 b0.json,1,0,1,1,0,10000,0.0,10000.0,0.0,10000.0,-6.123233995737785e-13
-dwi.json,2,1,1,1,0,10000,-1.0826894936144527e-12,9743.809662769738,0.12704726036493338,9743.78570844338,21.605837624490192
-dwi.json,2,2,1,1,0,10000,-1.112887559884257e-12,380.0539800180521,21.136233326248842,354.4861105989037,137.04242087771124
-dwi.json,2,3,1,1,0,10000,-1.1151080059335072e-12,6231.9706203527985,0.34936343792723606,6231.8547683098905,37.99946886113677
-dwi.json,2,4,1,1,0,10000,-1.1100009800202315e-12,1579.2244577868873,-3.1666252841986307,1576.8131569313173,-87.23620922863046
-dwi.json,2,5,1,1,0,10000,-1.1006751066133802e-12,8230.46010699698,-0.010958765878115173,8230.459956449964,-1.5742116714078458
-dwi.json,2,6,1,1,0,10000,-1.1153300505384323e-12,6540.092818480065,-0.19846107689681958,6540.0535848128075,-22.653523162403673
-dwi.json,2,7,1,1,0,10000,-1.120659121056633e-12,2132.066052474365,3.069707437612927,2129.0067988696983,114.17400089434564
-dwi.json,2,8,1,1,0,10000,-1.120659121056633e-12,173.29196384908636,35.91763500304507,140.342424483704,101.6568178958445
-dwi.json,2,9,1,1,0,10000,-1.1182166304024577e-12,623.5303711257815,11.880955429039572,610.1727738872358,128.3717637294548
-dwi.json,2,10,1,1,0,10000,-1.1193268534270828e-12,106.57548242075376,-77.27807118937847,23.470005262054777,-103.9590895795818
-</code></pre><p>Note that the multiple gradient orientations are only applied to the sequence with diffusion-weighted gradients, not the b0 sequence. So, in total we have 11 sequences, one for the b0 sequence, and 10 for each bvec for the dwi sequence.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../tutorial_julia/">« Tutorial (Julia)</a><a class="docs-footer-nextpage" href="../geometry/">Geometry »</a><div class="flexbox-break"></div></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.2 on <span class="colophon-date" title="Monday 30 October 2023 15:09">Monday 30 October 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+dwi.json,2,1,1,1,0,10000,-1.0824674490095276e-12,9593.066256681106,0.23728955508356533,9592.983987190762,39.72941700149653
+dwi.json,2,2,1,1,0,10000,-1.1093348462054564e-12,323.67913342525407,-5.644762226636203,322.1095679285738,-31.837205652991706
+dwi.json,2,3,1,1,0,10000,-1.1048939541069558e-12,5962.064822675391,-0.8224853050887191,5961.45053716699,-85.58295796916522
+dwi.json,2,4,1,1,0,10000,-1.1126655152793319e-12,1509.0731854838073,2.7128438174427285,1507.3819523116144,71.42498856472591
+dwi.json,2,5,1,1,0,10000,-1.0837997166390778e-12,7967.180473057726,0.4770443864743405,7966.904323428097,66.33394014395105
+dwi.json,2,6,1,1,0,10000,-1.1102230246251565e-12,6208.034959736688,0.7172396179381105,6207.548550556252,77.71134923470183
+dwi.json,2,7,1,1,0,10000,-1.1048939541069558e-12,1989.625373274201,-1.7877299547428152,1988.6569512666752,-62.06976844837993
+dwi.json,2,8,1,1,0,10000,-1.1093348462054564e-12,115.53724174912519,-38.061934800039296,90.96764466178256,-71.23020325454264
+dwi.json,2,9,1,1,0,10000,-1.1213252548714081e-12,560.9052201197967,-3.988472865831284,559.5467436463816,-39.014197830636675
+dwi.json,2,10,1,1,0,10000,-1.1182166304024577e-12,50.35278624880307,130.5039973861861,-32.70418997665633,38.28627745013118
+</code></pre><p>Note that the multiple gradient orientations are only applied to the sequence with diffusion-weighted gradients, not the b0 sequence. So, in total we have 11 sequences, one for the b0 sequence, and 10 for each bvec for the dwi sequence.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../tutorial_julia/">« Tutorial (Julia)</a><a class="docs-footer-nextpage" href="../geometry/">Geometry »</a><div class="flexbox-break"></div></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.2 on <span class="colophon-date" title="Thursday 2 November 2023 16:47">Thursday 2 November 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
