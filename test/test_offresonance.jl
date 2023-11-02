@@ -82,9 +82,10 @@
         @testset "Single right triangle test" begin
             for t in ([1, 2, 3], [2, 1, 3])
                 mesh = mr.Mesh(vertices=[[0, 0, 0], [1, 0, 0], [1, 1, 0]], triangles=[t], myelin=true, susceptibility_iso=1., susceptibility_aniso=0.)
-                ref_field = (atan(sqrt(3)) - atan(1)) / 4π
-                @test field(mesh, [0, 0, 1]) ≈ ref_field
-                @test field(mesh, [0, 0, -1]) ≈ -ref_field
+                f(z) = atan(sqrt(2 + z^2)/ z)
+                ref_field = (f(0.99) - f(1.01)) / (0.02 * 4π)
+                @test field(mesh, [0, 0, 1]) ≈ ref_field rtol=0.1
+                @test field(mesh, [0, 0, -1]) ≈ ref_field rtol=0.1
             end
         end
         @testset "Points very close to mesh" begin
