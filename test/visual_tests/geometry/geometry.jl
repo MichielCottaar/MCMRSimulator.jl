@@ -2,6 +2,25 @@
 
 dir = @__DIR__
 isCI = get(ENV, "CI", "false") == "true"
+
+@testset "Plot 3-dimensional mesh" begin
+    geometry = mr.BendyCylinder(control_point=[[0, 0, 0], [0, 0.3, 1]], radius=[0.3, 0.6], repeats=[2., 2., 2.], spline_order=2, closed=[0, 0, 1])
+
+    function plot_mesh(fname)
+        f = Figure()
+        mr.plot_geometry3d(f[1, 1], geometry)
+        CairoMakie.save(fname, f)
+    end
+
+    function plot_mesh2(fname)
+        f = Figure()
+        mr.plot(f[1, 1], geometry)
+        CairoMakie.save(fname, f)
+    end
+
+    @visualtest plot_mesh "$dir/bendy_cylinder.png" !isCI
+    @visualtest plot_mesh "$dir/bendy_cylinder.png" !isCI
+end
 @testset "Plot walls" begin
     geometry = [
         mr.Walls(repeats=1),
