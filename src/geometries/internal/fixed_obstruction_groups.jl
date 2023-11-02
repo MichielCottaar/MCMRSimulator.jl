@@ -132,7 +132,7 @@ function Base.show(io::IO, geom::FixedObstructionGroup)
     if repeating(geom)
         print(io, "repeating ")
     end
-    print(io, String(nameof(obstruction_type(geom))) * " objects")
+    print(io, String(nameof(obstruction_type(typeof(geom)))) * " objects")
 end
 
 """
