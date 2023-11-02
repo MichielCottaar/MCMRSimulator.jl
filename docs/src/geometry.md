@@ -6,11 +6,11 @@ MCMRSimulator.jl comes with a variety of basic components that can be used to re
 |------------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|
 | Constructor (Julia)         | [`Walls`](@ref)    | [`Cylinders`](@ref) | [`Annuli`](@ref)  | [`Spheres`](@ref)   | [`Mesh`](@ref)     | [`BendyCylinder`](@ref) |
 | Constructor (CLI)         | `mcmr geometry create walls` | `mcmr geometry create cylinders` or `mcmr geometry create-random cylinders` | `mcmr geometry create annuli` or `mcmr geometry create-random annuli` | `mcmr geometry create spheres` or `mcmr geometry create-random spheres` | Generate mesh from tissue samples or generative models (e.g., [palomboGenerativeModelRealistic2019](@cite), [Ginsburger_2019](@cite), [Callaghan_2020](@cite), [villarreal-haroCACTUSComputationalFramework2023](@cite)) | `mcmr geometry create bendy-cylinder` |
-| Hinder diffusion       | :white_check_mark: | :white_check_mark: |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Surface relaxation     | :white_check_mark: | :white_check_mark: |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Magnetisation transfer | :white_check_mark: | :white_check_mark: |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Generate off-resonance field    |                    | :white_check_mark: | :white_check_mark: |                    | :construction:     | :construction:     |
-| Different relaxation inside    |                    | :white_check_mark: | :white_check_mark: |  :white_check_mark:                  | :white_check_mark:     | :white_check_mark:     |
+| Hinder diffusion       | ✅ | ✅ |                    | ✅ | ✅ | ✅ |
+| Surface relaxation     | ✅| ✅ |                    | ✅ | ✅ | ✅ |
+| Magnetisation transfer | ✅  | ✅ |                    | ✅ | ✅ | ✅ |
+| Generate off-resonance field    |                    | ✅ | ✅ |                    | 🚧     | 🚧     |
+| Different relaxation inside    |                    | ✅ | ✅ |  ✅                  | ✅     | ✅     |
 | Intrinsic dimensionality| 1                   | 2 | 2 |  3                  | 3     | 3     |
 
 The constructors for these components all have a similar interface.
