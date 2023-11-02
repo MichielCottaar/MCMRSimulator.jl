@@ -56,7 +56,7 @@ Projects the plane on the intrinsic plane of the obstructions deformed by `trans
 function project_geometry(plot_plane::PlotPlane, group::FixedObstructionGroup{L, N}) where {L, N}
     center_obstruction_space = plot_plane.transformation(zero(SVector{3, Float64}))
 
-    obstruction_coordinates_in_plot_plane = SVector{2, SVector{3, Float64}}(map(p->SVector{3, Float64}(plot_plane.transformation(p)) - center_obstruction_space, eachcol(group.rotation)))
+    obstruction_coordinates_in_plot_plane = SVector{N, SVector{3, Float64}}(map(p->SVector{3, Float64}(plot_plane.transformation(p)) - center_obstruction_space, eachcol(group.rotation)))
 
     projections = []
     repeats = group.grid.repeating ? group.grid.size : nothing
