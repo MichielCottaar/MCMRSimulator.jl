@@ -1,13 +1,16 @@
 # [Obstructions to free diffusion](@id geometry)
 MCMRSimulator.jl comes with a variety of basic components that can be used to represent various components in the tissue microstructure.
 
-| Component     | Constructor         |  Dimensionality |
-| ------------- | ------------------- |  -------------- |
-| infinite walls | [`Walls`](@ref)  |  1 |
-| hollow infinite cylinder |  [`Cylinders`](@ref)   |  2 |
-| Annulus with inner and outer cylinders | [`Annuli`](@ref)   |  2 |
-| hollow sphere |  [`Spheres`](@ref)   |  3 |
-| mesh | [`Mesh`](@ref) |  3 |
+
+| Component:             | infinite walls     | hollow cylinder    | myelinated annuli  | hollow sphere      | mesh               | bendy cylinder     |
+|------------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|
+| Constructor (Julia)         | [`Walls`](@ref)    | [`Cylinders`](@ref) | [`Annuli`](@ref)  | [`Sphere`](@ref)   | [`Mesh`](@ref)     | [`BendyCylinder`](@ref) |
+| Constructor (CLI)         | `mcmr geometry create walls` | `mcmr geometry create cylinders` or `mcmr geometry create-random cylinders` | `mcmr geometry create annuli` or `mcmr geometry create-random annuli` | `mcmr geometry create spheres` or `mcmr geometry create-random spheres` | Generate mesh from tissue samples or generative models (e.g., [palomboGenerativeModelRealistic2019](@cite), [Ginsburger_2019](@cite), [Callaghan_202](@cite), [villarreal-haroCACTUSComputationalFramework2023](@cite)) | `mcmr geometry create bendy-cylinders` |
+| Hinder diffusion       | :white_check_mark: | :white_check_mark: |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Surface relaxation     | :white_check_mark: | :white_check_mark: |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Magnetisation transfer | :white_check_mark: | :white_check_mark: |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Off-resonance field    |                    | :white_check_mark: | :white_check_mark: |                    | :construction:     | :construction:     |
+| Intrinsic dimensionality| 1                   | 2 | 2 |  3                  | 3     | 3     |
 
 The constructors for these components all have a similar interface.
 Some expect certain component-specific keyword arguments (e.g., radius for [`Spheres`](@ref) and [`Cylinders`](@ref), or the keywords regarding the myelin-induced off-resonance field produced by [`Cylinders`](@ref) or [`Annuli`](@ref)).
