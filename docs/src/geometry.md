@@ -9,7 +9,8 @@ MCMRSimulator.jl comes with a variety of basic components that can be used to re
 | Hinder diffusion       | :white_check_mark: | :white_check_mark: |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | Surface relaxation     | :white_check_mark: | :white_check_mark: |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | Magnetisation transfer | :white_check_mark: | :white_check_mark: |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Off-resonance field    |                    | :white_check_mark: | :white_check_mark: |                    | :construction:     | :construction:     |
+| Generate off-resonance field    |                    | :white_check_mark: | :white_check_mark: |                    | :construction:     | :construction:     |
+| Different relaxation inside    |                    | :white_check_mark: | :white_check_mark: |  :white_check_mark:                  | :white_check_mark:     | :white_check_mark:     |
 | Intrinsic dimensionality| 1                   | 2 | 2 |  3                  | 3     | 3     |
 
 The constructors for these components all have a similar interface.
