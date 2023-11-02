@@ -157,14 +157,13 @@ end
 
     real_inside(spin) = norm(spin.position[1:2]) .< 1.
 
-    starts_inside = isinside(bendy_cylinder, snap)
+    starts_inside = mr.isinside(bendy_cylinder, snap)
     @test all(real_inside.(snap) .== starts_inside)
 
     new_snap = mr.evolve(snap, mr.Simulation([], geometry=bendy_cylinder), 10.)
-    @show isinside(bendy_cylinder, snap)
 
     @test all(real_inside.(snap) .== starts_inside)
-    @test all(isinside(bendy_cylinder, snap) .== starts_inside)
+    @test all(mr.isinside(bendy_cylinder, snap) .== starts_inside)
 end
 
 @testset "Compare mesh cylinder with perfect one" begin
