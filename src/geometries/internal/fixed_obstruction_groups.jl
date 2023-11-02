@@ -129,14 +129,10 @@ size_scale(g::FixedGeometry{0}) = Inf
 
 function Base.show(io::IO, geom::FixedObstructionGroup)
     print(io, length(geom.obstructions), " ")
-    print(io, typeof(geom))
-end
-
-function Base.show(io::IO, geom_type::Type{<:FixedObstructionGroup})
-    if repeating(geom_type)
+    if repeating(geom)
         print(io, "repeating ")
     end
-    print(io, String(nameof(obstruction_type(geom_type))) * " objects")
+    print(io, String(nameof(obstruction_type(geom))) * " objects")
 end
 
 """
@@ -386,13 +382,13 @@ function random_surface_positions(group::FixedObstructionGroup{N}, bb::BoundingB
         nrepeats_upper = div.([bb.upper ⋅ abs.(n) for n in normals], group.grid.size, RoundUp) .+ 5
 
         total_repeats = prod(nrepeats_upper .- nrepeats_lower .+ 1)
-        sub_draws = random_surface_positions(group.obstructions, normed_surface_density .* total_repeats)
+        sub_draws = random_surface_positions(group.obstructions, group.vertices, normed_surface_density .* total_repeats)
         base_positions = [p for s in sub_draws for p in s[1]]
         normals = [p for s in sub_draws for p in s[2]]
         shifts = SVector{N, Float64}.(zip(rand.(UnitRange.(nrepeats_lower, nrepeats_upper), length(base_positions))...))
         positions = base_positions .+ [s .* repeats for s in shifts]
     else
-        sub_draws = get_random_pos.(group.obstructions, normed_surface_density)
+        sub_draws = get_random_pos.(group.obstructions, group.vertices, normed_surface_density)
         positions = [p for s in sub_draws for p in s[1]]
         normals = [p for s in sub_draws for p in s[2]]
     end
