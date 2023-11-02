@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Off-resonance fields generated from meshes are now correctly modelled using magnetic dipoles rather than magnetic monopoles.
 - Size calculation of meshes has been fixed (used in the calculation of the maximum timestep).
 - Determining the inside of meshes has been fixed.
+- Fixed printing of arrays of `Snapshot`
 ### Changed
 - CSV output files now contain the name of the sequence file (CLI)
 ## [v0.8.0]
