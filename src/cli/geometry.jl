@@ -8,7 +8,7 @@ import StaticArrays: StaticVector, MMatrix, MVector
 import Random
 import CSV
 import Tables
-import ...Geometries.User.Obstructions: Walls, Spheres, Cylinders, Annuli, fields, field_to_docs, Field, ObstructionGroup, FieldValue
+import ...Geometries.User.Obstructions: Walls, Spheres, Cylinders, Annuli, BendyCylinder, fields, field_to_docs, Field, ObstructionGroup, FieldValue
 import ...Geometries.User.JSON: write_geometry, read_geometry
 import ...Geometries.User.RandomDistribution: random_positions_radii
 import ...Methods: get_rotation
@@ -126,6 +126,7 @@ function get_parser(; kwargs...)
         ("cylinders", Cylinders),
         ("spheres", Spheres),
         ("annuli", Annuli),
+        ("bendy-cylinder", BendyCylinder),
     ]
         for sub_command in ("create", "create-random")
             if sub_command == "create-random" && as_string == "walls"
@@ -307,6 +308,7 @@ function run_create(args::Dict{<:AbstractString, <:Any})
         "cylinders" => Cylinders,
         "spheres" => Spheres,
         "annuli" => Annuli,
+        "bendy-cylinder" => BendyCylinder,
     )[obstruction_type]
     number = pop!(flags, "number")
     symbol_flags = Dict(Symbol(k) => parse_user_argument(v, number) for (k, v) in flags)
