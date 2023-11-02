@@ -4,6 +4,7 @@ All notable changes to MCMRSimulator.jl will be documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+## [v0.9.0]
 ### Added
 - Text files can be used to set geometry positions/radii/etc from the command line.
 - New obstruction type: `BendyCylinder`. This cylinder can follow an arbitrary path (defined using splines) and vary in diameter.
@@ -118,7 +119,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added citation instructions
 
 
-[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.8.0...main
+[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.9.0...main
+[v0.9.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.8.0...v0.9.0
 [v0.8.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.7.1...v0.8.0
 [v0.7.1]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.7.0...v0.7.1
 [v0.7.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.6.0...v0.7.0
