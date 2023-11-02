@@ -175,8 +175,8 @@ end
     @testset "Compare inside" begin
         Random.seed!(1)
         for _ in 1:1000
-            position = rand(3) .* 1000.
-            @test length(isinside(fmesh, position)) == length(isinside(fcylinder, position))
+            position = Random.rand(3) .* 1000.
+            @test length(mr.isinside(fmesh, position)) == length(mr.isinside(fcylinder, position))
         end
     end
 end
