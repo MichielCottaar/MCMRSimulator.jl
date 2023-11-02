@@ -71,14 +71,14 @@ end
         end
         @testset "create bendy cylinder" begin
             in_tmpdir() do 
-                _, err = run_main_test("geometry create bendy-cylinder 2 test.json --control-point 0,0,0;0,0.5,1 --radius 0.4,0.6 --nclosed 0,0,1 --repeats 1.3,2,2")
+                _, err = run_main_test("geometry create bendy-cylinder 2 test.json --control-point 0,0,0;0,0.5,1 --radius 0.4,0.6 --closed 0,0,1 --repeats 1.3,2,2")
                 @test length(err) == 0
                 result = JSON.parse(open("test.json", "r"))
                 @test result["type"] == "BendyCylinder"
                 @test result["number"] == 2
                 @test result["position"] == [[0., 0., 0.], [0., 0.5, 1.]]
                 @test result["radius"] == [0.4, 0.6]
-                @test result["nclosed"] == [0, 0, 1]
+                @test result["closed"] == [0, 0, 1]
                 @test result["repeats"] == [1.3, 2., 2.]
             end
         end

@@ -18,13 +18,13 @@ function Mesh(bendy_cylinder::BendyCylinder)
     radii = value_as_vector(bendy_cylinder.radius)
     triangle_size = 2π * mean(radii) / bendy_cylinder.nsamples.value
 
-    nadd = all(iszero.(bendy_cylinder.nclosed.value)) ? 0 : div(bendy_cylinder.spline_order.value, length(bendy_cylinder.control_point), RoundUp)
+    nadd = all(iszero.(bendy_cylinder.closed.value)) ? 0 : div(bendy_cylinder.spline_order.value, length(bendy_cylinder.control_point), RoundUp)
     if iszero(nadd)
         full_control_points = SVector{3}.(control_points)
         full_radii = Float64.(radii)
     else
         @assert !isnothing(bendy_cylinder.repeats.value)
-        full_control_points = [SVector{3}(cp .+ bendy_cylinder.repeats.value .* bendy_cylinder.nclosed.value .* index_add) for index_add in -nadd:nadd for cp in control_points]
+        full_control_points = [SVector{3}(cp .+ bendy_cylinder.repeats.value .* bendy_cylinder.closed.value .* index_add) for index_add in -nadd:nadd for cp in control_points]
         full_radii = [r for _ in -nadd:nadd for r in radii]
     end
 
