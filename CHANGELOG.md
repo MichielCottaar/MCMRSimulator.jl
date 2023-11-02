@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Text files can be used to set geometry positions/radii/etc from the command line.
 - New obstruction type: `BendyCylinder`. This cylinder can follow an arbitrary path (defined using splines) and vary in diameter.
+- 3D plotting for meshes (and `BendyCylinder`) is now available. Just call `plot(mesh)` or `plot_geometry3d(mesh)`.
 ### Changed
 - Multiple values passed on the `mcmr geometry` on the command line should now be separated by commas and semi-colons rather than spaces
 - The `save_memory` option has been removed from meshes, because it did not work properly.
