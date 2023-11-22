@@ -6,7 +6,8 @@ import StaticArrays: SVector, MVector
 import BSplineKit: BSplineOrder, interpolate, Derivative
 import LinearAlgebra: cross, norm, ⋅
 import Statistics: mean
-import ..Obstructions: Mesh, value_as_vector, BendyCylinder, Cylinder, Cylinders
+import ....Methods: get_rotation
+import ..Obstructions: Mesh, value_as_vector, BendyCylinder, Cylinder, Cylinders, Wall, Walls
 
 """
     Mesh(other_obstruction; kwargs...)
@@ -18,7 +19,10 @@ Sometimes a sequence of [`Mesh`](@ref) objects will be returned instead
 ## Keyword arguments
 For [`Cylinders`](@ref):
 - `nsamples`: number of mesh vertices along the circumference (default: 100).
-- `height`: height of mesh triangles along the long axis (default: average cylinder circumference divided by `nsamples`).
+- `height`: height of mesh triangles in um along the long axis (default: average cylinder circumference divided by `nsamples`).
+
+For [`Walls`](@ref):
+- `height`: heigh of mesh triangle in um
 """
 function Mesh(bendy_cylinder::BendyCylinder)
     control_points = value_as_vector(bendy_cylinder.control_point)
@@ -164,5 +168,36 @@ end
 
 Mesh(c::Cylinder; kwargs...) = Mesh(BendyCylinder(c; kwargs...))
 Mesh(c::Cylinders; kwargs...) = Mesh.(BendyCylinder(c; kwargs...))
+
+function Mesh(w::Wall; height=1.)
+    normal = w.rotation[:, 1]
+    rotation = get_rotation(normal, 3; reference_dimension=:x)
+    mesh_kwargs = Dict{Symbol, Any}(
+        :vertices => [
+            [w.position[1], height/2, height/2],
+            [w.position[1], -height/2, height/2],
+            [w.position[1], height/2, -height/2],
+            [w.position[1], -height/2, -height/2],
+        ],
+        :triangles => [
+            [0, 1, 2],
+            [1, 2, 3],
+        ],
+        :number => 2,
+        :rotation => rotation,
+        :repeats => [isnothing(w.repeats) ? Inf : w.repeats[2], height, height],
+    )
+    for symbol in Mesh(number=0).unique_keys
+        if symbol in keys(mesh_kwargs)
+            continue
+        end
+        if hasproperty(w, symbol)
+            mesh_kwargs[symbol] = getproperty(w, symbol)
+        end
+    end
+    return Mesh(; mesh_kwargs...)
+end
+
+Mesh(w::Walls; kwargs...) = Mesh.(w; kwargs...)
 
 end
