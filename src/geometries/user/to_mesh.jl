@@ -183,8 +183,8 @@ function Mesh(w::Wall; height=1.)
             [w.position[1], -height/2, -height/2],
         ],
         :triangles => [
-            [0, 1, 2],
             [1, 2, 3],
+            [4, 3, 2],
         ],
         :number => 2,
         :rotation => rotation,
