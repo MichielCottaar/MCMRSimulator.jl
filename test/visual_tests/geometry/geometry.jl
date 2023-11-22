@@ -3,23 +3,24 @@
 dir = @__DIR__
 isCI = get(ENV, "CI", "false") == "true"
 
-@testset "Plot 3-dimensional mesh" begin
-    geometry = mr.BendyCylinder(control_point=[[0, 0, 0], [0, 0.3, 1]], radius=[0.3, 0.6], repeats=[2., 2., 2.], spline_order=2, closed=[0, 0, 1])
+@testset "3D geometry plots" begin
 
-    function plot_mesh(fname)
-        f = Figure()
-        mr.plot_geometry3d(f[1, 1], geometry)
-        CairoMakie.save(fname, f)
+    for (name, geometry) in [
+        ("bendy_cylinder", mr.BendyCylinder(control_point=[[0, 0, 0], [0, 0.3, 1]], radius=[0.3, 0.6], repeats=[2., 2., 2.], spline_order=2, closed=[0, 0, 1])),
+        ("spheres", mr.Spheres(position=[[0, 0, 0], [0, 0, 1]], repeats=[3, 3, 3], radius=0.6)),
+        ("cylinders", mr.Cylinders(position=[[0, 0], [1, 1]], repeats=[3, 3], radius=0.6)),
+        ("walls", mr.Walls(position=0., repeats=3.)),
+    ]
+        @testset "Plot $name in 3D" begin
+            function plot_mesh(fname)
+                f = Figure()
+                mr.plot_geometry3d(f[1, 1], geometry)
+                CairoMakie.save(fname, f)
+            end
+
+            @visualtest plot_mesh "$dir/$(name)_3D.png" !isCI
+        end
     end
-
-    function plot_mesh2(fname)
-        f = Figure()
-        mr.plot(f[1, 1], geometry)
-        CairoMakie.save(fname, f)
-    end
-
-    @visualtest plot_mesh "$dir/bendy_cylinder.png" !isCI
-    @visualtest plot_mesh "$dir/bendy_cylinder.png" !isCI
 end
 @testset "Plot walls" begin
     geometry = [
