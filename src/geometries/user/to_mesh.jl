@@ -6,12 +6,19 @@ import StaticArrays: SVector, MVector
 import BSplineKit: BSplineOrder, interpolate, Derivative
 import LinearAlgebra: cross, norm, ⋅
 import Statistics: mean
-import ..Obstructions: Mesh, value_as_vector, BendyCylinder
+import ..Obstructions: Mesh, value_as_vector, BendyCylinder, Cylinder, Cylinders
 
 """
-    Mesh(bendy_cylinder)
+    Mesh(other_obstruction; kwargs...)
 
-Converts a [`BendyCylinder`](@ref) object into 
+Approximates any other obstruction type by a mesh.
+Sometimes a sequence of [`Mesh`](@ref) objects will be returned instead
+(e.g., one mesh for each sphere/cylinder in [`Spheres`](@ref)/[`Cylinders`](@ref) objects).
+
+## Keyword arguments
+For [`Cylinders`](@ref):
+- `nsamples`: number of mesh vertices along the circumference (default: 100).
+- `height`: height of mesh triangles along the long axis (default: average cylinder circumference divided by `nsamples`).
 """
 function Mesh(bendy_cylinder::BendyCylinder)
     control_points = value_as_vector(bendy_cylinder.control_point)
@@ -99,5 +106,63 @@ function Mesh(bendy_cylinder::BendyCylinder)
 
     return Mesh(; mesh_kwargs...)
 end
+
+"""
+    BendyCylinder(cylinder(s), nsamples=100, height=nothing)
+
+Approximates a cylinder by a [`BendyCylinder`](@ref) with `nsamples` along the circumference.
+The `height` of the resulting mesh triangles is by default set to the circumference divided by `nsamples`.
+"""
+function BendyCylinder(cylinder::Cylinder; nsamples=100, height=nothing)
+    if isnothing(height)
+        height = 2π * cylinder.radius.value / nsamples
+    end
+    position = [cylinder.position..., 0.]
+    repeats = [cylinder.repeats..., height]
+
+    if isone(cylinder.g_ratio)
+        myelin = false
+        width = 0.
+    else
+        myelin = true
+        width = cylinder.radius * 2 * (1 - cylinder.g_ratio) / (1 + cylinder.g_ratio)
+    end
+    iso = cylinder.susceptibility_iso * width
+    aniso = cylinder.susceptibility_aniso * width
+
+    last_vec = cross(eachcol(cylinder.rotation)...)
+    rotation = [eachcol(cylinder.rotation)..., last_vec]
+
+    bendy_kwargs = Dict{Symbol, Any}(
+        :control_point => position,
+        :spline_order => 2,
+        :repeats => repeats,
+        :number => 1,
+        :nsamples => nsamples,
+        :closed => [0, 0, 1],
+        :myelin => myelin,
+        :susceptibility_iso => iso,
+        :susceptibility_aniso => aniso,
+        :rotation => rotation
+    )
+    for symbol in BendyCylinder(number=0).unique_keys
+        if symbol in keys(bendy_kwargs)
+            continue
+        end
+        bendy_kwargs[symbol] = getproperty(cylinder, symbol)
+    end
+    return BendyCylinder(; bendy_kwargs...)
+end
+
+function BendyCylinder(cylinders::Cylinders; nsamples=100, height=nothing)
+    if isnothing(height)
+        height = 2π * mean(cylinders.radius.value) / nsamples
+    end
+    BendyCylinder.(cylinders; nsamples=nsamples, height=height)
+end
+
+
+Mesh(c::Cylinder; kwargs...) = Mesh(BendyCylinder(c; kwargs...))
+Mesh(c::Cylinders; kwargs...) = Mesh.(BendyCylinder(c; kwargs...))
 
 end
