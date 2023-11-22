@@ -16,6 +16,8 @@ Base.length(g::ObstructionGroup) = g.n_obstructions
 function Base.getindex(g::ObstructionGroup, index::Int)
     return IndexedObstruction(g, index)
 end
+Base.iterate(g::ObstructionGroup) = iterate(g, 1)
+Base.iterate(g::ObstructionGroup, state::Int) = state > g.n_obstructions ? nothing : (g[state], state + 1)
 
 struct IndexedObstruction{N}
     group :: ObstructionGroup{N}
