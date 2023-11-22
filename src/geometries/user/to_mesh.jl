@@ -188,7 +188,7 @@ function Mesh(w::Wall; height=1.)
         ],
         :number => 2,
         :rotation => rotation,
-        :repeats => [isnothing(w.repeats) ? Inf : w.repeats[2], height, height],
+        :repeats => [isnothing(w.repeats) ? Inf : w.repeats[1], height, height],
     )
     for symbol in Mesh(number=0).unique_keys
         if symbol in keys(mesh_kwargs)
