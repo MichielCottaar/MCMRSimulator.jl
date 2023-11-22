@@ -11,7 +11,7 @@ import LinearAlgebra: norm, ⋅
 import NearestNeighbors: KDTree, nn
 import StaticArrays: SVector
 import Statistics: mean
-import ..Obstructions.Triangles: FullTriangle, IndexTriangle, normal, triangle_size, detect_intersection_partial
+import ..Obstructions.Triangles: FullTriangle, IndexTriangle, normal, detect_intersection_partial
 import ..FixedObstructionGroups: FixedMesh, detect_intersection_non_repeating, isinside, rotate_from_global, repeating, detect_intersection_loop
 import ..BoundingBoxes: BoundingBox
 import ..Reflections: Reflection, empty_reflection
