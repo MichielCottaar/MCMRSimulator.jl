@@ -46,7 +46,7 @@ function isinside_grid(mesh::FixedMesh)
         end
         inpr = (centre - mean_triangles[triangle_index]) ⋅ normal(FullTriangle(mesh.obstructions[triangle_index], mesh.vertices))
         if iszero(inpr)
-            error("Grid voxel centre falls exactly on the mesh element. This will lead to trouble, please shift the mesh a tiny amount.")
+            @warn "Grid voxel centre falls exactly on the mesh element. This will lead to erroneous estimations of what is the inside of a grid. You might want to shift the mesh a tiny amount."
         end
         inside_arr[index...] = inpr < 0
     end
