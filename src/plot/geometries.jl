@@ -6,7 +6,7 @@ import Colors
 import GeometryBasics
 import ..PlotPlanes: PlotPlane
 import ...Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, FixedMesh
-import ...Geometries: ObstructionGroup, fix
+import ...Geometries: ObstructionGroup, fix, Mesh
 
 """
     plot(plot_plane, geometry)
@@ -276,7 +276,9 @@ end
 function Makie.plot!(pg::Plot_Geometry3D)
     base_geometry = pg[1]
 
-    geometry = @lift $base_geometry isa FixedGeometry ? $base_geometry : fix($base_geometry)
+    geometry = @lift $base_geometry isa FixedGeometry ? $base_geometry : (
+        $base_geometry isa ObstructionGroup ? fix(Mesh($base_geometry)) : fix(Mesh.($base_geometry))
+    )
 
     function plot_group(group, color)
         if ~(group isa FixedMesh)
