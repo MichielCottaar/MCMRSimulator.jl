@@ -14,7 +14,7 @@ isCI = get(ENV, "CI", "false") == "true"
         @testset "Plot $name in 3D" begin
             function plot_mesh(fname)
                 f = Figure()
-                mr.plot_geometry3d(f[1, 1], geometry)
+                mr.plot_geometry3d(f[1, 1], geometry, axis=(type=CairoMakie.Axis3,))
                 CairoMakie.save(fname, f)
             end
 
