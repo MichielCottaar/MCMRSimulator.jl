@@ -71,7 +71,7 @@ function Makie.plot!(pp::PulsePlot)
                 Makie.arrows!(pp, [get_time(pulse)], [0.], [0.], [height], color=:black)
                 Makie.text!(pp, "α=" * string(Int(round(flip_angle(pulse)))), position=(get_time(pulse), height + 0.05), align=(:center, :center))
             else
-                Makie.text!(pp, string("α=0"), position=(get_time(pulse), 0.05), align=(:center, :center))
+                Makie.text!(pp, string(""), position=(get_time(pulse), 0.05), align=(:center, :center))
             end
         elseif isa(pulse, InstantGradient)
             if ~iszero(qval(pulse))
@@ -79,7 +79,7 @@ function Makie.plot!(pp::PulsePlot)
                 Makie.barplot!(pp, [get_time(pulse)], [height], color=:black)
                 Makie.text!(pp, "q=" * string(round(qval(pulse), sigdigits=2)), position=(get_time(pulse), height + 0.05), align=(:center, :center))
             else
-                Makie.text!(pp, string("q=0"), position=(get_time(pulse), 0.05), align=(:center, :center))
+                Makie.text!(pp, string(""), position=(get_time(pulse), 0.05), align=(:center, :center))
             end
         elseif isa(pulse, Readout)
             Makie.arrows!(pp, [get_time(pulse)], [0.5], [0.], [-0.5], color=:black)
