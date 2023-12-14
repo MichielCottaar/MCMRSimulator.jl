@@ -1,7 +1,6 @@
 module MakieMCMRSimulator
 
 include("utils.jl")
-include("plot_planes.jl")
 #include("sequences.jl")
 include("geometries.jl")
 #include("off_resonance.jl")

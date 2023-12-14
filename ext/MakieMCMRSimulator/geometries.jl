@@ -4,14 +4,13 @@ import StaticArrays: SVector
 import LinearAlgebra: cross, ⋅, norm
 import Colors
 import GeometryBasics
-import ..PlotPlanes: PlotPlane
-import MCMRSimulator.Plot: Plot, plot_geometry!
+import MCMRSimulator.Plot: Plot, plot_geometry!, PlotPlane
 import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, FixedMesh
 import MCMRSimulator.Geometries: ObstructionGroup, fix, Mesh, Cylinders
 
 
 function Plot.plot_geometry!(axis, plot_plane::PlotPlane, geometry::Union{ObstructionGroup, AbstractVector{<:ObstructionGroup}})
-    Plot.plot_geometry!(axis, plot_plane, geometry)
+    Plot.plot_geometry!(axis, plot_plane, fix(geometry))
 end
 
 function Plot.plot_geometry!(axis, plot_plane::PlotPlane, geometry::FixedGeometry)
