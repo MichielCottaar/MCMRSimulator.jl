@@ -1,6 +1,6 @@
 module Utils
 import Colors
-import ...Spins: Spin, SpinOrientation, phase, transverse
+import MCMRSimulator.Spins: Spin, SpinOrientation, phase, transverse
 """
     color(orient::SpinOrientation; saturation=1.)
 

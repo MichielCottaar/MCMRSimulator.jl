@@ -1,9 +1,9 @@
 module PlotPlanes
 import CoordinateTransformations
 import StaticArrays: SVector, MVector
-import ...Spins: Snapshot, orientation, SpinOrientation, position
-import ...Methods: get_rotation
-import ...Geometries.Internal: ray_grid_intersections
+import MCMRSimulator.Spins: Snapshot, orientation, SpinOrientation, position
+import MCMRSimulator.Methods: get_rotation
+import MCMRSimulator.Geometries.Internal: ray_grid_intersections
 
 """
 Defines a finite plane in the 3D space used for plotting.

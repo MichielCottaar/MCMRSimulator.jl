@@ -5,58 +5,24 @@ import LinearAlgebra: cross, ⋅, norm
 import Colors
 import GeometryBasics
 import ..PlotPlanes: PlotPlane
-import ...Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, FixedMesh
-import ...Geometries: ObstructionGroup, fix, Mesh, Cylinders
+import MCMRSimulator.Plot: Plot, plot_geometry!
+import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, FixedMesh
+import MCMRSimulator.Geometries: ObstructionGroup, fix, Mesh, Cylinders
 
-"""
-    plot(plot_plane, geometry)
-    plot!(plot_plane, geometry)
-    plot_geometry(plot_plane, geometry)
-    plot_geometry!(plot_plane, geometry)
 
-Plots the intersections of `geometry` in the [`PlotPlane`](@ref).
-"""
-@Makie.recipe(Plot_Geometry, plot_plane, geometry) do scene
-    Makie.Theme(
-    )
+function Plot.plot_geometry!(axis, plot_plane::PlotPlane, geometry::Union{ObstructionGroup, AbstractVector{<:ObstructionGroup}})
+    Plot.plot_geometry!(axis, plot_plane, geometry)
 end
 
-function Makie.plot!(pg::Plot_Geometry)
-    plot_plane = pg[1]
-    base_geometry = pg[2]
-
-    geometry = @lift $base_geometry isa FixedGeometry ? $base_geometry : fix($base_geometry)
-
-    to_plot = @lift project_geometry($plot_plane, $geometry)
-
-    on(to_plot) do to_iter
-        for (func, args, kwargs) in to_iter
-            func(pg, args...; kwargs...)
-        end
-    end
-    to_plot[] = to_plot[]
-    pg
-end
-
-Makie.plottype(::PlotPlane, ::FixedGeometry) = Plot_Geometry
-Makie.plottype(::PlotPlane, ::ObstructionGroup) = Plot_Geometry
-Makie.plottype(::PlotPlane, ::AbstractVector{<:ObstructionGroup}) = Plot_Geometry
-
-
-function project_geometry(plot_plane::PlotPlane, geometry::FixedGeometry)
-    projections = []
+function Plot.plot_geometry!(axis, plot_plane::PlotPlane, geometry::FixedGeometry)
     for t in geometry
-        append!(projections, project_geometry(plot_plane, t))
+        plot_geometry!(axis, plot_plane, t)
     end
-    projections
 end
 
-"""
-    project_geometry(plot_plane, transform)
+const GeometryLike = Union{ObstructionGroup, AbstractVector{<:ObstructionGroup}, FixedGeometry, FixedObstructionGroup}
 
-Projects the plane on the intrinsic plane of the obstructions deformed by `transform`.
-"""
-function project_geometry(plot_plane::PlotPlane, group::FixedObstructionGroup{N}) where {N}
+function Plot.plot_geometry!(axis, plot_plane::PlotPlane, group::FixedObstructionGroup{N}) where {N}
     center_obstruction_space = plot_plane.transformation(zero(SVector{3, Float64}))
 
     obstruction_coordinates_in_plot_plane = SVector{N, SVector{3, Float64}}(map(p->SVector{3, Float64}(plot_plane.transformation(p)) .- center_obstruction_space, eachcol(group.rotation)))
@@ -65,13 +31,13 @@ function project_geometry(plot_plane::PlotPlane, group::FixedObstructionGroup{N}
     repeats = group.grid.repeating ? group.grid.size : nothing
     for obstruction in group.obstructions
         obstruction_center_in_plot_plane = plot_plane.transformation(group.rotation * obstruction.shift)
-        append!(projections, project_obstruction(obstruction.base, obstruction_center_in_plot_plane, obstruction_coordinates_in_plot_plane, repeats, (plot_plane.sizex, plot_plane.sizey)))
+        plot_obstruction!(axis, obstruction.base, obstruction_center_in_plot_plane, obstruction_coordinates_in_plot_plane, repeats, (plot_plane.sizex, plot_plane.sizey))
     end
     projections
 end
 
 
-function project_obstruction(wall::Wall, center::SVector{3, Float64}, obstruction_coordinates_in_plot_plane::SVector{1, SVector{3, Float64}}, repeats::Union{Nothing, SVector{1, Float64}}, sizes::Tuple{<:Real, <:Real})
+function plot_obstruction!(axis, wall::Wall, center::SVector{3, Float64}, obstruction_coordinates_in_plot_plane::SVector{1, SVector{3, Float64}}, repeats::Union{Nothing, SVector{1, Float64}}, sizes::Tuple{<:Real, <:Real})
     constant_center = obstruction_coordinates_in_plot_plane[1] ⋅ center
     normal = obstruction_coordinates_in_plot_plane[1][1:2]
     halfs = (sizes[1]/2, sizes[2]/2)
@@ -104,10 +70,10 @@ function project_obstruction(wall::Wall, center::SVector{3, Float64}, obstructio
     else
         line = get_line(constant_center)[1:2]
     end
-    [(Makie.lines!, (cut_line(line, halfs), ), Dict())]
+    Makie.lines!(axis, cut_line(line, halfs))
 end
 
-function project_obstruction(obstruction::Cylinder, center_vec::SVector{3, Float64}, obstruction_coordinates_in_plot_plane::SVector{2, SVector{3, Float64}}, repeats::Union{Nothing, SVector{2, Float64}}, sizes::Tuple{<:Real, <:Real})
+function plot_obstruction!(axis, obstruction::Cylinder, center_vec::SVector{3, Float64}, obstruction_coordinates_in_plot_plane::SVector{2, SVector{3, Float64}}, repeats::Union{Nothing, SVector{2, Float64}}, sizes::Tuple{<:Real, <:Real})
     (dirx, diry) = obstruction_coordinates_in_plot_plane
     normal = cross(dirx, diry)
     if normal[3] == 0
@@ -157,7 +123,7 @@ function project_obstruction(obstruction::Cylinder, center_vec::SVector{3, Float
     else
         line = get_line(SVector{2}(center))
     end
-    [(Makie.lines!, (cut_line(line, halfs), ), Dict())]
+    Makie.lines!(axis, cut_line(line, halfs))
 end
 
 function cut_line(old_line::AbstractVector{SVector{2, Float64}}, sizes)
