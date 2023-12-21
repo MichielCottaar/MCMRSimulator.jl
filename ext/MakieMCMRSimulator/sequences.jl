@@ -28,6 +28,17 @@ max_instant_pulse(grad::InstantGradient) = 0.
 max_instant_pulse(pulse::InstantRFPulse) = pulse.flip_angle
 
 
+function Plot.plot_sequence(sequence::Sequence; figure=Dict{Symbol, Any}(), axis=Dict{Symbol, Any}(), kwargs...)
+    f = Figure(; figure...)
+    ax = Axis(f[1, 1]; axis...)
+    plot_sequence!(ax, sequence; kwargs...)
+    if length(ax.scene.plots) == 0
+        return Makie.FigureAxis(f, ax)
+    else
+        return Makie.FigureAxisPlot(f, ax, ax.scene.plots[end])
+    end
+end
+
 function plot_sequence!(scene, sequence::Sequence)
     lines = [
         (label, [0.], [0.], [])
