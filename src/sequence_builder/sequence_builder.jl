@@ -7,5 +7,5 @@ include("sequences/sequences.jl")
 import .BuildingBlocks: BuildingBlock
 import .DefineSequence: define_sequence
 import .Diffusion: add_linear_diffusion_weighting
-import .Sequences: gradient_echo, spin_echo, dwi, dwssfp
+import .Sequences: gradient_echo, spin_echo, dwi, dwssfp, stimulated_echo, dwste
 end

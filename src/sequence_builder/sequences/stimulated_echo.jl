@@ -17,12 +17,12 @@ stimulated_echo(TE,
     refocus_time=nothing,
 )
 
-Creates a gradient echo sequence consisting of:
+Creates a stimulated echo sequence consisting of:
 - `excitation_pulse`: by default this is an [`InstantRFPulse`](@ref), but can be replaced with an [`RFPulse`](@ref). If the excitation does not take place halfway the RF pulse, `excitation_time` should be set as well.
 - a delay
-- `refocus_pulse`: by default this is an [`InstantRFPulse`](@ref), but can be replaced with an [`RFPulse`](@ref). If the refocus does not take place halfway the RF pulse, `refocus_time` should be set as well.
+- `stimulate_pulse`: by default this is an [`InstantRFPulse`](@ref), but can be replaced with an [`RFPulse`](@ref). If the excitation does not take place halfway the RF pulse, `stimulate_time` should be set as well.
 - a readout `TE` ms after the excitation.
-The refocus time is always halfway the excitation time and the readout.
+
 """
 
 function stimulated_echo(TE, 
@@ -36,7 +36,7 @@ function stimulated_echo(TE,
     
 )
     excitation_time = isnothing(excitation_time) ? duration(excitation_pulse) / 2 : excitation_time
-    stimulate_time = isnothing(stimulate_time) ? duration(rstimulate_pulse) / 2 : stimulate_time
+    stimulate_time = isnothing(stimulate_time) ? duration(stimulate_pulse) / 2 : stimulate_time
     define_sequence(scanner, TR) do 
         [
             excitation_pulse,
@@ -59,10 +59,11 @@ end
         bval/qval/gradient_strength=<one is required>, orientation=:x,
         )
 
-Creates a gradient echo sequence consisting of:
+Creates a stimulated echo sequence consisting of:
 - `excitation_pulse`: by default this is an [`InstantRFPulse`](@ref), but can be replaced with an [`RFPulse`](@ref). If the excitation does not take place halfway the RF pulse, `excitation_time` should be set as well.
 - diffusion weighting
-- `refocus_pulse`: by default this is an [`InstantRFPulse`](@ref), but can be replaced with an [`RFPulse`](@ref). If the refocus does not take place halfway the RF pulse, `refocus_time` should be set as well.
+- 2x `stimulate_pulse`: by default this is an [`InstantRFPulse`](@ref), but can be replaced with an [`RFPulse`](@ref). If the excitation does not take place halfway the RF pulse, `refocus_time` should be set as well.
+- 'stimulate_interval' between 2 stimulate_pulses
 - identical diffusion weighting cancelling out the first one
 - a readout `TE` ms after the excitation.
 The refocus time is always halfway the excitation time and the readout.
@@ -81,7 +82,7 @@ function dwste(stimulate_interval;
     scanner=Scanner(B0=3.),
     excitation_pulse=InstantRFPulse(flip_angle=90, phase=-90),
     excitation_time=nothing,
-    stimulate_pulse=InstantRFPulse(flip_angle=180, phase=0),
+    stimulate_pulse=InstantRFPulse(flip_angle=90, phase=0),
     stimulate_time=nothing,
     bval=nothing,
     diffusion_time=nothing,
@@ -96,7 +97,7 @@ function dwste(stimulate_interval;
             TE,
             stimulate_interval;
             excitation_pulse=excitation_pulse, excitation_time=excitation_time,
-            stimulate_pulse=refocus_pulse, stimulate_time=refocus_time, scanner=scanner
+            stimulate_pulse=stimulate_pulse, stimulate_time=stimulate_time, scanner=scanner
         )
 
         if !iszero(readout_time)
