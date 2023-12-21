@@ -9,19 +9,19 @@ import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup, 
 import MCMRSimulator.Geometries: User, ObstructionGroup, fix, Cylinders
 
 
-function Plot.plot_geometry!(axis, plot_plane::PlotPlane, geometry::Union{ObstructionGroup, AbstractVector{<:ObstructionGroup}})
-    Plot.plot_geometry!(axis, plot_plane, geometry)
+function Plot.plot_geometry!(axis, plot_plane::PlotPlane, geometry::Union{ObstructionGroup, AbstractVector{<:ObstructionGroup}}; kwargs...)
+    Plot.plot_geometry!(axis, plot_plane, geometry; kwargs...)
 end
 
-function Plot.plot_geometry!(axis, plot_plane::PlotPlane, geometry::FixedGeometry)
+function Plot.plot_geometry!(axis, plot_plane::PlotPlane, geometry::FixedGeometry; kwargs...)
     for t in geometry
-        plot_geometry!(axis, plot_plane, t)
+        plot_geometry!(axis, plot_plane, t; kwargs...)
     end
 end
 
 const GeometryLike = Union{ObstructionGroup, AbstractVector{<:ObstructionGroup}, FixedGeometry, FixedObstructionGroup}
 
-function Plot.plot_geometry!(axis, plot_plane::PlotPlane, group::FixedObstructionGroup{N}) where {N}
+function Plot.plot_geometry!(axis, plot_plane::PlotPlane, group::FixedObstructionGroup{N}, kwargs...) where {N}
     center_obstruction_space = plot_plane.transformation(zero(SVector{3, Float64}))
 
     obstruction_coordinates_in_plot_plane = SVector{N, SVector{3, Float64}}(map(p->SVector{3, Float64}(plot_plane.transformation(p)) .- center_obstruction_space, eachcol(group.rotation)))
@@ -30,13 +30,13 @@ function Plot.plot_geometry!(axis, plot_plane::PlotPlane, group::FixedObstructio
     repeats = group.grid.repeating ? group.grid.size : nothing
     for obstruction in group.obstructions
         obstruction_center_in_plot_plane = plot_plane.transformation(group.rotation * obstruction.shift)
-        plot_obstruction!(axis, obstruction.base, obstruction_center_in_plot_plane, obstruction_coordinates_in_plot_plane, repeats, (plot_plane.sizex, plot_plane.sizey))
+        plot_obstruction!(axis, obstruction.base, obstruction_center_in_plot_plane, obstruction_coordinates_in_plot_plane, repeats, (plot_plane.sizex, plot_plane.sizey), kwargs...)
     end
     projections
 end
 
 
-function plot_obstruction!(axis, wall::Wall, center::SVector{3, Float64}, obstruction_coordinates_in_plot_plane::SVector{1, SVector{3, Float64}}, repeats::Union{Nothing, SVector{1, Float64}}, sizes::Tuple{<:Real, <:Real})
+function plot_obstruction!(axis, wall::Wall, center::SVector{3, Float64}, obstruction_coordinates_in_plot_plane::SVector{1, SVector{3, Float64}}, repeats::Union{Nothing, SVector{1, Float64}}, sizes::Tuple{<:Real, <:Real}; kwargs...)
     constant_center = obstruction_coordinates_in_plot_plane[1] ⋅ center
     normal = obstruction_coordinates_in_plot_plane[1][1:2]
     halfs = (sizes[1]/2, sizes[2]/2)
@@ -69,10 +69,10 @@ function plot_obstruction!(axis, wall::Wall, center::SVector{3, Float64}, obstru
     else
         line = get_line(constant_center)[1:2]
     end
-    Makie.lines!(axis, cut_line(line, halfs))
+    Makie.lines!(axis, cut_line(line, halfs); kwargs...)
 end
 
-function plot_obstruction!(axis, obstruction::Cylinder, center_vec::SVector{3, Float64}, obstruction_coordinates_in_plot_plane::SVector{2, SVector{3, Float64}}, repeats::Union{Nothing, SVector{2, Float64}}, sizes::Tuple{<:Real, <:Real})
+function plot_obstruction!(axis, obstruction::Cylinder, center_vec::SVector{3, Float64}, obstruction_coordinates_in_plot_plane::SVector{2, SVector{3, Float64}}, repeats::Union{Nothing, SVector{2, Float64}}, sizes::Tuple{<:Real, <:Real}; kwargs...)
     (dirx, diry) = obstruction_coordinates_in_plot_plane
     normal = cross(dirx, diry)
     if normal[3] == 0
@@ -122,7 +122,7 @@ function plot_obstruction!(axis, obstruction::Cylinder, center_vec::SVector{3, F
     else
         line = get_line(SVector{2}(center))
     end
-    Makie.lines!(axis, cut_line(line, halfs))
+    Makie.lines!(axis, cut_line(line, halfs); kwargs...)
 end
 
 function cut_line(old_line::AbstractVector{SVector{2, Float64}}, sizes)
