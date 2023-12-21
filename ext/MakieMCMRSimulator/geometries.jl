@@ -10,7 +10,7 @@ import MCMRSimulator.Geometries: User, ObstructionGroup, fix, Cylinders
 
 
 function Plot.plot_geometry!(axis, plot_plane::PlotPlane, geometry::Union{ObstructionGroup, AbstractVector{<:ObstructionGroup}}; kwargs...)
-    Plot.plot_geometry!(axis, plot_plane, geometry; kwargs...)
+    Plot.plot_geometry!(axis, plot_plane, fix(geometry); kwargs...)
 end
 
 function Plot.plot_geometry!(axis, plot_plane::PlotPlane, geometry::FixedGeometry; kwargs...)
