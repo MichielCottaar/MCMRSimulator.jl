@@ -2,27 +2,111 @@ module Sequences
 using Makie
 import Colors
 import LinearAlgebra: norm
-import ...Sequences: Sequence, MRGradients, RFPulse, Readout, InstantComponent, InstantGradient, InstantRFPulse
-import ...Sequences: flip_angle, qval, control_points, gradient
-import ...Methods: get_time
-@Makie.recipe(Sequence_Plot, seq) do scene
-    Makie.Theme(
-        max_G=nothing,
-        single_gradient=false,
-    )
+import MCMRSimulator.Sequences: Sequence, MRGradients, RFPulse, Readout, InstantComponent, InstantGradient, InstantRFPulse
+import MCMRSimulator.Sequences: flip_angle, qval, control_points, gradient
+import MCMRSimulator.Methods: get_time
+import MCMRSimulator.Plot: Plot, plot_sequence!
+
+
+
+max_finite_gradient(sequence::Sequence{L, K, M, 0}) where {L, K, M} = 0.
+max_finite_gradient(sequence::Sequence) = maximum(max_finite_gradient.(sequence.gradients))
+max_finite_gradient(grad::MRGradients) = maximum(abs.(reduce(vcat, grad.shape.amplitudes)), init=0.)
+
+max_instant_gradient(sequence::Sequence{0}) = 0.
+max_instant_gradient(sequence::Sequence) = maximum(max_instant_gradient.(sequence.instants))
+max_instant_gradient(grad::InstantGradient) = maximum(abs.(grad.qvec))
+max_instant_gradient(pulse::InstantRFPulse) = 0.
+
+max_finite_pulse(sequence::Sequence{L, 0}) where {L} = 0.
+max_finite_pulse(sequence::Sequence) = maximum(max_finite_pulse.(sequence.pulses))
+max_finite_pulse(pulse::RFPulse) = maximum(abs.(pulse.amplitude.amplitudes), init=0.)
+
+max_instant_pulse(sequence::Sequence{0}) = 0.
+max_instant_pulse(sequence::Sequence) = maximum(max_instant_pulse.(sequence.instants))
+max_instant_pulse(grad::InstantGradient) = 0.
+max_instant_pulse(pulse::InstantRFPulse) = pulse.flip_angle
+
+
+function plot_sequence!(scene, sequence::Sequence)
+    lines = [
+        (label, [0.], [0.], [])
+        for label in ("RFx", "RFy", "G1↺", "G2↺", "G3↺", "Gx", "Gy", "Gz")
+    ]
+
+    scale = max_finite_pulse(sequence)
+    for pulse in sequence.pulses
+        append!(lines[1][2], pulse.amplitude.times)
+        append!(lines[2][2], pulse.amplitude.times)
+        append!(lines[1][3], pulse.amplitude.amplitudes .* cosd.(pulse.phase.amplitudes) ./ scale)
+        append!(lines[2][3], pulse.amplitude.amplitudes .* sind.(pulse.phase.amplitudes) ./ scale)
+    end
+
+    scale = max_instant_pulse(sequence)
+    for instant_pulse in sequence.instants
+        if !(instant_pulse isa InstantRFPulse)
+            continue
+        end
+        if cosd(instant_pulse.phase) != 0.
+            push!(lines[1][4], (instant_pulse.time, instant_pulse.flip_angle * cosd(instant_pulse.phase) / scale))
+        end
+        if sind(instant_pulse.phase) != 0.
+            push!(lines[2][4], (instant_pulse.time, instant_pulse.flip_angle * sind(instant_pulse.phase) / scale))
+        end
+    end
+
+    instant_scale = max_instant_gradient(sequence)
+    finite_scale = max_finite_gradient(sequence)
+    for base_index in (2, 5)
+        for dim in (1, 2, 3)
+            index = base_index + dim
+
+            for grad in sequence.gradients
+                if xor(base_index == 2, grad.apply_bvec)
+                    continue
+                end
+                append!(lines[index][2], grad.shape.times)
+                append!(lines[index][3], [a[dim] for a in grad.shape.amplitudes] ./ finite_scale)
+            end
+            for instant_grad in sequence.instants
+                if !(instant_grad isa InstantGradient)
+                    continue
+                end
+                if xor(base_index == 2, instant_grad.apply_bvec)
+                    continue
+                end
+                push!(lines[index][4], (instant_grad.time, instant_grad.qvec[dim] ./ instant_scale))
+            end
+        end
+    end
+
+    current_y = 0.
+    for ln in lines[end:-1:1]
+        push!(ln[2], sequence.TR)
+        push!(ln[3], 0.)
+        lower = min(minimum(ln[3], init=0.), minimum([a[2] for a in ln[4]], init=0.))
+        upper = max(maximum(ln[3], init=0.), maximum([a[2] for a in ln[4]], init=0.))
+        if lower == upper
+            continue
+        end
+        Makie.text!(scene, ln[1] * " ", position=(0., current_y - lower), align=(:right, :center))
+        Makie.lines!(scene, ln[2], ln[3] .- (lower - current_y), color=:black, linewidth=1.5)
+        for (time, height) in ln[4]
+            Makie.lines!(scene, [time, time], [current_y - lower, current_y - lower + height], color=:black, linewidth=5)
+        end
+
+        current_y += (upper - lower) + 0.1
+    end
 end
 
-"""
-    plot(sequence)
-    plot!(sequence)
-    plot_sequence(sequence)
-    plot_sequence!(sequence)
+function plot_sequence(sequence::Sequence)
+    sc = Scene()
+    plot_sequence!(sc, sequence)
+    return sc
+end
 
-Creates a visual representation of a [`Sequence`](@ref) diagram.
-"""
-function sequence_plot end
 
-function Makie.plot!(sp::Sequence_Plot)
+function old()
     seq = sp[1]
     on(@lift ($(sp[1]), $(sp[:max_G]), $(sp[:single_gradient]))) do as_tuple
         (s, max_G, sg) = as_tuple
@@ -106,34 +190,38 @@ Makie.plottype(::RFPulse) = PulsePlot
     )
 end
 
-function Makie.plot!(gp::GradientPlot)
-    comb = @lift ($(gp[1]), $(gp[:max_G]), $(gp[:single_gradient]))
+"""
+    plot_gradient!(axis, sequence, dimension)
+"""
+function plot_gradient!(axis, sequence::Sequence, dimension::Int)
+    times = [0.]
+    amplitudes = [0.]
 
-    on(comb) do as_tuple
-        (gradient_profile, max_G, single_grad) = as_tuple
-        cp = sort(unique(control_points(gradient_profile)))
-        times = sort(unique([
-            prevfloat.(cp[2:end])...
-            nextfloat.(cp[1:end-1])...
-        ]))
-        gradients = [gradient(gradient_profile, t) for t in times]
-        if length(gradients) > 0
-            grad_sizes = [norm(g) for g in gradients]
-            if isnothing(max_G) | !isfinite(max_G)
-                max_G = maximum(grad_sizes)
-            end
-            if single_grad
-                rgb = [Colors.RGB(abs.(g./s)...) for (g, s) in zip(gradients, grad_sizes)]
-                Makie.lines!(gp, times, [s / max_G for s in grad_sizes], color=1:length(times), colormap=rgb)
+    plot_rotation = iszero(dimension)
+
+    for grad in sequence.gradients
+        if xor(plot_rotation, ~grad.apply_bvec)
+            continue
+        end
+        shape = grad.shape
+        for (time, full_amplitude) in zip(shape.times, shape.amplitudes)
+            push!(times, time)
+            if plot_rotation
+                push!(amplitudes, norm(full_amplitude))
             else
-                for (dim, color) in zip(1:3, ("red", "green", "blue"))
-                    Makie.lines!(gp, times, [g[dim] / max_G for g in gradients], color=color)
-                end
+                push!(amplitudes, full_amplitude[dimension])
             end
         end
     end
-    gp[1][] = gp[1][]
-    gp
+    push!(times, sequence.TR)
+    push!(amplitudes, 0.)
+    lines!(axis, times, amplitudes)
+    for grad in sequence.instants
+        if ~(grad isa InstantGradient)
+            continue
+        end
+
+    end
 end
 
 Makie.plottype(::MRGradients) = GradientPlot

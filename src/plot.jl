@@ -2,7 +2,7 @@
 Defines the plotting functions.
 
 This modules does not actually implement these functions.
-Instead they are implemented in the `MakieMCMRSimulator` extension if [`Makie`](https://makie.org) is installed.
+Instead they are implemented in the `MakieMCMRSimulator` extension if [`Makie`](https://makie.org) is installed and used.
 
 The exception to this is the [`PlotPlane`](@ref), which is defined here.
 """
@@ -19,7 +19,7 @@ import ..Geometries.Internal: ray_grid_intersections
 Plots the geometry in a new plot. 
 If `plot_plane` is provided the projection on it will be plotted. Otherwise, the 3-dimensional geometry will be plotted.
 
-This function will only work if [`Makie`](https://makie.org) is installed.
+This function will only work if [`Makie`](https://makie.org) is installed and used.
 """
 function plot_geometry end
 
@@ -29,10 +29,27 @@ function plot_geometry end
 Plots the geometry on an existing plot axis.
 If `plot_plane` is provided the projection on it will be plotted. Otherwise, the 3-dimensional geometry will be plotted.
 
-This function will only work if [`Makie`](https://makie.org) is installed.
+This function will only work if [`Makie`](https://makie.org) is installed and used.
 """
 function plot_geometry! end
 
+"""
+    plot_sequence(sequence)
+
+Plots the sequence in a new plot. 
+
+This function will only work if [`Makie`](https://makie.org) is installed and used.
+"""
+function plot_sequence end
+
+"""
+    plot_sequence!(axis, sequence)
+
+Plots the sequence on an existing plot axis.
+
+This function will only work if [`Makie`](https://makie.org) is installed and used.
+"""
+function plot_sequence! end
 
 """
 Defines a finite plane in the 3D space used for plotting.
