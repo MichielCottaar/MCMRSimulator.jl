@@ -84,6 +84,9 @@ export constant_pulse, read_pulseq
 import .SequenceBuilder: BuildingBlock, define_sequence, add_linear_diffusion_weighting, gradient_echo, spin_echo, dwi, trapezium_gradient
 export BuildingBlock, define_sequence, add_linear_diffusion_weighting, gradient_echo, spin_echo, dwi, trapezium_gradient
 
+import .Plot: PlotPlane, plot_geometry, plot_geometry!, plot_sequence, plot_sequence!
+export PlotPlane, plot_geometry, plot_geometry!, plot_sequence, plot_sequence!
+
 import .Plot: PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d, simulator_movie, plot_off_resonance, plot_geometry3d, plot_geometry3d!
 export PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d, simulator_movie, plot_off_resonance, plot_geometry3d, plot_geometry3d!
 
