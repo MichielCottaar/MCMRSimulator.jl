@@ -28,10 +28,13 @@ max_instant_pulse(grad::InstantGradient) = 0.
 max_instant_pulse(pulse::InstantRFPulse) = pulse.flip_angle
 
 
-function Plot.plot_sequence(sequence::Sequence; figure=Dict{Symbol, Any}(), axis=Dict{Symbol, Any}(), kwargs...)
+function Plot.plot_sequence(sequence::Sequence; figure=Dict{Symbol, Any}(), axis=Dict{Symbol, Any}(:xlabel => "Time (ms)"), kwargs...)
     f = Figure(; figure...)
     ax = Axis(f[1, 1]; axis...)
     plot_sequence!(ax, sequence; kwargs...)
+    hidespines!(ax, :l, :r, :t)
+    hideydecorations!(ax)
+    xlims!(ax, -sequence.TR/10, sequence.TR)
     if length(ax.scene.plots) == 0
         return Makie.FigureAxis(f, ax)
     else
