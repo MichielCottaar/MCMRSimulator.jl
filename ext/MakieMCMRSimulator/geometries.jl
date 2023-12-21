@@ -6,11 +6,11 @@ import Colors
 import GeometryBasics
 import MCMRSimulator.Plot: Plot, plot_geometry!, PlotPlane
 import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, FixedMesh
-import MCMRSimulator.Geometries: ObstructionGroup, fix, Mesh, Cylinders
+import MCMRSimulator.Geometries: User, ObstructionGroup, fix, Cylinders
 
 
 function Plot.plot_geometry!(axis, plot_plane::PlotPlane, geometry::Union{ObstructionGroup, AbstractVector{<:ObstructionGroup}})
-    Plot.plot_geometry!(axis, plot_plane, fix(geometry))
+    Plot.plot_geometry!(axis, plot_plane, geometry)
 end
 
 function Plot.plot_geometry!(axis, plot_plane::PlotPlane, geometry::FixedGeometry)
@@ -19,19 +19,7 @@ function Plot.plot_geometry!(axis, plot_plane::PlotPlane, geometry::FixedGeometr
     end
 end
 
-
 const GeometryLike = Union{ObstructionGroup, AbstractVector{<:ObstructionGroup}, FixedGeometry, FixedObstructionGroup}
-
-function Plot.plot_geometry(plot_plane::PlotPlane, geometry::GeometryLike; figure=Dict{Symbol, Any}(), axis=Dict{Symbol, Any}(), kwargs...)
-    f = Figure(; figure...)
-    ax = Axis(f[1, 1]; axis...)
-    plot_geometry!(ax, plot_plane, geometry; kwargs...)
-    if length(ax.scene.plots) == 0
-        return Makie.FigureAxis(f, ax)
-    else
-        return Makie.FigureAxisPlot(f, ax, ax.scene.plots[end])
-    end
-end
 
 function Plot.plot_geometry!(axis, plot_plane::PlotPlane, group::FixedObstructionGroup{N}) where {N}
     center_obstruction_space = plot_plane.transformation(zero(SVector{3, Float64}))
