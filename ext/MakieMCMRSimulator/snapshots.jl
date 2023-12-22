@@ -59,8 +59,8 @@ function dyad_snapshot!(scene, plot_plane::PlotPlane, snapshot::Snapshot; sequen
 end
 
 function image_snapshot!(scene, plot_plane::PlotPlane, snapshot::Snapshot; sequence=1, ngrid=20, interpolate=true, kwargs...)
-    projection = project_on_grid(planar, get_sequence(snapshot, sequence=sequence), ngrid)
-    Makie.heatmap!(sp, projection[1], projection[2], color.(projection[3]); kwargs...)
+    projection = project_on_grid(plot_plane, get_sequence(snapshot, sequence), ngrid)
+    Makie.heatmap!(scene, projection[1], projection[2], color.(projection[3]); interpolate=interpolate, kwargs...)
 end
 
 end
