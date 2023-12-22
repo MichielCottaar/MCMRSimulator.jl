@@ -10,7 +10,7 @@ In the future, we will also provide docker and singularity images to make it pos
 2. Start the julia REPL in a terminal (`$ julia --project=<project_dir>`).
 3. Enter the package manager by pressing "]"
    - Install MCMRSimulator.jl using `pkg> add https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl.git{install_version}`.
-   - Optionally, install one of the [Makie backends](https://makie.juliaplots.org/stable/documentation/backends/) for plotting (e.g., `pkg> add CairoMakie`).
+   - Optionally, install one of the [Makie backends](https://makie.juliaplots.org/stable/documentation/backends/) for plotting (e.g., `pkg> add CairoMakie`). If you are not planning on making any plots, you can skip this step.
    - If you want to use a Jupyter notebook, you will also have to install `IJulia`. You can find instructions to do so at https://github.com/JuliaLang/IJulia.jl.
    - Press "\[backspace\]" to leave the package manager.
 
