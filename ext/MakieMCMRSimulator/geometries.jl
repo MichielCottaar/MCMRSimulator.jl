@@ -21,12 +21,13 @@ end
 
 const GeometryLike = Union{ObstructionGroup, AbstractVector{<:ObstructionGroup}, FixedGeometry, FixedObstructionGroup}
 
-function Plot.plot_geometry(plot_plane::PlotPlane, geometry::GeometryLike; figure=Dict{Symbol, Any}(), axis=Dict{Symbol, Any}(), kwargs...)
+function Plot.plot_geometry(args...; figure=Dict{Symbol, Any}(), axis=Dict{Symbol, Any}(), kwargs...)
     f = Figure(; figure...)
     axis[:xgridvisible] = pop!(axis, :xgridvisible, false)
     axis[:ygridvisible] = pop!(axis, :ygridvisible, false)
-    ax = Axis(f[1, 1]; axis...)
-    plot_geometry!(ax, plot_plane, geometry; kwargs...)
+    ax_type = length(args) == 1 ? Axis3 : Axis
+    ax = ax_type(f[1, 1]; axis...)
+    plot_geometry!(ax, args...; kwargs...)
     if length(ax.scene.plots) == 0
         return Makie.FigureAxis(f, ax)
     else
