@@ -43,15 +43,14 @@ end
 end
 
 @testset "pulseseq example PRESS sequence" begin
-    function plot_press(fname, single_gradient=false)
+    function plot_press(fname)
         fn = joinpath(dir, "..", "..", "example_pulseseq", "01_from_FID_to_PRESS_v140", "06_PRESS_center.seq")
         sequence = mr.read_pulseq(fn)
-        f = mr.plot_sequence(sequence; single_gradient=single_gradient)
+        f = mr.plot_sequence(sequence)
         CairoMakie.save(fname, f.figure)
     end
 
-    @visualtest fn->plot_press(fn, true) "$dir/single_pulseq_press.png" !isCI
-    @visualtest fn->plot_press(fn, false) "$dir/multi_pulseq_press.png" !isCI
+    @visualtest plot_press "$dir/pulseq_press.png" !isCI
 end
 
 end
