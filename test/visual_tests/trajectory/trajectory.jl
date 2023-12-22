@@ -7,9 +7,8 @@
             snapshot = mr.Snapshot([mr.Spin() for _ in 1:4])
             simulation = mr.Simulation(mr.dwi(bval=0.1, TE=80, gradient_duration=0), diffusivity=3.)
             trajectory = mr.readout(snapshot, simulation, 0:0.1:80, return_snapshot=true)
-            f = Figure()
-            mr.plot_trajectory3d(f[1, 1], trajectory, sequence=1, axis=(type=CairoMakie.Axis3,))
-            CairoMakie.save(fname, f)
+            f = mr.plot_trajectory(trajectory, sequence=1)
+            CairoMakie.save(fname, f.figure)
         end
 
         @visualtest plot_trajectory "$dir/trajectory_3d.png" !isCI
@@ -21,9 +20,8 @@
             simulation = mr.Simulation(mr.dwi(bval=0.1, TE=80, gradient_duration=0), diffusivity=3.)
             trajectory = mr.readout(snapshot, simulation, 0:0.1:80, return_snapshot=true)
             pp = mr.PlotPlane(sizex=30., sizey=30.)
-            f = Figure()
-            mr.plot_trajectory2d(f[1, 1], pp, trajectory, sequence=1)
-            CairoMakie.save(fname, f)
+            f = mr.plot_trajectory(pp, trajectory, sequence=1)
+            CairoMakie.save(fname, f.figure)
         end
 
         @visualtest plot_trajectory "$dir/trajectory_2d.png" !isCI

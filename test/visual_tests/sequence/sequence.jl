@@ -6,10 +6,8 @@ isCI = get(ENV, "CI", "false") == "true"
 @testset "Instantaneous gradients & pulses" begin
     function plot_perfect_dwi(fname)
         sequence = mr.dwi(bval=2., gradient_duration=0)
-        f = Figure()
-        Axis(f[1, 1])
-        plot!(sequence)
-        CairoMakie.save(fname, f)
+        f = mr.plot_sequence(sequence)
+        CairoMakie.save(fname, f.figure)
     end
 
     @visualtest plot_perfect_dwi "$dir/perfect_dwi.png" !isCI
@@ -27,10 +25,8 @@ end
         ]
 
         sequence = mr.Sequence(components=pulses, TR=30.)
-        f = Figure()
-        Axis(f[1, 1])
-        plot!(sequence)
-        CairoMakie.save(fname, f)
+        f = mr.plot_sequence(sequence)
+        CairoMakie.save(fname, f.figure)
     end
 
     @visualtest plot_finite_rf "$dir/finite_rf.png" !isCI
@@ -39,10 +35,8 @@ end
 @testset "Finite gradients" begin
     function plot_finite_dwi(fname, single_gradient=false)
         sequence = mr.dwi(bval=2., TE=80, TR=100, orientation=[0, -1, 1])
-        f = Figure()
-        Axis(f[1, 1])
-        plot!(sequence; single_gradient=single_gradient)
-        CairoMakie.save(fname, f)
+        f = mr.plot_sequence(sequence; single_gradient=single_gradient)
+        CairoMakie.save(fname, f.figure)
     end
 
     @visualtest fn->plot_finite_dwi(fn, true) "$dir/single_grad_dwi.png" !isCI

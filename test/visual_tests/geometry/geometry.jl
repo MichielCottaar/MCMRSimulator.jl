@@ -13,9 +13,8 @@ isCI = get(ENV, "CI", "false") == "true"
     ]
         @testset "Plot $name in 3D" begin
             function plot_mesh(fname)
-                f = Figure()
-                mr.plot_geometry3d(f[1, 1], geometry, axis=(type=CairoMakie.Axis3,))
-                CairoMakie.save(fname, f)
+                f = mr.plot_geometry(geometry)
+                CairoMakie.save(fname, f.figure)
             end
 
             @visualtest plot_mesh "$dir/$(name)_3D.png" !isCI
@@ -31,9 +30,8 @@ end
     pp = mr.PlotPlane()
 
     function plot_walls(fname)
-        f = Figure()
-        mr.plot_geometry(f[1, 1], pp, geometry)
-        CairoMakie.save(fname, f)
+        f = mr.plot_geometry(pp, geometry)
+        CairoMakie.save(fname, f.figure)
     end
 
     @visualtest plot_walls "$dir/walls.png" !isCI

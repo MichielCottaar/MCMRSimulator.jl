@@ -1,8 +1,8 @@
 @testset "Snapshot plots" begin
     isCI = get(ENV, "CI", "false") == "true"
     dir = @__DIR__
-    @testset "Spins as dyads" begin
-        function plot_dyads(fname)
+    @testset "Spins as dyads or scatter plot" begin
+        function plot_dyads(fname, kind)
             snapshot = mr.Snapshot(
                 [
                     mr.Spin(position=[0, 0, 0], transverse=0.8, phase=0.)
@@ -12,12 +12,12 @@
                 ]
             )
             plot_plane = mr.PlotPlane()
-            f = Figure()
-            mr.dyad_snapshot(f[1, 1], plot_plane, snapshot; dyadlength=1.)
-            CairoMakie.save(fname, f)
+            f = mr.plot_snapshot(plot_plane, snapshot; dyadlength=1., kind=kind)
+            CairoMakie.save(fname, f.figure)
         end
 
-        @visualtest plot_dyads "$dir/dyad_snapshot.png" !isCI
+        @visualtest fn => plot_dyads(fn, :dyad) "$dir/dyad_snapshot.png" !isCI
+        @visualtest fn => plot_dyads(fn, :scatter) "$dir/scatter_snapshot.png" !isCI
     end
     @testset "Spins as image" begin
         function plot_image(fname)
@@ -30,9 +30,8 @@
                 ]
             )
             plot_plane = mr.PlotPlane()
-            f = Figure()
-            mr.plot_snapshot(f[1, 1], plot_plane, snapshot, ndyads=10, dyadlength=0.5, ngrid=10)
-            CairoMakie.save(fname, f)
+            f = mr.plot_snapshot(plot_plane, snapshot, ngrid=10, kind=:image)
+            CairoMakie.save(fname, f.figure)
         end
 
         @visualtest plot_image "$dir/image_snapshot.png" !isCI
