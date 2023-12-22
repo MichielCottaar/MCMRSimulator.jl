@@ -33,24 +33,21 @@ end
 end
 
 @testset "Finite gradients" begin
-    function plot_finite_dwi(fname, single_gradient=false)
+    function plot_finite_dwi(fname)
         sequence = mr.dwi(bval=2., TE=80, TR=100, orientation=[0, -1, 1])
-        f = mr.plot_sequence(sequence; single_gradient=single_gradient)
+        f = mr.plot_sequence(sequence)
         CairoMakie.save(fname, f.figure)
     end
 
-    @visualtest fn->plot_finite_dwi(fn, true) "$dir/single_grad_dwi.png" !isCI
-    @visualtest fn->plot_finite_dwi(fn, false) "$dir/multi_grad_dwi.png" !isCI
+    @visualtest plot_finite_dwi "$dir/grad_dwi.png" !isCI
 end
 
 @testset "pulseseq example PRESS sequence" begin
     function plot_press(fname, single_gradient=false)
         fn = joinpath(dir, "..", "..", "example_pulseseq", "01_from_FID_to_PRESS_v140", "06_PRESS_center.seq")
         sequence = mr.read_pulseq(fn)
-        f = Figure()
-        Axis(f[1, 1])
-        plot!(sequence; single_gradient=single_gradient)
-        CairoMakie.save(fname, f)
+        f = mr.plot_sequence(sequence; single_gradient=single_gradient)
+        CairoMakie.save(fname, f.figure)
     end
 
     @visualtest fn->plot_press(fn, true) "$dir/single_pulseq_press.png" !isCI
