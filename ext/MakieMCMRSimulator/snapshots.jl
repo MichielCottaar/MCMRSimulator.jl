@@ -52,9 +52,9 @@ function scatter_snapshot!(scene, plot_plane::PlotPlane, snapshot::Snapshot; seq
     Makie.scatter!(scene, pos; color=colors, kwargs...)
 end
 
-function dyad_snapshot!(scene, plot_plane::PlotPlane, snapshot::Snapshot; sequence=1, dyad_length=0.1, kwargs...)
+function dyad_snapshot!(scene, plot_plane::PlotPlane, snapshot::Snapshot; sequence=1, dyadlength=0.1, kwargs...)
     pos = [Makie.Point2f(project(plot_plane, position(spin))[1:2]) for spin in snapshot]
-    directions = [Makie.Point2f(orientation(get_sequence(s, sequence))[1:2] .* dyad_length) for s in snapshot]
+    directions = [Makie.Point2f(orientation(get_sequence(s, sequence))[1:2] .* dyadlength) for s in snapshot]
     Makie.arrows!(scene, pos, directions; kwargs...)
 end
 
