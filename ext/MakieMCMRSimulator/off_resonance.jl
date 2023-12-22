@@ -7,7 +7,7 @@ import MCMRSimulator.Geometries: fix_susceptibility
 import ..Geometries: GeometryLike
 
 
-Plot.plot_off_resonance!(scene, plot_plane::PlotPlane, geometry) = plot_off_resonance!(scene, plot_plane, fix_susceptibility(geometry))
+Plot.plot_off_resonance!(scene, plot_plane::PlotPlane, geometry; kwargs...) = plot_off_resonance!(scene, plot_plane, fix_susceptibility(geometry); kwargs...)
 function Plot.plot_off_resonance!(scene, plot_plane::PlotPlane, susc::FixedSusceptibility; ngrid=400, colormap=:viridis)
     dims = -0.5:(1/ngrid):0.5
     xx_1d = dims * plot_plane.sizex
