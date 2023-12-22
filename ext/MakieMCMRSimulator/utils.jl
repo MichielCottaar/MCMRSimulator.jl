@@ -10,6 +10,6 @@ Brighter colors have a larger transverse component, so that spins with no transv
 The actual color encodes the spin orientation.
 """
 color(orient::SpinOrientation; saturation=1.) = Colors.HSV(phase(orient) + 180, saturation, transverse(orient))
-color(spin::Spin{N}; sequence=1, kwargs...) where {N} = color(spin.orient[sequence]; kwargs...)
+color(spin::Spin{N}; sequence=1, kwargs...) where {N} = color(spin.orientations[sequence]; kwargs...)
 
 end
