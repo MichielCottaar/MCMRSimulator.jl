@@ -73,6 +73,64 @@ This function will only work if [`Makie`](https://makie.org) is installed and im
 """
 function plot_sequence! end
 
+"""
+    plot_snapshot([plot_plane], snapshot; kind=:scatter, kwargs...)
+
+Plots a [`Snapshot`](@ref) in a new plot. 
+
+The spins are plotted in 2D projected onto the [`PlotPlane`](@ref) if one is provided.
+Otherwise, the spins are plotted in 3D (does not work for `kind=:image`).
+
+There are three kinds of snapshot plots available:
+## Scatter plot
+Default (or set using `kind=:scatter`). Each spin is plotted as a point with the colour set by the transverse magnetisation.
+Additional keywords are passed on to `Makie.meshscatter`.
+
+## Dyad plot
+Set using `kind=:dyad`. Each spin is plotted as a dyad. For a 2D dyad the orienation is set by the transverse magnetisation.
+For a 3D dyad the full magnetisation is used to set the orienation.
+The length of the dyads can be controlled using `dyad_length` (0.1 by default).
+Additional keywords are passed on to `Makie.arrows`.
+
+## Image
+Set using `kind=:image`. The average magnetisation is plotted across the [`PlotPlane`](@ref). 
+The colour in each pixel is set by the average transverse magnetisation of the local spins.
+Additional keywords are passed on to `Makie.image!`.
+This plot will not work in 3D (i.e., a [`PlotPlane`](@ref) is required).
+
+This function will only work if [`Makie`](https://makie.org) is installed and imported.
+"""
+function plot_snapshot end
+
+"""
+    plot_snapshot!([plot_plane], snapshot; kind=:scatter)
+
+Plots a [`Snapshot`](@ref) on an existing plot scene. 
+
+The spins are plotted in 2D projected onto the [`PlotPlane`](@ref) if one is provided.
+Otherwise, the spins are plotted in 3D (does not work for `kind=:image`).
+
+There are three kinds of snapshot plots available:
+## Scatter plot
+Default (or set using `kind=:scatter`). Each spin is plotted as a point with the colour set by the transverse magnetisation.
+Additional keywords are passed on to `Makie.meshscatter`.
+
+## Dyad plot
+Set using `kind=:dyad`. Each spin is plotted as a dyad. For a 2D dyad the orienation is set by the transverse magnetisation.
+For a 3D dyad the full magnetisation is used to set the orienation.
+The length of the dyads can be controlled using `dyad_length` (0.1 by default).
+Additional keywords are passed on to `Makie.arrows`.
+
+## Image
+Set using `kind=:image`. The average magnetisation is plotted across the [`PlotPlane`](@ref). 
+The colour in each pixel is set by the average transverse magnetisation of the local spins.
+Additional keywords are passed on to `Makie.image!`.
+This plot will not work in 3D (i.e., a [`PlotPlane`](@ref) is required).
+
+This function will only work if [`Makie`](https://makie.org) is installed and imported.
+"""
+function plot_snapshot! end
+
 
 """
 Defines a finite plane in the 3D space used for plotting.

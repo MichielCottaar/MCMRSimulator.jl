@@ -4,7 +4,7 @@ include("utils.jl")
 include("sequences.jl")
 include("geometries.jl")
 include("off_resonance.jl")
-#include("snapshots.jl")
+include("snapshots.jl")
 #include("trajectory.jl")
 #include("movie.jl")
 
