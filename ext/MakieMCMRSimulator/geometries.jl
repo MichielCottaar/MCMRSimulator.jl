@@ -245,8 +245,9 @@ function plot_geometry!(scene, geometry::Union{FixedGeometry, AbstractVector{<:O
     end
 end
 
-plot_geometry!(scene, group::ObstructionGroup; color=:black, kwargs...) = plot_geometry!(scene, fix(group); color=color, kwargs...)
-plot_geometry!(scene, group::Cylinders; color=:black, kwargs...) = plot_geometry!(scene, fix(group, height=1.); color=color, kwargs...)
+plot_geometry!(scene, group::User.Mesh; kwargs...) = plot_geometry!(scene, fix(group); kwargs...)
+plot_geometry!(scene, group::ObstructionGroup; kwargs...) = plot_geometry!(scene, User.Mesh(group); kwargs...)
+plot_geometry!(scene, group::Cylinders; kwargs...) = plot_geometry!(scene, User.Mesh(group, height=1.); kwargs...)
 
 function plot_geometry!(scene, group::FixedMesh; color=:black, alpha=0.3, kwargs...)
     vert = GeometryBasics.Point{3, Float64}.(group.vertices)
