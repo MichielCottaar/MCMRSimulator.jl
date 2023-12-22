@@ -1,12 +1,13 @@
 module Movie
 using Makie
-import ..PlotPlanes: PlotPlane
-import ..Snapshots: dyad_snapshot!
-import ...Spins: transverse
-import ...Simulations: Simulation
-import ...Evolve: readout
+import MCMRSimulator.Plot: PlotPlane
+import ..Geometries: plot_geometry!
+import ..Snapshots: plot_snapshot!
+import MCMRSimulator.Spins: transverse
+import MCMRSimulator.Simulations: Simulation
+import MCMRSimulator.Evolve: readout
 
-function simulator_movie(filename, simulator::Simulation{N}, times, repeats; resolution=(1600, 800), trajectory_init=30, signal_init=10000, framerate=50, plane_orientation=:z, dyadlength=0.6, arrowsize=10.) where {N}
+function simulator_movie(filename, simulator::Simulation{N}, times, repeats; resolution=(1600, 800), trajectory_init=30, signal_init=10000, framerate=50, plane_orientation=:z, kwargs...) where {N}
     if isa(trajectory_init, Integer)
         trajectory_init = [rand(3) .* repeats .- repeats ./ 2 for _ in 1:trajectory_init]
     end
@@ -22,33 +23,35 @@ function simulator_movie(filename, simulator::Simulation{N}, times, repeats; res
     end
     pp = PlotPlane(plane_orientation, sizex=repeats[1], sizey=repeats[2])
 
-    index = Observable(1)
-    time = @lift times[$index]
     fig = Figure(resolution=resolution)
-    ax_walk = Axis(fig[1, 1], title=(@lift("time = $(round($time, digits=1)) ms")))
-    plot!(ax_walk, pp, simulator.geometry)
-    xlims!(ax_walk, -repeats[1]/2, repeats[1]/2)
-    ylims!(ax_walk, -repeats[2]/2, repeats[2]/2)
-    dyad_snapshot!(ax_walk, pp, @lift(traj[$index]), dyadlength=dyadlength, arrowsize=arrowsize)
+    function single_frame!(index::Integer)
+        time = times[index]
+        ax_walk = Axis(fig[1, 1], title="time = $(round(time, digits=1)) ms")
+        plot_geometry!(ax_walk, pp, simulator.geometry)
+        xlims!(ax_walk, -repeats[1]/2, repeats[1]/2)
+        ylims!(ax_walk, -repeats[2]/2, repeats[2]/2)
+        plot_snapshot!(ax_walk, pp, traj[index]; kwargs...)
 
-    ax_seq = Axis(fig[1, 2])
+        ax_seq = Axis(fig[1, 2])
 
-    function set_nan(arr, index)
-        new = copy(arr)
-        new[index+1:end] .= NaN
-        new
+        function set_nan(arr, index)
+            new = copy(arr)
+            new[index+1:end] .= NaN
+            new
+        end
+
+        plot!(ax_seq, simulator.sequences[1])
+        for t in trans
+            lines!(ax_seq, times, set_nan(t, index))
+        end
+        xlims!(ax_seq, -3, maximum(times) + 5)
     end
-
-    plot!(ax_seq, simulator.sequences[1])
-    for t in trans
-        lines!(ax_seq, times, (@lift(set_nan(t, $index))))
-    end
-    xlims!(ax_seq, -3, maximum(times) + 5)
 
 
     record(fig, filename, 1:length(times);
             framerate=framerate) do i
-        index[] = i
+        empty!(fig)
+        single_frame!(i)
     end
 end
 

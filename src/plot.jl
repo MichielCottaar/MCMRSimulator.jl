@@ -159,6 +159,25 @@ This function will only work if [`Makie`](https://makie.org) is installed and im
 """
 function plot_trajectory! end
 
+"""
+    simulator_movie(filename, simulation, times, size; resolution=(1600, 800), trajectory_init=30, signal_init=10000, framerate=50, plane_orientation=:z, kwargs...)
+
+Writes a movie of the [`Simulation`](@ref) to the given `filename`.
+
+Each frame of the movie shows the [`Snapshot`](@ref) at given `times`.
+`size` is a tuple with the size of the plotted region in the x- and y-direction.
+If there is a repeating geometry, then it is strongly recommended to use the size of the repeat for `size`.
+
+Keyword arguments:
+- `resolution`: pixel resolution of each frame in the movie.
+- `trajectory_init`: how many spins to plot on each frame.
+- `signal_init`: how many spins to use to evaluate the signal evolution.
+- `framerate`: wait time between each subsequent frame in the movie.
+- `plane_orientation`: orienation of the plane on which the spins are projected (see [`PlotPlane`](@ref)).
+
+Additional keyword arguments are passed on to [`plot_snapshot!`](@ref).
+"""
+function simulator_movie end
 
 """
 Defines a finite plane in the 3D space used for plotting.
