@@ -4,8 +4,21 @@ import MCMRSimulator.Spins: Snapshot, get_sequence, position, orientation
 import ..Utils: color
 import MCMRSimulator.Plot: Plot, PlotPlane, project, project_on_grid, plot_snapshot!
 
+function Plot.plot_snapshot(args...; figure=Dict{Symbol, Any}(), axis=Dict{Symbol, Any}(), kwargs...)
+    f = Figure(; figure...)
+    axis[:xgridvisible] = pop!(axis, :xgridvisible, false)
+    axis[:ygridvisible] = pop!(axis, :ygridvisible, false)
+    ax_type = length(args) == 1 ? Axis3 : Axis
+    ax = ax_type(f[1, 1]; axis...)
+    plot_snapshot!(ax, args...; kwargs...)
+    if length(ax.scene.plots) == 0
+        return Makie.FigureAxis(f, ax)
+    else
+        return Makie.FigureAxisPlot(f, ax, ax.scene.plots[end])
+    end
+end
 
-function plot_snapshot!(args...; kind=:scatter, kwargs...)
+function Plot.plot_snapshot!(args...; kind=:scatter, kwargs...)
     func = Dict(
         :scatter => scatter_snapshot!
         :dyad => dyad_snapshot!
