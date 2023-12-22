@@ -53,7 +53,7 @@ When overlaying both the off-resonance field and the geometry, call this functio
 
 This function will only work if [`Makie`](https://makie.org) is installed and imported.
 """
-function plot_off_resonance end
+function plot_off_resonance! end
 
 """
     plot_sequence(sequence)
