@@ -24,7 +24,7 @@ end
 function plot_trajectory!(scene, trajectory::Vector{<:Snapshot}; sequence=1, kwargs...)
     for index in 1:length(trajectory[1])
         positions = map(s -> Makie.Point3f(position(s[index])), trajectory)
-        colors = map(s -> color(s[index], sequence), trajectory)
+        colors = map(s -> color(s[index]; sequence=sequence), trajectory)
         Makie.lines!(scene, positions; color=colors, kwargs...)
     end
 end
