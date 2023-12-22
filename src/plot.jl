@@ -84,7 +84,7 @@ Otherwise, the spins are plotted in 3D (does not work for `kind=:image`).
 There are three kinds of snapshot plots available:
 ## Scatter plot
 Default (or set using `kind=:scatter`). Each spin is plotted as a point with the colour set by the transverse magnetisation.
-Additional keywords are passed on to `Makie.meshscatter`.
+Additional keywords are passed on to `Makie.scatter`.
 
 ## Dyad plot
 Set using `kind=:dyad`. Each spin is plotted as a dyad. For a 2D dyad the orienation is set by the transverse magnetisation.
@@ -113,7 +113,7 @@ Otherwise, the spins are plotted in 3D (does not work for `kind=:image`).
 There are three kinds of snapshot plots available:
 ## Scatter plot
 Default (or set using `kind=:scatter`). Each spin is plotted as a point with the colour set by the transverse magnetisation.
-Additional keywords are passed on to `Makie.meshscatter`.
+Additional keywords are passed on to `Makie.scatter`.
 
 ## Dyad plot
 Set using `kind=:dyad`. Each spin is plotted as a dyad. For a 2D dyad the orienation is set by the transverse magnetisation.
