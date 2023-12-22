@@ -57,10 +57,9 @@ end
     pp = mr.PlotPlane()
 
     function plot_myelinated_annuli(fname)
-        f = Figure()
-        mr.plot_off_resonance(f[1, 1], pp, geometry)
-        mr.plot_geometry!(f[1, 1], pp, geometry)
-        CairoMakie.save(fname, f)
+        f = mr.plot_off_resonance(pp, geometry)
+        mr.plot_geometry!(f.axis, pp, geometry)
+        CairoMakie.save(fname, f.figure)
     end
 
     @visualtest plot_myelinated_annuli "$dir/myelinated_annuli.png" !isCI
