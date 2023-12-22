@@ -4,7 +4,7 @@ include("obstruction_types.jl")
 include("obstruction_groups.jl")
 import StaticArrays: MVector
 import .ObstructionTypes: ObstructionType, fields
-import .Fields: Field, FieldValue, isglobal, description
+import .Fields: Field, FieldValue, isglobal, description, value_as_vector
 import .ObstructionGroups: ObstructionGroup, IndexedObstruction, key_value_pairs
 import ....Methods: get_rotation
 
@@ -52,7 +52,18 @@ for obstruction_type in (
             Field{Bool}(:myelin, "Whether the mesh is myelinated.", false, required=true), 
             Field{Float64}(:susceptibility_iso, "Isotropic component of the myelin susceptibility (in ppm).", -0.1),
             Field{Float64}(:susceptibility_aniso, "Ansotropic component of the myelin susceptibility (in ppm).", -0.1),
-            Field{Bool}(:save_memory, "If true the internal triangle representation will contain the indices of the vertices rather than the actual corner coordinates. This will save memory, but slow down the algorithm as more memory lookups will have to take place.", true, required=true, only_group=true),
+            Field{Float64}(:lorentz_radius, "Only compute field explicitly for triangles with this Lorentz radius.", 5.),
+        ]),
+    ObstructionType(
+        :Ring; plural=:BendyCylinder, ndim=3, include_shift=false, fields=[
+            Field{MVector{3, Float64}}(:control_point, "Control points defining the path of the cylinder.", required=true), 
+            Field{Float64}(:radius, "Radius at each control point.", required=true), 
+            Field{Int}(:nsamples, "Number of mesh vertices along each ring.", 100, only_group=true),
+            Field{MVector{3, Int}}(:closed, "After how many repeats in each dimension does the cylinder connect with itself. If not set the cylinder is not closed.", only_group=true), 
+            Field{Int}(:spline_order, "Sets the order of the b-spine interpolating between control points.", 3, required=true, only_group=true), 
+            Field{Bool}(:myelin, "Whether the cylinder is myelinated.", false, required=true, only_group=true), 
+            Field{Float64}(:susceptibility_iso, "Isotropic component of the myelin susceptibility (in ppm).", -0.1),
+            Field{Float64}(:susceptibility_aniso, "Ansotropic component of the myelin susceptibility (in ppm).", -0.1),
             Field{Float64}(:lorentz_radius, "Only compute field explicitly for triangles with this Lorentz radius.", 5.),
         ]),
 )

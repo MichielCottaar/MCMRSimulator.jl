@@ -10,11 +10,11 @@ PLY IO is handled by PlyIO.jl (https://github.com/JuliaGeometry/PlyIO.jl).
 """
 function ply_from_mesh(ply_file)
     ply = PlyIO.load_ply(ply_file)
-    vertices = zip(
-        ply["vertex"]["x"],
-        ply["vertex"]["y"],
-        ply["vertex"]["z"],
-    )
+    vertices = collect(zip(
+        Float32.(ply["vertex"]["x"]),
+        Float32.(ply["vertex"]["y"]),
+        Float32.(ply["vertex"]["z"]),
+    ))
     indices = [v .+ 1 for v in ply["face"]["vertex_indices"]]
     return Mesh(vertices=vertices, triangles=indices)
 end

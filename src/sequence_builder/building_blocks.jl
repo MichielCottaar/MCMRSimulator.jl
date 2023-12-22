@@ -27,7 +27,15 @@ const BuildingBlockLike = Union{BuildingBlock, RFPulse, MRGradients, Number, Ins
 
 Creates an empty sequence building block representing a delay of `delay` ms.
 """
-BuildingBlock(number::Number) = BuildingBlock(duration=abs(number) < 1e-8 ? 0 : number)
+function BuildingBlock(number::Number)
+    if abs(number) < 1e-8
+        number = 0.
+    end
+    if number < 0.
+        error("Building blocks cannot have negative durations.")
+    end
+    BuildingBlock(duration=number)
+end
 
 """
     BuildingBlock(pulse/gradient)

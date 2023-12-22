@@ -60,8 +60,6 @@ end
 
 has_inside(::Type{Triangle}) = false
 isinside(::Triangle, ::SVector{3, Float64}) = false
-size_scale(ft::FullTriangle) = triangle_size(ft.a, ft.b, ft.c)
-size_scale(it::IndexTriangle, vertices) = size_scale(FullTriangle(it, vertices))
 
 """
     triangle_size(p1, p2, p3)
@@ -151,6 +149,10 @@ function detect_intersection_partial(triangle::FullTriangle, start::SVector{N}, 
     ), partial)
 end
 
+function random_surface_positions(triangle::IndexTriangle, vertices, density::Number)
+    random_surface_positions(FullTriangle(triangle, vertices), density)
+end
+
 function random_surface_positions(ft::FullTriangle, density::Number)
     surface = triangle_size(ft.a, ft.b, ft.c)
     nspins = rand(Poisson(surface * density))
@@ -169,5 +171,51 @@ function random_surface_positions(ft::FullTriangle, density::Number)
     normals = fill(-normal(ft.a, ft.b, ft.c), nspins)
     return (positions, normals)
 end
+
+"""
+    curvature(triangles, vertices[index1, index2])
+
+Computes the curvature between two neighbouring triangles (`index1` and `index2`).
+If no indices are provided computes the mean curvature over the whole surface.
+"""
+function curvature(triangles, vertices, index1, index2)
+    pos1 = map(i->vertices[i], triangles[index1])
+    pos2 = map(i->vertices[i], triangles[index2])
+    pos_offset = @. (pos1[1] + pos1[2] + pos1[3] - pos2[1] - pos2[2] - pos2[3]) / 3
+    normal_offset = normal(pos1...) - normal(pos2...)
+    return (pos_offset ⋅ normal_offset) / norm(pos_offset)^2
+end
+
+function curvature(triangles, vertices) 
+    sizes = [triangle_size(vertices[t[1]], vertices[t[2]], vertices[t[3]]) ./ 3 for t in triangles]
+    all_curv = [(sizes[i1] + sizes[i2], curvature(triangles, vertices, i1, i2)) for (i1, i2) in neighbours(triangles)]
+    return sum([w .* c for (w, c) in all_curv]) / sum([w for (w, _) in all_curv])
+end
+
+curvature(triangles::AbstractVector{IndexTriangle}, vertices) = curvature([t.indices for t in triangles], vertices)
+
+"""
+    neighbours(triangles)
+
+Return pairs of indices of triangles that share an edge.
+"""
+function neighbours(triangles::AbstractVector)
+    norm_edge((i1, i2)) = i1 > i2 ? (i2, i1) : (i1, i2)
+    edges(t) = norm_edge.([(t[1], t[2]), (t[2], t[3]), (t[3], t[1])])
+
+    edges_to_triangle = Dict{Tuple{Int, Int}, Int}()
+    pairs = Tuple{Int, Int}[]
+    for (i, t) in enumerate(triangles)
+        for e in edges(t)
+            if e in keys(edges_to_triangle)
+                push!(pairs, (edges_to_triangle[e], i))
+            else
+                edges_to_triangle[e] = i
+            end
+        end
+    end
+    return pairs
+end
+
 
 end

@@ -12,6 +12,7 @@ import .User:
     Sphere, Spheres,
     Annulus, Annuli,
     Triangle, Mesh,
+    Ring, BendyCylinder,
     load_mesh, random_positions_radii, split_mesh,
     write_geometry, read_geometry
 end

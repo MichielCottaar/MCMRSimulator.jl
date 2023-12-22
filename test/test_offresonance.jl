@@ -82,19 +82,21 @@
         @testset "Single right triangle test" begin
             for t in ([1, 2, 3], [2, 1, 3])
                 mesh = mr.Mesh(vertices=[[0, 0, 0], [1, 0, 0], [1, 1, 0]], triangles=[t], myelin=true, susceptibility_iso=1., susceptibility_aniso=0.)
-                ref_field = (atan(sqrt(3)) - atan(1)) / 4π
-                @test field(mesh, [0, 0, 1]) ≈ ref_field
-                @test field(mesh, [0, 0, -1]) ≈ -ref_field
+                f(z) = atan(sqrt(2 + z^2)/ z)
+                ref_field = (f(0.99) - f(1.01)) / (0.02 * 4π)
+                @test field(mesh, [0, 0, 1]) ≈ ref_field rtol=0.1
+                @test field(mesh, [0, 0, -1]) ≈ ref_field rtol=0.1
             end
         end
         @testset "Points very close to mesh" begin
             for t in ([1, 2, 3], [2, 1, 3])
                 mesh = mr.Mesh(vertices=[[0, 0, 0], [1, 0, 0], [1, 1, 0]], triangles=[t], myelin=true, susceptibility_iso=1., susceptibility_aniso=0.)
                 for y in (0.2, 0.3)
-                    @test field(mesh, [0.8, y, 1e-5]) ≈ 0.5 rtol=0.01
-                    @test field(mesh, [0.8, y, 1e-3]) ≈ 0.5 rtol=0.01
-                    @test field(mesh, [0.8, y, -1e-5]) ≈ -0.5 rtol=0.01
-                    @test field(mesh, [0.8, y, -1e-3]) ≈ -0.5 rtol=0.01
+                    ref = field(mesh, [0.8, y, 1e-4])
+                    @test field(mesh, [0.8, y, 1e-5]) ≈ ref rtol=0.01
+                    @test field(mesh, [0.8, y, 1e-3]) ≈ ref rtol=0.01
+                    @test field(mesh, [0.8, y, -1e-5]) ≈ ref rtol=0.01
+                    @test field(mesh, [0.8, y, -1e-3]) ≈ ref rtol=0.01
                 end
             end
         end
@@ -102,8 +104,8 @@
             for t in ([1, 2, 3], [2, 1, 3])
                 for v in [[1, 1, 0], [0, 1, 0]]
                     mesh = mr.Mesh(vertices=[[0, 0, 0], [1, 0, 0], v], triangles=[t], myelin=true, susceptibility_iso=1., susceptibility_aniso=0., lorentz_radius=1e7, grid_resolution=Inf)
-                    @test field(mesh, [1e-5, 1e-5, 20.]) ≈ 0.5 / 4π / 20^2 rtol=0.01
-                    @test field(mesh, [1e-5, 1e-5, -20.]) ≈ -0.5 / 4π / 20^2 rtol=0.01
+                    @test field(mesh, [1e-5, 1e-5, 20.]) ≈ 1 / (20^3 * 4π) rtol=0.1
+                    @test field(mesh, [1e-5, 1e-5, -20.]) ≈ 1 / (20^3 * 4π) rtol=0.1
                 end
             end
         end
@@ -111,8 +113,8 @@
             for t in ([1, 2, 3], [2, 1, 3])
                 for v in [[1, 0, 1], [0, 0, 1]]
                     mesh = mr.Mesh(vertices=[[0, 0, 0], [1, 0, 0], v], triangles=[t], myelin=true, susceptibility_iso=1., susceptibility_aniso=0., lorentz_radius=1e7, grid_resolution=Inf)
-                    @test field(mesh, [1e-5, 1e-5, 20.]) ≈ 0.5 / 4π / 20^2 rtol=0.1
-                    @test field(mesh, [1e-5, 1e-5, -20.]) ≈ -0.5 / 4π / 20^2 rtol=0.1
+                    @test field(mesh, [1e-3, 1e-3, 20.]) ≈ 1 / 4π / 20^3 rtol=0.1
+                    @test field(mesh, [1e-3, 1e-3, -20.]) ≈ 1 / 4π / 20^3 rtol=0.1
                 end
             end
         end

@@ -28,6 +28,8 @@ struct Grid{N}
 end
 
 
+BoundingBox(grid::Grid) = BoundingBox(grid.lower, grid.lower .+ grid.size)
+
 """
     get_indices(grid, position)
 
@@ -44,7 +46,7 @@ end
 
 
 function Grid(obstructions::Vector{BoundingBox{N}}, grid_resolution::Float64, repeats::Nothing=nothing; isinside=nothing) where {N}
-    bb_actual = BoundingBox(obstructions...)
+    bb_actual = BoundingBox(obstructions)
     extend_by = isfinite(grid_resolution) ? grid_resolution / 100 : 0.001
     bb = BoundingBox(bb_actual.lower .- extend_by, bb_actual.upper .+ extend_by)
     sz = upper(bb) .- lower(bb)

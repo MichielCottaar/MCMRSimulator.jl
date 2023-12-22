@@ -9,7 +9,6 @@ using Statistics
 all_tests = [
     "collisions",
     "evolve",
-    "plots",
     "known_sequences",
     "meshes",
     "offresonance",
@@ -20,6 +19,9 @@ all_tests = [
     "sequence_IO",
     "various",
     "subsets",
+    "gen_sequence",
+    "plots",
+    "cli",
 ]
 
 if length(ARGS) == 0

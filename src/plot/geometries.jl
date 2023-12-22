@@ -2,9 +2,12 @@ module Geometries
 using Makie
 import StaticArrays: SVector
 import LinearAlgebra: cross, ⋅, norm
+import Colors
+import GeometryBasics
 import ..PlotPlanes: PlotPlane
-import ...Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere
-import ...Geometries: ObstructionGroup, fix
+import ...Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, FixedMesh
+import ...Geometries: ObstructionGroup, fix, Mesh, Cylinders
+
 """
     plot(plot_plane, geometry)
     plot!(plot_plane, geometry)
@@ -53,10 +56,10 @@ end
 
 Projects the plane on the intrinsic plane of the obstructions deformed by `transform`.
 """
-function project_geometry(plot_plane::PlotPlane, group::FixedObstructionGroup{L, N}) where {L, N}
+function project_geometry(plot_plane::PlotPlane, group::FixedObstructionGroup{N}) where {N}
     center_obstruction_space = plot_plane.transformation(zero(SVector{3, Float64}))
 
-    obstruction_coordinates_in_plot_plane = SVector{N}(map(p->SVector{3, Float64}(plot_plane.transformation(p)) - center_obstruction_space, eachcol(group.rotation)))
+    obstruction_coordinates_in_plot_plane = SVector{N, SVector{3, Float64}}(map(p->SVector{3, Float64}(plot_plane.transformation(p)) .- center_obstruction_space, eachcol(group.rotation)))
 
     projections = []
     repeats = group.grid.repeating ? group.grid.size : nothing
@@ -256,4 +259,42 @@ function add_overlap!(new_line, prev_point, new_point, sizes)
     end
 end
 
+
+"""
+    plot(plot_plane, geometry)
+    plot!(plot_plane, geometry)
+    plot_geometry(plot_plane, geometry)
+    plot_geometry!(plot_plane, geometry)
+
+Plots the intersections of `geometry` in 3 dimensions
+"""
+@Makie.recipe(Plot_Geometry3D, geometry) do scene
+    Makie.Theme(
+    )
+end
+
+function Makie.plot!(pg::Plot_Geometry3D)
+    base_geometry = pg[1]
+
+    geometry = @lift $base_geometry isa FixedGeometry ? $base_geometry : (
+        $base_geometry isa Cylinders ? fix(Mesh($base_geometry, height=1.)) : (
+        $base_geometry isa ObstructionGroup ? fix(Mesh($base_geometry)) : fix(Mesh.($base_geometry))
+    ))
+
+    function plot_group(group, color)
+        if ~(group isa FixedMesh)
+            println("Skipping $group for 3D geometry plot.")
+            return
+        end
+        vert = GeometryBasics.Point{3, Float64}.(group.vertices)
+        tri = [GeometryBasics.TriangleFace{Int}(o.indices) for o in group.obstructions]
+        geometry_mesh = GeometryBasics.Mesh(vert, tri)
+        Makie.mesh!(pg, geometry_mesh, color=color, alpha=0.3)
+    end
+    @lift plot_group.($geometry, Colors.distinguishable_colors(length($geometry)))
+end
+
+Makie.plottype(::FixedGeometry) = Plot_Geometry3D
+Makie.plottype(::ObstructionGroup) = Plot_Geometry3D
+Makie.plottype(::AbstractVector{<:ObstructionGroup}) = Plot_Geometry3D
 end

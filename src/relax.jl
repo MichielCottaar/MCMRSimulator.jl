@@ -28,11 +28,8 @@ end
 function relax!(spin::Spin{N}, parts::SVector{N, SequencePart}, simulation, t1::Number, t2::Number) where {N}
     props = MRIProperties(simulation.geometry, simulation.inside_geometry, simulation.properties, spin.position, spin.reflection)
 
-    if stuck(spin)
-        off_resonance_unscaled = susceptibility_off_resonance(simulation.susceptibility, spin.position, spin.reflection.inside) * 1e-6 * gyromagnetic_ratio
-    else
-        off_resonance_unscaled = susceptibility_off_resonance(simulation.susceptibility, spin.position) * 1e-6 * gyromagnetic_ratio
-    end
+    off_resonance_unscaled = susceptibility_off_resonance(simulation, spin) * 1e-6 * gyromagnetic_ratio
+
     tmean = (t1 + t2) / 2
     for (orient, part) in zip(spin.orientations, parts)
         pulse = effective_pulse(part, t1, t2)

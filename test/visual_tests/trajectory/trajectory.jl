@@ -8,7 +8,7 @@
             simulation = mr.Simulation(mr.dwi(bval=0.1, TE=80, gradient_duration=0), diffusivity=3.)
             trajectory = mr.readout(snapshot, simulation, 0:0.1:80, return_snapshot=true)
             f = Figure()
-            mr.plot_trajectory3d(f[1, 1], trajectory, sequence=1)
+            mr.plot_trajectory3d(f[1, 1], trajectory, sequence=1, axis=(type=CairoMakie.Axis3,))
             CairoMakie.save(fname, f)
         end
 

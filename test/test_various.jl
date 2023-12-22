@@ -215,10 +215,12 @@ Sequence (TR=2000.0ms):
     - InstantRFPulse: t=0.0ms, θ=90.0°, ϕ=-90.0°;
     - InstantRFPulse: t=40.0ms, θ=180.0°, ϕ=0.0°;
     - Readout at 80.0ms
-Sequence (TR=80.0ms):
+    - InstantGradient: t=80.000001ms, q=[0.5773502691896258, 0.5773502691896258, 0.5773502691896258]rad/um;
+Sequence (TR=80.000002ms):
     - InstantRFPulse: t=0.0ms, θ=90.0°, ϕ=-90.0°;
     - InstantRFPulse: t=40.0ms, θ=180.0°, ϕ=0.0°;
     - Readout at 80.0ms
+    - InstantGradient: t=80.000001ms, q=[0.5773502691896258, 0.5773502691896258, 0.5773502691896258]rad/um;
 " 
 end
 

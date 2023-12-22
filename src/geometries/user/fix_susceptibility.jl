@@ -3,7 +3,7 @@ import StaticArrays: SVector
 import LinearAlgebra: transpose
 import ...Internal.Susceptibility: FixedSusceptibility, ParentSusceptibility, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, TriangleSusceptibility
 import ...Internal: Grid, BoundingBox, FullTriangle, radius
-import ..Obstructions: ObstructionType, ObstructionGroup, Walls, Cylinders, Spheres, Annuli, Mesh, fields, isglobal
+import ..Obstructions: ObstructionType, ObstructionGroup, Walls, Cylinders, Spheres, Annuli, Mesh, fields, isglobal, BendyCylinder
 
 """
     fix_susceptibility(geometry)
@@ -51,6 +51,8 @@ function fix_susceptibility_type(group::Annuli)
     end
     add_parent(group, base; radius_symbol=:inner)
 end
+
+fix_susceptibility_type(group::BendyCylinder) = fix_susceptibility_type(Mesh(group))
 
 function fix_susceptibility_type(group::Mesh)
     if ~any(group.myelin.value)

@@ -1,31 +1,35 @@
 module Movie
 using Makie
+import ..PlotPlanes: PlotPlane
+import ..Snapshots: dyad_snapshot!
+import ...Spins: transverse
 import ...Simulations: Simulation
 import ...Evolve: readout
 
-function simulator_movie(filename, simulator::Simulation{N}, times, repeats; resolution=(1600, 800), trajectory_init=30, signal_init=10000, framerate=50, plane_orientation=:z) where {N}
+function simulator_movie(filename, simulator::Simulation{N}, times, repeats; resolution=(1600, 800), trajectory_init=30, signal_init=10000, framerate=50, plane_orientation=:z, dyadlength=0.6, arrowsize=10.) where {N}
     if isa(trajectory_init, Integer)
         trajectory_init = [rand(3) .* repeats .- repeats ./ 2 for _ in 1:trajectory_init]
     end
     sig = readout(signal_init, simulator, times)
-    if N == 1
+    if ndims(sig) == 1
         trans = [transverse.(sig) ./ signal_init]
     else
-        trans = [transverse.([s[index] for s in sig]) ./ signal_init for index in 1:N]
+        trans = [transverse.(sig[index, :]) ./ signal_init for index in 1:N]
     end
     traj = readout(trajectory_init, simulator, times, return_snapshot=true);
+    if ndims(traj) > 1
+        traj = traj[1, :]
+    end
     pp = PlotPlane(plane_orientation, sizex=repeats[1], sizey=repeats[2])
 
     index = Observable(1)
     time = @lift times[$index]
     fig = Figure(resolution=resolution)
     ax_walk = Axis(fig[1, 1], title=(@lift("time = $(round($time, digits=1)) ms")))
-    for geometry in simulator.geometry.obstructions
-        plot!(ax_walk, pp, geometry)
-    end
+    plot!(ax_walk, pp, simulator.geometry)
     xlims!(ax_walk, -repeats[1]/2, repeats[1]/2)
     ylims!(ax_walk, -repeats[2]/2, repeats[2]/2)
-    dyad_snapshot!(ax_walk, pp, @lift(traj[$index]), dyadlength=0.6, arrowsize=10.)
+    dyad_snapshot!(ax_walk, pp, @lift(traj[$index]), dyadlength=dyadlength, arrowsize=arrowsize)
 
     ax_seq = Axis(fig[1, 2])
 

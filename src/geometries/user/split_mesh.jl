@@ -8,7 +8,7 @@ import StaticArrays: SVector, MVector
 import SparseArrays: sparse, SparseMatrixCSC
 import LinearAlgebra: norm, ⋅
 import Statistics: mean
-import ...Internal.Obstructions.Triangles: normal
+import ...Internal.Obstructions.Triangles: normal, curvature
 import ..Obstructions: Mesh, isglobal
 
 """
@@ -22,7 +22,7 @@ function split_mesh(old_mesh::Mesh)
     result = Mesh[]
     for (triangle_indices, vertex_indices, triangles) in connected_components(old_mesh.triangles.value)
         make_normals_consistent!(triangles)
-        if mean(sign.(curvature(triangles, old_mesh.vertices.value[vertex_indices]))) < 0
+        if curvature(triangles, old_mesh.vertices.value[vertex_indices]) < 0
             # flip all triangles
             for t in triangles
                 v = t[1]
@@ -46,7 +46,7 @@ function split_mesh(old_mesh::Mesh)
             end
         end
 
-        push!(result, Mesh(; kwargs...))
+        push!(result, Mesh(; number=length(triangles), kwargs...))
     end
     return result
 end
@@ -133,6 +133,10 @@ end
 Splits the mesh represented by `triangles` into a sequences of meshes that are actually internally connected.
 """
 function connected_components(triangles::AbstractVector, nvertices=nothing)
+    connected_components(SVector{3, Int}.(triangles), nvertices)
+end
+
+function connected_components(triangles::AbstractVector{SVector{3, Int}}, nvertices=nothing)
     m = connectivity_matrix(triangles, nvertices)
     vertex_indices = connected_components(m)
     indices = [vertex_indices[t[1]] for t in triangles]
@@ -141,9 +145,17 @@ function connected_components(triangles::AbstractVector, nvertices=nothing)
         triangle_index = (1:length(indices))[indices .== i]
         new_index = zeros(Int, length(vertex_indices))
         new_index[vertex_indices .== i] = 1:length(vertex_index)
-        return (triangle_index, vertex_index, [MVector{3, Int}(new_index[t]) for t in triangles])
+        return (triangle_index, vertex_index, MVector{3, Int}.([(new_index[t[1]], new_index[t[2]], new_index[t[3]]) for t in triangles[indices .== i]]))
     end
     return get_index.(1:maximum(indices))
+end
+
+function get_index(i, triangles, indices, vertex_indices)
+    vertex_index = (1:length(vertex_indices))[vertex_indices .== i]
+    triangle_index = (1:length(indices))[indices .== i]
+    new_index = zeros(Int, length(vertex_indices))
+    new_index[vertex_indices .== i] = 1:length(vertex_index)
+    return (triangle_index, vertex_index, [(new_index[t[1]], new_index[t[2]], new_index[t[3]]) for t in triangles[indices .== i]])
 end
 
 """
@@ -157,61 +169,39 @@ function connected_components(m::SparseMatrixCSC)
     result = fill(0, nvertices)
     component_index = 1
     while any(not_assigned)
-        start_index = findfirst(not_assigned)
-        new_component = fill(0, nvertices)
+        start_index :: Int = findfirst(not_assigned)
+        new_component = BitVector(fill(false, nvertices))
+        tocheck = BitVector(fill(false, nvertices))
+
         new_component[start_index] = true
-        ncomponents = 0
-        while ncomponents != sum(new_component .> 0)
-            ncomponents = sum(new_component .> 0)
-            new_component = m * new_component
+        tocheck[start_index] = true
+
+        repeat = true
+        while repeat
+            repeat = false
+            for i in 1:nvertices
+                if tocheck[i]
+                    for j in m.rowval[m.colptr[i]:m.colptr[i + 1] - 1]
+                        if ~new_component[j]
+                            new_component[j] = true
+                            tocheck[j] = true
+                            if j < i
+                                repeat = true
+                            end
+                        end
+                    end
+                    tocheck[i] = false
+                end
+            end
         end
-        @assert sum(not_assigned .& (new_component .> 0)) == ncomponents "new component includes elements already assigned to previous components"
-        not_assigned[new_component .> 0] .= false
-        result[new_component .> 0] .= component_index
+
+        @assert sum(not_assigned .& new_component) == sum(new_component) "new component includes elements already assigned to previous components"
+        not_assigned[new_component] .= false
+        result[new_component] .= component_index
         component_index += 1
     end
     @assert all(result .> 0)
     return result
 end
-
-"""
-    neighbours(triangles)
-
-Return pairs of indices of triangles that share an edge.
-"""
-function neighbours(triangles::AbstractVector)
-    norm_edge((i1, i2)) = i1 > i2 ? (i2, i1) : (i1, i2)
-    edges(t) = norm_edge.([(t[1], t[2]), (t[2], t[3]), (t[3], t[1])])
-
-    edges_to_triangle = Dict{Tuple{Int, Int}, Int}()
-    pairs = Tuple{Int, Int}[]
-    for (i, t) in enumerate(triangles)
-        for e in edges(t)
-            if e in keys(edges_to_triangle)
-                push!(pairs, (edges_to_triangle[e], i))
-            else
-                edges_to_triangle[e] = i
-            end
-        end
-    end
-    return pairs
-end
-
-"""
-    curvature(triangles, vertices[index1, index2])
-
-Computes the curvature between two neighbouring triangles (`index1` and `index2`).
-If no indices are provided computes the curvature between any neighbouring triangles.
-"""
-function curvature(triangles, vertices, index1, index2)
-    pos1 = map(i->vertices[i], triangles[index1])
-    pos2 = map(i->vertices[i], triangles[index2])
-    pos_offset = @. (pos1[1] + pos1[2] + pos1[3] - pos2[1] - pos2[2] - pos2[3]) / 3
-    normal_offset = normal(pos1...) - normal(pos2...)
-    return (pos_offset ⋅ normal_offset) / norm(pos_offset)^2
-end
-
-curvature(triangles, vertices) = [curvature(triangles, vertices, i1, i2) for (i1, i2) in neighbours(triangles)]
-
 
 end
