@@ -3,7 +3,7 @@ using Makie
 import Colors
 import LinearAlgebra: norm
 import MCMRSimulator.Sequences: Sequence, MRGradients, RFPulse, Readout, InstantComponent, InstantGradient, InstantRFPulse
-import MCMRSimulator.Sequences: flip_angle, qval, control_points, gradient
+import MCMRSimulator.Sequences: flip_angle, qval, control_points, gradient, amplitude, phase
 import MCMRSimulator.Methods: get_time
 import MCMRSimulator.Plot: Plot, plot_sequence!
 
@@ -50,10 +50,11 @@ function plot_sequence!(scene, sequence::Sequence)
 
     scale = max_finite_pulse(sequence)
     for pulse in sequence.pulses
-        append!(lines[1][2], pulse.amplitude.times)
-        append!(lines[2][2], pulse.amplitude.times)
-        append!(lines[1][3], pulse.amplitude.amplitudes .* cosd.(pulse.phase.amplitudes) ./ scale)
-        append!(lines[2][3], pulse.amplitude.amplitudes .* sind.(pulse.phase.amplitudes) ./ scale)
+        times = sort(unique(vcat(pulse.amplitude.times, pulse.phase.times)))
+        append!(lines[1][2], times)
+        append!(lines[2][2], times)
+        append!(lines[1][3], [amplitude(pulse, time) .* cosd.(phase(pulse, time)) ./ scale for time in times])
+        append!(lines[2][3], [amplitude(pulse, time) .* sind.(phase(pulse, time)) ./ scale for time in times])
     end
 
     scale = max_instant_pulse(sequence)
