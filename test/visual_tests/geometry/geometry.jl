@@ -43,9 +43,8 @@ end
     pp = mr.PlotPlane()
 
     function plot_annuli(fname)
-        f = Figure()
-        mr.plot_geometry(f[1, 1], pp, geometry)
-        CairoMakie.save(fname, f)
+        f = mr.plot_geometry(pp, geometry)
+        CairoMakie.save(fname, f.figure)
     end
 
     @visualtest plot_annuli "$dir/annuli.png" !isCI
