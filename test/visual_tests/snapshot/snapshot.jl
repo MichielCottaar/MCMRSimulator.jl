@@ -16,8 +16,8 @@
             CairoMakie.save(fname, f.figure)
         end
 
-        @visualtest fn => plot_dyads(fn, :dyad) "$dir/dyad_snapshot.png" !isCI
-        @visualtest fn => plot_dyads(fn, :scatter) "$dir/scatter_snapshot.png" !isCI
+        @visualtest fn -> plot_dyads(fn, :dyad) "$dir/dyad_snapshot.png" !isCI
+        @visualtest fn -> plot_dyads(fn, :scatter) "$dir/scatter_snapshot.png" !isCI
     end
     @testset "Spins as image" begin
         function plot_image(fname)
