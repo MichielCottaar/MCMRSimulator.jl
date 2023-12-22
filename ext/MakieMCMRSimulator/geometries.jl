@@ -23,6 +23,8 @@ const GeometryLike = Union{ObstructionGroup, AbstractVector{<:ObstructionGroup},
 
 function Plot.plot_geometry(plot_plane::PlotPlane, geometry::GeometryLike; figure=Dict{Symbol, Any}(), axis=Dict{Symbol, Any}(), kwargs...)
     f = Figure(; figure...)
+    axis[:xgridvisible] = pop!(axis, :xgridvisible, false)
+    axis[:ygridvisible] = pop!(axis, :ygridvisible, false)
     ax = Axis(f[1, 1]; axis...)
     plot_geometry!(ax, plot_plane, geometry; kwargs...)
     if length(ax.scene.plots) == 0
