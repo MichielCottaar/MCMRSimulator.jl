@@ -20,9 +20,9 @@ end
 
 function Plot.plot_snapshot!(args...; kind=:scatter, kwargs...)
     func = Dict(
-        :scatter => scatter_snapshot!
-        :dyad => dyad_snapshot!
-        :image => image_snapshot!
+        :scatter => scatter_snapshot!,
+        :dyad => dyad_snapshot!,
+        :image => image_snapshot!,
     )[kind]
     func(args...; kwargs...)
 end
