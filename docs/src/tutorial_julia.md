@@ -182,7 +182,7 @@ In this example we do not set this time explicitly, so it will default to the ti
 snapshot = readout(3000, simulation, return_snapshot=true)
 pp = PlotPlane(size=2.5)
 f = plot_snapshot(pp, snapshot)
-plot_geoemtry!(f, pp, geometry)
+plot_geomtry!(f, pp, geometry)
 f
 save("tutorial_snapshot.png", f) # hide
 nothing # hide
