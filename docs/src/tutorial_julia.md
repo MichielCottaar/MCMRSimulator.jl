@@ -32,7 +32,7 @@ This is represented by a single cylinder with a radius of 1 micrometer that repe
 import Random; Random.seed!(1) # hide
 geometry = Cylinders(radius=1., repeats=[2.5, 2.5])
 
-f = plot(PlotPlane(size=5), geometry)
+f = plot_sequence(PlotPlane(size=5), geometry)
 f
 save("tutorial_geometry.png", f) # hide
 nothing # hide
@@ -45,7 +45,7 @@ The next step is to define a sequence (see [here](@ref sequence) for more detail
 Here we will adopt a single diffusion-weighted MRI sequence.
 ```@example tutorial
 sequence = dwi(bval=2., TR=1000, TE=80, scanner=Siemens_Prisma)  # default gradient orientation in the x-direction
-f = plot(sequence)
+f = plot_sequence(sequence)
 f
 save("tutorial_sequence.png", f); # hide
 nothing # hide
@@ -135,9 +135,9 @@ Here we use this to plot the actual transverse signal evolution.
 times = 0:0.1:100
 # simulate 3000 spins for a single repetition time
 average_signals = readout(3000, simulation, times, skip_TR=5)
-f = plot(sequence)
-lines!(times, transverse.(average_signals)/3000.)
-xlims!(0, 100)
+f = plot_sequence(sequence)
+lines!(f, times, transverse.(average_signals)/3000.)
+xlims!(f, 0, 100)
 f
 save("tutorial_transverse.png", f) # hide
 nothing # hide
@@ -157,8 +157,8 @@ To plot the trajectory we first need to output the state of the all spins at a h
 snapshots = readout([[0, 0, 0], [1, 1, 0]], simulation, 0:0.01:3., return_snapshot=true)
 
 pp = PlotPlane(size=5.)
-f = plot(pp, geometry)
-plot_trajectory2d!(pp, snapshots)
+f = plot_geometry(pp, geometry)
+plot_geometry!(f, pp, snapshots)
 f
 save("tutorial_trajectory2D.png", f) # hide
 nothing # hide
@@ -170,7 +170,7 @@ The color of the spin encodes the phase of the MR signal in the transverse plane
 
 The trajectories can also be plotted in 3D:
 ```@example tutorial
-f = plot_trajectory3d(snapshots)
+f = plot_trajectory(snapshots)
 save("tutorial_trajectory3D.png", f) # hide
 nothing # hide
 ```
@@ -181,8 +181,8 @@ In this example we do not set this time explicitly, so it will default to the ti
 ```@example tutorial
 snapshot = readout(3000, simulation, return_snapshot=true)
 pp = PlotPlane(size=2.5)
-f = plot(pp, snapshot)
-plot!(pp, geometry)
+f = plot_snapshot(pp, snapshot)
+plot_geoemtry!(f, pp, geometry)
 f
 save("tutorial_snapshot.png", f) # hide
 nothing # hide

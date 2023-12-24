@@ -14,7 +14,7 @@ In Julia, one can use:
 using MCMRSimulator # hide
 sequence = dwi(TR=100., bval=3.)
 using CairoMakie # hide
-f = plot(sequence) # hide
+f = plot_sequence(sequence) # hide
 save("dwi_sequence.png", f) # hide
 nothing # hide
 ```  
@@ -25,7 +25,7 @@ By setting the `gradient_duration` keyword to 0, [`InstantGradient`](@ref) objec
 using MCMRSimulator # hide
 sequence = dwi(TR=100., bval=3., gradient_duration=0.)
 using CairoMakie # hide
-f = plot(sequence) # hide
+f = plot_sequence(sequence) # hide
 save("dwi_sequence_delta_0.png", f) # hide
 nothing # hide
 ```  
@@ -75,7 +75,7 @@ unrotated_sequence = Sequence([
 sequence = rotate_bvec(unrotated_sequence, [0, 0.5, 1])
 
 using CairoMakie # hide
-f = plot(sequence) # hide
+f = plot_sequence(sequence) # hide
 save("custom_dwi.png", f) # hide
 nothing # hide
 ```
@@ -99,7 +99,7 @@ base_sequence = [
 with_dwi = add_linear_diffusion_weighting(base_sequence, 2, 4, bval=1.) 
 sequence = Sequence(with_dwi; TR=100)
 using CairoMakie # hide
-f = plot(sequence) # hide
+f = plot_sequence(sequence) # hide
 save("custom_dwi_helped.png", f) # hide
 nothing # hide
 ```

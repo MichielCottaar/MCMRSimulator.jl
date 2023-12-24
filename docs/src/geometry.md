@@ -43,7 +43,7 @@ For example, we can create two base cylinders, which repeat infinitely by runnin
 using MCMRSimulator
 geometry = Cylinders(radius=sqrt(0.5), position=[[0, 0], [1, 1]], repeats=[2, 2])
 using CairoMakie # hide
-f = plot(PlotPlane(size=4), geometry) # hide
+f = plot_geometry(PlotPlane(size=4), geometry) # hide
 save("regular_cylinders.png", f) # hide
 nothing # hide
 ```  
@@ -60,7 +60,7 @@ rotation = [
     ]
 geometry = Cylinders(radius=sqrt(0.5), repeats=[sqrt(2), sqrt(2)], rotation=rotation)
 using CairoMakie # hide
-f = plot(PlotPlane(size=4), geometry) # hide
+f = plot_geometry(PlotPlane(size=4), geometry) # hide
 save("regular_cylinders2.png", f) # hide
 nothing # hide
 ```  
@@ -82,7 +82,7 @@ These can be used to produce randomly distributed cylinders:
 ```@example random_distribution
 geometry = Cylinders(radius=outer_radii, position=positions, repeats=(20, 20))
 using CairoMakie # hide
-f = plot(PlotPlane(size=20), geometry) # hide
+f = plot_geometry(PlotPlane(size=20), geometry) # hide
 save("random_cylinders.png", f) # hide
 nothing # hide
 ```
@@ -92,7 +92,7 @@ When used as initialisation for annuli or spirals, an inner radius will also nee
 ```@example random_distribution
 geometry = Annuli(inner=0.8 .* outer_radii, outer=outer_radii, position=positions, repeats=(20, 20))
 using CairoMakie # hide
-f = plot(PlotPlane(size=20), geometry) # hide
+f = plot_geometry(PlotPlane(size=20), geometry) # hide
 save("random_annuli.png", f) # hide
 nothing # hide
 ```
