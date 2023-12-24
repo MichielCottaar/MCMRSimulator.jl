@@ -32,7 +32,7 @@ This is represented by a single cylinder with a radius of 1 micrometer that repe
 import Random; Random.seed!(1) # hide
 geometry = Cylinders(radius=1., repeats=[2.5, 2.5])
 
-f = plot_sequence(PlotPlane(size=5), geometry)
+f = plot_geometry(PlotPlane(size=5), geometry)
 f
 save("tutorial_geometry.png", f) # hide
 nothing # hide
