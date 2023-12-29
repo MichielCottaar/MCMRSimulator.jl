@@ -143,15 +143,15 @@
                 sim = mr.Simulation(sequence, diffusivity=0.5)
                 snap = mr.readout(nspins, sim, return_snapshot=true)
                 @test snap.time == TE + stimulate_interval
-                @test mr.transverse(snap) ≈ nspins * exp(-0.15) rtol=0.05
+                @test mr.transverse(snap) ≈ 0.5 * nspins * exp(-0.15) rtol=0.05
             end
         end
         @testset "PGSE in realistic scanner with free diffusion" begin
             nspins = 30000
-            sequence = mr.dwste(50, TE=10, bval=2, scanner=mr.Siemens_Prisma)
+            sequence = mr.dwste(50, TE=10, bval=0.5, scanner=mr.Siemens_Prisma)
             sim = mr.Simulation(sequence, diffusivity=0.5)
             snap = mr.readout(nspins, sim)
-            @test mr.transverse(snap) ≈ nspins * exp(-1) rtol=0.05
+            @test mr.transverse(snap) ≈ nspins * exp(-0.25) rtol=0.05
         end
 
         """No restricted tests yet"""
