@@ -1,5 +1,5 @@
 module StimulatedEcho
-import ....Scanners: Scanner, max_gradient
+import ....Scanners: Scanner, max_gradient, max_slew_rate
 import ....Sequences: InstantRFPulse, Readout, RFPulse, InstantGradient, MRGradients, rotate_bvec
 import ...DefineSequence: define_sequence
 import ...Diffusion: add_linear_diffusion_weighting
@@ -41,10 +41,16 @@ function stimulated_echo(TE,
         ramp_time = max_gradient(scanner) / max_slew_rate(scanner)
     end
 
+    if isinf(max_gradient(scanner))
+        g_spoiler = 10000 # Can't use infinite gradient strength as it smh breaks the propose_time
+    else
+        g_spoiler = max_gradient(scanner)
+    end
+
     interval_spoiler = rotate_bvec(MRGradients([
         (0, 0.), 
-        (ramp_time, max_gradient(scanner)),
-        (stimulate_interval - ramp_time - duration(stimulate_pulse), max_gradient(scanner)),
+        (ramp_time, g_spoiler),
+        (stimulate_interval - ramp_time - duration(stimulate_pulse), g_spoiler),
         (stimulate_interval - duration(stimulate_pulse), 0.), 
     ], apply_bvec=true), spoiler_orientation)
 

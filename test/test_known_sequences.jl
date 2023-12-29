@@ -110,34 +110,35 @@
             for (δ, Δ, stimulate_interval) in [
                 (nothing, 0.1, 0.05),
                 # (0.1, 0.1),
-                (0.1, 70., 50),
-                (nothing, nothing, 50),
-                (0.1, nothing, 50),
-                (0, nothing, 50),
-                (0, 70, 50),
+                (0.1, 70., 60),
+                (nothing, nothing, 60),
+                (0.1, nothing, 60),
+                (0, nothing, 60),
+                (0, 70, 60),
                 (0, 0.1, 0.05),
             ]
-                nspins = 300
-                sequence = mr.dwste(stimulate_interval, TE=10, bval=2., gradient_duration=δ, diffusion_time=Δ)
+                nspins = 30000
+                sequence = mr.dwste(stimulate_interval, TE=20, bval=2., gradient_duration=δ, diffusion_time=Δ)
                 sim = mr.Simulation(sequence, diffusivity=0.)
                 snap = mr.readout(nspins, sim, return_snapshot=true)
-                @test snap.time == stimulate_interval + 10
-                @test mr.transverse(snap) ≈ nspins rtol=1e-2 # Question for Michiel, what's rtol? tolerance?
+                @test snap.time == stimulate_interval + 20
+                "https://mriquestions.com/stimulated-echoes.html for equation below"
+                @test mr.transverse(snap) ≈ nspins/2 rtol=1e-2 # Question for Michiel, what's rtol? tolerance?
             end
         end
         @testset "DWSTE with various gradient durations and free diffusion" begin
             for (δ, Δ, stimulate_interval) in [
                 (nothing, 1, 0.5),
                 # (1, 1), ## Question for Michiel: Necessary to test δ == Δ situations?
-                (1, 70., 50),
-                (nothing, nothing, 50),
-                (1, nothing, 50),
-                (0, nothing, 50),
-                (0, 70, 50),
+                (1, 70., 60),
+                (nothing, nothing, 60),
+                (1, nothing, 60),
+                (0, nothing, 60),
+                (0, 70, 60),
                 (0, 1, 0.5),
             ]
                 nspins = 3000
-                TE = 10.
+                TE = 20.
                 sequence = mr.dwste(stimulate_interval, TE=TE, bval=0.3, gradient_duration=δ, diffusion_time=Δ)
                 sim = mr.Simulation(sequence, diffusivity=0.5)
                 snap = mr.readout(nspins, sim, return_snapshot=true)
