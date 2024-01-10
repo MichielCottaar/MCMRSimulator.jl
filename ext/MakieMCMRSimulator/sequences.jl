@@ -4,7 +4,7 @@ import MakieCore
 import Colors
 import LinearAlgebra: norm
 import MCMRSimulator.Sequences: Sequence, MRGradients, RFPulse, Readout, InstantComponent, InstantGradient, InstantRFPulse
-import MCMRSimulator.Sequences: flip_angle, qval, control_points, gradient
+import MCMRSimulator.Sequences: flip_angle, qval, control_points, gradient, amplitude, phase
 import MCMRSimulator.Methods: get_time
 import MCMRSimulator.Plot: Plot_Sequence
 

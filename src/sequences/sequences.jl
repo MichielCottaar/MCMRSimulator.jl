@@ -10,7 +10,7 @@ include("json.jl")
 
 import .Methods: start_time, end_time, add_TR
 import .Gradients: MRGradients, gradient, rotate_bvec
-import .RadioFrequency: RFPulse, constant_pulse, effective_pulse, amplitude, flip_angle
+import .RadioFrequency: RFPulse, constant_pulse, effective_pulse, amplitude, flip_angle, phase
 import .Main: Sequence, SequencePart
 import .Main: previous_pulse, current_pulse, next_pulse
 import .Main: previous_gradient, current_gradient, next_gradient
