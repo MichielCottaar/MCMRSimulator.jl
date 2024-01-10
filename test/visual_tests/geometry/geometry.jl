@@ -14,7 +14,7 @@ isCI = get(ENV, "CI", "false") == "true"
         @testset "Plot $name in 3D" begin
             function plot_mesh(fname)
                 f = Figure()
-                mr.plot_geometry3d(f[1, 1], geometry, axis=(type=CairoMakie.Axis3,))
+                plot(f[1, 1], geometry)
                 CairoMakie.save(fname, f)
             end
 
@@ -32,7 +32,7 @@ end
 
     function plot_walls(fname)
         f = Figure()
-        mr.plot_geometry(f[1, 1], pp, geometry)
+        plot(f[1, 1], pp, geometry)
         CairoMakie.save(fname, f)
     end
 
@@ -46,7 +46,7 @@ end
 
     function plot_annuli(fname)
         f = Figure()
-        mr.plot_geometry(f[1, 1], pp, geometry)
+        plot(f[1, 1], pp, geometry)
         CairoMakie.save(fname, f)
     end
 
@@ -61,7 +61,7 @@ end
     function plot_myelinated_annuli(fname)
         f = Figure()
         mr.plot_off_resonance(f[1, 1], pp, geometry)
-        mr.plot_geometry!(f[1, 1], pp, geometry)
+        plot!(f[1, 1], pp, geometry)
         CairoMakie.save(fname, f)
     end
 

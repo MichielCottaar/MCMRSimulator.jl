@@ -2,7 +2,7 @@
     isCI = get(ENV, "CI", "false") == "true"
     dir = @__DIR__
     @testset "Spins as dyads" begin
-        function plot_dyads(fname)
+        function plot_dyads(fname, kind=:dyad)
             snapshot = mr.Snapshot(
                 [
                     mr.Spin(position=[0, 0, 0], transverse=0.8, phase=0.)
@@ -13,11 +13,12 @@
             )
             plot_plane = mr.PlotPlane()
             f = Figure()
-            mr.dyad_snapshot(f[1, 1], plot_plane, snapshot; dyadlength=1.)
+            plot(f[1, 1], plot_plane, snapshot; lengthscale=1., kind=kind)
             CairoMakie.save(fname, f)
         end
 
         @visualtest plot_dyads "$dir/dyad_snapshot.png" !isCI
+        @visualtest fn => plot_dyads(fn, kind=:scatter) "$dir/scatter_snapshot.png" !isCI
     end
     @testset "Spins as image" begin
         function plot_image(fname)
@@ -31,7 +32,7 @@
             )
             plot_plane = mr.PlotPlane()
             f = Figure()
-            mr.plot_snapshot(f[1, 1], plot_plane, snapshot, ndyads=10, dyadlength=0.5, ngrid=10)
+            plot(f[1, 1], plot_plane, snapshot, kind=:image, ngrid=10)
             CairoMakie.save(fname, f)
         end
 
