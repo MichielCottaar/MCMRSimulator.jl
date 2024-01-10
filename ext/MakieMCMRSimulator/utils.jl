@@ -2,7 +2,8 @@ module Utils
 import Makie
 import Colors
 import MCMRSimulator.Spins: Spin, SpinOrientation, phase, transverse
-import MCMRSimulator: FixedGeometry, Snapshot, ObstructionGroup
+import MCMRSimulator: Snapshot, ObstructionGroup
+import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup
 import MCMRSimulator.Plot: PlotPlane
 
 
@@ -18,7 +19,9 @@ color(orient::SpinOrientation; saturation=1.) = Colors.HSV(phase(orient) + 180, 
 color(spin::Spin{N}; sequence=1, kwargs...) where {N} = color(spin.orientations[sequence]; kwargs...)
 
 
-const Projectable = Union{FixedGeometry, ObstructionGroup, Vector{<:ObstructionGroup}, Snapshot, Vector{<:Snapshot}}
+const GeometryLike = Union{FixedGeometry, FixedObstructionGroup, ObstructionGroup, Vector{<:ObstructionGroup}}
+const Projectable = Union{GeometryLike, Snapshot, Vector{<:Snapshot}}
+
 
 Makie.args_preferred_axis(::Projectable) = Makie.LScene
 Makie.args_preferred_axis(::PlotPlane) = Makie.Axis

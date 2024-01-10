@@ -4,36 +4,31 @@ import StaticArrays: SVector
 import LinearAlgebra: cross, ⋅, norm
 import Colors
 import GeometryBasics
-import MCMRSimulator.Plot: PlotPlane, plot_geometry, plot_geometry!
+import MCMRSimulator.Plot: PlotPlane, Plot_Geometry
 import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, FixedMesh
 import MCMRSimulator.Geometries: ObstructionGroup, fix, Mesh, Cylinders
+import ..Utils: GeometryLike
 
 
-@Makie.recipe(Plot_Geometry, plot_plane, geometry) do scene
-    Makie.Theme(
-    )
-end
-
-function Makie.plot!(pg::Plot_Geometry)
-    plot_plane = pg[1]
-    base_geometry = pg[2]
+function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:PlotPlane, <:GeometryLike}})
+    plot_plane = scene[1]
+    base_geometry = scene[2]
 
     geometry = @lift $base_geometry isa FixedGeometry ? $base_geometry : fix($base_geometry)
 
     to_plot = @lift project_geometry($plot_plane, $geometry)
 
-    on(to_plot) do to_iter
+    lift(to_plot) do to_iter
         for (func, args, kwargs) in to_iter
-            func(pg, args...; kwargs...)
+            func(scene, args...; kwargs...)
         end
     end
-    to_plot[] = to_plot[]
-    pg
+    scene
 end
 
-Makie.plottype(::PlotPlane, ::FixedGeometry) = Plot_Geometry
-Makie.plottype(::PlotPlane, ::ObstructionGroup) = Plot_Geometry
-Makie.plottype(::PlotPlane, ::AbstractVector{<:ObstructionGroup}) = Plot_Geometry
+Makie.plottype(::PlotPlane, ::GeometryLike) = Plot_Geometry
+
+Makie.convert_arguments(::Plot_Geometry, pp::PlotPlane, geometry::GeometryLike) = (pp, snapshot)
 
 
 function project_geometry(plot_plane::PlotPlane, geometry::FixedGeometry)
@@ -253,20 +248,7 @@ function add_overlap!(new_line, prev_point, new_point, sizes)
 end
 
 
-"""
-    plot(plot_plane, geometry)
-    plot!(plot_plane, geometry)
-    plot_geometry(plot_plane, geometry)
-    plot_geometry!(plot_plane, geometry)
-
-Plots the intersections of `geometry` in 3 dimensions
-"""
-@Makie.recipe(Plot_Geometry3D, geometry) do scene
-    Makie.Theme(
-    )
-end
-
-function Makie.plot!(pg::Plot_Geometry3D)
+function Makie.plot!(pg::Plot_Geometry{<:Tuple{<:GeometryLike}})
     base_geometry = pg[1]
 
     geometry = @lift $base_geometry isa FixedGeometry ? $base_geometry : (
@@ -287,7 +269,5 @@ function Makie.plot!(pg::Plot_Geometry3D)
     @lift plot_group.($geometry, Colors.distinguishable_colors(length($geometry)))
 end
 
-Makie.plottype(::FixedGeometry) = Plot_Geometry3D
-Makie.plottype(::ObstructionGroup) = Plot_Geometry3D
-Makie.plottype(::AbstractVector{<:ObstructionGroup}) = Plot_Geometry3D
+Makie.plottype(::GeometryLike) = Plot_Geometry
 end

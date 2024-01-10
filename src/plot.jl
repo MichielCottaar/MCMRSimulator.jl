@@ -16,8 +16,6 @@ import ...Methods: get_rotation
 import ...Geometries.Internal: ray_grid_intersections
 
 
-function plot_geometry end
-function plot_geometry! end
 """
     plot([plot_plane,] geometry; kwargs...)
     plot!([scene,] [plot_plane,] geometry; kwargs...)
@@ -32,7 +30,13 @@ If you want to overlay the off-resonance field, call [`plot_off_resonance`](@ref
 
 This function will only work if a [`Makie`](https://makie.org) backend is imported.
 """
-plot_geometry, plot_geometry!
+@recipe(Plot_Geometry, plot_plane, geometry) do scene
+    attr = Attributes(
+        color=theme(scene, :linecolor),
+    )
+    generic_plot_attributes!(attr)
+    return attr
+end
 
 function plot_off_resonance end
 function plot_off_resonance! end
