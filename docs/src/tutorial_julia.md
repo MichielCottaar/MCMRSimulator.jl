@@ -8,6 +8,7 @@ After [installation](@ref installation) we can load MCMRSimulator.jl using
 ```@example tutorial
 using MCMRSimulator
 using CairoMakie  # used for plotting; use GLMakie or WGLMakie for interactive plots
+update_theme!(Theme(Axis=(xgridvisible=false, ygridvisible=false))) # hide grid lines
 ```
 
 In general, running a simulation will consist of the following three steps:
@@ -33,6 +34,8 @@ import Random; Random.seed!(1) # hide
 geometry = Cylinders(radius=1., repeats=[2.5, 2.5])
 
 f = plot(PlotPlane(size=5), geometry)
+xlims!(f.axis, -2.5, 2.5)
+ylims!(f.axis, -2.5, 2.5)
 f
 save("tutorial_geometry.png", f) # hide
 nothing # hide
@@ -40,17 +43,22 @@ nothing # hide
 ![](tutorial_geometry.png)
 
 More complicated geometries can be generated as described [here](@ref geometry).
+More details on plotting geometries can be found in the [`plot_geometry`](@ref) documentation.
 
 The next step is to define a sequence (see [here](@ref sequence) for more details). 
 Here we will adopt a single diffusion-weighted MRI sequence.
 ```@example tutorial
 sequence = dwi(bval=2., TR=1000, TE=80, scanner=Siemens_Prisma)  # default gradient orientation in the x-direction
 f = plot(sequence)
+hideydecorations!(f.axis)
+hidespines!(f.axis, :l, :r, :t)
+xlims!(f.axis, -10, 110)
 f
 save("tutorial_sequence.png", f); # hide
 nothing # hide
 ```
 ![](tutorial_sequence.png)
+More details on plotting sequences can be found in the [`plot_sequence`](@ref) documentation.
 
 Once we have both a geometry and one or more sequences, we can put them together in a [`Simulation`](@ref) object:
 ```@example tutorial
@@ -135,8 +143,7 @@ Here we use this to plot the actual transverse signal evolution.
 times = 0:0.1:100
 # simulate 3000 spins for a single repetition time
 average_signals = readout(3000, simulation, times, skip_TR=5)
-f = plot(sequence)
-lines!(times, transverse.(average_signals)/3000.)
+f = lines(times, transverse.(average_signals)/3000.)
 xlims!(0, 100)
 f
 save("tutorial_transverse.png", f) # hide
@@ -158,7 +165,7 @@ snapshots = readout([[0, 0, 0], [1, 1, 0]], simulation, 0:0.01:3., return_snapsh
 
 pp = PlotPlane(size=5.)
 f = plot(pp, geometry)
-plot_trajectory2d!(pp, snapshots)
+plot(pp, snapshots)
 f
 save("tutorial_trajectory2D.png", f) # hide
 nothing # hide
@@ -170,11 +177,12 @@ The color of the spin encodes the phase of the MR signal in the transverse plane
 
 The trajectories can also be plotted in 3D:
 ```@example tutorial
-f = plot_trajectory3d(snapshots)
+f = plot(snapshots)
 save("tutorial_trajectory3D.png", f) # hide
 nothing # hide
 ```
 ![](tutorial_trajectory3D.png)
+More details on plotting snapshots can be found in the [`plot_snapshot`](@ref) documentation.
 
 We can also use this future to plot the complete [`Snapshot`](@ref) at a specific time. 
 In this example we do not set this time explicitly, so it will default to the time of the sequence [`Readout`](@ref) as discussed above:
