@@ -4,6 +4,13 @@ All notable changes to MCMRSimulator.jl will be documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+### Changed
+- The plotting in MCMRSimulator has been refactored:
+    - `plot_sequence` produces an actual sequence diagram
+    - More keywords can be passed on to `plot_geometry`, `plot_off_resonance`, `plot_snapshot`, `plot_sequence`, and `plot_trajectory`. The documentation of these functions now reflects these new keywords.
+    - The plotting library `Makie` is now an optional dependency. This greatly speeds up loading time, if plotting is not required.
+    - `plot_geometry3d`, `plot_trajectory3d`, and `plot_snapshot3d` have been removed. Used `plot_geometry`, `plot_trajectory`, and `plot_snapshot` (or just `plot`) instead.
+    - Plotting of individual snapshots can now be done using `Makie.plot([plot_plane, ]snapshot)`. You can decide whether to plot the spins as points (default), dyads (set `kind=:dyad`), or the total magnetisation as an image (set `kind=:image`). The length of the dyads is set using the `lengthscale` keyword (as in `Makie.arrows`), instead of the `dyadlength` keyword (as previous).
 ## [v0.9.0]
 ### Added
 - Text files can be used to set geometry positions/radii/etc from the command line.
