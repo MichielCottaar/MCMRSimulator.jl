@@ -112,6 +112,8 @@ Set `interpolate=false` to disable interpolating the colors.
 This plot will not work in 3D (i.e., a [`PlotPlane`](@ref) is required).
 
 This function will only work if [`Makie`](https://makie.org) is installed and imported.
+
+$(Base.Docs.doc(generic_plot_attributes!))
 """
 @recipe(Plot_Snapshot, snapshot) do scene
     attr = Attributes(
