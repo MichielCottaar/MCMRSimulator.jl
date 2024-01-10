@@ -8,7 +8,7 @@ This makes Makie an optional dependency of MCMRSimulator, which will only be req
 In addition to these empty plotting functions, this module defines the [`PlotPlane`](@ref) for any 2D-projections and helper functions to project onto this plane.
 """
 module Plot
-import MakieCore: @recipe, theme, generic_plot_attributes!, Attributes, automatic
+import MakieCore: @recipe, theme, generic_plot_attributes!, Attributes, automatic, shading_attributes!
 import CoordinateTransformations
 import StaticArrays: SVector, MVector
 import ...Spins: Snapshot, orientation, SpinOrientation, position
@@ -29,11 +29,26 @@ Otherwise, the geometry is plotted in 3D.
 If you want to overlay the off-resonance field, call [`plot_off_resonance`](@ref) first before calling this function.
 
 This function will only work if a [`Makie`](https://makie.org) backend is imported.
+
+## Attributes
+- `color`: Set the the theme's `linecolor` by default in 2D. In 3D each individual obstruction is by default plotted in a different, distinguishable color.
+- `alpha`: Set the transparancy in a 3D plot (0 being fully transparent and 1 fully opague).
+- `linewidth`: Set the linewidth in 2D plots.
+- `linestyle`: Set the linestyle in 2D plots.
+
+$(Base.Docs.doc(shading_attributes!))
+
+$(Base.Docs.doc(generic_plot_attributes!))
 """
 @recipe(Plot_Geometry, plot_plane, geometry) do scene
     attr = Attributes(
-        color=theme(scene, :linecolor),
+        color=automatic,
+        alpha=1.,
+        fxaa=true,
+        linewidth=theme(scene, :linewidth),
+        linestyle=nothing,
     )
+    shading_attributes!(attr)
     generic_plot_attributes!(attr)
     return attr
 end

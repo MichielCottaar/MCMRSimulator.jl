@@ -13,14 +13,23 @@ import ..Utils: GeometryLike
 function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:PlotPlane, <:GeometryLike}})
     plot_plane = scene[1]
     base_geometry = scene[2]
+    color = scene[:color]
+    lc = theme(scene, :linecolor)
 
     geometry = @lift $base_geometry isa FixedGeometry ? $base_geometry : fix($base_geometry)
 
     to_plot = @lift project_geometry($plot_plane, $geometry)
 
+    line_color = @lift $color == Makie.automatic ? $lc : $color
+
+    full_kwargs = Dict([key => scene[key] for key in [
+        :visible, :overdraw, :fxaa, :transparency, :inspectable, :depth_shift, :model, :space,
+        :linewidth, :linestyle,
+    ]])
+
     lift(to_plot) do to_iter
         for (func, args, kwargs) in to_iter
-            func(scene, args...; kwargs...)
+            func(scene, args...; color=line_color, kwargs..., full_kwargs...)
         end
     end
     scene
@@ -248,8 +257,13 @@ function add_overlap!(new_line, prev_point, new_point, sizes)
 end
 
 
-function Makie.plot!(pg::Plot_Geometry{<:Tuple{<:GeometryLike}})
-    base_geometry = pg[1]
+function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:GeometryLike}})
+    base_geometry = scene[1]
+    default_color = scene[:color]
+    kwargs = Dict([key => scene[key] for key in [
+        :alpha, :visible, :overdraw, :fxaa, :transparency, :inspectable, :depth_shift, :model, :space,
+        :shading, :diffuse, :specular, :shininess, :backlight, :ssao
+    ]])
 
     geometry = @lift $base_geometry isa FixedGeometry ? $base_geometry : (
         $base_geometry isa Cylinders ? fix(Mesh($base_geometry, height=1.)) : (
@@ -263,8 +277,9 @@ function Makie.plot!(pg::Plot_Geometry{<:Tuple{<:GeometryLike}})
         end
         vert = GeometryBasics.Point{3, Float64}.(group.vertices)
         tri = [GeometryBasics.TriangleFace{Int}(o.indices) for o in group.obstructions]
+        patch_color = @lift $default_color == Makie.automatic ? color : $default_color
         geometry_mesh = GeometryBasics.Mesh(vert, tri)
-        Makie.mesh!(pg, geometry_mesh, color=color, alpha=0.3)
+        Makie.mesh!(scene, geometry_mesh; color=patch_color, kwargs...)
     end
     @lift plot_group.($geometry, Colors.distinguishable_colors(length($geometry)))
 end
