@@ -85,7 +85,9 @@ This function will only work if [`Makie`](https://makie.org) is installed and im
         color = automatic,
         sequence = 1,
         fxaa = true,
-        dyadlength=1.
+        dyadlength=1.,
+        ngrid=20,
+        interpolate=true
     )
     generic_plot_attributes!(attr)
     return attr

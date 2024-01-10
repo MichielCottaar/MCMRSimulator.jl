@@ -21,6 +21,6 @@ color(spin::Spin{N}; sequence=1, kwargs...) where {N} = color(spin.orientations[
 const Projectable = Union{FixedGeometry, ObstructionGroup, Vector{<:ObstructionGroup}, Snapshot, Vector{<:Snapshot}}
 
 Makie.args_preferred_axis(::Projectable) = Makie.LScene
-Makie.args_preferred_axis(::Tuple{PlotPlane, <:Projectable}) = Makie.Axis
+Makie.args_preferred_axis(::PlotPlane) = Makie.Axis
 
 end
