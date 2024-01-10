@@ -1,17 +1,11 @@
 module Snapshots
 using Makie
-import ...Spins: Snapshot, get_sequence, position, orientation
+import MCMRSimulator.Spins: Snapshot, get_sequence, position, orientation
 import ..Utils: color
-import ..PlotPlanes: PlotPlane, project, project_on_grid
-"""
-    plot(snapshot)
-    plot!(snapshot)
-    scatter_snapshot(snapshot)
-    scatter_snapshot!(snapshot)
+import MCMRSimulator.Plot: PlotPlane, project, project_on_grid, plot_snapshot, plot_snapshot!
 
-Plots the spin positions in the [`Snapshot`](@ref) in 3D color coded by the spin's orientation (see [`color`](@ref)).
-"""
-@Makie.recipe(Scatter_Snapshot, snap) do scene
+
+@Makie.recipe(PlotSnapshot, snap) do scene
     Makie.Theme(
     )
 end

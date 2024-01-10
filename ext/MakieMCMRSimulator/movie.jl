@@ -1,10 +1,10 @@
 module Movie
 using Makie
-import ..PlotPlanes: PlotPlane
+import MCMRSimulator.Plot: PlotPlane, simulator_movie
 import ..Snapshots: dyad_snapshot!
-import ...Spins: transverse
-import ...Simulations: Simulation
-import ...Evolve: readout
+import MCMRSimulator.Spins: transverse
+import MCMRSimulator.Simulations: Simulation
+import MCMRSimulator.Evolve: readout
 
 function simulator_movie(filename, simulator::Simulation{N}, times, repeats; resolution=(1600, 800), trajectory_init=30, signal_init=10000, framerate=50, plane_orientation=:z, dyadlength=0.6, arrowsize=10.) where {N}
     if isa(trajectory_init, Integer)

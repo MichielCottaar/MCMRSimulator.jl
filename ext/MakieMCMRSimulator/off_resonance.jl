@@ -1,16 +1,10 @@
 module OffResonance
 using Makie
 import StaticArrays: SVector
-import ..PlotPlanes: PlotPlane
-import ...Geometries.Internal: FixedSusceptibility, susceptibility_off_resonance
-import ...Geometries: fix_susceptibility
+import MCMRSimulator.Plot: PlotPlane, plot_off_resonance, plot_off_resonance!
+import MCMRSimulator.Geometries.Internal: FixedSusceptibility, susceptibility_off_resonance
+import MCMRSimulator.Geometries: fix_susceptibility
 
-"""
-    plot_off_resonance(plot_plane, geometry)
-    plot_off_resonance(plot_plane, geometry)
-
-Plots the off-resonance of `geometry` in the [`PlotPlane`](@ref).
-"""
 @Makie.recipe(Plot_Off_Resonance, plot_plane, geometry) do scene
     Makie.Theme(
         colormap=:viridis,

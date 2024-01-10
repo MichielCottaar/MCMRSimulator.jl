@@ -4,18 +4,11 @@ import StaticArrays: SVector
 import LinearAlgebra: cross, ⋅, norm
 import Colors
 import GeometryBasics
-import ..PlotPlanes: PlotPlane
-import ...Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, FixedMesh
-import ...Geometries: ObstructionGroup, fix, Mesh, Cylinders
+import MCMRSimulator.Plot: PlotPlane, plot_geometry, plot_geometry!
+import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, FixedMesh
+import MCMRSimulator.Geometries: ObstructionGroup, fix, Mesh, Cylinders
 
-"""
-    plot(plot_plane, geometry)
-    plot!(plot_plane, geometry)
-    plot_geometry(plot_plane, geometry)
-    plot_geometry!(plot_plane, geometry)
 
-Plots the intersections of `geometry` in the [`PlotPlane`](@ref).
-"""
 @Makie.recipe(Plot_Geometry, plot_plane, geometry) do scene
     Makie.Theme(
     )

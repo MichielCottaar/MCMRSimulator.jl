@@ -1,9 +1,9 @@
 module Trajectory
 using Makie
 import Colors
-import ..PlotPlanes: PlotPlane, project_trajectory
+import MCMRSimulator.Plot: PlotPlane, project_trajectory, plot_trajectory, plot_trajectory!
 import ..Utils: color
-import ...Spins: Snapshot, position, get_sequence
+import MCMRSimulator.Spins: Snapshot, position, get_sequence
 """
     plot(snapshots)
     plot!(snapshots)

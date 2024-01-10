@@ -25,7 +25,7 @@ include("relax.jl")
 include("simulations.jl")
 include("subsets.jl")
 include("evolve.jl")
-include("plot/plot.jl")
+include("plot.jl")
 include("cli/cli.jl")
 
 import .Constants: gyromagnetic_ratio
@@ -84,11 +84,11 @@ export constant_pulse, read_pulseq
 import .SequenceBuilder: BuildingBlock, define_sequence, add_linear_diffusion_weighting, gradient_echo, spin_echo, dwi, trapezium_gradient
 export BuildingBlock, define_sequence, add_linear_diffusion_weighting, gradient_echo, spin_echo, dwi, trapezium_gradient
 
-import .Plot: PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d, simulator_movie, plot_off_resonance, plot_geometry3d, plot_geometry3d!
-export PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d, simulator_movie, plot_off_resonance, plot_geometry3d, plot_geometry3d!
+import .Plot: PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance
+export PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance
 
-import .Plot: plot_snapshot!, image_snapshot!, dyad_snapshot!, plot_geometry!, plot_trajectory2d!, plot_trajectory3d!, plot_off_resonance!
-export plot_snapshot!, image_snapshot!, dyad_snapshot!, plot_geometry!, plot_trajectory2d!, plot_trajectory3d!, plot_off_resonance!
+import .Plot: plot_snapshot!, plot_geometry!, plot_trajectory!, plot_off_resonance!
+export plot_snapshot!, plot_geometry!, plot_trajectory!, plot_off_resonance!
 
 
 # Additional imports that will not be exported.

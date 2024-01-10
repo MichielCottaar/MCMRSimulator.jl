@@ -2,9 +2,11 @@ module Sequences
 using Makie
 import Colors
 import LinearAlgebra: norm
-import ...Sequences: Sequence, MRGradients, RFPulse, Readout, InstantComponent, InstantGradient, InstantRFPulse
-import ...Sequences: flip_angle, qval, control_points, gradient
-import ...Methods: get_time
+import MCMRSimulator.Sequences: Sequence, MRGradients, RFPulse, Readout, InstantComponent, InstantGradient, InstantRFPulse
+import MCMRSimulator.Sequences: flip_angle, qval, control_points, gradient
+import MCMRSimulator.Methods: get_time
+import MCMRSimulator.Plot: plot_sequence, plot_sequence!
+
 @Makie.recipe(Sequence_Plot, seq) do scene
     Makie.Theme(
         max_G=nothing,

@@ -1,6 +1,8 @@
 module Utils
 import Colors
-import ...Spins: Spin, SpinOrientation, phase, transverse
+import MCMRSimulator.Spins: Spin, SpinOrientation, phase, transverse
+
+
 """
     color(orient::SpinOrientation; saturation=1.)
 
@@ -9,4 +11,5 @@ Brighter colors have a larger transverse component, so that spins with no transv
 The actual color encodes the spin orientation.
 """
 color(orient::Union{Spin{1}, SpinOrientation}; saturation=1.) = Colors.HSV(phase(orient) + 180, saturation, transverse(orient))
+
 end
