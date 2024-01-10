@@ -1,23 +1,21 @@
 module OffResonance
 using Makie
 import StaticArrays: SVector
-import MCMRSimulator.Plot: PlotPlane, plot_off_resonance, plot_off_resonance!
+import MCMRSimulator.Plot: PlotPlane, Plot_Off_Resonance
 import MCMRSimulator.Geometries.Internal: FixedSusceptibility, susceptibility_off_resonance
 import MCMRSimulator.Geometries: fix_susceptibility
 
-@Makie.recipe(Plot_Off_Resonance, plot_plane, geometry) do scene
-    Makie.Theme(
-        colormap=:viridis,
-        ngrid=400
-    )
-end
+function Makie.plot!(scene::Plot_Off_Resonance)
+    plot_plane = scene[1]
+    raw_geometry = scene[2]
 
-function Makie.plot!(por::Plot_Off_Resonance)
-    plot_plane = por[1]
-    raw_geometry = por[2]
+    kwargs = Dict([key => scene[key] for key in [
+        :visible, :overdraw, :fxaa, :transparency, :inspectable, :depth_shift, :model, :space,
+        :colormap, :colorscale, :colorrange, :nan_color, :lowclip, :highclip, :alpha,
+    ]])
     susc = @lift raw_geometry isa FixedSusceptibility ? raw_geometry : fix_susceptibility($raw_geometry)
 
-    dims = @lift -0.5:(1/$(por[:ngrid])):0.5
+    dims = @lift -0.5:(1/$(scene[:ngrid])):0.5
     xx_1d = @lift $dims * $plot_plane.sizex
     yy_1d = @lift $dims * $plot_plane.sizey
     pos_plane = @lift broadcast(
@@ -27,8 +25,10 @@ function Makie.plot!(por::Plot_Off_Resonance)
     )
     pos_orig = @lift inv($plot_plane.transformation).($pos_plane)
     field = @lift map(p->susceptibility_off_resonance($susc, p), $pos_orig)
-    Makie.image!(por, xx_1d, yy_1d, field, colormap=por[:colormap])
-    por
+    x_interval = @lift (-0.5 * $plot_plane.sizex) .. (0.5 * $plot_plane.sizex)
+    y_interval = @lift (-0.5 * $plot_plane.sizey) .. (0.5 * $plot_plane.sizey)
+    Makie.image!(scene, x_interval, y_interval, field; kwargs...)
+    scene
 end
 
 end

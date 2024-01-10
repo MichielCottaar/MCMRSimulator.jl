@@ -8,7 +8,7 @@ This makes Makie an optional dependency of MCMRSimulator, which will only be req
 In addition to these empty plotting functions, this module defines the [`PlotPlane`](@ref) for any 2D-projections and helper functions to project onto this plane.
 """
 module Plot
-import MakieCore: @recipe, theme, generic_plot_attributes!, Attributes, automatic, shading_attributes!
+import MakieCore: @recipe, theme, generic_plot_attributes!, Attributes, automatic, shading_attributes!, colormap_attributes!
 import CoordinateTransformations
 import StaticArrays: SVector, MVector
 import ...Spins: Snapshot, orientation, SpinOrientation, position
@@ -53,8 +53,7 @@ $(Base.Docs.doc(generic_plot_attributes!))
     return attr
 end
 
-function plot_off_resonance end
-function plot_off_resonance! end
+
 """
     plot_off_resonance([plot_plane,] geometry; kwargs...)
     plot_off_resonance!([scene,] [plot_plane,] geometry; kwargs...)
@@ -64,8 +63,23 @@ If a [`PlotPlane`](@ref) is provided the 2D projection of the geometry onto this
 Otherwise, the geometry is plotted in 3D.
 
 This function will only work if a [`Makie`](https://makie.org) backend is imported.
+
+## Attributes
+- `ngrid=400` sets the number of points where the off-resonance field is evaluated before producing the image. Setting this to a higher number will produce a more accurate image of the off-resonance field at the cost of more computing power.
+
+$(Base.Docs.doc(colormap_attributes!))
+
+$(Base.Docs.doc(generic_plot_attributes!))
 """
-plot_off_resonance, plot_off_resonance!
+@recipe(Plot_Off_Resonance, plot_plane, geometry) do scene
+    attr = Attributes(
+        ngrid=400,
+        fxaa=true,
+    )
+    colormap_attributes!(attr, theme(scene, :colormap))
+    generic_plot_attributes!(attr)
+    return attr
+end
 
 
 """
