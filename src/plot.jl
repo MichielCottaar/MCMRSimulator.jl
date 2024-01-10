@@ -49,8 +49,6 @@ This function will only work if a [`Makie`](https://makie.org) backend is import
 plot_off_resonance, plot_off_resonance!
 
 
-function plot_snapshot end
-function plot_snapshot! end
 """
     plot([plot_plane], snapshot; kind=:scatter, kwargs...)
     plot!([scene,] [plot_plane], snapshot; kind=:scatter, kwargs...)
@@ -81,7 +79,17 @@ This plot will not work in 3D (i.e., a [`PlotPlane`](@ref) is required).
 
 This function will only work if [`Makie`](https://makie.org) is installed and imported.
 """
-plot_snapshot, plot_snapshot!
+@recipe(Plot_Snapshot, snapshot) do scene
+    attr = Attributes(
+        kind = :scatter,
+        color = automatic,
+        sequence = 1,
+        fxaa = true,
+        dyadlength=1.
+    )
+    generic_plot_attributes!(attr)
+    return attr
+end
 
 function plot_trajectory end
 function plot_trajectory! end
