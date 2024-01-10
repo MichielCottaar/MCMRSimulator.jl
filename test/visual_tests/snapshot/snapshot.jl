@@ -18,7 +18,7 @@
         end
 
         @visualtest plot_dyads "$dir/dyad_snapshot.png" !isCI
-        @visualtest fn => plot_dyads(fn, kind=:scatter) "$dir/scatter_snapshot.png" !isCI
+        @visualtest fn -> plot_dyads(fn, :scatter) "$dir/scatter_snapshot.png" !isCI
     end
     @testset "Spins as image" begin
         function plot_image(fname)
