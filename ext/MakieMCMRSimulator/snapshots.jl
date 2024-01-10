@@ -25,7 +25,10 @@ Makie.convert_arguments(::Plot_Snapshot, pp::PlotPlane, snapshot::Snapshot) = (p
 function generic_kwargs(scene::Plot_Snapshot)
     return Dict([key => scene[key] for key in [
         :visible, :overdraw, :transparency, :fxaa, :inspectable, :depth_shift, :model, :space,
-        :interpolate
+        :marker, :markersize, :strokecolor, :strokewidth, :glowcolor, :glowwidth,
+        :interpolate,
+        :arrowsize, :arrowhead, :arrowtail, :linestyle, :lengthscale, :quality, :inspectable, :markerspace,
+        :diffuse, :specular, :shininess, :ssao
     ]])
 end
 
@@ -39,11 +42,11 @@ function scatter_snapshot!(scene::Plot_Snapshot{<:Tuple{<:Snapshot}})
 end
 
 function dyad_snapshot!(scene::Plot_Snapshot{<:Tuple{<:Snapshot}})
-    @extract scene (snapshot, sequence, color, dyadlength)
+    @extract scene (snapshot, sequence, color)
     kwargs = generic_kwargs(scene)
     colors = @lift $color == Makie.automatic ? Utils.color.($snapshot; sequence=$sequence) : $color
     pos = @lift Makie.Point3f.(position.($snapshot))
-    directions = @lift [Makie.Point3f(orientation(get_sequence(s, $sequence)) .* $dyadlength) for s in $snapshot]
+    directions = @lift [Makie.Point3f(orientation(get_sequence(s, $sequence))) for s in $snapshot]
     Makie.arrows!(scene, pos, directions; color=colors, kwargs...)
 end
 
@@ -66,11 +69,11 @@ end
 function dyad_snapshot!(scene::Plot_Snapshot{<:Tuple{PlotPlane, Snapshot}})
     plot_plane = scene[1]
     snapshot = scene[2]
-    @extract scene (sequence, color, dyadlength)
+    @extract scene (sequence, color)
     kwargs = generic_kwargs(scene)
     colors = @lift $color == Makie.automatic ? Utils.color.($snapshot; sequence=$sequence) : $color
     pos = @lift [Makie.Point2f(project($plot_plane, position(spin))[1:2]) for spin in $snapshot]
-    directions = @lift [Makie.Point2f(orientation(get_sequence(s, $sequence))[1:2] .* $dyadlength) for s in $snapshot]
+    directions = @lift [Makie.Point2f(orientation(get_sequence(s, $sequence))[1:2]) for s in $snapshot]
     Makie.arrows!(scene, pos, directions; color=colors, kwargs...)
 end
 
