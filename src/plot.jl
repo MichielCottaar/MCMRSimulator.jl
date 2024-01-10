@@ -170,7 +170,15 @@ Additional keywords are passed on to `Makie.lines!`.
 
 This function will only work if [`Makie`](https://makie.org) is installed and imported.
 """
-plot_trajectory, plot_trajectory!
+@recipe(Plot_Trajectory, trajectory) do scene
+    attr = Attributes(
+        sequence=1,
+        color=automatic,
+        fxaa=true,
+    )
+    generic_plot_attributes!(attr)
+    return attr
+end
 
 
 """
