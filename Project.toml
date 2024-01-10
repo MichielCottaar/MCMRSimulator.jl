@@ -1,6 +1,6 @@
 name = "MCMRSimulator"
 uuid = "eac06e4d-a854-4bf6-b44f-54c98b0401d1"
-authors = ["Michiel Cottaar <Mmichiel.cottaar@ndcn.ox.ac.uk>"]
+authors = ["Michiel Cottaar <michiel.cottaar@ndcn.ox.ac.uk>"]
 version = "0.9.0"
 
 [deps]
