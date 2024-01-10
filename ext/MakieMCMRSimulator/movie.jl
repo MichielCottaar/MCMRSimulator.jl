@@ -1,12 +1,11 @@
 module Movie
 using Makie
 import MCMRSimulator.Plot: PlotPlane, simulator_movie
-import ..Snapshots: dyad_snapshot!
 import MCMRSimulator.Spins: transverse
 import MCMRSimulator.Simulations: Simulation
 import MCMRSimulator.Evolve: readout
 
-function simulator_movie(filename, simulator::Simulation{N}, times, repeats; resolution=(1600, 800), trajectory_init=30, signal_init=10000, framerate=50, plane_orientation=:z, dyadlength=0.6, arrowsize=10.) where {N}
+function simulator_movie(filename, simulator::Simulation{N}, times, repeats; resolution=(1600, 800), trajectory_init=30, signal_init=10000, framerate=50, plane_orientation=:z, lengthscale=1., arrowsize=10.) where {N}
     if isa(trajectory_init, Integer)
         trajectory_init = [rand(3) .* repeats .- repeats ./ 2 for _ in 1:trajectory_init]
     end
@@ -29,7 +28,7 @@ function simulator_movie(filename, simulator::Simulation{N}, times, repeats; res
     plot!(ax_walk, pp, simulator.geometry)
     xlims!(ax_walk, -repeats[1]/2, repeats[1]/2)
     ylims!(ax_walk, -repeats[2]/2, repeats[2]/2)
-    dyad_snapshot!(ax_walk, pp, @lift(traj[$index]), dyadlength=dyadlength, arrowsize=arrowsize)
+    plot!(ax_walk, pp, @lift(traj[$index]), lengthscale=lengthscale, arrowsize=arrowsize, kind=:dyad)
 
     ax_seq = Axis(fig[1, 2])
 
