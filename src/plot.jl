@@ -31,7 +31,7 @@ If you want to overlay the off-resonance field, call [`plot_off_resonance`](@ref
 This function will only work if a [`Makie`](https://makie.org) backend is imported.
 
 ## Attributes
-- `color`: Set the the theme's `linecolor` by default in 2D. In 3D each individual obstruction is by default plotted in a different, distinguishable color.
+- `color`: Set the color of the lines (2D) or patches (3D). In 2D it is set to the theme's `linecolor` by default. In 3D each individual obstruction is by default plotted in a different, distinguishable color.
 - `alpha`: Set the transparancy in a 3D plot (0 being fully transparent and 1 fully opague).
 - `linewidth`: Set the linewidth in 2D plots.
 - `linestyle`: Set the linestyle in 2D plots.
