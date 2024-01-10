@@ -8,6 +8,7 @@ This makes Makie an optional dependency of MCMRSimulator, which will only be req
 In addition to these empty plotting functions, this module defines the [`PlotPlane`](@ref) for any 2D-projections and helper functions to project onto this plane.
 """
 module Plot
+import MakieCore: @recipe, theme, generic_plot_attributes!, Attributes, automatic
 import CoordinateTransformations
 import StaticArrays: SVector, MVector
 import ...Spins: Snapshot, orientation, SpinOrientation, position
@@ -101,8 +102,7 @@ This function will only work if [`Makie`](https://makie.org) is installed and im
 """
 plot_trajectory, plot_trajectory!
 
-function plot_sequence end
-function plot_sequence! end
+
 """
     plot(sequence; kwargs...)
     plot!([scene,] sequence; kwargs...)
@@ -112,8 +112,36 @@ function plot_sequence! end
 Plot the sequence diagram.
 
 This function will only work if [`Makie`](https://makie.org) is installed and imported.
+
+## Attributes
+
+### Line properties
+- `linecolor=theme(scene, :textcolor)` sets the color of the lines. If you want to set the text color to the same value, you can also use `color=...`.
+- `linewidth=1.5` sets the width of the lines.
+- `instant_width=3.` sets the width of any instant gradients or pulses with respect to the `linewidth`.
+
+### Text properties
+- `textcolor=theme(scene, :textcolor)` sets the color of the text. If you want to set the line color to the same value, you can also use `color=...`.
+- `font`: 
+- `fontsize`: set the text size
+
+$(Base.Docs.doc(generic_plot_attributes!))
 """
-plot_sequence, plot_sequence!
+@recipe(Plot_Sequence, sequence) do scene
+    attr = Attributes(
+        color = theme(scene, :textcolor),
+        linecolor = automatic,
+        linewidth = 1.5,
+        instant_width = 3.,
+        textcolor = automatic,
+        font = theme(scene, :font),
+        fonts = theme(scene, :fonts),
+        fontsize = theme(scene, :fontsize),
+        fxaa = true,
+    )
+    generic_plot_attributes!(attr)
+    return attr
+end
 
 """
     simulator_movie(filename, simulation, times, size; resolution=(1600, 800), trajectory_init=30, signal_init=10000, framerate=50, plane_orientation=:z, kwargs...)

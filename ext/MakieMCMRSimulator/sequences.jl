@@ -1,18 +1,32 @@
 module Sequences
 using Makie
+import MakieCore
 import Colors
 import LinearAlgebra: norm
 import MCMRSimulator.Sequences: Sequence, MRGradients, RFPulse, Readout, InstantComponent, InstantGradient, InstantRFPulse
 import MCMRSimulator.Sequences: flip_angle, qval, control_points, gradient
 import MCMRSimulator.Methods: get_time
-import MCMRSimulator.Plot: plot_sequence, plot_sequence!
+import MCMRSimulator.Plot: Plot_Sequence
 
-@Makie.recipe(Sequence_Plot, seq) do scene
-    Makie.Theme(
-        max_G=nothing,
-        single_gradient=false,
-    )
-end
+max_finite_gradient(sequence::Sequence{L, K, M, 0}) where {L, K, M} = 0.
+max_finite_gradient(sequence::Sequence) = maximum(max_finite_gradient.(sequence.gradients))
+max_finite_gradient(grad::MRGradients) = maximum(abs.(reduce(vcat, grad.shape.amplitudes)), init=0.)
+
+max_instant_gradient(sequence::Sequence{0}) = 0.
+max_instant_gradient(sequence::Sequence) = maximum(max_instant_gradient.(sequence.instants))
+max_instant_gradient(grad::InstantGradient) = maximum(abs.(grad.qvec))
+max_instant_gradient(pulse::InstantRFPulse) = 0.
+
+max_finite_pulse(sequence::Sequence{L, 0}) where {L} = 0.
+max_finite_pulse(sequence::Sequence) = maximum(max_finite_pulse.(sequence.pulses))
+max_finite_pulse(pulse::RFPulse) = maximum(abs.(pulse.amplitude.amplitudes), init=0.)
+
+max_instant_pulse(sequence::Sequence{0}) = 0.
+max_instant_pulse(sequence::Sequence) = maximum(max_instant_pulse.(sequence.instants))
+max_instant_pulse(grad::InstantGradient) = 0.
+max_instant_pulse(pulse::InstantRFPulse) = pulse.flip_angle
+
+
 
 """
     plot(sequence)
@@ -24,120 +38,94 @@ Creates a visual representation of a [`Sequence`](@ref) diagram.
 """
 function sequence_plot end
 
-function Makie.plot!(sp::Sequence_Plot)
-    seq = sp[1]
-    on(@lift ($(sp[1]), $(sp[:max_G]), $(sp[:single_gradient]))) do as_tuple
-        (s, max_G, sg) = as_tuple
-        max_angle = maximum([abs(flip_angle(p)) for p in s.instants if isa(p, InstantRFPulse)], init=0.)
-        max_rf = maximum(Vector([maximum(p.amplitude.amplitudes) for p in s.pulses]), init=0.)
-        max_qval = maximum([qval(p) for p in s.instants if isa(p, InstantGradient)], init=0.)
-        for pulse in [s.instants..., s.pulses..., Readout.(s.readout_times)...]
-            pulseplot!(sp, pulse; max_rf_pulse=max_rf, max_rf_angle=max_angle, max_qval=max_qval)
+function Makie.plot!(scene::Plot_Sequence)
+    kwargs = Dict([
+        key => scene[key] for key in [
+            :visible, :overdraw, :transparency, :fxaa, :inspectable, :depth_shift, :model, :space
+        ]
+    ])
+    text_kwargs = Dict([
+        key => scene[key] for key in [
+            :textcolor, :font, :fonts, :fontsize
+        ]
+    ])
+    text_kwargs[:color] = map((a, c) -> a === MakieCore.automatic ? c : a, scene[:textcolor], scene[:color])
+    line_color = map((a, c) -> a === MakieCore.automatic ? c : a, scene[:linecolor], scene[:color])
+    instant_width = map((a, c) -> a * c, scene[:linewidth], scene[:instant_width])
+
+    lift(scene[:sequence]) do sequence
+        lines = [
+            (label, [0.], [0.], [])
+            for label in ("RFx", "RFy", "G1↺", "G2↺", "G3↺", "Gx", "Gy", "Gz")
+        ]
+
+        scale = max_finite_pulse(sequence)
+        for pulse in sequence.pulses
+            times = sort(unique(vcat(pulse.amplitude.times, pulse.phase.times)))
+            append!(lines[1][2], times)
+            append!(lines[2][2], times)
+            append!(lines[1][3], [amplitude(pulse, time) .* cosd.(phase(pulse, time)) ./ scale for time in times])
+            append!(lines[2][3], [amplitude(pulse, time) .* sind.(phase(pulse, time)) ./ scale for time in times])
         end
-        max_G = isnothing(max_G) ? s.scanner.gradient : max_G
-        if isinf(max_G)
-            if length(s.gradients) > 0
-                max_G = maximum([maximum(norm.(grad.shape.amplitudes)) for grad in s.gradients])
+
+        scale = max_instant_pulse(sequence)
+        for instant_pulse in sequence.instants
+            if !(instant_pulse isa InstantRFPulse)
+                continue
+            end
+            if cosd(instant_pulse.phase) != 0.
+                push!(lines[1][4], (instant_pulse.time, instant_pulse.flip_angle * cosd(instant_pulse.phase) / scale))
+            end
+            if sind(instant_pulse.phase) != 0.
+                push!(lines[2][4], (instant_pulse.time, instant_pulse.flip_angle * sind(instant_pulse.phase) / scale))
             end
         end
-        for grad in s.gradients
-            gradientplot!(sp, grad, max_G=max_G, single_gradient=sg)
-        end
-    end
-    seq[] = seq[]
-    sp
-end
 
-Makie.plottype(::Sequence) = Sequence_Plot
+        instant_scale = max_instant_gradient(sequence)
+        finite_scale = max_finite_gradient(sequence)
+        for base_index in (2, 5)
+            for dim in (1, 2, 3)
+                index = base_index + dim
 
-
-@Makie.recipe(PulsePlot, pulse) do scene
-    Makie.Theme(
-        max_rf_pulse=nothing,
-        max_rf_angle=180.,
-        max_qval=nothing,
-    )
-end
-
-function Makie.plot!(pp::PulsePlot)
-    p = pp[1]
-    r = pp[:max_rf_pulse]
-    a = pp[:max_rf_angle]
-    q = pp[:max_qval]
-    comb = @lift ($p, $r, $a, $q)
-    on(comb) do as_tuple
-        pulse, max_rf, max_angle, max_qval = as_tuple
-        if isa(pulse, InstantRFPulse)
-            if ~iszero(flip_angle(pulse))
-                height = 0.9 * flip_angle(pulse) / max_angle
-                Makie.arrows!(pp, [get_time(pulse)], [0.], [0.], [height], color=:black)
-                Makie.text!(pp, "α=" * string(Int(round(flip_angle(pulse)))), position=(get_time(pulse), height + 0.05), align=(:center, :center))
-            else
-                Makie.text!(pp, string("α=0"), position=(get_time(pulse), 0.05), align=(:center, :center))
-            end
-        elseif isa(pulse, InstantGradient)
-            if ~iszero(qval(pulse))
-                height = (isnothing(max_qval) ? 1. : qval(pulse) / max_qval) * 0.9
-                Makie.barplot!(pp, [get_time(pulse)], [height], color=:black)
-                Makie.text!(pp, "q=" * string(round(qval(pulse), sigdigits=2)), position=(get_time(pulse), height + 0.05), align=(:center, :center))
-            else
-                Makie.text!(pp, string("q=0"), position=(get_time(pulse), 0.05), align=(:center, :center))
-            end
-        elseif isa(pulse, Readout)
-            Makie.arrows!(pp, [get_time(pulse)], [0.5], [0.], [-0.5], color=:black)
-            Makie.text!(pp, "readout", position=(get_time(pulse), 0.55), align=(:center, :center))
-        elseif isa(pulse, RFPulse)
-            times = control_points(pulse.amplitude)
-            norm = isnothing(max_rf) ? maximum(pulse.amplitude.amplitudes) : max_rf
-            Makie.lines!(pp, times, pulse.amplitude.amplitudes ./ norm, color=:black)
-        end
-    end
-    p[] = p[]
-    pp
-end
-
-Makie.plottype(::InstantComponent) = PulsePlot
-Makie.plottype(::Readout) = PulsePlot
-Makie.plottype(::RFPulse) = PulsePlot
-
-
-@Makie.recipe(GradientPlot, pulse) do scene
-    Makie.Theme(
-        max_G=nothing,
-        single_gradient=false,
-    )
-end
-
-function Makie.plot!(gp::GradientPlot)
-    comb = @lift ($(gp[1]), $(gp[:max_G]), $(gp[:single_gradient]))
-
-    on(comb) do as_tuple
-        (gradient_profile, max_G, single_grad) = as_tuple
-        cp = sort(unique(control_points(gradient_profile)))
-        times = sort(unique([
-            prevfloat.(cp[2:end])...
-            nextfloat.(cp[1:end-1])...
-        ]))
-        gradients = [gradient(gradient_profile, t) for t in times]
-        if length(gradients) > 0
-            grad_sizes = [norm(g) for g in gradients]
-            if isnothing(max_G) | !isfinite(max_G)
-                max_G = maximum(grad_sizes)
-            end
-            if single_grad
-                rgb = [Colors.RGB(abs.(g./s)...) for (g, s) in zip(gradients, grad_sizes)]
-                Makie.lines!(gp, times, [s / max_G for s in grad_sizes], color=1:length(times), colormap=rgb)
-            else
-                for (dim, color) in zip(1:3, ("red", "green", "blue"))
-                    Makie.lines!(gp, times, [g[dim] / max_G for g in gradients], color=color)
+                for grad in sequence.gradients
+                    if xor(base_index == 2, grad.apply_bvec)
+                        continue
+                    end
+                    append!(lines[index][2], grad.shape.times)
+                    append!(lines[index][3], [a[dim] for a in grad.shape.amplitudes] ./ finite_scale)
+                end
+                for instant_grad in sequence.instants
+                    if !(instant_grad isa InstantGradient)
+                        continue
+                    end
+                    if xor(base_index == 2, instant_grad.apply_bvec)
+                        continue
+                    end
+                    push!(lines[index][4], (instant_grad.time, instant_grad.qvec[dim] ./ instant_scale))
                 end
             end
         end
+
+        current_y = 0.
+        for ln in lines[end:-1:1]
+            push!(ln[2], sequence.TR)
+            push!(ln[3], 0.)
+            lower = min(minimum(ln[3], init=0.), minimum([a[2] for a in ln[4]], init=0.))
+            upper = max(maximum(ln[3], init=0.), maximum([a[2] for a in ln[4]], init=0.))
+            if lower == upper
+                continue
+            end
+            Makie.text!(scene, ln[1] * " ", position=(0., current_y - lower), align=(:right, :center); text_kwargs..., kwargs...)
+            Makie.lines!(scene, ln[2], ln[3] .- (lower - current_y); linewidth=scene[:linewidth], color=line_color, kwargs...)
+            for (time, height) in ln[4]
+                Makie.lines!(scene, [time, time], [current_y - lower, current_y - lower + height]; linewidth=instant_width, color=line_color, kwargs...)
+            end
+
+            current_y += (upper - lower) + 0.1
+        end
     end
-    gp[1][] = gp[1][]
-    gp
 end
 
-Makie.plottype(::MRGradients) = GradientPlot
+Makie.plottype(::Sequence) = Plot_Sequence
 
 end
