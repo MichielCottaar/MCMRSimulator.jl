@@ -145,7 +145,7 @@ $(Base.Docs.doc(generic_plot_attributes!))
         markerspace=:pixel,
         diffuse=0.4,
         specular=0.2,
-        shininess=32.0,
+        shininess=32f0,
         ssao = false
 
     )
