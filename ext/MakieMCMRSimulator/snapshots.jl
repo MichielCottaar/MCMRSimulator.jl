@@ -38,7 +38,7 @@ function scatter_snapshot!(scene::Plot_Snapshot{<:Tuple{<:Snapshot}})
     kwargs = generic_kwargs(scene)
     colors = @lift $color == Makie.automatic ? Utils.color.($snapshot; sequence=$sequence) : $color
     pos = @lift Makie.Point3f.(position.($snapshot))
-    Makie.meshscatter!(scene, pos; color=colors, kwargs...)
+    Makie.scatter!(scene, pos; color=colors, kwargs...)
 end
 
 function dyad_snapshot!(scene::Plot_Snapshot{<:Tuple{<:Snapshot}})
