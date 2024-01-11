@@ -123,6 +123,13 @@ function Makie.plot!(scene::Plot_Sequence)
 
             current_y += (upper - lower) + 0.1
         end
+
+        if length(sequence.readout_times) > 0
+            Makie.text!(scene, "ADC "; position=(0., -0.35), align=(:right, :center), text_kwargs..., kwargs...)
+            for time in sequence.readout_times
+                Makie.lines!(scene, [time, time], [-0.6, -0.1]; color=line_color, linewidth=scene[:linewidth], linestyle=scene[:readout_linestyle], kwargs...)
+            end
+        end
     end
 end
 

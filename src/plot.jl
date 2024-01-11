@@ -197,6 +197,7 @@ This function will only work if [`Makie`](https://makie.org) is installed and im
 - `linecolor` sets the color of the lines. If you want to set the text color to the same value, you can also use `color=...`.
 - `linewidth=1.5` sets the width of the lines.
 - `instant_width=3.` sets the width of any instant gradients or pulses with respect to the `linewidth`.
+- `readout_linestyle` sets the linestyle used to mark the sequence readouts (`:dot` by default).
 
 ### Text properties
 - `textcolor` sets the color of the text. If you want to set the line color to the same value, you can also use `color=...`.
@@ -211,6 +212,7 @@ $(Base.Docs.doc(generic_plot_attributes!))
         linecolor = automatic,
         linewidth = 1.5,
         instant_width = 3.,
+        readout_linestyle=:dot,
         textcolor = automatic,
         font = theme(scene, :font),
         fonts = theme(scene, :fonts),
