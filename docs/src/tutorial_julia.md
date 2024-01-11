@@ -182,7 +182,7 @@ save("tutorial_trajectory3D.png", f) # hide
 nothing # hide
 ```
 ![](tutorial_trajectory3D.png)
-More details on plotting snapshots can be found in the [`plot_snapshot`](@ref) documentation.
+More details on plotting trajectories can be found in the [`plot_trajectory`](@ref) documentation.
 
 We can also use this future to plot the complete [`Snapshot`](@ref) at a specific time. 
 In this example we do not set this time explicitly, so it will default to the time of the sequence [`Readout`](@ref) as discussed above:
@@ -196,11 +196,8 @@ save("tutorial_snapshot.png", f) # hide
 nothing # hide
 ```
 ![](tutorial_snapshot.png)
-The color encoding is the same as for the trajectory plot above.
-The brightness encodes the size of the transverse component, while
-the color encodes the phase of the MR signal in the transverse plane.
-We can see that outside of the cylinder the signal contribution is significantly reduced.
-The black arrows show the transverse spin for some random subset of spins.
+We can see that the spins within the cylinder stay far more in-sync with each other
+(i.e., they have a more uniform colour), than those outside of the cylinder.
 
 Note that object returned when `return_snapshot=true` is the same [`Snapshot`](@ref) object as was used to initialise this simulation.
 This means that it can be used as an initialisation for future simulations.
@@ -209,3 +206,23 @@ One complication with this occurs when running a [`Simulation`](@ref) with multi
 Often, these different sequences will readout at different times (because of different [`Readout`](@ref) objects and/or different TRs).
 So, each [`Snapshot`](@ref) object returned by [`readout`](@ref) will only contain the spin magnetisation of the sequence that is readout at that particular time.
 To get a [`Snapshot`](@ref) object with the spin states for all sequences, you can use the [`evolve`](@ref) function instead.
+
+More details on plotting snapshots can be found in the [`plot_snapshot`](@ref) documentation.
+For example, the same snapshot can also be plotted using dyads or as an image:
+```@example tutorial
+f = plot(pp, snapshot, kind=:dyad)
+plot!(pp, geometry)
+f
+save("tutorial_snapshot_dyad.png", f) # hide
+nothing # hide
+```
+![](tutorial_snapshot_dyad.png)
+
+```@example tutorial
+f = plot(pp, snapshot, kind=:image)
+plot!(pp, geometry)
+f
+save("tutorial_snapshot_image.png", f) # hide
+nothing # hide
+```
+![](tutorial_snapshot_image.png)
