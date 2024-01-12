@@ -144,6 +144,8 @@ function print_sequence(; sequence_file, output_file, t0, t1, kwargs...)
         t1 = sequence.TR
     end
     xlims!(ax, t0 - 0.1 * (t1 - t0), t1)
+    ax.xlabel[] = "Time (ms)"
+    ax.title[] = sequence_file
     hideydecorations!(ax)
     hidespines!(ax, :l, :r, :t)
     save(output_file, f)
