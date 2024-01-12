@@ -72,6 +72,17 @@ Markdown.parse("```json\n$(text)\n```")
 ```
 This one is less readable or editable by users, but basically describes the sequence diagram.
 
+We can plot the sequence diagram using
+```bash
+mcmr sequence plot dwi.json dwi_plot.png --t1 150
+```
+```@eval
+import MCMRSimulator.CLI: run_main_docs
+run_main_docs("sequence plot dwi.json dwi_plot.png --t1 120")
+```
+![](dwi_plot.png)
+
+
 ## Running the simulation
 To get instructions on running the simulations, we can check the help message of `mcmr run`:
 ```bash
