@@ -137,14 +137,16 @@ Makie.plottype(::Sequence) = Plot_Sequence
 
 function print_sequence(; sequence_file, output_file, t0, t1, kwargs...)
     sequence = read_sequence(sequence_file)
-    f = plot(sequence; Axis=(xgridvsible=false, ygridvisible=false), kwargs...)
+    f = Figure()
+    ax = Axis(f[1, 1], xgridvisible=false, ygridvisible=false)
+    plot!(ax, sequence; kwargs...)
     if isinf(t1)
         t1 = sequence.TR
     end
-    xlims!(f.axis, t0 - 0.1 * (t1 - t0), t1)
-    hideydecorations!(f.axis)
-    hidespines!(f.axis, :l, :r, :t)
-    save(output_file, f.figure)
+    xlims!(ax, t0 - 0.1 * (t1 - t0), t1)
+    hideydecorations!(ax)
+    hidespines!(ax, :l, :r, :t)
+    save(output_file, f)
 end
 
 end
