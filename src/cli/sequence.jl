@@ -9,6 +9,41 @@ import ...SequenceBuilder.Sequences.GradientEcho: gradient_echo
 import ...SequenceBuilder.Diffusion: gen_crusher, duration
 import ...Sequences: InstantRFPulse, constant_pulse, write_sequence
 import ...Scanners: Scanner, predefined_scanners, max_gradient
+import ...Plot: print_sequence
+
+
+function print_plot_sequence(args=ARGS::AbstractVector[<:AbstractString]; kwargs...)
+    parser = ArgParseSettings(prog="mcmr sequence plot"; description="Plots the sequence diagram.", kwargs...)
+    @add_arg_table! parser begin
+        "sequence-file"
+            help = "Pulseq or JSON file containing the MR sequence."
+            required=true
+        "output-file"
+            help = "Filename for output image."
+            required=true
+        "--t0"
+            help = "Starting time of the sequence diagram (0 by default)."
+            arg_type = Float64
+            default = 0.
+        "--t1"
+            help = "End time of the sequence diagram (single TR by default)."
+            arg_type = Float64
+            default = Inf
+        "--linewidth"
+            help = "Control the width of the lines in the sequence diagram (default: 1)."
+            arg_type = Float64
+            default = 1.
+    end
+    as_dict = parse_args(args, parser)
+
+    Base.require(Module(), :CairoMakie)
+    as_kwargs = NamedTuple(
+        Symbol(replace(k, '-' => '_')) => as_dict[k] 
+        for k in keys(as_dict)
+    )
+    print_sequence(; as_kwargs...)
+end
+
 
 
 function known_sequence_parser(name; kwargs...)
@@ -279,6 +314,7 @@ By default it is set to `ARGS`.
 """
 function run_main(args=ARGS::AbstractVector[<:AbstractString]; kwargs...)
     pre_created = Dict(
+        "plot" => print_plot_sequence,
         "dwi" => run_dwi,
         "dw-pgse" => run_dwi,
         "spin-echo" => run_spin_echo,

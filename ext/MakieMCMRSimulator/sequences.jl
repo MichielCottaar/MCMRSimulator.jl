@@ -3,10 +3,10 @@ using Makie
 import MakieCore
 import Colors
 import LinearAlgebra: norm
-import MCMRSimulator.Sequences: Sequence, MRGradients, RFPulse, Readout, InstantComponent, InstantGradient, InstantRFPulse
+import MCMRSimulator.Sequences: Sequence, MRGradients, RFPulse, Readout, InstantComponent, InstantGradient, InstantRFPulse, read_sequence
 import MCMRSimulator.Sequences: flip_angle, qval, control_points, gradient, amplitude, phase
 import MCMRSimulator.Methods: get_time
-import MCMRSimulator.Plot: Plot_Sequence
+import MCMRSimulator.Plot: Plot_Sequence, print_sequence
 
 max_finite_gradient(sequence::Sequence{L, K, M, 0}) where {L, K, M} = 0.
 max_finite_gradient(sequence::Sequence) = maximum(max_finite_gradient.(sequence.gradients))
@@ -134,5 +134,17 @@ function Makie.plot!(scene::Plot_Sequence)
 end
 
 Makie.plottype(::Sequence) = Plot_Sequence
+
+function print_sequence(; sequence_file, output_file, t0, t1, kwargs...)
+    sequence = read_sequence(sequence_file)
+    f = plot(sequence; Axis=(xgridvsible=false, ygridvisible=false), kwargs...)
+    if isinf(t1)
+        t1 = sequence.TR
+    end
+    xlims!(f.axis, t0 - 0.1 * (t1 - t0), t1)
+    hideydecorations!(f.axis)
+    hidespines!(f.axis, :l, :r, :t)
+    save(output_file, f.figure)
+end
 
 end

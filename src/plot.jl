@@ -376,4 +376,8 @@ function project_on_grid(pp::PlotPlane, snap::Snapshot{1}, ngrid::Int)
     end
     (range(xrange..., ngrid), range(yrange..., ngrid), SpinOrientation.(res ./ hits))
 end
+
+# Helper functions for CLI plotting
+function print_sequence end
+
 end
