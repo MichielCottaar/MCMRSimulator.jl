@@ -178,6 +178,11 @@ function ShapePart(shape::Shape{T}, t0::Number, t1::Number) where {T}
     tmean = (t0 + t1) / 2
     mean_value = sample(shape, tmean)
     slope = sample_derivative(shape, tmean)
+    if any(isinf.(slope))
+        slope = map(slope) do val
+            isinf(val) ? prevfloat(val) : val
+        end
+    end
     return ShapePart{T}(
         (t0 - tmean) * slope .+ mean_value,
         (t1 - tmean) * slope .+ mean_value,
