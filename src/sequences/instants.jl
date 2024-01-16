@@ -1,8 +1,9 @@
 module Instants
+import Rotations
 import LinearAlgebra: ⋅, norm
 import StaticArrays: SVector
 import ...Spins: Spin, SpinOrientation, Snapshot
-import ...Methods: get_time, get_rotation
+import ...Methods: get_time, get_rotation, phase, off_resonance
 import ..Methods: start_time, end_time
 
 # defining the sequence
@@ -19,6 +20,7 @@ Time can be retrieved using [`get_time`](@ref).
 struct InstantRFPulse <: InstantComponent
     time :: Float64
     flip_angle :: Float64
+    off_resonance :: Float64
     cf :: Float64
     sf :: Float64
     phase :: Float64
@@ -30,15 +32,15 @@ function Base.show(io::IO, pulse::InstantRFPulse)
     print(io, "InstantRFPulse: t=$(start_time(pulse))ms, θ=$(flip_angle(pulse))°, ϕ=$(phase(pulse))°;")
 end
 
-function InstantRFPulse(time, flip_angle, phase)
+function InstantRFPulse(time, flip_angle, phase, off_resonance)
     f = Float64(flip_angle)
     p = Float64(phase)
     frad = deg2rad(f)
     prad = deg2rad(p)
-    InstantRFPulse(Float64(time), f, cos(frad), sin(frad), p, cos(prad), sin(prad))
+    InstantRFPulse(Float64(time), f, Float64(off_resonance), cos(frad), sin(frad), p, cos(prad), sin(prad))
 end
 
-InstantRFPulse(; time=0, flip_angle=0, phase=0) = InstantRFPulse(time, flip_angle, phase)
+InstantRFPulse(; time=0, flip_angle=0, phase=0, off_resonance=0) = InstantRFPulse(time, flip_angle, phase, off_resonance)
 
 """
     phase(instant_pulse)
@@ -55,19 +57,35 @@ Returns the flip angle of the [`InstantRFPulse`](@ref) in degrees.
 flip_angle(pulse :: InstantRFPulse) = pulse.flip_angle
 
 """
+    off_resonance(instant_pulse)
+
+Returns the off-resonance frequency of [`InstantRFPulse`](@ref) in kHz.
+"""
+off_resonance(instant_pulse) = instant_pulse.off_resonance
+
+
+"""
     apply!(sequence_component, spin_orientation[, position])
 
 Applies given sequence component to the spin orientation.
 This updates the existing spin orientation.
 Some pulses (e.g., [`InstantGradient`](@ref)) require positional information as well.
 
-    apply!(sequence_components, spin)
-    apply!(sequence_components, snapshot)
+    apply!(sequence_components, spin[, off_resonance])
+    apply!(sequence_components, snapshot[, off_resonance])
 
 Apply all sequence components to the spin orientation in the [`Spin`](@ref) or to all the spins in [`Snapshot`](@ref).
 Sequence components (see [`Sequence`](@ref)) can be `nothing` if there is no sequence component at this time.
 """
-function apply!(pulse :: InstantRFPulse, spin :: SpinOrientation)
+function apply!(pulse :: InstantRFPulse, spin :: SpinOrientation, off_resonance=0.)
+    sp, cp = sincosd(spin.phase)
+    
+    RF_vector = SVector{3, Float64}(
+        spin.transverse * cp,
+        spin.transverse * sp,
+        off_resonance - 
+
+    )
     Bx_init = spin.transverse * cosd(spin.phase)
     By_init = spin.transverse * sind(spin.phase)
     Bxy_parallel  = pulse.cp * Bx_init + pulse.sp * By_init
