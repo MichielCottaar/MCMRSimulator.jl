@@ -1,9 +1,8 @@
 module Instants
-import Rotations
 import LinearAlgebra: ⋅, norm
 import StaticArrays: SVector
 import ...Spins: Spin, SpinOrientation, Snapshot
-import ...Methods: get_time, get_rotation, phase, off_resonance
+import ...Methods: get_time, get_rotation
 import ..Methods: start_time, end_time
 
 # defining the sequence
@@ -20,7 +19,6 @@ Time can be retrieved using [`get_time`](@ref).
 struct InstantRFPulse <: InstantComponent
     time :: Float64
     flip_angle :: Float64
-    off_resonance :: Float64
     cf :: Float64
     sf :: Float64
     phase :: Float64
@@ -32,15 +30,15 @@ function Base.show(io::IO, pulse::InstantRFPulse)
     print(io, "InstantRFPulse: t=$(start_time(pulse))ms, θ=$(flip_angle(pulse))°, ϕ=$(phase(pulse))°;")
 end
 
-function InstantRFPulse(time, flip_angle, phase, off_resonance)
+function InstantRFPulse(time, flip_angle, phase)
     f = Float64(flip_angle)
     p = Float64(phase)
     frad = deg2rad(f)
     prad = deg2rad(p)
-    InstantRFPulse(Float64(time), f, Float64(off_resonance), cos(frad), sin(frad), p, cos(prad), sin(prad))
+    InstantRFPulse(Float64(time), f, cos(frad), sin(frad), p, cos(prad), sin(prad))
 end
 
-InstantRFPulse(; time=0, flip_angle=0, phase=0, off_resonance=0) = InstantRFPulse(time, flip_angle, phase, off_resonance)
+InstantRFPulse(; time=0, flip_angle=0, phase=0) = InstantRFPulse(time, flip_angle, phase)
 
 """
     phase(instant_pulse)
@@ -55,14 +53,6 @@ phase(pulse :: InstantRFPulse) = pulse.phase
 Returns the flip angle of the [`InstantRFPulse`](@ref) in degrees.
 """
 flip_angle(pulse :: InstantRFPulse) = pulse.flip_angle
-
-"""
-    off_resonance(instant_pulse)
-
-Returns the off-resonance frequency of [`InstantRFPulse`](@ref) in kHz.
-"""
-off_resonance(instant_pulse) = instant_pulse.off_resonance
-
 
 """
     apply!(sequence_component, spin_orientation[, position])
