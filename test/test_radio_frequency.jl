@@ -14,7 +14,7 @@
             @test all(mr.transverse.(constant) .≈ 100.)
             @test all(mr.longitudinal.(increasing) .≈ cosd.(0:89) .* 100.)
             @test all(mr.transverse.(increasing) .≈ sind.(0:89) .* 100.)
-            @test all(mr.phase.(signal[2:end]) .≈ (phase + 90))
+            @test all(mr.phase.(signal[2:end]) .≈ (phase - 90))
         end
     end
     @testset "Constant RF pulse with off-resonance" begin
