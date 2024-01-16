@@ -4,7 +4,7 @@
             rf = mr.constant_pulse(0, 9, 90, phase0=phase)
             @test rf.max_amplitude ≈ 1/36
             seq = mr.Sequence(components=[rf], TR=100.)
-            sim = mr.Simulation(seq)
+            sim = mr.Simulation(seq, rf_rotation=1.)
             signal = mr.readout(100, sim, 0:0.1:10)
             @test all(mr.propose_times(sim, 0, 9) .== 0:0.1:9)
             @test all(mr.propose_times(mr.Simulation(seq, rf_rotation=10), 0, 9) .== 0:1:9)
