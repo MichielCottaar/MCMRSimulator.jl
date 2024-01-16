@@ -40,14 +40,22 @@ function relax!(spin::Spin{N}, parts::SVector{N, SequencePart}, simulation, t1::
 
     off_resonance_unscaled = susceptibility_off_resonance(simulation, spin) * 1e-6 * gyromagnetic_ratio
 
+    relax_time = 1 / max(props.R1, props.R2)
     for (orient, part) in zip(spin.orientations, parts)
-        pulse = EffectivePulse(part, t1, t2)
-        grad = gradient(spin.position, part, t1, t2)
         off_resonance_kHz = off_resonance_unscaled * B0(part) + props.off_resonance
-
-        relax!(orient, (t2 - t1) * part.total_time/2, props.R1, props.R2)
-        apply!(pulse, orient, grad + off_resonance_kHz)
-        relax!(orient, (t2 - t1) * part.total_time/2, props.R1, props.R2)
+        nsteps = isinf(relax_time) ? 1 : Int(div(part.total_time * (t2 - t1), relax_time/3, RoundUp))
+        step_ratio = (t2 - t1) / nsteps
+        step_size = part.total_time * step_ratio
+        relax!(orient, step_size/2, props.R1, props.R2)
+        t_end = t1
+        for index in 1:nsteps
+            t_start = t_end
+            t_end += step_ratio
+            pulse = EffectivePulse(part, t_start, t_end)
+            grad = gradient(spin.position, part, t_start, t_end)
+            apply!(pulse, orient, grad + off_resonance_kHz)
+            relax!(orient, index == nsteps ? step_size/2 : step_size, props.R1, props.R2)
+        end
     end
 end
 

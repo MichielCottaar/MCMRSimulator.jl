@@ -91,5 +91,18 @@
             @test mr.transverse(get_signal(o)) <= 0.2
         end
 
+        @testset "Spins with very short T2" begin
+            sim1 = mr.Simulation(seq, diffusivity=0., R2=100, rf_rotation=5) # T2 of 10 ns
+            sim2 = mr.Simulation(seq, diffusivity=0., R2=100, rf_rotation=0.5)
+
+            for o in (0, 5, 20, 50)
+                spin = mr.Spin(position=[o, 0, 0])
+                s1 = mr.readout(spin, sim1)
+                s2 = mr.readout(spin, sim2)
+                @test (1 - mr.longitudinal(s1)) ≈ (1 - mr.longitudinal(s2)) rtol=0.01
+                @test mr.transverse(s1) < 1e-3
+                @test mr.transverse(s2) < 1e-3
+            end
+        end
     end
 end
