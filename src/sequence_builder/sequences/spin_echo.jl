@@ -78,7 +78,7 @@ function dwi(;
     TE=80.,
     TR=nothing,
     scanner=Scanner(B0=3.),
-    excitation_pulse=InstantRFPulse(flip_angle=90, phase=-90),
+    excitation_pulse=InstantRFPulse(flip_angle=90, phase=90),
     excitation_time=nothing,
     refocus_pulse=InstantRFPulse(flip_angle=180, phase=0),
     refocus_time=nothing,
