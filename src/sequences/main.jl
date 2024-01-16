@@ -2,11 +2,13 @@ module Main
 import StaticArrays: SVector
 import Accessors: @set
 import LinearAlgebra: ⋅, norm
+import Rotations
 import ....Scanners: Scanner
 import ...Methods: get_time, B0, get_rotation
+import ...Spins: SpinOrientation, orientation
 import ..Gradients: MRGradients, gradient, rotate_bvec
-import ..Instants: InstantComponent, Readout, InstantRFPulse, InstantGradient
-import ..RadioFrequency: RFPulse, effective_pulse
+import ..Instants: InstantComponent, Readout, InstantRFPulse, InstantGradient, apply!
+import ..RadioFrequency: RFPulse
 import ..Shapes: ShapePart, sample_integral, sample, sample_derivative
 import ..Methods: start_time, end_time, add_TR
 """
@@ -209,7 +211,52 @@ end
 
 gradient(position, part::SequencePart, t0, t1) = sample(part.gradients, t0, t1) ⋅ (position - part.origin)
 
-effective_pulse(part::SequencePart, t0::Number, t1::Number) = InstantRFPulse(flip_angle=sample_integral(part.rf_amplitude, t0, t1) * part.total_time * 360., phase=sample(part.rf_phase, t0, t1))
+"""
+    EffectivePulse(sequence_part, t0, t1)
+
+Used to represent the effective RF pulse during a [`SequencePart`](@ref).
+Only considers a subset of the total d
+"""
+struct EffectivePulse
+    RFx::Float64        # in radians
+    RFy::Float64        # in radians
+    frequency::Float64  # in kHz
+    duration::Float64   # in ms
+end
+
+function EffectivePulse(part::SequencePart, t0::Number, t1::Number) 
+    phase = sample(part.rf_phase, t0)
+    flip_angle = sample_integral(part.rf_amplitude, t0, t1) * 2π * part.total_time
+    EffectivePulse(
+        flip_angle * cosd(phase),
+        flip_angle * sind(phase),
+        sample_derivative(part.rf_phase, t0, t1) / 360.,
+        (t1 - t0) * part.total_time
+    )
+end
+
+"""
+    apply!(effective_pulse, spin_orientation, off_resonance)
+
+Apply given [`EffectivePulse`](@ref) to [`SpinOrientation`](@ref) given an `off_resonance` field (in kHz).
+"""
+function apply!(effective_pulse::EffectivePulse, orient::SpinOrientation, off_resonance::Float64)
+    if iszero(effective_pulse.RFx) && iszero(effective_pulse.RFy)
+        orient.phase += off_resonance * effective_pulse.duration * 360
+    else
+        as_vec = orientation(orient)
+        rot_mat = Rotations.RotationVec(
+            effective_pulse.RFx, effective_pulse.RFy, 
+            (off_resonance - effective_pulse.frequency) * effective_pulse.duration * 2π
+        )
+    
+        new_orient = SpinOrientation(rot_mat * as_vec)
+        orient.transverse = new_orient.transverse
+        orient.longitudinal = new_orient.longitudinal
+        orient.phase = new_orient.phase + effective_pulse.frequency * effective_pulse.duration * 2π
+    end
+end
+
 B0(part::SequencePart) = part.B0
 
 """
