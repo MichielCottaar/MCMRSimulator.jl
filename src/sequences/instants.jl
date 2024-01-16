@@ -71,21 +71,13 @@ Applies given sequence component to the spin orientation.
 This updates the existing spin orientation.
 Some pulses (e.g., [`InstantGradient`](@ref)) require positional information as well.
 
-    apply!(sequence_components, spin[, off_resonance])
-    apply!(sequence_components, snapshot[, off_resonance])
+    apply!(sequence_components, spin)
+    apply!(sequence_components, snapshot)
 
 Apply all sequence components to the spin orientation in the [`Spin`](@ref) or to all the spins in [`Snapshot`](@ref).
 Sequence components (see [`Sequence`](@ref)) can be `nothing` if there is no sequence component at this time.
 """
-function apply!(pulse :: InstantRFPulse, spin :: SpinOrientation, off_resonance=0.)
-    sp, cp = sincosd(spin.phase)
-    
-    RF_vector = SVector{3, Float64}(
-        spin.transverse * cp,
-        spin.transverse * sp,
-        off_resonance - 
-
-    )
+function apply!(pulse :: InstantRFPulse, spin :: SpinOrientation)
     Bx_init = spin.transverse * cosd(spin.phase)
     By_init = spin.transverse * sind(spin.phase)
     Bxy_parallel  = pulse.cp * Bx_init + pulse.sp * By_init
