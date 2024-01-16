@@ -187,6 +187,6 @@ end
 
 sample(part::ShapePart, time) = part.start + time * part.slope
 sample(part::ShapePart, t1, t2) = sample(part, (t1 + t2) / 2)
-sample_derivative(part::ShapePart, time) = part.slope
+sample_derivative(part::ShapePart, t1, t2=nothing) = part.slope
 sample_integral(part::ShapePart, t1, t2) = sample(part, (t1 + t2) / 2) * (t2 - t1)
 end
