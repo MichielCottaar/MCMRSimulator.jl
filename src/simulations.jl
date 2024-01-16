@@ -90,7 +90,7 @@ function Simulation(
     geometry=[],
     max_timestep=nothing,
     gradient_precision=1.,
-    rf_rotation=1.,
+    rf_rotation=5.,
     permeability=0.,
     surface_density=0.,
     dwell_time=0.,

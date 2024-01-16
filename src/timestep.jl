@@ -6,7 +6,7 @@ import ..Methods: get_time
 import ..Properties: GlobalProperties
 
 """
-    TimeController(geometry, B0, diffusivity; max_stepsize=<see docs>, gradient_precision=1, rf_rotation=1)
+    TimeController(geometry, B0, diffusivity; max_stepsize=<see docs>, gradient_precision=1, rf_rotation=5)
 
 Stores the settings controlling the maximum timestep during the simulation, namely:
 - `max_timestep`: Generic maximum timestep that is considered throughout the simulation. By default this is set by the minimum of the following three options:
@@ -26,7 +26,7 @@ struct TimeController
     rf_rotation :: Float64
 end
 
-function TimeController(geometry::FixedGeometry, susceptibility::FixedSusceptibility, B0::Number, diffusivity::Number; max_timestep=nothing, gradient_precision=1., rf_rotation=1.)
+function TimeController(geometry::FixedGeometry, susceptibility::FixedSusceptibility, B0::Number, diffusivity::Number; max_timestep=nothing, gradient_precision=1., rf_rotation=5.)
     mt_stick = max_timestep_sticking(geometry, diffusivity)
     if isnothing(max_timestep)
         max_timestep = min(
