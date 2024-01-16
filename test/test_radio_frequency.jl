@@ -21,7 +21,7 @@
         rf = mr.constant_pulse(0, 9, 90, off_resonance=1.)
         @test rf.max_amplitude ≈ sqrt(1 + (90 / (360 * 9))^2)
         seq = mr.Sequence(components=[rf], TR=100.)
-        sim = mr.Simulation(seq, off_resonance=1)
+        sim = mr.Simulation(seq, off_resonance=1, rf_rotation=1)
         signal = mr.readout(100, sim, 0:0.1:10)
         increasing = signal[1:90]
         constant = signal[91:end]
