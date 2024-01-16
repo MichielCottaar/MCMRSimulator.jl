@@ -7,7 +7,7 @@ import ...Methods: get_time, B0, get_rotation
 import ..Gradients: MRGradients, gradient, rotate_bvec
 import ..Instants: InstantComponent, Readout, InstantRFPulse, InstantGradient
 import ..RadioFrequency: RFPulse, effective_pulse
-import ..Shapes: ShapePart, sample_integral, sample
+import ..Shapes: ShapePart, sample_integral, sample, sample_derivative
 import ..Methods: start_time, end_time, add_TR
 """
     Sequence(;TR, components=[], scanner=Scanner(B0), B0=3.)
@@ -91,21 +91,6 @@ function Base.show(io::IO, seq::Sequence)
     end
 end
 
-"""
-    effective_pulse(sequence, t1, t2)
-
-Returns the [`InstantRFPulse`](@ref) that has the same effect as the radio-frequency pulses ([`RFPulse`](@ref)) in the provided sequence will have between `t1` and `t2`.
-"""
-function effective_pulse(sequence::Sequence, t1::Number, t2::Number)
-    current = current_pulse(sequence, (t1 + t2) / 2)
-    if isnothing(current)
-        return InstantRFPulse(0, 0, 0)
-    else
-        @assert t1 >= start_time(current)
-        @assert t2 <= end_time(current)
-        return effective_pulse(current, t1, t2)
-    end
-end
 
 Scanner(sequence::Sequence) = sequence.scanner
 B0(sequence::Sequence) = B0(Scanner(sequence))

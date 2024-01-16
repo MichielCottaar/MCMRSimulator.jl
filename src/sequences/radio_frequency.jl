@@ -87,14 +87,6 @@ end
 
 
 """
-    effective_pulse(RFPulse, t0, t1)
-    effective_pulse(sequence, t0, t1)
-
-Represents the effect of the RF pulse between times `t0` and `t1` as an [`InstantRFPulse`](@ref).
-"""
-effective_pulse(pulse::RFPulse, t0::Number, t1::Number) = InstantRFPulse(flip_angle=amplitude(pulse, t0, t1) * (t1 - t0) * 360., phase=phase(pulse, t0, t1))
-
-"""
     constant_pulse([t0=0, ]t1, flip_angle; phase0=0., off_resonance=0.)
 
 Creates an RF pulse with a constant amplitude resulting in given `flip_angle` (for spins at `off_resonance`).
