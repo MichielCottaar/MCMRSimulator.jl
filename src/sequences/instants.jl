@@ -2,7 +2,7 @@ module Instants
 import LinearAlgebra: ⋅, norm
 import StaticArrays: SVector
 import ...Spins: Spin, SpinOrientation, Snapshot
-import ...Methods: get_time, get_rotation
+import ...Methods: get_time, get_rotation, flip_angle, phase
 import ..Methods: start_time, end_time
 
 # defining the sequence
