@@ -91,7 +91,7 @@ end
             mr.apply!(pulse, spin)
             @test mr.longitudinal(spin) ≈ 0. atol=1e-7
             @test mr.transverse(spin) ≈ 1.
-            @test mr.phase(spin) ≈ pulse_phase + 90
+            @test mr.phase(spin) ≈ pulse_phase - 90
         end
     end
     @testset "90 pulses flips transverse spin into longitudinal plane" begin
@@ -212,12 +212,12 @@ end
     @test repr(sim, context=:compact => false) == "Simulation(Geometry(2 repeating Round objects, ), D=3.0um^2/ms, GlobalProperties(R1=0.1kHz, )):
 2 sequences:
 Sequence (TR=2000.0ms):
-    - InstantRFPulse: t=0.0ms, θ=90.0°, ϕ=-90.0°;
+    - InstantRFPulse: t=0.0ms, θ=90.0°, ϕ=90.0°;
     - InstantRFPulse: t=40.0ms, θ=180.0°, ϕ=0.0°;
     - Readout at 80.0ms
     - InstantGradient: t=80.000001ms, q=[0.5773502691896258, 0.5773502691896258, 0.5773502691896258]rad/um;
 Sequence (TR=80.000002ms):
-    - InstantRFPulse: t=0.0ms, θ=90.0°, ϕ=-90.0°;
+    - InstantRFPulse: t=0.0ms, θ=90.0°, ϕ=90.0°;
     - InstantRFPulse: t=40.0ms, θ=180.0°, ϕ=0.0°;
     - Readout at 80.0ms
     - InstantGradient: t=80.000001ms, q=[0.5773502691896258, 0.5773502691896258, 0.5773502691896258]rad/um;
