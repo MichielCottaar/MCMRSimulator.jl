@@ -190,6 +190,8 @@ function ShapePart(shape::Shape{T}, t0::Number, t1::Number) where {T}
     )
 end
 
+Base.iszero(part::ShapePart) = iszero(part.start) && iszero(part.final) && iszero(part.slope)
+
 sample(part::ShapePart, time) = part.start + time * part.slope
 sample(part::ShapePart, t1, t2) = sample(part, (t1 + t2) / 2)
 sample_derivative(part::ShapePart, t1, t2=nothing) = part.slope
