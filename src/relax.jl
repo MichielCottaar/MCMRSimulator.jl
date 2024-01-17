@@ -43,7 +43,7 @@ function relax!(spin::Spin{N}, parts::SVector{N, SequencePart}, simulation, t1::
     relax_time = 1 / max(props.R1, props.R2)
     for (orient, part) in zip(spin.orientations, parts)
         off_resonance_kHz = off_resonance_unscaled * B0(part) + props.off_resonance
-        nsteps = isinf(relax_time) ? 1 : Int(div(part.total_time * (t2 - t1), relax_time, RoundUp))
+        nsteps = isinf(relax_time) ? 1 : Int(div(part.total_time * (t2 - t1), relax_time / 10, RoundUp))
         step_ratio = (t2 - t1) / nsteps
         step_size = part.total_time * step_ratio
         relax!(orient, step_size/2, props.R1, props.R2)
