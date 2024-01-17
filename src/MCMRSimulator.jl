@@ -95,7 +95,7 @@ export plot_snapshot!, plot_geometry!, plot_trajectory!, plot_off_resonance!, pl
 # They will not be of interest to most users.
 import .Sequences: apply!, start_time, end_time, amplitude, SequencePart, qval, qvec
 import .Spins: FixedXoshiro
-import .Methods: get_time, get_rotation, phase, project
+import .Methods: get_time, get_rotation, project
 import .Evolve: draw_step!
 import .Relax: relax!
 end
