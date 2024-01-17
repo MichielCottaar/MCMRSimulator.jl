@@ -63,7 +63,7 @@
         @test length(snaps) == 6
     end
     @testset "Gradient echo sequence" begin
-        simulation = mr.Simulation(mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=2.8))
+        simulation = mr.Simulation(mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90, phase=180)], TR=2.8))
         snaps = mr.readout(zeros(3), simulation, 0:0.5:2.8)
         @test mr.orientation(snaps[1]) ≈ SA[0., 0., 1.]
         for snap in snaps[2:end]
