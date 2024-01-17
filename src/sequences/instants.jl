@@ -73,7 +73,7 @@ function apply!(pulse :: InstantRFPulse, spin :: SpinOrientation)
     Bxy_parallel  = pulse.cp * Bx_init + pulse.sp * By_init
     Bxy_perp_init = pulse.cp * By_init - pulse.sp * Bx_init
 
-    Bxy_perp = Bxy_perp_init * pulse.cf + spin.longitudinal * pulse.sf
+    Bxy_perp = Bxy_perp_init * pulse.cf - spin.longitudinal * pulse.sf
     Bx = Bxy_parallel * pulse.cp - Bxy_perp * pulse.sp
     By = Bxy_perp * pulse.cp + Bxy_parallel * pulse.sp
     spin.longitudinal = spin.longitudinal * pulse.cf - Bxy_perp_init * pulse.sf
