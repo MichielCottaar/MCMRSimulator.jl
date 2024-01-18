@@ -19,7 +19,7 @@ include("properties.jl")
 include("geometries/geometries.jl")
 include("spin.jl")
 include("sequences/sequences.jl")
-include("sequence_builder/sequence_builder.jl")
+include("builder/builder.jl")
 include("timestep.jl")
 include("relax.jl")
 include("simulations.jl")
@@ -80,9 +80,6 @@ export previous_pulse, current_pulse, next_pulse, previous_gradient, current_gra
 
 import .Sequences: constant_pulse, read_pulseq
 export constant_pulse, read_pulseq
-
-import .SequenceBuilder: BuildingBlock, define_sequence, add_linear_diffusion_weighting, gradient_echo, spin_echo, dwi, trapezium_gradient
-export BuildingBlock, define_sequence, add_linear_diffusion_weighting, gradient_echo, spin_echo, dwi, trapezium_gradient
 
 import .Plot: PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance, plot_sequence
 export PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance, plot_sequence
