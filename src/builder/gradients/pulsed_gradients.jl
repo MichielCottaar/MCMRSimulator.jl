@@ -69,21 +69,41 @@ The time from 0 till the maximum gradient strength in ms.
 """
 rise_time(pg::PulsedGradient) = pg.rise_time
 
-"""The time spent at the maximum gradient strength in ms."""
+"""
+    flat_time(pulsed_gradient)
+
+The time spent at the maximum gradient strength in ms.
+"""
 flat_time(pg::PulsedGradient) = pg.flat_time
 
-"""Maximum gradient strength in kHz/um."""
+"""
+    gradient_strength(gradient)
+
+Maximum gradient strength in kHz/um.
+"""
 gradient_strength(g::PulsedGradient) = rise_time(g) * slew_rate(g)
 
-"""Maximum rate of increase (and decrease) of the gradient strength in kHz/um/ms."""
+"""
+    slew_rate(gradient)
+
+Maximum rate of increase (and decrease) of the gradient strength in kHz/um/ms.
+"""
 slew_rate(g::PulsedGradient) = g.slew_rate
 
-"""Pulse gradient duration (`rise_time + `flat_time).  This is the effective duration of the gradient. The real duration is longer (and given by [`duration`](@ref))."""
+"""
+    δ(pulsed_gradient)
+
+Pulse gradient duration (`rise_time + `flat_time`).  This is the effective duration of the gradient. The real duration is longer (and given by [`duration`](@ref)).
+"""
 δ(g::PulsedGradient) = rise_time(g) + flat_time(g)
 
 duration(g::PulsedGradient) = 2 * rise_time(g) + flat_time(g)
 
-"""q-value at the end of the gradient (rad/um)."""
+"""
+    qval(gradient)
+
+q-value at the end of the gradient (rad/um).
+"""
 qval(g::PulsedGradient) = gradient_strength(g) * δ(g)
 
 helper_functions(::Type{PulsedGradient}) = [qval, δ, gradient_strength, duration, rise_time, flat_time, slew_rate]
