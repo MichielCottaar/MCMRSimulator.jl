@@ -1,6 +1,7 @@
 module Wait
-import JuMP: Model, @constraint, @variable, VariableRef
+import JuMP: Model, @constraint, @variable, VariableRef, owner_model
 import ..BuildingBlocks: BuildingBlock, duration, helper_functions, apply_simple_constraint!, BuildingBlockPlaceholder
+import ..SequenceBuilders: SequenceBuilder, to_block
 import ...Scanners: Scanner
 
 """
@@ -15,12 +16,13 @@ Duration can be set to one of:
 - `nothing` to make it fully determined by external constraints and objectives
 """
 struct WaitBlock <: BuildingBlock
-    model :: Model
+    builder :: SequenceBuilder
     duration :: VariableRef
 end
 
-function WaitBlock(model::Model, duration_constraint=nothing)
-    res = WaitBlock(model, @variable(model))
+function WaitBlock(builder::SequenceBuilder, duration_constraint=nothing)
+    model = owner_model(builder)
+    res = WaitBlock(builder, @variable(model))
     @constraint model duration(res) >= 0
     if !isnothing(duration_constraint)
         apply_simple_constraint!(model, duration(res), duration_constraint)
@@ -29,6 +31,9 @@ function WaitBlock(model::Model, duration_constraint=nothing)
 end
 
 WaitBlock(duration_constraint=nothing) = BuildingBlockPlaceholder{WaitBlock}(duration_constraint)
+
+to_block(builder::SequenceBuilder, time::Union{Number, Symbol, Nothing, Val{:min}, Val{:max}}) = WaitBlock(builder, time)
+
 
 helper_functions(::Type{WaitBlock}) = [duration]
 

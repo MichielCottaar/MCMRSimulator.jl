@@ -3,8 +3,8 @@ Support for building NMR/MRI sequence diagrams.
 """
 module Builder
 include("building_blocks.jl")
-include("wait.jl")
 include("sequence_builders.jl")
+include("wait.jl")
 include("gradients/gradients.jl")
 
 import .BuildingBlocks: BuildingBlock, scanner_constraints!

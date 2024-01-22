@@ -3,7 +3,7 @@ Defines a set of different options for MRI gradients.
 """
 module PulsedGradients
 
-import JuMP: @constraint, @variable, Model, VariableRef
+import JuMP: @constraint, @variable, Model, VariableRef, owner_model
 import StaticArrays: SVector
 import ...BuildingBlocks: BuildingBlock, duration, helper_functions, set_simple_constraints!, scanner_constraints!, BuildingBlockPlaceholder
 import ...SequenceBuilders: SequenceBuilder
@@ -47,6 +47,7 @@ function PulsedGradient(; kwargs...)
 end
 
 function PulsedGradient(builder::SequenceBuilder; orientation=:bvec, kwargs...)
+    model = owner_model(builder)
     res = PulsedGradient(
         builder,
         orientation,

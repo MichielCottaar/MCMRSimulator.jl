@@ -49,7 +49,6 @@ Returns a list of function that can be called to constrain the `building_block`.
 """
 helper_functions(bb::BuildingBlock) = helper_functions(typeof(bb))
 
-
 struct _BuildingBlockPrinter
     bb :: BuildingBlock
     number :: Integer

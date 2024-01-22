@@ -1,8 +1,7 @@
 module SequenceBuilders
-import JuMP: Model, owner_model, index, VariableRef, @constraint, @variable
+import JuMP: Model, owner_model, index, VariableRef, @constraint, @variable, has_values
 import Ipopt
 import ..BuildingBlocks: BuildingBlock, BuildingBlockPlaceholder, match_blocks!, duration
-import ..Wait: WaitBlock
 
 """
     SequenceBuilder(blocks...)
@@ -16,9 +15,17 @@ struct SequenceBuilder
     model :: Model
     blocks :: Vector{<:BuildingBlock}
     TR :: VariableRef
+    function SequenceBuilder(model::Model, blocks...) 
+        builder = new(model, BuildingBlock[], @variable(model))
+        for b in blocks
+            push!(builder.blocks, to_block(builder, b))
+        end
+        @constraint model TR(builder) >= duration(builder)
+        return builder
+    end
 end
 
-function to_block(model::Model, placeholder::BuildingBlockPlaceholder{T}) where {T}
+function to_block(model::SequenceBuilder, placeholder::BuildingBlockPlaceholder{T}) where {T}
     block = T(model, placeholder.args...; placeholder.kwargs...)
     if isassigned(placeholder.concrete)
         match_blocks!(placeholder.concrete[], block)
@@ -28,21 +35,11 @@ function to_block(model::Model, placeholder::BuildingBlockPlaceholder{T}) where 
     return block
 end
 
-to_block(model::Model, time::Union{Number, Symbol, Nothing, Val{:min}, Val{:max}}) = WaitBlock(model, time)
-
-function SequenceBuilder(model::Model, blocks...) 
-    builder = SequenceBuilder(model, BuildingBlock[], @variable(model))
-    for b in blocks
-        add!(builder.blocks, to_block(builder, b))
-    end
-    @constraint model TR(builder) >= duration(builder)
-    return builder
-end
-
+Base.getindex(model::SequenceBuilder, i::Integer)  = model.blocks[i]
 
 function SequenceBuilder(blocks...)
     model = Model(Ipopt.Optimizer)
-    SequenceBuilder(model, blocks)
+    SequenceBuilder(model, blocks...)
 end
 
 
@@ -57,6 +54,7 @@ Base.length(sb::SequenceBuilder) = length(sb.blocks)
 builder(bb::BuildingBlock) = bb.builder
 owner_model(bb::BuildingBlock) = owner_model(builder(bb))
 owner_model(sb::SequenceBuilder) = sb.model
+has_values(object::Union{BuildingBlock, SequenceBuilder}) = has_values(owner_model(object))
 
 """
     TR(sequence::SequenceBuilder)
@@ -97,13 +95,14 @@ function duration(sb::SequenceBuilder, index1::Integer, index2::Integer)
     elseif index2 == index1 - 1
         return TR(sb)
     elseif index2 > index1
-        return [duration(i) for i in index1:index2]
+        return sum(duration(sb, i) for i in index1:index2)
     else
-        return [TR(sb) - duration(sb, index2+1, index1-1)]
+        return TR(sb) - duration(sb, index2+1, index1-1)
     end
 end
 
 duration(sb::SequenceBuilder) = duration(sb, 1, length(sb))
+duration(sb::SequenceBuilder, index::Integer) = duration(sb[index])
 
 
 """
