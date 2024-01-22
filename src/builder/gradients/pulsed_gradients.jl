@@ -5,7 +5,7 @@ module PulsedGradients
 
 import JuMP: @constraint, @variable, Model, VariableRef
 import StaticArrays: SVector
-import ...BuildingBlocks: BuildingBlock, duration, helper_functions, set_simple_constraints!, scanner_constraints!
+import ...BuildingBlocks: BuildingBlock, duration, helper_functions, set_simple_constraints!, scanner_constraints!, BuildingBlockPlaceholder
 import ....Scanners: Scanner
 
 
@@ -38,6 +38,10 @@ mutable struct PulsedGradient <: BuildingBlock
     slew_rate :: VariableRef
     rise_time :: VariableRef
     flat_time :: VariableRef
+end
+
+function PulsedGradient(; kwargs...)
+    return BuildingBlockPlaceholder{PulsedGradient}(; kwargs...)
 end
 
 function PulsedGradient(model::Model; orientation=:bvec, kwargs...)

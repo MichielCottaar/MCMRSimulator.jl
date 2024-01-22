@@ -1,7 +1,7 @@
 module SequenceBuilders
 import JuMP: Model
 import Ipopt
-import ..BuildingBlocks: BuildingBlock
+import ..BuildingBlocks: BuildingBlock, BuildingBlockPlaceholder, match_blocks!
 import ..Wait: WaitBlock
 
 """
@@ -17,34 +17,24 @@ struct SequenceBuilder
     blocks :: Vector{<:BuildingBlock}
 end
 
-
-function to_block(block::Expr)
-    if block.head == :call
-        return Expr(:call, esc(block.args[1]), :model, esc.(block.args[2:end])...)
+function to_block(model::Model, placeholder::BuildingBlockPlaceholder{T}) where {T}
+    block = T(model, placeholder.args...; placeholder.kwargs...)
+    if isassigned(placeholder.concrete)
+        match_blocks!(placeholder.concrete[], block)
     else
-        error("$(block) is not a valid part of a sequence.")
+        placeholder.concrete[] = block
     end
 end
 
-function to_block(block::Union{QuoteNode, Number, Symbol})
-    return :(WaitBlock(model, $(esc(block)))) 
+to_block(model::Model, time::Union{Number, Symbol, Nothing, Val{:min}, Val{:max}}) = WaitBlock(model, time)
+
+SequenceBuilder(model::Model, blocks::AbstractVector) = SequenceBuilder(model, to_block.(blocks))
+
+
+function SequenceBuilder(blocks::AbstractVector)
+    model = Model(Ipopt.Optimizer)
+    SequenceBuilder(model, blocks)
 end
 
-macro builder(blocks...)
-    model_blocks = to_block.(blocks)
-    create_builder = Expr(:call, :SequenceBuilder, :model, Expr(:vect, model_blocks...))
-    quote
-        model = Model(Ipopt.Optimizer)
-        $(create_builder)
-    end
-end
-
-function Base.show(io::IO, builder::SequenceBuilder)
-    print(io, "SequenceBuilder(")
-    for block in builder.blocks
-        print(io, block, ", ")
-    end
-    print(io, ")")
-end
 
 end

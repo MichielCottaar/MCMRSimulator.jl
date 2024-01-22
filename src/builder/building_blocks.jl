@@ -14,9 +14,7 @@ Required methods:
 """
 abstract type BuildingBlock end
 
-function owner_model(bb::BuildingBlock)
-    owner_model(duration(bb))
-end
+owner_model(bb::BuildingBlock) = bb.model
 
 has_values(block::BuildingBlock) = has_values(owner_model(block))
 
@@ -107,5 +105,61 @@ apply_simple_constraint!(model::Model, variable, ::Val{:min}) = @objective model
 apply_simple_constraint!(model::Model, variable, ::Val{:max}) = @objective model Min objective_function(model) - variable
 apply_simple_constraint!(model::Model, variable, value::Number) = @constraint model variable == value
 
+
+"""
+    match_blocks!(block1, block2[, property_list])
+
+Matches the listed properties between two [`BuildingBlock`](@ref) objects.
+By default all shared properties (i.e., those with the same name) are matched.
+"""
+function match_blocks!(block1::BuildingBlock, block2::BuildingBlock, property_list)
+    model = owner_model(block1)
+    @assert model == owner_model(block2)
+    for fn in property_list
+        @constraint model fn(block1) == fn(block2)
+    end
+end
+
+function match_blocks!(block1::BuildingBlock, block2::BuildingBlock)
+    property_list = intersect(helper_functions(block1), helper_functions(block2))
+    match_blocks!(block1, block2, property_list)
+end
+
+
+"""
+Stores the parameters passed on a [`BuildingBlock`](@ref) constructor (of type `T`).
+
+The parameters are temporarily stored in this format, until they can be added to a `SequenceBuilder`.
+
+For example, the following
+```julia
+pg = PulsedGradient(qval=2)
+```
+will return a `BuildingBlockPlaceholder` object rather than a `PulsedGradient` object.
+Only when this object is added to a `SequenceBuilder`, is the `PulsedGradient` actually initialised using the JuMP model of that `SequenceBuilder`:
+```julia
+sb = SequenceBuilder([pg])
+```
+You can access the initialised `PulsedGradient` through the `BuildingBlockPlaceholder` (`pg.concrete[]`) or directly through the `SequenceBuilder` (`sb[1]`)
+
+Each Placeholder can be added to only a single `SequenceBuilder`, but it can be added multiple times to the same `SequenceBuilder`.
+If added multiple times to the same `SequenceBuilder`, all variables will be matched between them.
+"""
+struct BuildingBlockPlaceholder{T<:BuildingBlock}
+    args
+    kwargs
+    concrete :: Ref{T}
+    BuildingBlockPlaceholder{T}(args...; kwargs...) where {T<:BuildingBlock} = new{T}(args, kwargs, Ref{T}())
+end
+
+function Base.show(io::IO, placeholder::BuildingBlockPlaceholder{T}) where {T}
+    if isassigned(placeholder.concrete)
+        print(io, "Assigned BuildingBlockPlaceholder for $(placeholder.current[])")
+    else
+        args = join(placeholder.args, ", ")
+        kwargs = join(["$key=$value" for (key, value) in pairs(placeholder.kwargs)], ", ")
+        print(io, "Unassigned BuildingBlockPlaceholder {T}($args; $kwargs)")
+    end
+end
 
 end
