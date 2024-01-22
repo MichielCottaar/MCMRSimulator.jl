@@ -24,11 +24,14 @@ function to_block(model::Model, placeholder::BuildingBlockPlaceholder{T}) where 
     else
         placeholder.concrete[] = block
     end
+    return block
 end
 
 to_block(model::Model, time::Union{Number, Symbol, Nothing, Val{:min}, Val{:max}}) = WaitBlock(model, time)
 
-SequenceBuilder(model::Model, blocks::AbstractVector) = SequenceBuilder(model, map(blocks) do b to_block(model, b) end)
+function SequenceBuilder(model::Model, blocks::AbstractVector) 
+    SequenceBuilder(model, [to_block(model, b) for b in blocks])
+end
 
 
 function SequenceBuilder(blocks::AbstractVector)
