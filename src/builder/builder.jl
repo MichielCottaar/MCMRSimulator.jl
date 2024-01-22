@@ -16,7 +16,7 @@ export WaitBlock
 import .SequenceBuilders: SequenceBuilder, start_time, end_time, duration
 export SequenceBuilder, start_time, end_time, duration
 
-import .Gradients: PulsedGradient, qval, rise_time, flat_time, slew_rate, gradient_strength
-export PulsedGradient, qval, rise_time, flat_time, slew_rate, gradient_strength
+import .Gradients: PulsedGradient, qval, rise_time, flat_time, slew_rate, gradient_strength, bval
+export PulsedGradient, qval, rise_time, flat_time, slew_rate, gradient_strength, bval
 
 end

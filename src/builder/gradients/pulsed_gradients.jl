@@ -5,6 +5,7 @@ module PulsedGradients
 
 import JuMP: @constraint, @variable, Model, VariableRef, owner_model
 import StaticArrays: SVector
+import ..IntegrateGradients: qval, bval
 import ...BuildingBlocks: BuildingBlock, duration, helper_functions, set_simple_constraints!, scanner_constraints!, BuildingBlockPlaceholder
 import ...SequenceBuilders: SequenceBuilder
 import ....Scanners: Scanner
@@ -105,7 +106,22 @@ duration(g::PulsedGradient) = 2 * rise_time(g) + flat_time(g)
 
 q-value at the end of the gradient (rad/um).
 """
-qval(g::PulsedGradient) = gradient_strength(g) * δ(g)
+qval(g::PulsedGradient) = (g.orientation == :neg_bvec ? -1 : 1) * gradient_strength(g) * δ(g)
+
+
+function bval(g::PulsedGradient, qstart=0.)
+    tr = rise_time(g)
+    td = δ(g)
+    grad = gradient_strength(g)
+    return (
+        # b-value due to just the gradient
+        grad * (1//60 * tr^3 - 1//12 * tr^2 * td + 1//2 * tr * td^2 + 1//3 * td^3) + 
+        # b-value due to cross-term
+        qstart * grad * (td * (td + tr)) +
+        # b-value due to just `qstart`
+        (td + tr) * qstart^2
+    )
+end
 
 helper_functions(::Type{PulsedGradient}) = [qval, δ, gradient_strength, duration, rise_time, flat_time, slew_rate]
 
