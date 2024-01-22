@@ -28,7 +28,7 @@ end
 
 to_block(model::Model, time::Union{Number, Symbol, Nothing, Val{:min}, Val{:max}}) = WaitBlock(model, time)
 
-SequenceBuilder(model::Model, blocks::AbstractVector) = SequenceBuilder(model, to_block.(blocks))
+SequenceBuilder(model::Model, blocks::AbstractVector) = SequenceBuilder(model, map(blocks) do b to_block(model, b) end)
 
 
 function SequenceBuilder(blocks::AbstractVector)

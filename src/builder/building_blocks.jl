@@ -63,7 +63,7 @@ function Base.show(io::IO, block::BuildingBlock)
     print(io, string(typeof(block)), "(")
     for name in propertynames(block)
         value = getproperty(block, name)
-        if value isa GenericVariableRef
+        if value isa GenericVariableRef || value isa Model
             continue
         end
         print(io, name, "=", repr(value), ", ")
@@ -154,11 +154,11 @@ end
 
 function Base.show(io::IO, placeholder::BuildingBlockPlaceholder{T}) where {T}
     if isassigned(placeholder.concrete)
-        print(io, "Assigned BuildingBlockPlaceholder for $(placeholder.current[])")
+        print(io, "Assigned BuildingBlockPlaceholder for $(placeholder.concrete[])")
     else
         args = join(placeholder.args, ", ")
         kwargs = join(["$key=$value" for (key, value) in pairs(placeholder.kwargs)], ", ")
-        print(io, "Unassigned BuildingBlockPlaceholder {T}($args; $kwargs)")
+        print(io, "Unassigned BuildingBlockPlaceholder{$T}($args; $kwargs)")
     end
 end
 

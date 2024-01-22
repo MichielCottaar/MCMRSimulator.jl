@@ -9,10 +9,10 @@ include("gradients/gradients.jl")
 
 import .BuildingBlocks: BuildingBlock, scanner_constraints!
 import .Wait: WaitBlock
-import .SequenceBuilders: @builder
+import .SequenceBuilders: SequenceBuilder
 import .Gradients: PulsedGradient
 
-export BuildingBlock, scanner_constraints!, @builder
+export BuildingBlock, scanner_constraints!
 export PulsedGradient, WaitBlock, SequenceBuilder
 
 end
