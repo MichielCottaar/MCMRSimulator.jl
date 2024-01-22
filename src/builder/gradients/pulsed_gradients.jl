@@ -34,6 +34,7 @@ If not set, they will be determined during the sequence optimisation.
 The [`bvalue`](@ref) can be constrained for multiple gradient pulses.
 """
 mutable struct PulsedGradient <: BuildingBlock
+    model::Model
     orientation :: Any
     slew_rate :: VariableRef
     rise_time :: VariableRef
@@ -46,6 +47,7 @@ end
 
 function PulsedGradient(model::Model; orientation=:bvec, kwargs...)
     res = PulsedGradient(
+        model,
         orientation,
         @variable(model),
         @variable(model),
