@@ -40,4 +40,10 @@ function SequenceBuilder(blocks::AbstractVector)
 end
 
 
+function Base.show(io::IO, builder::SequenceBuilder)
+    print(io, "SequenceBuilder($(builder.blocks)) being solved by ")
+    show(io, builder.model)
+end
+
+
 end
