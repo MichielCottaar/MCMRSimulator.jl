@@ -6,6 +6,7 @@ module PulsedGradients
 import JuMP: @constraint, @variable, Model, VariableRef
 import StaticArrays: SVector
 import ...BuildingBlocks: BuildingBlock, duration, helper_functions, set_simple_constraints!, scanner_constraints!, BuildingBlockPlaceholder
+import ...SequenceBuilders: SequenceBuilder
 import ....Scanners: Scanner
 
 
@@ -34,7 +35,7 @@ If not set, they will be determined during the sequence optimisation.
 The [`bvalue`](@ref) can be constrained for multiple gradient pulses.
 """
 mutable struct PulsedGradient <: BuildingBlock
-    model::Model
+    builder::SequenceBuilder
     orientation :: Any
     slew_rate :: VariableRef
     rise_time :: VariableRef
@@ -45,9 +46,9 @@ function PulsedGradient(; kwargs...)
     return BuildingBlockPlaceholder{PulsedGradient}(; kwargs...)
 end
 
-function PulsedGradient(model::Model; orientation=:bvec, kwargs...)
+function PulsedGradient(builder::SequenceBuilder; orientation=:bvec, kwargs...)
     res = PulsedGradient(
-        model,
+        builder,
         orientation,
         @variable(model),
         @variable(model),

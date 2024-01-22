@@ -14,10 +14,6 @@ Required methods:
 """
 abstract type BuildingBlock end
 
-owner_model(bb::BuildingBlock) = bb.model
-
-has_values(block::BuildingBlock) = has_values(owner_model(block))
-
 
 """
     duration(building_block)
@@ -63,7 +59,7 @@ function Base.show(io::IO, block::BuildingBlock)
     print(io, string(typeof(block)), "(")
     for name in propertynames(block)
         value = getproperty(block, name)
-        if value isa GenericVariableRef || value isa Model
+        if value isa GenericVariableRef || name == :builder
             continue
         end
         print(io, name, "=", repr(value), ", ")
@@ -161,5 +157,6 @@ function Base.show(io::IO, placeholder::BuildingBlockPlaceholder{T}) where {T}
         print(io, "Unassigned BuildingBlockPlaceholder{$T}($args; $kwargs)")
     end
 end
+
 
 end
