@@ -35,7 +35,7 @@ function SequenceBuilder(model::Model, blocks...)
     for b in blocks
         add!(builder.blocks, to_block(builder, b))
     end
-    @constraint TR(builder) >= duration(builder)
+    @constraint model TR(builder) >= duration(builder)
     return builder
 end
 
@@ -122,7 +122,7 @@ function start_time(sb::SequenceBuilder, bb::BuildingBlock)
     return start_time(sb, index(bb))
 end
 
-start_time(sb::SequenceBuilder, index::Integer) = index == 1 ? 0. | duration(sb, 1, index - 1)
+start_time(sb::SequenceBuilder, index::Integer) = index == 1 ? 0. : duration(sb, 1, index - 1)
 
 """
     end_time(building_block::BuildingBlock)
