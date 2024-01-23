@@ -6,7 +6,7 @@ module PulsedGradients
 import JuMP: @constraint, @variable, Model, VariableRef, owner_model
 import StaticArrays: SVector
 import ..IntegrateGradients: qval, bval
-import ...BuildingBlocks: BuildingBlock, duration, properties, set_simple_constraints!, scanner_constraints!, BuildingBlockPlaceholder
+import ...BuildingBlocks: BuildingBlock, duration, properties, set_simple_constraints!, BuildingBlockPlaceholder, gradient_strength, slew_rate
 import ...SequenceBuilders: SequenceBuilder
 import ....Scanners: Scanner
 
@@ -78,18 +78,8 @@ The time spent at the maximum gradient strength in ms.
 """
 flat_time(pg::PulsedGradient) = pg.flat_time
 
-"""
-    gradient_strength(gradient)
-
-Maximum gradient strength in kHz/um.
-"""
 gradient_strength(g::PulsedGradient) = rise_time(g) * slew_rate(g)
 
-"""
-    slew_rate(gradient)
-
-Maximum rate of increase (and decrease) of the gradient strength in kHz/um/ms.
-"""
 slew_rate(g::PulsedGradient) = g.slew_rate
 
 """
@@ -124,10 +114,5 @@ function bval(g::PulsedGradient, qstart=0.)
 end
 
 properties(::Type{<:PulsedGradient}) = [qval, δ, gradient_strength, duration, rise_time, flat_time, slew_rate]
-
-function scanner_constraints!(model::Model, g::PulsedGradient, scanner::Scanner)
-    @constraint model gradient_strength(g) <= scanner.gradient
-    @constraint model slew_rate(g) <= scanner.slew_rate
-end
 
 end

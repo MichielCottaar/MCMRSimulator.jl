@@ -1,7 +1,9 @@
 module SequenceBuilders
 import JuMP: Model, owner_model, index, VariableRef, @constraint, @variable, has_values, optimize!
 import Ipopt
-import ..BuildingBlocks: BuildingBlock, BuildingBlockPlaceholder, match_blocks!, duration, apply_simple_constraint!
+import ..BuildingBlocks: BuildingBlock, BuildingBlockPlaceholder, match_blocks!, duration, apply_simple_constraint!, scanner_constraints!
+import ...Sequences: Sequence
+import ...Scanners: Scanner
 
 """
     SequenceBuilder(blocks...)
@@ -13,15 +15,22 @@ A sequence matching these constraints will be produced by calling [`solve`](@ref
 """
 struct SequenceBuilder
     model :: Model
+    scanner :: Scanner
     blocks :: Vector{<:BuildingBlock}
     TR :: VariableRef
-    function SequenceBuilder(model::Model, blocks...; TR=nothing) 
-        builder = new(model, BuildingBlock[], @variable(model))
-        for b in blocks
-            push!(builder.blocks, to_block(builder, b))
+    function SequenceBuilder(model::Model, blocks...; scanner=3., TR=nothing) 
+        if scanner isa Number
+            scanner = Scanner(B0=scanner)
+        end
+        builder = new(model, scanner, BuildingBlock[], @variable(model))
+        for block in blocks
+            push!(builder.blocks, to_block(builder, block))
         end
         @constraint model builder.TR >= duration(builder)
         apply_simple_constraint!(model, builder.TR, TR)
+        for block in builder.blocks 
+            scanner_constraints!(block, scanner)
+        end
         return builder
     end
 end
@@ -38,9 +47,9 @@ end
 
 Base.getindex(model::SequenceBuilder, i::Integer)  = model.blocks[i]
 
-function SequenceBuilder(blocks...; TR=nothing)
+function SequenceBuilder(blocks...; kwargs...)
     model = Model(Ipopt.Optimizer)
-    SequenceBuilder(model, blocks...; TR=TR)
+    SequenceBuilder(model, blocks...; kwargs...)
 end
 
 
@@ -50,7 +59,6 @@ function Base.show(io::IO, builder::SequenceBuilder)
 end
 
 
-# Interactions between individual BuildingBlock and parent
 Base.length(sb::SequenceBuilder) = length(sb.blocks)
 builder(bb::BuildingBlock) = bb.builder
 owner_model(bb::BuildingBlock) = owner_model(builder(bb))

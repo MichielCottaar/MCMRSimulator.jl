@@ -8,7 +8,6 @@ Parent type for all individual components out of which a sequence can be built.
 
 Required methods:
 - [`duration`](@ref)(block, parameters): returns block duration in ms
-- [`scanner_constraints!`](@ref)(model, block, scanner): adds scanner constraints to the block
 - [`to_components`](@ref)(block, parameters): converts the block into components recognised by the MCMR simulator
 - [`properties`](@ref): A list of all functions that are used to compute properties of the building block. Any of these can be used in constraints or objective functions.
 """
@@ -33,13 +32,44 @@ Converts the building block into components recognised by the MCMR simulator. Th
 """
 function to_components end
 
+
+"""
+    gradient_strength(gradient)
+
+Maximum gradient strength in kHz/um.
+
+If a [`Scanner`](@ref) is provided, this will be constrained to be lower than the maximum scanner gradient strength.
+"""
+function gradient_strength end
+
+"""
+    slew_rate(gradient)
+
+Maximum rate of increase (and decrease) of the gradient strength in kHz/um/ms.
+
+If a [`Scanner`](@ref) is provided, this will be constrained to be lower than the maximum scanner slew rate.
+"""
+function slew_rate end
+
 """
     scanner_constraints!([model, ]building_block, scanner)
 
-Adds any constraints from a specific scanner to a sequence or BuildingBlock
+Adds any constraints from a specific scanner to a [`BuildingBlock`]{@ref}.
+If a [`Scanner`](@ref) is provided to the `SequenceBuilder`, this will be called under the hood on every [`BuildingBlock`]@(ref).
 """
 function scanner_constraints!(building_block::BuildingBlock, scanner::Scanner)
     scanner_constraints!(owner_model(building_block), building_block, scanner)
+end
+
+function scanner_constraints!(model::Model, building_block::BuildingBlock, scanner::Scanner)
+    for (func, property_name) in [
+        (gradient_strength, :gradient)
+        (slew_rate, :slew_rate)
+    ]
+        if (func in properties(building_block)) && isfinite(getproperty(scanner, property_name))
+            @constraint model func(building_block) <= getproperty(scanner, property_name)
+        end
+    end
 end
 
 """
