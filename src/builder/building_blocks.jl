@@ -74,7 +74,7 @@ end
 
 
 """
-    set_simple_constraints!(model, block)
+    set_simple_constraints!(model, block, kwargs)
 
 Add any constraints or objective functions to the properties of a [`BuildingBlock`](@ref) in the JuMP `model`.
 

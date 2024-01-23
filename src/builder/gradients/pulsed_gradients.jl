@@ -123,7 +123,7 @@ function bval(g::PulsedGradient, qstart=0.)
     )
 end
 
-properties(::Type{PulsedGradient}) = [qval, δ, gradient_strength, duration, rise_time, flat_time, slew_rate]
+properties(::Type{<:PulsedGradient}) = [qval, δ, gradient_strength, duration, rise_time, flat_time, slew_rate]
 
 function scanner_constraints!(model::Model, g::PulsedGradient, scanner::Scanner)
     @constraint model gradient_strength(g) <= scanner.gradient
