@@ -3,12 +3,12 @@ Defines a set of different options for MRI gradients.
 """
 module PulsedGradients
 
-import JuMP: @constraint, @variable, Model, VariableRef, owner_model
+import JuMP: @constraint, @variable, Model, VariableRef, owner_model, value
 import StaticArrays: SVector
+import ....Sequences: MRGradients
+import ...BuildingBlocks: BuildingBlock, duration, properties, set_simple_constraints!, BuildingBlockPlaceholder, gradient_strength, slew_rate, to_mcmr_components
+import ...SequenceBuilders: SequenceBuilder, start_time
 import ..IntegrateGradients: qval, bval
-import ...BuildingBlocks: BuildingBlock, duration, properties, set_simple_constraints!, BuildingBlockPlaceholder, gradient_strength, slew_rate
-import ...SequenceBuilders: SequenceBuilder
-import ....Scanners: Scanner
 
 
 """
@@ -114,5 +114,31 @@ function bval(g::PulsedGradient, qstart=0.)
 end
 
 properties(::Type{<:PulsedGradient}) = [qval, δ, gradient_strength, duration, rise_time, flat_time, slew_rate]
+
+
+function to_mcmr_components(block::PulsedGradient)
+    if block.orientation == :bvec
+        rotate = true
+        qvec = [value(qval(block)), 0., 0.]
+    elseif block.orientation == :neg_bvec
+        rotate = true
+        qvec = [-value(qval(block)), 0., 0.]
+    elseif block.orientation isa AbstractVector && size(block.orientation) == (3, )
+        rotate = false
+        qvec = block.orientation .* (value(qval(block)) / norm(block.orientation))
+    else
+        error("Gradient orientation should be :bvec, :neg_bvec or a length-3 vector, not $(block.orienation)")
+    end
+    t_start = value(start_time(block))
+    t_rise = value(rise_time(block))
+    t_d = value(δ(block))
+    return MRGradients([
+        (t_start, zeros(3)),
+        (t_start + t_rise, qvec),
+        (t_start + t_d, qvec),
+        (t_start + t_d + t_rise, zeros(3)),
+    ])
+end
+
 
 end

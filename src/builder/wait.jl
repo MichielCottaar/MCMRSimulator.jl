@@ -1,6 +1,6 @@
 module Wait
 import JuMP: Model, @constraint, @variable, VariableRef, owner_model
-import ..BuildingBlocks: BuildingBlock, duration, properties, apply_simple_constraint!, BuildingBlockPlaceholder
+import ..BuildingBlocks: BuildingBlock, duration, properties, apply_simple_constraint!, BuildingBlockPlaceholder, to_mcmr_components
 import ..SequenceBuilders: SequenceBuilder, to_block
 import ...Scanners: Scanner
 
@@ -40,5 +40,7 @@ properties(::Type{WaitBlock}) = [duration]
 duration(wb::WaitBlock) = wb.duration
 
 scanner_constraints!(::Model, ::WaitBlock, ::Scanner) = nothing
+
+to_mcmr_components(::WaitBlock) = []
 
 end

@@ -1,7 +1,8 @@
 module InstantPulses
-import JuMP: @constraint, @variable, VariableRef
-import ...BuildingBlocks: BuildingBlock, properties, BuildingBlockPlaceholder, set_simple_constraints!, duration
-import ...SequenceBuilders: SequenceBuilder, owner_model
+import JuMP: @constraint, @variable, VariableRef, value
+import ....Sequences: InstantRFPulse
+import ...BuildingBlocks: BuildingBlock, properties, BuildingBlockPlaceholder, set_simple_constraints!, duration, to_mcmr_components
+import ...SequenceBuilders: SequenceBuilder, owner_model, start_time
 
 struct InstantRFPulseBlock <: BuildingBlock
     builder :: SequenceBuilder
@@ -26,5 +27,14 @@ flip_angle(instant::InstantRFPulseBlock) = instant.flip_angle
 phase(instant::InstantRFPulseBlock) = instant.phase
 duration(instant::InstantRFPulseBlock) = 0.
 properties(::Type{<:InstantRFPulseBlock}) = [flip_angle, phase]
+
+
+function to_mcmr_components(block::InstantRFPulseBlock)
+    return InstantRFPulse(
+        time=value(start_time(block)),
+        flip_angle=value(flip_angle(block)),
+        phase=value(phase(block)),
+    )
+end
 
 end
