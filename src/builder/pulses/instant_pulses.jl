@@ -3,6 +3,7 @@ import JuMP: @constraint, @variable, VariableRef, value
 import ....Sequences: InstantRFPulse
 import ...BuildingBlocks: BuildingBlock, properties, BuildingBlockPlaceholder, set_simple_constraints!, duration, to_mcmr_components
 import ...SequenceBuilders: SequenceBuilder, owner_model, start_time
+import ..Properties: flip_angle, phase
 
 struct InstantRFPulseBlock <: BuildingBlock
     builder :: SequenceBuilder
