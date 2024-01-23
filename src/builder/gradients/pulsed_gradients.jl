@@ -6,7 +6,7 @@ module PulsedGradients
 import JuMP: @constraint, @variable, Model, VariableRef, owner_model
 import StaticArrays: SVector
 import ..IntegrateGradients: qval, bval
-import ...BuildingBlocks: BuildingBlock, duration, helper_functions, set_simple_constraints!, scanner_constraints!, BuildingBlockPlaceholder
+import ...BuildingBlocks: BuildingBlock, duration, properties, set_simple_constraints!, scanner_constraints!, BuildingBlockPlaceholder
 import ...SequenceBuilders: SequenceBuilder
 import ....Scanners: Scanner
 
@@ -123,7 +123,7 @@ function bval(g::PulsedGradient, qstart=0.)
     )
 end
 
-helper_functions(::Type{PulsedGradient}) = [qval, δ, gradient_strength, duration, rise_time, flat_time, slew_rate]
+properties(::Type{PulsedGradient}) = [qval, δ, gradient_strength, duration, rise_time, flat_time, slew_rate]
 
 function scanner_constraints!(model::Model, g::PulsedGradient, scanner::Scanner)
     @constraint model gradient_strength(g) <= scanner.gradient

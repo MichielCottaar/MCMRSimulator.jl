@@ -1,6 +1,6 @@
 module Wait
 import JuMP: Model, @constraint, @variable, VariableRef, owner_model
-import ..BuildingBlocks: BuildingBlock, duration, helper_functions, apply_simple_constraint!, BuildingBlockPlaceholder
+import ..BuildingBlocks: BuildingBlock, duration, properties, apply_simple_constraint!, BuildingBlockPlaceholder
 import ..SequenceBuilders: SequenceBuilder, to_block
 import ...Scanners: Scanner
 
@@ -35,7 +35,7 @@ WaitBlock(duration_constraint=nothing) = BuildingBlockPlaceholder{WaitBlock}(dur
 to_block(builder::SequenceBuilder, time::Union{Number, Symbol, Nothing, Val{:min}, Val{:max}}) = WaitBlock(builder, time)
 
 
-helper_functions(::Type{WaitBlock}) = [duration]
+properties(::Type{WaitBlock}) = [duration]
 
 duration(wb::WaitBlock) = wb.duration
 
