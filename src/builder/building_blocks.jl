@@ -1,5 +1,5 @@
 module BuildingBlocks
-import JuMP: has_values, GenericVariableRef, value, Model, @constraint, @objective, owner_model
+import JuMP: has_values, GenericVariableRef, value, Model, @constraint, @objective, owner_model, objective_function
 import ...Sequences: RFPulse, InstantRFPulse, MRGradients, InstantGradient, Sequence
 import ...Scanners: Scanner
 
@@ -96,6 +96,8 @@ end
 Add a single constraint or objective to the JuMP `model`.
 This is an internal function used by [`set_simple_constraints`](@ref).
 """
+apply_simple_constraint!(model::Model, variable, ::Nothing) = nothing
+apply_simple_constraint!(model::Model, variable, value::Symbol) = apply_simple_constraint!(model, variable, Val(value))
 apply_simple_constraint!(model::Model, variable, ::Val{:min}) = @objective model Min objective_function(model) + variable
 apply_simple_constraint!(model::Model, variable, ::Val{:max}) = @objective model Min objective_function(model) - variable
 apply_simple_constraint!(model::Model, variable, value::Number) = @constraint model variable == value

@@ -1,7 +1,7 @@
 module SequenceBuilders
 import JuMP: Model, owner_model, index, VariableRef, @constraint, @variable, has_values
 import Ipopt
-import ..BuildingBlocks: BuildingBlock, BuildingBlockPlaceholder, match_blocks!, duration
+import ..BuildingBlocks: BuildingBlock, BuildingBlockPlaceholder, match_blocks!, duration, apply_simple_constraint!
 
 """
     SequenceBuilder(blocks...)
@@ -15,12 +15,13 @@ struct SequenceBuilder
     model :: Model
     blocks :: Vector{<:BuildingBlock}
     TR :: VariableRef
-    function SequenceBuilder(model::Model, blocks...) 
+    function SequenceBuilder(model::Model, blocks...; TR=nothing) 
         builder = new(model, BuildingBlock[], @variable(model))
         for b in blocks
             push!(builder.blocks, to_block(builder, b))
         end
-        @constraint model TR(builder) >= duration(builder)
+        @constraint model builder.TR >= duration(builder)
+        apply_simple_constraint!(model, builder.TR, TR)
         return builder
     end
 end
@@ -37,9 +38,9 @@ end
 
 Base.getindex(model::SequenceBuilder, i::Integer)  = model.blocks[i]
 
-function SequenceBuilder(blocks...)
+function SequenceBuilder(blocks...; TR=nothing)
     model = Model(Ipopt.Optimizer)
-    SequenceBuilder(model, blocks...)
+    SequenceBuilder(model, blocks...; TR=TR)
 end
 
 
