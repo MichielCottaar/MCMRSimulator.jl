@@ -101,7 +101,7 @@ bandwidth(pulse::SincPulse) = 1 / lobe_duration(pulse)
 properties(::Type{<:SincPulse}) = [amplitude, N_left, N_right, duration, phase, frequency, flip_angle, lobe_duration, bandwidth]
 
 function to_mcmr_components(block::SincPulse)
-    normed_times = -value(N_left(block)):0.1:value(N_right(block))
+    normed_times = -value(N_left(block)):0.1:value(N_right(block)) + 1e-5
     times = ((normed_times .+ value(N_left(block))) .* value(lobe_duration(block))) .+ value(start_time(block))
     amplitudes = value(amplitude(block)) .* (normalised_function.(normed_times; apodise=block.apodise))
     phases = (value(frequency(block)) .* value(lobe_duration(block))) .* normed_times * 360
