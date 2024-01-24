@@ -30,6 +30,7 @@ Represents an radio-frequency pulse with a constant amplitude and frequency.
 struct SincPulse <: BuildingBlock
     builder :: SequenceBuilder
     symmetric :: Bool
+    apodise :: Bool
     nlobe_integral :: Polynomial
     N_left :: VariableRef
     N_right :: VariableRef
@@ -52,7 +53,8 @@ function SincPulse(builder::SequenceBuilder; symmetric=true, max_Nlobes=nothing,
     res = SincPulse(
         builder,
         symmetric,
-        nlobe_integral_params(max_Nlobes),
+        apodise,
+        nlobe_integral_params(max_Nlobes, apodise),
         N_left_var,
         N_right_var,
         @variable(model),
