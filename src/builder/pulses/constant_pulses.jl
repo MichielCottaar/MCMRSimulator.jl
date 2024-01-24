@@ -3,7 +3,7 @@ import JuMP: VariableRef, @constraint, @variable, value
 import ....Sequences: RFPulse
 import ...BuildingBlocks: BuildingBlock, properties, BuildingBlockPlaceholder, set_simple_constraints!, duration, to_mcmr_components
 import ...SequenceBuilders: SequenceBuilder, owner_model, start_time, end_time
-import ..Properties: flip_angle, phase, amplitude, frequency
+import ..Properties: flip_angle, phase, amplitude, frequency, bandwidth
 
 """
     ConstantPulse(; variables...)
@@ -45,6 +45,7 @@ duration(pulse::ConstantPulse) = pulse.duration
 phase(pulse::ConstantPulse) = pulse.phase
 frequency(pulse::ConstantPulse) = pulse.frequency
 flip_angle(pulse::ConstantPulse) = amplitude(pulse) * duration(pulse) * 360
+bandwidth(pulse::ConstantPulse) = 3.79098854 / duration(pulse)
 
 properties(::Type{<:ConstantPulse}) = [amplitude, duration, phase, frequency, flip_angle]
 

@@ -29,4 +29,11 @@ The maximum frequency during the RF pulse in a [`BuildingBlock`](@ref) relative 
 function frequency end
 
 
+"""
+    bandwidth(pulse_block)
+
+FWHM of the frequency content of the RF pulse in kHz.
+"""
+function bandwidth end
+
 end
