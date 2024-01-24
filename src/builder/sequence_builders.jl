@@ -1,5 +1,6 @@
 module SequenceBuilders
-import JuMP: Model, owner_model, index, VariableRef, @constraint, @variable, has_values, optimize!, value
+import JuMP: Model, owner_model, index, VariableRef, @constraint, @variable, has_values, optimize!, value, optimizer_with_attributes
+import Juniper
 import Ipopt
 import ..BuildingBlocks: BuildingBlock, BuildingBlockPlaceholder, match_blocks!, duration, apply_simple_constraint!, scanner_constraints!, to_mcmr_components
 import ...Sequences: Sequence
@@ -48,7 +49,9 @@ end
 Base.getindex(model::SequenceBuilder, i::Integer)  = model.blocks[i]
 
 function SequenceBuilder(blocks...; kwargs...)
-    model = Model(Ipopt.Optimizer)
+    ipopt_opt = optimizer_with_attributes(Ipopt.Optimizer, "print_level" => 0)
+    juniper_opt = optimizer_with_attributes(Juniper.Optimizer, "nl_solver" => ipopt_opt)
+    model = Model(juniper_opt)
     SequenceBuilder(model, blocks...; kwargs...)
 end
 
