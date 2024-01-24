@@ -1,5 +1,5 @@
 module ConstantPulses
-import JuMP: VariableRef, @constraint, @variable
+import JuMP: VariableRef, @constraint, @variable, value
 import ....Sequences: RFPulse
 import ...BuildingBlocks: BuildingBlock, properties, BuildingBlockPlaceholder, set_simple_constraints!, duration, to_mcmr_components
 import ...SequenceBuilders: SequenceBuilder, owner_model, start_time, end_time
@@ -18,6 +18,7 @@ Represents an radio-frequency pulse with a constant amplitude and frequency.
 - [`frequency`](@ref): frequency of the RF pulse relative to the Larmor frequency (in kHz).
 """
 struct ConstantPulse <: BuildingBlock
+    builder :: SequenceBuilder
     amplitude :: VariableRef
     duration :: VariableRef
     phase :: VariableRef
@@ -29,6 +30,8 @@ function ConstantPulse(builder::SequenceBuilder; kwargs...)
     model = owner_model(builder)
     res = ConstantPulse(
         builder,
+        @variable(model),
+        @variable(model),
         @variable(model),
         @variable(model)
     )
