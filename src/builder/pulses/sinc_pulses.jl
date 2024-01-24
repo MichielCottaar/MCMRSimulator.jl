@@ -9,13 +9,14 @@ import ...SequenceBuilders: SequenceBuilder, owner_model, start_time, end_time
 import ..Properties: flip_angle, phase, amplitude, frequency, bandwidth
 
 """
-    SincPulse(; symmetric=true, variables...)
+    SincPulse(; symmetric=true, max_Nlobes=nothing, apodise=true, variables...)
 
 Represents an radio-frequency pulse with a constant amplitude and frequency.
 
 ## Parameters
 - `symmetric`: by default the sinc pulse will be symmetric (i.e., `N_left` == `N_right`). Set `symmetric=false` to independently control `N_left` and `N_right`.
 - `max_Nlobes`: by default the computed [`flip_angle`](@ref) is only approximated as `amplitude` * `lobe_duration`. By setting `max_Nlobes` the flip_angle will be given by the actual integral of the sinc function, which will be more accurate for small number of lobes. However, the number of lobes will not be able to exceed this `max_Nlobes`.
+- `apodise`: if true (default) applies a Hanning apodising window to the sinc pulse.
 
 ## Variables
 - [`N_left`](@ref): number of zero-crossings of the sinc function before the main peak (minimum of 1).
@@ -41,7 +42,7 @@ struct SincPulse <: BuildingBlock
 end
 
 SincPulse(; kwargs...) = BuildingBlockPlaceholder{SincPulse}(; kwargs...)
-function SincPulse(builder::SequenceBuilder; symmetric=true, max_Nlobes=nothing, kwargs...) 
+function SincPulse(builder::SequenceBuilder; symmetric=true, max_Nlobes=nothing, apodise=true, kwargs...) 
     model = owner_model(builder)
     if symmetric
         N_lobes = @variable(model, integer=true)
