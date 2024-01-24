@@ -8,9 +8,9 @@ import ..Properties: flip_angle, phase, amplitude, frequency, bandwidth
 """
     ConstantPulse(; variables...)
 
-Represents an radio-frequency pulse with a constant amplitude and frequency.
+Represents an radio-frequency pulse with a constant amplitude and frequency (i.e., a rectangular function).
 
-## Variables
+## Properties
 - [`flip_angle`](@ref): rotation expected for on-resonance spins in degrees.
 - [`duration`](@ref): duration of the RF pulse in ms.
 - [`amplitude`](@ref): amplitude of the RF pulse in kHz.
@@ -47,7 +47,7 @@ frequency(pulse::ConstantPulse) = pulse.frequency
 flip_angle(pulse::ConstantPulse) = amplitude(pulse) * duration(pulse) * 360
 bandwidth(pulse::ConstantPulse) = 3.79098854 / duration(pulse)
 
-properties(::Type{<:ConstantPulse}) = [amplitude, duration, phase, frequency, flip_angle]
+properties(::Type{<:ConstantPulse}) = [amplitude, duration, phase, frequency, flip_angle, bandwidth]
 
 function to_mcmr_components(block::ConstantPulse)
     final_phase = phase(block) + duration(block) * frequency(block) * 360
