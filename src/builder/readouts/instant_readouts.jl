@@ -2,6 +2,13 @@ module InstantReadouts
 import ...BuildingBlocks: BuildingBlock, BuildingBlockPlaceholder, duration, properties, to_mcmr_components
 import ...SequenceBuilders: SequenceBuilder, start_time
 
+"""
+    InstantReadout()
+
+Represents an instantaneous `Readout` of the signal.
+
+It has no parameters or properties to set.
+"""
 struct InstantReadout <: BuildingBlock
     builder::SequenceBuilder
 end
