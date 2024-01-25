@@ -1,5 +1,6 @@
 module BuildingBlocks
 import JuMP: has_values, GenericVariableRef, value, Model, @constraint, @objective, owner_model, objective_function
+import Printf: @sprintf
 import ...Sequences: RFPulse, InstantRFPulse, MRGradients, InstantGradient
 import ...Scanners: Scanner
 
@@ -86,9 +87,20 @@ end
 
 function Base.show(io::IO, block::BuildingBlock)
     print(io, string(typeof(block)), "(")
+    if has_values(block)
+        if iszero(value(duration(block)))
+            print(io, "time=", @sprintf("%.3f", value(start_time(block))), ", ")
+        else
+            print(
+                io, "time=", 
+                @sprintf("%.3f", value(start_time(block))), " - ",
+                @sprintf("%.3f", value(end_time(block))), ", "
+            )
+        end
+    end
     for name in propertynames(block)
         value = getproperty(block, name)
-        if value isa GenericVariableRef || name == :builder
+        if value isa GenericVariableRef || name == :builder || string(name)[1] == '_'
             continue
         end
         print(io, name, "=", repr(value), ", ")
@@ -96,11 +108,20 @@ function Base.show(io::IO, block::BuildingBlock)
 
     if has_values(block)
         for fn in properties(block)
-            print(io, "$(nameof(fn))=$(value(fn(block))), ")
+            if fn == duration
+                continue
+            end
+            numeric_value = value(fn(block))
+            printed_value = @sprintf("%.3g", numeric_value)
+            print(io, "$(nameof(fn))=$(printed_value), ")
         end
     end
     print(io, ")")
 end
+
+# The `start_time` and `end_time` functions are properly defined in "sequence_builders.jl"
+function start_time end
+function end_time end
 
 
 """
