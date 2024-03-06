@@ -29,8 +29,8 @@ function RFPulse(times::AbstractVector, amplitudes::AbstractVector, phases=nothi
         phases = (times .- times[1]) .* (360 * off_resonance) .+ phase0
     end
     off_resonance_step = @. abs((phases[1:end-1] - phases[2:end]) / (360 * (times[1:end-1] - times[2:end])))
-    off_resonance_step[isnan.(off_resonance_step)] .= 0
-    off_resonance_edge = max.([0, off_resonance_step...], [off_resonance_step..., 0])
+    off_resonance_step[isnan.(off_resonance_step)] .= 0.
+    off_resonance_edge = max.([0., off_resonance_step...], [off_resonance_step..., 0.])
     return RFPulse(
         Shape(times, amplitudes),
         Shape(times, phases),
