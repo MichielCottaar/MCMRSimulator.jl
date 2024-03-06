@@ -17,7 +17,7 @@ end
 
 makedocs(;
     modules=[MCMRSimulator],
-    authors="Michiel Cottaar <Michiel.cottaar@ndcn.ox.ac.uk>",
+    authors="Michiel Cottaar <Michiel.Cottaar@ndcn.ox.ac.uk>",
     repo=remote,
     sitename="MCMRSimulator.jl",
     format=Documenter.HTML(;
