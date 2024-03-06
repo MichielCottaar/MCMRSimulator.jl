@@ -34,9 +34,6 @@ export gyromagnetic_ratio
 import .Methods: get_time, get_rotation
 export get_time, get_rotation
 
-import .Sequences: Sequence, InstantRFPulse, Readout, InstantGradient, RFPulse, MRGradients, gradient, rotate_bvec, flip_angle, read_sequence, write_sequence
-export Sequence, InstantRFPulse, Readout, InstantGradient, RFPulse, MRGradients, gradient, rotate_bvec, flip_angle, read_sequence, write_sequence
-
 import .Scanners: Scanner, B0, max_gradient, max_slew_rate, Siemens_Connectom, Siemens_Prisma, Siemens_Terra
 export Scanner, B0, max_gradient, max_slew_rate, Siemens_Connectom, Siemens_Prisma, Siemens_Terra
 
@@ -75,25 +72,15 @@ export BoundingBox
 import .Properties: GlobalProperties, R1, R2, off_resonance, correct_for_timestep
 export GlobalProperties, R1, R2, off_resonance
 
-import .Sequences: previous_pulse, current_pulse, next_pulse, previous_gradient, current_gradient, next_gradient, previous_instant, current_instant, next_instant
-export previous_pulse, current_pulse, next_pulse, previous_gradient, current_gradient, next_gradient, previous_instant, current_instant, next_instant
+import .Plot: PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance
+export PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance
 
-import .Sequences: constant_pulse, read_pulseq
-export constant_pulse, read_pulseq
-
-import .SequenceBuilder: BuildingBlock, define_sequence, add_linear_diffusion_weighting, gradient_echo, spin_echo, dwi, trapezium_gradient
-export BuildingBlock, define_sequence, add_linear_diffusion_weighting, gradient_echo, spin_echo, dwi, trapezium_gradient
-
-import .Plot: PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance, plot_sequence
-export PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance, plot_sequence
-
-import .Plot: plot_snapshot!, plot_geometry!, plot_trajectory!, plot_off_resonance!, plot_sequence!
-export plot_snapshot!, plot_geometry!, plot_trajectory!, plot_off_resonance!, plot_sequence!
+import .Plot: plot_snapshot!, plot_geometry!, plot_trajectory!, plot_off_resonance!
+export plot_snapshot!, plot_geometry!, plot_trajectory!, plot_off_resonance!
 
 
 # Additional imports that will not be exported.
 # They will not be of interest to most users.
-import .Sequences: apply!, start_time, end_time, amplitude, SequencePart, qval, qvec
 import .Spins: FixedXoshiro
 import .Methods: get_time, get_rotation, project
 import .Evolve: draw_step!
