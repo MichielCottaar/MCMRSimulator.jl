@@ -1,8 +1,8 @@
 module Simulations
 import StaticArrays: SVector
+import MRIBuilder: Sequence
 import ..Geometries: ObstructionGroup, fix, fix_susceptibility
 import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility, susceptibility_off_resonance
-import ..Sequences: Sequence
 import ..Timestep: TimeController, propose_times
 import ..Spins: Spin, Snapshot, SpinOrientation, stuck
 import ..Methods: get_time, B0
