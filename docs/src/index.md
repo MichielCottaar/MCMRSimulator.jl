@@ -4,7 +4,7 @@ The spin evolution of randomly diffusing particles is tracked under influence of
 At present, the simulator allows to model
 - Free diffusion and diffusion restricted by [`Walls`](@ref), [`Cylinders`](@ref), [`Spheres`](@ref), and/or a triangular [`Mesh`](@ref).
 - R1 and R2 relaxation using global or local R1/R2 parameters
-- MR sequences consisting of arbitrary RF pulses, gradients, and readouts
+- MR sequences consisting of arbitrary RF pulses, gradients, and readouts (built using [MRIBuilder](https://open.win.ox.ac.uk/pages/ndcn0236/mribuilder.jl/dev/))
 - Off-resonance magnetic field generation by myelinated cylinders or meshes
 - Magnetisation transfer between liquid spins and bound spins in membranes.
 - Membrane permeability (i.e., exchange)
