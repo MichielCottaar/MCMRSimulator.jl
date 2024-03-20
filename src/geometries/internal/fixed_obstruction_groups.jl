@@ -127,6 +127,18 @@ end
 size_scale(g::FixedGeometry) = minimum(size_scale.(g))
 size_scale(g::FixedGeometry{0}) = Inf
 
+"""
+    max_timestep_turtoisity(geometry, diffusivity; factor=0.003)
+
+Computes the maximum timestep that will still allow for the turtoisity to be modeled accurately.
+
+This is given by ``A * l^2/D``, where
+- `A` is the `factor` (experimentally determined)
+- `l` is the size scale of the geometry
+- `D` is the `diffusivity`
+"""
+max_timestep_turtoisity(geometry, diffusivity; factor=0.003) = factor * size_scale(geometry)^2 / diffusivity
+
 function Base.show(io::IO, geom::FixedObstructionGroup)
     print(io, length(geom.obstructions), " ")
     if repeating(geom)

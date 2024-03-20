@@ -2,8 +2,7 @@ module Simulations
 import StaticArrays: SVector
 import MRIBuilder: Sequence
 import ..Geometries: ObstructionGroup, fix, fix_susceptibility
-import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility, susceptibility_off_resonance
-import ..Timestep: TimeController, propose_times
+import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility, susceptibility_off_resonance, max_timestep_sticking, max_timestep_turtoisity
 import ..Spins: Spin, Snapshot, SpinOrientation, stuck
 import ..Methods: get_time, B0
 import ..Properties: GlobalProperties, R1, R2, off_resonance, correct_for_timestep
@@ -57,7 +56,7 @@ struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, S<:Sequence, O
     geometry :: G
     inside_geometry :: IG
     susceptibility :: O
-    time_controller::TimeController
+    max_timestep :: Float64
     flatten::Bool
     function Simulation(
         sequences, 
@@ -66,7 +65,7 @@ struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, S<:Sequence, O
         geometry::FixedGeometry,
         inside_geometry::FixedGeometry,
         susceptibility::FixedSusceptibility,
-        time_controller::TimeController,
+        max_timestep::Float64,
         flatten::Bool,
     )
         nseq = length(sequences)
@@ -78,7 +77,7 @@ struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, S<:Sequence, O
             geometry,
             inside_geometry,
             susceptibility,
-            time_controller,
+            max_timestep,
             flatten
         )
     end
@@ -89,8 +88,6 @@ function Simulation(
     diffusivity=3,
     geometry=[],
     max_timestep=nothing,
-    gradient_precision=1.,
-    rf_rotation=5.,
     permeability=0.,
     surface_density=0.,
     dwell_time=0.,
@@ -116,8 +113,7 @@ function Simulation(
     end
 
     default_properties = GlobalProperties(; R1=R1, R2=R2, off_resonance=off_resonance)
-    max_B0 = iszero(length(sequences)) ? 0 : maximum(B0.(sequences))
-    controller = TimeController(geometry, susceptibility, max_B0, diffusivity; max_timestep=max_timestep, gradient_precision=gradient_precision, rf_rotation=rf_rotation)
+    max_timestep = isnothing(max_timestep) ? min(max_timestep_sticking(geometry, diffusivity), max_timestep_turtoisity(geometry, diffusivity)) : max_timestep
     if iszero(diffusivity) && length(geometry) > 0
         @warn "Restrictive geometry will have no effect, because the diffusivity is set at zero"
     end
@@ -128,7 +124,7 @@ function Simulation(
         geometry,
         inside_geometry,
         susceptibility,
-        controller,
+        max_timestep,
         flatten,
     )
 end
