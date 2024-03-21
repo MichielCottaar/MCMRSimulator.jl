@@ -11,10 +11,8 @@ import LinearAlgebra: norm, ⋅
 import MRIBuilder: SequencePart, LinearSequence, Sequence, readout_times, TR
 import ..Methods: get_time
 import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence
-import ..Sequences: SequencePart, next_instant, InstantComponent, apply!, Readout
 import ..Simulations: Simulation, _to_snapshot
 import ..Relax: relax!, transfer!
-import ..Timestep: propose_times
 import ..Properties: GlobalProperties, correct_for_timestep, stick_probability
 import ..Subsets: Subset, get_subset
 
