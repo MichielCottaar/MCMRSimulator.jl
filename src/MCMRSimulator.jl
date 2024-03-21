@@ -18,7 +18,6 @@ include("scanners.jl")
 include("properties.jl")
 include("geometries/geometries.jl")
 include("spin.jl")
-include("timestep.jl")
 include("relax.jl")
 include("simulations.jl")
 include("subsets.jl")
@@ -37,9 +36,6 @@ export Scanner, B0, max_gradient, max_slew_rate, Siemens_Connectom, Siemens_Pris
 
 import .Spins: position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, SpinOrientationSum, isinside, stuck, stuck_to, orientation
 export position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, isinside, stuck, stuck_to, orientation
-
-import .Timestep: TimeController, propose_times
-export TimeController, propose_times
 
 import .Simulations: Simulation, susceptibility_off_resonance
 export Simulation, susceptibility_off_resonance
