@@ -64,7 +64,7 @@ function relax!(spin::Spin{N}, parts::SVector{N, SequencePart}, simulation, t1::
                 new_orient = SpinOrientation(rotation * orientation(orient))
                 orient.longitudinal = new_orient.longitudinal
                 orient.transverse = new_orient.transverse
-                orient.phase = new_orient.phase
+                orient.phase = new_orient.phase + part.rf_phase(t_end) - part.rf_phase(t_start)
 
                 relax!(orient, index == nsteps ? step_size/2 : step_size, props.R1, props.R2)
             end
