@@ -48,9 +48,9 @@ To run a [`Snapshot`](@ref) of spins through the simulations you can use one of 
 - `evolve`: evolves the spins in the snapshot until a single given time and returns that state in a new [`Snapshot`](@ref).
 - `readout`: evolves the spins to particular times in each TR and return the total signal at that time (or a [`Snapshot`](@ref)).
 """
-struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, S<:Sequence, O<:FixedSusceptibility}
+struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, O<:FixedSusceptibility}
     # N sequences, datatype T
-    sequences :: SVector{N, S}
+    sequences :: SVector{N, Sequence}
     diffusivity :: Float64
     properties :: GlobalProperties
     geometry :: G
@@ -70,8 +70,8 @@ struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, S<:Sequence, O
     )
         nseq = length(sequences)
 
-        new{nseq, length(geometry), typeof(geometry), typeof(inside_geometry), eltype(sequences), typeof(susceptibility)}(
-            SVector{nseq}(sequences),
+        new{nseq, length(geometry), typeof(geometry), typeof(inside_geometry), typeof(susceptibility)}(
+            SVector{nseq, Sequence}(sequences),
             diffusivity,
             properties,
             geometry,
