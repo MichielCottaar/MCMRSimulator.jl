@@ -8,14 +8,10 @@ All of these functions call [`evolve_to_time`](@ref) under the hood to actually 
 module Evolve
 import StaticArrays: SVector, MVector
 import LinearAlgebra: norm, ⋅
+import MRIBuilder: SequencePart, LinearSequence, Sequence, readout_times, TR
 import ..Methods: get_time
 import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence
 import ..Sequences: SequencePart, next_instant, InstantComponent, apply!, Readout
-import ..Geometries.Internal: 
-    FixedGeometry, empty_reflection, detect_intersection, Intersection,
-    empty_intersection, direction, Reflection, has_intersection, previous_hit,
-    surface_relaxivity, surface_density, dwell_time, permeability, FixedSusceptibility,
-    BoundingBox
 import ..Simulations: Simulation, _to_snapshot
 import ..Relax: relax!, transfer!
 import ..Timestep: propose_times
@@ -51,17 +47,17 @@ The function returns an up to 3-dimensional (KxLxMxN) array, with the following 
 By default each element of this matrix is either a [`SpinOrientationSum`](@ref) with the total signal.
 If `return_snapshot=true` is set, each element is the full [`Snapshot`](@ref) instead.
 """
-function readout(spins, simulation::Simulation{N}, readout_times=nothing; bounding_box=500, skip_TR=0, nTR=nothing, return_snapshot=false, noflatten=false, subset=Subset()) where {N}
+function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bounding_box=500, skip_TR=0, nTR=nothing, return_snapshot=false, noflatten=false, subset=Subset()) where {N}
     snapshot = _to_snapshot(spins, simulation, bounding_box)
 
-    if isnothing(readout_times)
+    if isnothing(new_readout_times)
         if iszero(N)
             nreadout_per_TR = 0
         else
-            nreadout_per_TR = maximum((length(seq.readout_times) for seq in simulation.sequences))
+            nreadout_per_TR = maximum((length(readout_times(seq)) for seq in simulation.sequences))
         end
     else
-        nreadout_per_TR = length(readout_times)
+        nreadout_per_TR = length(new_readout_times)
     end
     actual_readout_times = Set{Float64}()
     use_nTR = isnothing(nTR) ? 1 : nTR
@@ -70,10 +66,10 @@ function readout(spins, simulation::Simulation{N}, readout_times=nothing; boundi
     store_times = fill(-1., (N, nreadout_per_TR, use_nTR))
 
     for (i, seq) in enumerate(simulation.sequences)
-        current_TR = Int(div(get_time(snapshot), seq.TR, RoundDown))
-        time_in_TR = get_time(snapshot) - current_TR * seq.TR
+        current_TR = Int(div(get_time(snapshot), TR(seq), RoundDown))
+        time_in_TR = get_time(snapshot) - current_TR * TR(seq)
 
-        rt = isnothing(readout_times) ? seq.readout_times : readout_times
+        rt = isnothing(new_readout_times) ? readout_times(seq) : readout_times
         if rt isa Number
             rt = [rt]
         end
@@ -87,9 +83,9 @@ function readout(spins, simulation::Simulation{N}, readout_times=nothing; boundi
 
         for (j, relative_time) in enumerate(rt)
             for k in 1:use_nTR
-                new_readout_time = ((skip_TR + k - 1) * seq.TR) + relative_time
+                new_readout_time = ((skip_TR + k - 1) * TR(seq)) + relative_time
                 if new_readout_time < snapshot.time
-                    warn("Skipping readouts scheduled before the current snapshot. Did you provide negative `readout_times`?")
+                    warn("Skipping readouts scheduled before the current snapshot. Did you provide negative `new_readout_times`?")
                     continue
                 end
                 push!(actual_readout_times, new_readout_time)
@@ -147,11 +143,11 @@ If undefined `new_time` will be set to the start of the next TR.
 function evolve(spins, simulation::Simulation{N}, new_time=nothing; bounding_box=500) where {N}
     snapshot = _to_snapshot(spins, simulation, bounding_box)
     if isnothing(new_time)
-        TR = simulation.sequences[1].TR
-        if !all(s.TR == TR for s in simulation.sequences)
+        first_TR = TR(simulation.sequences[1])
+        if !all(TR(s) ≈ first_TR for s in simulation.sequences)
             error("Cannot evolve snapshot for a single TR, because the simulation contains sequences with different TRs. Please set a `new_time` explicitly.")
         end
-        new_time = (div(nextfloat(snapshot.time), TR, RoundDown) + 1) * TR
+        new_time = (div(nextfloat(snapshot.time), first_TR, RoundDown) + 1) * first_TR
     end
     evolve_to_time(snapshot, simulation, Float64(new_time))
 end
@@ -295,34 +291,51 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     end
     spins::Vector{Spin{N}} = deepcopy.(snapshot.spins)
 
-    times = propose_times(simulation, snapshot.time, new_time)
-
-    # define next stopping time due to instantaneous components
-    sequence_instants = Union{Nothing, InstantComponent}[next_instant(seq, current_time) for seq in simulation.sequences]
-    sequence_times = MVector{N, Float64}([isnothing(i) ? Inf : get_time(i) for i in sequence_instants])
-
-    for next_time in times
-        # evolve all spins to next interesting time
-        parts = SequencePart.(simulation.sequences, current_time, next_time)
-        Threads.@threads for spin in spins
-            draw_step!(spin, simulation, parts, next_time - current_time)
+    linear_sequences = LinearSequence(simulation.sequences, current_time, new_time)
+    if iszero(N)
+        if isinf(simulation.timestep)
+            Nparts = 1
+        else
+            Nparts = Int(div(new_time - current_time, simulation.timestep, RoundUp))
         end
-        current_time = next_time
+    else
+        Nparts = length(linear_sequences[1])
+    end
 
-        # apply instant components (if we are not at new_time already)
-        if current_time != new_time && any(t -> t == current_time, sequence_times)
-            components = SVector{N, Union{Nothing, InstantComponent}}([
-                time == current_time ? instant : nothing 
-                for (seq, instant, time) in zip(simulation.sequences, sequence_instants, sequence_times)
-            ])
-            apply!(components, spins)
-            for (idx, ctime) in enumerate(sequence_times)
-                if ctime == current_time
-                    sequence = simulation.sequences[idx]
-                    sequence_instants[idx] = next_instant(sequence, nextfloat(ctime))
-                    sequence_times[idx] = get_time(sequence_instants[idx])
+    for index_part in 1:Nparts
+        # apply instant components
+        for index_seq in 1:N
+            if !isnothing(linear_sequences.instant_pulses[index_seq])
+                # apply pulse to all spins
+                pulse = linear_sequences.instant_gradients[index_seq]
+                rotation = Rotations.RotationVec(
+                    pulse.flip_angle * cosd(pulse.phase),
+                    pulse.flip_angle * sind(pulse.phase),
+                    0.
+                )
+                for spin in spins
+                    orient = spin.orientations[index_seq]
+                    new_orient = SpinOrientation(rotation * orientation(orient))
+                    orient.longitudinal = new_orient.longitudinal
+                    orient.transverse = new_orient.transverse
+                    orient.phase = new_orient.phase
                 end
             end
+            if !isnothing(linear_sequences.instant_gradients[index_seq])
+                # apply gradient to all spins
+                grad = linear_sequences.instant_gradient[index_seq]
+                for spin in spins
+                    new_phase = rad2deg(spin.position ⋅ grad)
+                    spin.orientations[index_seq].phase += new_phase
+                end
+            end
+        end
+
+        parts = map(seq -> seq.finite_parts[index_part], linear_sequences)
+        timestep = iszero(N) ? (new_time - current_time) / Nparts : parts[1].duration
+        # evolve all spins to next interesting time
+        Threads.@threads for spin in spins
+            draw_step!(spin, simulation, parts, timestep)
         end
     end
     return Snapshot(spins, current_time)
