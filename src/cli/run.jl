@@ -8,9 +8,8 @@ import DataFrames: DataFrame
 import CSV
 import Tables
 import Random
+import MRIBuilder: read_sequence, Sequence
 import ...Geometries.User.JSON: read_geometry
-import ...Sequences.JSON: read_sequence
-import ...Sequences.Main: can_rotate_bvec, rotate_bvec, Sequence
 import ...Simulations: Simulation
 import ...Spins: Snapshot, BoundingBox, longitudinal, transverse, phase, orientation, position
 import ...Evolve: readout
