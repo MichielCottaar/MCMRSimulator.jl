@@ -15,6 +15,7 @@ import ..Simulations: Simulation, _to_snapshot
 import ..Relax: relax!, transfer!
 import ..Properties: GlobalProperties, correct_for_timestep, stick_probability
 import ..Subsets: Subset, get_subset
+import ..Geometries.Internal: Reflection
 
 """
     readout(spins, simulation[, readout_times]; bounding_box=<1x1x1 mm box>, skip_TR=0, nTR=1, return_snapshot=false, subset=<all>)
@@ -291,10 +292,10 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
 
     linear_sequences = LinearSequence(simulation.sequences, current_time, new_time)
     if iszero(N)
-        if isinf(simulation.timestep)
+        if isinf(simulation.max_timestep)
             Nparts = 1
         else
-            Nparts = Int(div(new_time - current_time, simulation.timestep, RoundUp))
+            Nparts = Int(div(new_time - current_time, simulation.max_timestep, RoundUp))
         end
     else
         Nparts = length(linear_sequences[1])
