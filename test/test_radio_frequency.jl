@@ -1,9 +1,7 @@
 @testset "test_radio_frequency.jl: Using finite RF pulses" begin
     @testset "Constant RF pulse without off-resonance" begin
         for phase in (0, 30)
-            rf = mr.constant_pulse(0, 9, 90, phase0=phase)
-            @test rf.max_amplitude ≈ 1/36
-            seq = mr.Sequence(components=[rf], TR=100.)
+            seq = build_sequence() do Sequence([ConstantPulse(; flip_angle=90, phase=0., frequency=0., duration=90.)]; duration=100) end
             sim = mr.Simulation(seq, rf_rotation=1.)
             signal = mr.readout(100, sim, 0:0.1:10)
             @test all(mr.propose_times(sim, 0, 9) .== 0:0.1:9)
@@ -18,9 +16,7 @@
         end
     end
     @testset "Constant RF pulse with off-resonance" begin
-        rf = mr.constant_pulse(0, 9, 90, off_resonance=1.)
-        @test rf.max_amplitude ≈ sqrt(1 + (90 / (360 * 9))^2)
-        seq = mr.Sequence(components=[rf], TR=100.)
+        seq = build_sequence() do Sequence([ConstantPulse(; flip_angle=90, phase=0., frequency=1., duration=90.)]; duration=100) end
         sim = mr.Simulation(seq, off_resonance=1, rf_rotation=1)
         signal = mr.readout(100, sim, 0:0.1:10)
         increasing = signal[1:90]
@@ -45,9 +41,9 @@
         amplitude = @. ω * (1 / cosh(beta * t_axis))
         phase = @. log(amplitude / ω) * μ
 
-        pulse = mr.RFPulse(t_axis .+ t .+ 0.5, amplitude, rad2deg.(phase))
-        grad = mr.MRGradients([0, 2 * t + 1], [1, 1])
-        seq = mr.Sequence(components=[pulse, grad, mr.Readout(2 * t + 1)], TR=2 * t + 2)
+        pulse = GenericPulse(t_axis .+ t .+ 0.5, amplitude, rad2deg.(phase))
+        bb = BuildingBlock([(0, [1., 0., 0.]), (2 * t + 1, [1., 0., 0.])], [(0., pulse)])
+        seq = build_sequence() do Sequence([bb], duration=2 * t + 2) end
         sim = mr.Simulation(seq, diffusivity=0.)
 
         get_signal(off_resonance) = mr.readout(mr.Spin(position=[off_resonance, 0, 0]), sim)
@@ -74,9 +70,9 @@
         ampl[t_axis .== 0] .= π / 2
         ampl .*= (90 / 102.79339283389233)
 
-        pulse = mr.RFPulse(t_axis .+ (t + 1e-3), ampl)
-        grad = mr.MRGradients([0, 2 * t + 1], [1, 1])
-        seq = mr.Sequence(components=[pulse, grad, mr.Readout(2 * t + 1)], TR=2 * t + 2)
+        pulse = GenericPulse(t_axis .+ (t + 1e-3), ampl)
+        bb = BuildingBlock([(0, [1., 0., 0.]), (2 * t + 1, [1., 0., 0.])], [(0., pulse)])
+        seq = build_sequence() do Sequence([bb, SingleReadout()], duration=2 * t + 2) end
         sim = mr.Simulation(seq, diffusivity=0.)
 
         get_signal(off_resonance) = mr.readout(mr.Spin(position=[off_resonance, 0, 0]), sim)

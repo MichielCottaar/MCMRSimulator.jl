@@ -5,6 +5,7 @@ using LinearAlgebra
 import Random
 import SpecialFunctions: erf
 using Statistics
+using MRIBuilder
 
 all_tests = [
     "collisions",
@@ -19,7 +20,6 @@ all_tests = [
     "sequence_IO",
     "various",
     "subsets",
-    "gen_sequence",
     "plots",
     "cli",
 ]

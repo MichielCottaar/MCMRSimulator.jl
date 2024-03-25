@@ -1,7 +1,7 @@
 @testset "test_evolve.jl" begin
     @testset "Timings of readouts" begin
         @testset "Explicitly setting timestep" begin
-            s1 = mr.dwi(bval=0.)
+            s1 = SpinEcho(TE=80.)
 
             eval_at = [
                 0., nextfloat(0.),
@@ -14,8 +14,8 @@
             @test all(mr.propose_times(mr.Simulation(s1, max_timestep=0.501), 0., 80.) .≈ eval_at)
         end
         @testset "Setting gradient_precision" begin
-            s1 = mr.dwi(bval=0.)
-            s2 = mr.dwi(bval=1.)
+            s1 = SpinEcho(TE=80.)
+            s2 = DWI(TE=80., bval=1.)
 
             kwargs = Dict(
                 :diffusivity => 0.,
@@ -38,7 +38,10 @@
         end
     end
     @testset "Empty environment and sequence" begin
-        simulation = mr.Simulation(mr.Sequence(TR=2.8))
+        empty_sequence = build_sequence() do
+            Sequence([2.8])
+        end
+        simulation = mr.Simulation(empty_sequence)
         snaps = mr.readout(zeros(3), simulation, 0:0.5:2.8, return_snapshot=true)
         time = 0.
         for snap in snaps
@@ -50,7 +53,7 @@
         end
         @test length(snaps) == 6
 
-        simulation = mr.Simulation(mr.Sequence(TR=2.8))
+        simulation = mr.Simulation(empty_sequence)
         snaps= mr.readout([mr.Spin(), mr.Spin()], simulation, 0:0.5:2.8, return_snapshot=true)
         time = 0.
         for snap in snaps
@@ -63,7 +66,7 @@
         @test length(snaps) == 6
     end
     @testset "Gradient echo sequence" begin
-        simulation = mr.Simulation(mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90, phase=180)], TR=2.8))
+        simulation = mr.Simulation(GradientEcho(TE=2.8))
         snaps = mr.readout(zeros(3), simulation, 0:0.5:2.8)
         @test mr.orientation(snaps[1]) ≈ SA[0., 0., 1.]
         for snap in snaps[2:end]
@@ -72,7 +75,10 @@
         @test length(snaps) == 6
     end
     @testset "Ensure data is stored at requested time" begin
-        simulation = mr.Simulation(mr.Sequence(TR=2.8))
+        empty_sequence = build_sequence() do
+            Sequence([2.8])
+        end
+        simulation = mr.Simulation(empty_sequence)
 
         snaps = mr.evolve(mr.Spin(), simulation, 2.3)
         @test mr.get_time(snaps) == 2.3
@@ -87,7 +93,7 @@
         @test mr.get_time(snaps) == 2.8
     end
     @testset "Basic diffusion has no effect in constant fields" begin
-        sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=2.)
+        sequence = GradientEcho(TE=2.)
         no_diff = mr.Simulation([sequence], diffusivity=0., R2=0.3)
         with_diff = mr.Simulation([sequence], diffusivity=1., R2=0.3)
         spin_no_diff = mr.evolve(mr.Spin(), no_diff).spins[1]
@@ -99,10 +105,10 @@
         @test abs(mr.longitudinal(spin_no_diff)) < Float64(1e-6)
     end
     @testset "Basic diffusion run within sphere" begin
-        sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90)], TR=2.)
+        sequence = GradientEcho(TE=20.)
         sphere = mr.Spheres(radius=1.)
         Random.seed!(12)
-        diff = mr.Simulation(mr.Sequence(TR=20.), diffusivity=2., geometry=sphere)
+        diff = mr.Simulation(sequence, diffusivity=2., geometry=sphere)
         snaps = mr.readout([mr.Spin(), mr.Spin()], diff, 0:0.5:sequence.TR, return_snapshot=true)
         @test size(snaps) == (5, )
         for snap in snaps
@@ -115,9 +121,9 @@
     end
     @testset "Run simulation with multiple sequences at once" begin
         sequences = [
-            mr.Sequence(components=[mr.InstantRFPulse(flip_angle=0), mr.Readout(2.)], TR=3.),
-            mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90), mr.Readout(2.)], TR=3.),
-            mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90), mr.Readout(1.)], TR=2.),
+            build_sequence() do Sequence([InstantPulse(flip_angle=0, phase=0.), 2., SingleReadout(), 1.]) end,
+            build_sequence() do Sequence([InstantPulse(flip_angle=90, phase=0.), 2., SingleReadout(), 1.]) end,
+            build_sequence() do Sequence([InstantPulse(flip_angle=90, phase=0.), 1., SingleReadout(), 1.]) end,
         ]
         all_snaps = mr.Simulation(sequences, diffusivity=1., R2=1.)
 

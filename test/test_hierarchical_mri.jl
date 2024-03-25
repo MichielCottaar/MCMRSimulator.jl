@@ -16,7 +16,7 @@
             @test iszero(mr.off_resonance(pos_out, obstruction, defaults))
         end
         @testset "Test simulation in $(typeof(obstruction))" begin
-            sequence = mr.Sequence(components=[mr.InstantRFPulse(flip_angle=90., time=0.)], TR=100.)
+            sequence = GradientEcho(TE=100.)
             sim = mr.Simulation(sequence, R2=1., geometry=obstruction, diffusivity=1.)
             snap = mr.evolve([pos_in, pos_out], sim, 10.)
             within = snap[1].orientations[1]

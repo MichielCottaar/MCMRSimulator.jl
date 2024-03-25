@@ -20,13 +20,13 @@ end
         times = -2:0.1:2
         raw_amp = sinc.(times)
         pulses = [
-            mr.RFPulse(times .+ 2, raw_amp),
-            mr.InstantRFPulse(time=4., flip_angle=60.),
-            mr.RFPulse(times .+ 6, raw_amp .* 2),
-            mr.InstantRFPulse(time=8., flip_angle=120.),
+            GenericPulse(times .+ 2, raw_amp),
+            InstantPulse(flip_angle=60.),
+            GenericPulse(times .+ 2, raw_amp .* 2),
+            InstantPulse(flip_angle=120.),
         ]
 
-        sequence = mr.Sequence(components=pulses, TR=30.)
+        sequence = build_sequence() do Sequence(pulses) end
         f = Figure()
         Axis(f[1, 1])
         plot!(sequence)

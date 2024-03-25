@@ -158,7 +158,8 @@ end
 end
 
 @testset "Test readout formats" begin
-    seq = mr.Sequence(TR=100, components=[mr.Readout(10.), mr.Readout(30.)])
+    sequence = GradientEcho(TE=1000)
+    seq = build_sequence() do Sequence([10., SingleReadout(), 20., SingleReadout(), 70]) end
     sim_empty = mr.Simulation([])
     sim_flat = mr.Simulation(seq)
     sim_single = mr.Simulation([seq])

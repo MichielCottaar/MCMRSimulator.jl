@@ -12,7 +12,8 @@
                 (0, 0.1),
             ]
                 nspins = 300
-                sequence = mr.dwi(bval=2., TE=80., gradient_duration=δ, diffusion_time=Δ)
+                type = iszero(δ) ? :instant : :trapezoid
+                sequence = DWI(bval=0.3, TE=TE, Δ=Δ, gradient=(type=type, δ=δ))
                 sim = mr.Simulation(sequence, diffusivity=0.)
                 snap = mr.readout(nspins, sim, return_snapshot=true)
                 @test snap.time == 80.
@@ -32,7 +33,8 @@
             ]
                 nspins = 3000
                 TE = 80.
-                sequence = mr.dwi(bval=0.3, TE=TE, gradient_duration=δ, diffusion_time=Δ)
+                type = iszero(δ) ? :instant : :trapezoid
+                sequence = DWI(bval=0.3, TE=TE, Δ=Δ, gradient=(type=type, δ=δ))
                 sim = mr.Simulation(sequence, diffusivity=0.5)
                 snap = mr.readout(nspins, sim, return_snapshot=true)
                 @test snap.time == TE
@@ -41,7 +43,7 @@
         end
         @testset "PGSE in realistic scanner with free diffusion" begin
             nspins = 30000
-            sequence = mr.dwi(bval=2, scanner=mr.Siemens_Prisma)
+            sequence = DWI(bval=2, TE=80., scanner=Siemens_Prisma)
             sim = mr.Simulation(sequence, diffusivity=0.5)
             snap = mr.readout(nspins, sim)
             @test mr.transverse(snap) ≈ nspins * exp(-1) rtol=0.05
@@ -54,7 +56,7 @@
                 @testset "Stejskal-Tanner approximation at long diffusion times" begin
                     # equation 4 from Balinov, B. et al. (1993) ‘The NMR Self-Diffusion Method Applied to Restricted Diffusion. Simulation of Echo Attenuation from Molecules in Spheres and between Planes’, Journal of Magnetic Resonance, Series A, 104(1), pp. 17–25. doi:10.1006/jmra.1993.1184.
                     qvals = [0.01, 0.1, 1.]
-                    sequences = [mr.dwi(TE=101, diffusion_time=100, qval=qval, gradient_duration=0) for qval in qvals]
+                    sequences = [DWI(TE=101, diffusion_time=100, qval=qval, gradient=(type=:instant, )) for qval in qvals]
                     simulation = mr.Simulation(sequences; geometry=sphere, diffusivity=3.)
                     at_readout = mr.readout(snap, simulation, return_snapshot=true)
                     for (qval, readout) in zip(qvals, at_readout)
@@ -74,7 +76,7 @@
                 @testset "Stejskal-Tanner approximation at long diffusion times for a=$distance" begin
                     # equation 6 from Balinov, B. et al. (1993) ‘The NMR Self-Diffusion Method Applied to Restricted Diffusion. Simulation of Echo Attenuation from Molecules in Spheres and between Planes’, Journal of Magnetic Resonance, Series A, 104(1), pp. 17–25. doi:10.1006/jmra.1993.1184.
                     qvals = [0.01, 0.1, 1.]
-                    sequences = [mr.dwi(TE=101, diffusion_time=100, qval=qval, orientation=[1., 0., 0.], gradient_duration=0) for qval in qvals]
+                    sequences = [DWI(TE=101, diffusion_time=100, qval=qval, gradient=(type=:instant, orientation=[1., 0., 0.])) for qval in qvals]
                     simulation = mr.Simulation(sequences; geometry=walls, diffusivity=3.)
                     at_readout = mr.readout(snap, simulation, return_snapshot=true)
                     for (qval, readout) in zip(qvals, at_readout)
@@ -89,7 +91,7 @@
                     # equation 3 from Mitra, P.P. et al. (1992) ‘Diffusion propagator as a probe of the structure of porous media’, Physical Review Letters, 68(24), pp. 3555–3558. doi:10.1103/physrevlett.68.3555.
                     diffusion_times = [0.003, 0.01]
                     sequences = [
-                        mr.dwi(diffusion_time=dt, TE=2, bval=2.)
+                        DWI(diffusion_time=dt, TE=2, bval=2.)
                         for dt in diffusion_times
                     ]
                     simulation = mr.Simulation(sequences; geometry=walls, diffusivity=1.)
