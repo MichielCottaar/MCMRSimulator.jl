@@ -246,7 +246,7 @@
             Random.seed!(1234)
             walls = mr.Walls(position=[0, 1])
             snap = mr.Snapshot([mr.Spin(position=rand(3)) for _ in 1:3000])
-            sequence = DWI(TE=80., bval=2., gradient_duration=0)
+            sequence = DWI(TE=80., bval=2., gradient=(type=:instant, ))
             simulation = mr.Simulation([sequence]; geometry=walls, diffusivity=3.);
 
             final = mr.evolve(snap, simulation, 200.)
