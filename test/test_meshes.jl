@@ -142,7 +142,7 @@ end
     mesh = box_mesh()
     snap = mr.Snapshot(rand(100, 3) .- 0.5)
 
-    sequence = mr.dwi(bval=2., gradient_duration=0)
+    sequence = DWI(TE=80., bval=2., gradient_duration=0)
 
     simulation = mr.Simulation([sequence]; geometry=mesh, diffusivity=3.)
     final = mr.evolve(snap, simulation, 20)

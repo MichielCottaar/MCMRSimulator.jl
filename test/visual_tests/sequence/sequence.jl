@@ -5,7 +5,7 @@ isCI = get(ENV, "CI", "false") == "true"
 
 @testset "Instantaneous gradients & pulses" begin
     function plot_perfect_dwi(fname)
-        sequence = mr.dwi(bval=2., gradient_duration=0)
+        sequence = DWI(TE=80., bval=2., gradient=(type=:instant, ))
         f = Figure()
         Axis(f[1, 1])
         plot!(sequence)
@@ -26,7 +26,9 @@ end
             InstantPulse(flip_angle=120.),
         ]
 
-        sequence = build_sequence() do Sequence(pulses) end
+        sequence = build_sequence() do 
+            Sequence(pulses) 
+        end
         f = Figure()
         Axis(f[1, 1])
         plot!(sequence)
@@ -38,7 +40,7 @@ end
 
 @testset "Finite gradients" begin
     function plot_finite_dwi(fname, single_gradient=false)
-        sequence = mr.dwi(bval=2., TE=80, TR=100, orientation=[0, -1, 1])
+        sequence = DWI(bval=2., TE=80, TR=100, orientation=[0, -1, 1], scanner=Siemens_Prisma)
         f = Figure()
         Axis(f[1, 1])
         plot!(sequence; single_gradient=single_gradient)

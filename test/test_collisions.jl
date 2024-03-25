@@ -168,9 +168,12 @@
             spin = mr.Spin(position=[200., 200., 0.])
             @test mr.isinside(geometry, spin) == 2
             inside = true
-            seq_part = SVector{1}([mr.SequencePart(mr.Sequence(TR=10), 0, 1)])
+            empty_sequence = build_sequence() do 
+                Sequence([10.]) 
+            end
+            seq_part = SVector{1}([MRIBuilder.SequencePart(empty_sequence, 0, 1)])
             for _ in 1:100
-                mr.draw_step!(spin, mr.Simulation(mr.Sequence(TR=10), diffusivity=3., geometry=geometry), seq_part, 0.5)
+                mr.draw_step!(spin, mr.Simulation(empty_sequence, diffusivity=3., geometry=geometry), seq_part, 0.5)
                 inside &= mr.isinside(geometry, spin) == 2
             end
             @test inside
@@ -227,7 +230,7 @@
                 mr.Cylinders(radius=[0.8, 0.9], position=[[0, 0], [0, 0]], repeats=[2, 2]),
                 mr.Spheres(radius=[0.8, 0.9], position=[[0, 0, 0], [2, 0, 2]], repeats=[2, 2, 2]),
             )
-                sequence = mr.dwi(bval=2., gradient_duration=0)
+                sequence = DWI(TE=80., bval=2., gradient=(type=:instant, ))
 
                 snap = mr.Snapshot(300);
 
@@ -243,7 +246,7 @@
             Random.seed!(1234)
             walls = mr.Walls(position=[0, 1])
             snap = mr.Snapshot([mr.Spin(position=rand(3)) for _ in 1:3000])
-            sequence = mr.dwi(bval=2., gradient_duration=0)
+            sequence = DWI(TE=80., bval=2., gradient_duration=0)
             simulation = mr.Simulation([sequence]; geometry=walls, diffusivity=3.);
 
             final = mr.evolve(snap, simulation, 200.)

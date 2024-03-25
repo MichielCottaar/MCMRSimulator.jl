@@ -116,9 +116,9 @@
     end
     @testset "check that JSON encoding works for some sequences with instant pulses/gradients" begin
         for seq_orig in [
-            mr.dwi(bval=2., TR=100., scanner=mr.Siemens_Connectom),
-            mr.dwi(bval=2., gradient_duration=0., TR=100, scanner=mr.Siemens_Terra),
-            mr.spin_echo(30., TR=100., scanner=mr.Scanner(B0=1.5)),
+            DWI(TE=80., bval=2., TR=100., scanner=mr.Siemens_Connectom),
+            DWI(TE=80., bval=2., gradient_duration=0., TR=100, scanner=mr.Siemens_Terra),
+            SpinEcho(TE=30., TR=100., scanner=mr.Scanner(B0=1.5)),
         ]
             io = IOBuffer()
             mr.write_sequence(io, seq_orig)

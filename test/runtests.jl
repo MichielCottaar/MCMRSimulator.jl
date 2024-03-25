@@ -43,7 +43,7 @@ It is used to test the collision detection and resolution, but not actually used
 function correct_collisions(start, dest, geometry)
     simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
     spin = mr.Spin(nsequences=0, position=start)
-    parts = SVector{0, mr.SequencePart}()
+    parts = SVector{0, MRIBuilder.SequencePart}()
     return mr.draw_step!(spin, simulation, parts, 1., dest)
 end
 

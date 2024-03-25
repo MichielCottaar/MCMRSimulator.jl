@@ -121,9 +121,15 @@
     end
     @testset "Run simulation with multiple sequences at once" begin
         sequences = [
-            build_sequence() do Sequence([InstantPulse(flip_angle=0, phase=0.), 2., SingleReadout(), 1.]) end,
-            build_sequence() do Sequence([InstantPulse(flip_angle=90, phase=0.), 2., SingleReadout(), 1.]) end,
-            build_sequence() do Sequence([InstantPulse(flip_angle=90, phase=0.), 1., SingleReadout(), 1.]) end,
+            build_sequence() do 
+                Sequence([InstantPulse(flip_angle=0, phase=0.), 2., SingleReadout(), 1.]) 
+            end,
+            build_sequence() do 
+                Sequence([InstantPulse(flip_angle=90, phase=0.), 2., SingleReadout(), 1.]) 
+            end,
+            build_sequence() do 
+                Sequence([InstantPulse(flip_angle=90, phase=0.), 1., SingleReadout(), 1.]) 
+            end,
         ]
         all_snaps = mr.Simulation(sequences, diffusivity=1., R2=1.)
 

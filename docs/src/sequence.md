@@ -12,7 +12,7 @@ From the command line these sequences can be generated using `mcmr sequence grad
 In Julia, one can use:
 ```@example
 using MCMRSimulator # hide
-sequence = dwi(TR=100., bval=3.)
+sequence = DWI(TE=80, TR=100., bval=3.)
 using CairoMakie # hide
 f = plot(sequence) # hide
 save("dwi_sequence.png", f) # hide
@@ -23,7 +23,7 @@ nothing # hide
 By setting the `gradient_duration` keyword to 0, [`InstantGradient`](@ref) objects can be inserted instead of [`MRGradients`](@ref).
 ```@example
 using MCMRSimulator # hide
-sequence = dwi(TR=100., bval=3., gradient_duration=0.)
+sequence = DWI(TE=80, TR=100., bval=3., gradient_duration=0.)
 using CairoMakie # hide
 f = plot(sequence) # hide
 save("dwi_sequence_delta_0.png", f) # hide

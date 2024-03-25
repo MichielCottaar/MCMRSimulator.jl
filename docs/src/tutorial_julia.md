@@ -48,7 +48,7 @@ More details on plotting geometries can be found in the [`plot_geometry`](@ref) 
 The next step is to define a sequence (see [here](@ref sequence) for more details). 
 Here we will adopt a single diffusion-weighted MRI sequence.
 ```@example tutorial
-sequence = dwi(bval=2., TR=1000, TE=80, scanner=Siemens_Prisma)  # default gradient orientation in the x-direction
+sequence = DWI(bval=2., TR=1000, TE=80, scanner=Siemens_Prisma)  # default gradient orientation in the x-direction
 f = plot(sequence)
 hideydecorations!(f.axis)
 hidespines!(f.axis, :l, :r, :t)

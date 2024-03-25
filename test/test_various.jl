@@ -159,7 +159,9 @@ end
 
 @testset "Test readout formats" begin
     sequence = GradientEcho(TE=1000)
-    seq = build_sequence() do Sequence([10., SingleReadout(), 20., SingleReadout(), 70]) end
+    seq = build_sequence() do 
+        Sequence([10., SingleReadout(), 20., SingleReadout(), 70]) 
+    end
     sim_empty = mr.Simulation([])
     sim_flat = mr.Simulation(seq)
     sim_single = mr.Simulation([seq])
@@ -208,7 +210,7 @@ end
 end
 
 @testset "Test simulation pretty printing" begin
-    sim = mr.Simulation([mr.dwi(bval=1, TR=2000), mr.dwi(bval=2)], geometry=mr.Spheres(radius=[1, 2.], repeats=[5, 5, 5]), R1=0.1, surface_relaxivity=0.3)
+    sim = mr.Simulation([DWI(TE=80., bval=1, TR=2000), DWI(TE=80., bval=2)], geometry=mr.Spheres(radius=[1, 2.], repeats=[5, 5, 5]), R1=0.1, surface_relaxivity=0.3)
     @test repr(sim, context=:compact => true) == "Simulation(2 sequences, Geometry(2 repeating Round objects, ), D=3.0um^2/ms, GlobalProperties(R1=0.1kHz, ))" 
     @test repr(sim, context=:compact => false) == "Simulation(Geometry(2 repeating Round objects, ), D=3.0um^2/ms, GlobalProperties(R1=0.1kHz, )):
 2 sequences:
