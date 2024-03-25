@@ -3,10 +3,10 @@ module Relax
 import StaticArrays: SVector
 import Rotations
 import MRIBuilder: LinearSequence, SequencePart
+import LinearAlgebra: ⋅
 import ..Constants: gyromagnetic_ratio
 import ..Spins: Spin, SpinOrientation, stuck, R1, R2, off_resonance, stuck_to, orientation
 import ..Geometries.Internal: susceptibility_off_resonance, MRIProperties
-import ..Methods: B0
 import ..Properties: GlobalProperties
 
 """
@@ -36,17 +36,17 @@ The spin will precess around an effective RF pulse and relax with a given `R1` a
 The R1 and R2 are determined based on the [`Simulation`](@ref) parameters, potentially influenced by the geometry.
 The effective RF pulse is determined by the sequence and any changes in the off-resonance field due to the geometry or set in the [`Simulation`](@ref).
 """
-function relax!(spin::Spin{N}, parts::SVector{N, SequencePart}, simulation, t1::Number, t2::Number) where {N}
+function relax!(spin::Spin{N}, parts::SVector{N, SequencePart}, simulation, t1::Number, t2::Number, B0s::SVector{N, <:Number}) where {N}
     props = MRIProperties(simulation.geometry, simulation.inside_geometry, simulation.properties, spin.position, spin.reflection)
 
     off_resonance_unscaled = susceptibility_off_resonance(simulation, spin) * 1e-6 * gyromagnetic_ratio
 
     relax_time = 1 / max(props.R1, props.R2)
-    for (orient, part) in zip(spin.orientations, parts)
-        off_resonance_kHz = off_resonance_unscaled * B0(part) + props.off_resonance
+    for (orient, part, B0) in zip(spin.orientations, parts, B0s)
+        off_resonance_kHz = off_resonance_unscaled * B0 + props.off_resonance
         if iszero(part.rf_amplitude)
-            relax!(orient, step_size, props.R1, props.R2)
-            grad = (spin.position - part.gradient_origin) ⋅ part.gradient(t_start + step_ratio/2)
+            relax!(orient, part.duration, props.R1, props.R2)
+            grad = (spin.position - part.gradient_origin) ⋅ part.gradient((t1 + t2) / 2)
             orient.phase = orient.phase + (grad + off_resonance_kHz) * 360 * (t2 - t1) * part.duration
         else
             nsteps = isinf(relax_time) ? 1 : Int(div(part.duration * (t2 - t1), relax_time / 10, RoundUp))

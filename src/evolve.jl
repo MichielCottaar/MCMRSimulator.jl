@@ -9,13 +9,14 @@ module Evolve
 import StaticArrays: SVector, MVector
 import LinearAlgebra: norm, ⋅
 import MRIBuilder: SequencePart, LinearSequence, Sequence, readout_times, TR
+import Rotations
 import ..Methods: get_time
-import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence
+import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation
 import ..Simulations: Simulation, _to_snapshot
 import ..Relax: relax!, transfer!
 import ..Properties: GlobalProperties, correct_for_timestep, stick_probability
 import ..Subsets: Subset, get_subset
-import ..Geometries.Internal: Reflection
+import ..Geometries.Internal: Reflection, detect_intersection, empty_intersection, has_intersection, surface_relaxivity, permeability, surface_density, direction, previous_hit
 
 """
     readout(spins, simulation[, readout_times]; bounding_box=<1x1x1 mm box>, skip_TR=0, nTR=1, return_snapshot=false, subset=<all>)
@@ -159,18 +160,18 @@ Updates the spin based on a random movement through the given geometry for a giv
   This displacement will take into account the obstructions in `simulation.geometry`.
 - The spin orientation will be affected by relaxation (see [`relax!`](@ref)) and potentially by magnetisation transfer during collisions.
 """
-function draw_step!(spin :: Spin{N}, simulation::Simulation{N, 0}, parts::SVector{N, SequencePart}, timestep :: Float64) where {N}
+function draw_step!(spin :: Spin{N}, simulation::Simulation{N, 0}, parts::SVector{N, SequencePart}, timestep :: Float64, B0s::SVector{N, Float64}) where {N}
     if iszero(timestep)
         return
     end
-    relax!(spin, parts, simulation, 0, 1//2)
+    relax!(spin, parts, simulation, 0, 1//2, B0s)
     @spin_rng spin begin
         spin.position += randn(SVector{3, Float64}) .* sqrt(2 * simulation.diffusivity * timestep)
     end
-    relax!(spin, parts, simulation, 1//2, 1)
+    relax!(spin, parts, simulation, 1//2, 1, B0s)
 end
 
-function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N, SequencePart}, timestep :: Float64, test_new_pos=nothing) where {N}
+function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N, SequencePart}, timestep :: Float64, B0s::SVector{N, Float64}, test_new_pos=nothing) where {N}
     if ~isnothing(test_new_pos)
         all_positions = [spin.position]
     end
@@ -202,7 +203,7 @@ function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N
             if is_stuck
                 td = dwell_time(simulation.geometry, spin.reflection)
                 fraction_stuck = -log(rand()) * td / timestep
-                relax!(spin, parts, simulation, fraction_timestep, min(one(Float64), fraction_timestep + fraction_stuck))
+                relax!(spin, parts, simulation, fraction_timestep, min(one(Float64), fraction_timestep + fraction_stuck), B0s)
                 fraction_timestep += fraction_stuck
                 if fraction_timestep >= 1
                     found_solution = true
@@ -230,7 +231,7 @@ function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N
             # spin relaxation
             relax_pos_dist = rand() * use_distance
             spin.position = relax_pos_dist .* new_pos .+ (1 - relax_pos_dist) .* current_pos
-            relax!(spin, parts, simulation, fraction_timestep, next_fraction_timestep)
+            relax!(spin, parts, simulation, fraction_timestep, next_fraction_timestep, B0s)
 
             if ~has_intersection(collision)
                 spin.position = new_pos
@@ -291,6 +292,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     spins::Vector{Spin{N}} = deepcopy.(snapshot.spins)
 
     linear_sequences = LinearSequence(simulation.sequences, current_time, new_time)
+    B0s = map(seq->seq.scanner.B0, simulation.sequences)
     if iszero(N)
         if isinf(simulation.max_timestep)
             Nparts = 1
@@ -298,15 +300,15 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
             Nparts = Int(div(new_time - current_time, simulation.max_timestep, RoundUp))
         end
     else
-        Nparts = length(linear_sequences[1])
+        Nparts = length(linear_sequences[1].finite_parts)
     end
 
     for index_part in 1:Nparts
         # apply instant components
         for index_seq in 1:N
-            if !isnothing(linear_sequences.instant_pulses[index_seq])
+            if !isnothing(linear_sequences[index_seq].instant_pulses[index_part])
                 # apply pulse to all spins
-                pulse = linear_sequences.instant_gradients[index_seq]
+                pulse = linear_sequences[index_seq].instant_pulses[index_part]
                 rotation = Rotations.RotationVec(
                     pulse.flip_angle * cosd(pulse.phase),
                     pulse.flip_angle * sind(pulse.phase),
@@ -320,9 +322,9 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
                     orient.phase = new_orient.phase
                 end
             end
-            if !isnothing(linear_sequences.instant_gradients[index_seq])
+            if !isnothing(linear_sequences[index_seq].instant_gradient[index_part])
                 # apply gradient to all spins
-                grad = linear_sequences.instant_gradient[index_seq]
+                grad = linear_sequences[index_seq].instant_gradient[index_part].qvec
                 for spin in spins
                     new_phase = rad2deg(spin.position ⋅ grad)
                     spin.orientations[index_seq].phase += new_phase
@@ -334,7 +336,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
         timestep = iszero(N) ? (new_time - current_time) / Nparts : parts[1].duration
         # evolve all spins to next interesting time
         Threads.@threads for spin in spins
-            draw_step!(spin, simulation, parts, timestep)
+            draw_step!(spin, simulation, parts, timestep, B0s)
         end
     end
     return Snapshot(spins, current_time)
