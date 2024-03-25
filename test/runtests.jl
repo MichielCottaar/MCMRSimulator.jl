@@ -44,7 +44,8 @@ function correct_collisions(start, dest, geometry)
     simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
     spin = mr.Spin(nsequences=0, position=start)
     parts = SVector{0, MRIBuilder.SequencePart}()
-    return mr.draw_step!(spin, simulation, parts, 1., dest)
+    B0s = SVector{0, Float64}()
+    return mr.draw_step!(spin, simulation, parts, 1., B0s, dest)
 end
 
 @testset "MCMRSimulator tests" begin
