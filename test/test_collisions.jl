@@ -173,7 +173,7 @@
             end
             seq_part = SVector{1}([MRIBuilder.SequencePart(empty_sequence, 0, 1)])
             for _ in 1:100
-                mr.draw_step!(spin, mr.Simulation(empty_sequence, diffusivity=3., geometry=geometry), seq_part, 0.5)
+                mr.draw_step!(spin, mr.Simulation(empty_sequence, diffusivity=3., geometry=geometry), seq_part, 0.5, SVector{1, Float64}(3.))
                 inside &= mr.isinside(geometry, spin) == 2
             end
             @test inside
