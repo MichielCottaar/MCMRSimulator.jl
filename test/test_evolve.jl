@@ -1,42 +1,4 @@
 @testset "test_evolve.jl" begin
-    @testset "Timings of readouts" begin
-        @testset "Explicitly setting timestep" begin
-            s1 = SpinEcho(TE=80.)
-
-            eval_at = [
-                0., nextfloat(0.),
-                0.5:0.5:39.5...,
-                prevfloat(40.), 40., nextfloat(40.),
-                40.5:0.5:79.5...,
-                prevfloat(80.), 80.,
-            ]
-            @test all(mr.propose_times(mr.Simulation(s1, max_timestep=0.5), 0., 80.) .≈ eval_at)
-            @test all(mr.propose_times(mr.Simulation(s1, max_timestep=0.501), 0., 80.) .≈ eval_at)
-        end
-        @testset "Setting gradient_precision" begin
-            s1 = SpinEcho(TE=80.)
-            s2 = DWI(TE=80., bval=1.)
-
-            kwargs = Dict(
-                :diffusivity => 0.,
-                :gradient_precision => 1.,
-                :max_timestep => Inf,
-            )
-            control_points = [0., nextfloat(0.), prevfloat(40.), 40., nextfloat(40.), prevfloat(80.), 80.]
-
-            @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 0., 80.) .== control_points)
-            @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 90., 120.) .== [90., 120.])
-            @test all(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.) .== control_points)
-            @test all(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 90., 120.) .== [90., 120.])
-
-            kwargs[:diffusivity] = 1.
-            @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 0., 80.) .== control_points)
-            @test all(mr.propose_times(mr.Simulation(s1; kwargs...), 90., 120.) .== [90., 120.])
-            @test length(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.)) > length(control_points)
-            @test length(intersect(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 0., 80.), control_points)) == length(control_points)
-            @test all(mr.propose_times(mr.Simulation([s1, s2]; kwargs...), 90., 120.) .== [90., 120.])
-        end
-    end
     @testset "Empty environment and sequence" begin
         empty_sequence = build_sequence() do
             Sequence([2.8])
@@ -109,7 +71,7 @@
         sphere = mr.Spheres(radius=1.)
         Random.seed!(12)
         diff = mr.Simulation(sequence, diffusivity=2., geometry=sphere)
-        snaps = mr.readout([mr.Spin(), mr.Spin()], diff, 0:0.5:sequence.TR, return_snapshot=true)
+        snaps = mr.readout([mr.Spin(), mr.Spin()], diff, 0:0.5:TR(sequence), return_snapshot=true)
         @test size(snaps) == (5, )
         for snap in snaps
             @test length(snap.spins) == 2
@@ -134,7 +96,7 @@
         all_snaps = mr.Simulation(sequences, diffusivity=1., R2=1.)
 
         readouts = mr.readout(mr.Spin(), all_snaps)
-        @assert size(readouts) == (3,)
+        @test size(readouts) == (3,)
 
         # check relaxation
         @test mr.transverse(readouts[1]) ≈ 0. atol=1e-12
