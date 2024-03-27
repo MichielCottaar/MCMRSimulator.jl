@@ -16,7 +16,7 @@ import ..Simulations: Simulation, _to_snapshot
 import ..Relax: relax!, transfer!
 import ..Properties: GlobalProperties, correct_for_timestep, stick_probability
 import ..Subsets: Subset, get_subset
-import ..Geometries.Internal: Reflection, detect_intersection, empty_intersection, has_intersection, surface_relaxivity, permeability, surface_density, direction, previous_hit
+import ..Geometries.Internal: Reflection, detect_intersection, empty_intersection, has_intersection, surface_relaxivity, permeability, surface_density, direction, previous_hit, dwell_time
 
 """
     readout(spins, simulation[, readout_times]; bounding_box=<1x1x1 mm box>, skip_TR=0, nTR=1, return_snapshot=false, subset=<all>)
@@ -184,7 +184,7 @@ function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N
     end
     current_pos = spin.position
     is_stuck = stuck(spin)
-    fraction_timestep = zero(Float64)
+    fraction_timestep = 0.
 
     found_solution = false
     @spin_rng spin begin
@@ -212,7 +212,7 @@ function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N
                 phit = previous_hit(spin.reflection)
                 reflection = spin.reflection
                 displacement = direction(reflection, (1 - fraction_timestep) * timestep, simulation.diffusivity)
-                new_pos = current_pos + displacement
+                new_pos = current_pos .+ displacement
 
                 spin.reflection = empty_reflection
                 is_stuck = false
@@ -230,7 +230,7 @@ function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N
 
             # spin relaxation
             relax_pos_dist = rand() * use_distance
-            spin.position = relax_pos_dist .* new_pos .+ (1 - relax_pos_dist) .* current_pos
+            spin.position = map((p1, p2) -> relax_pos_dist * p1 + (1 - relax_pos_dist) * p2, new_pos, current_pos)
             relax!(spin, parts, simulation, fraction_timestep, next_fraction_timestep, B0s)
 
             if ~has_intersection(collision)
@@ -250,7 +250,7 @@ function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N
                 reflection.distance_moved + norm(new_pos - current_pos) * use_distance, 
                 passes_through
             )
-            current_pos = spin.position = @. (current_pos * (1 - use_distance) + new_pos * use_distance)
+            current_pos = spin.position = map((p1, p2) -> use_distance * p1 + (1 - use_distance) * p2, new_pos, current_pos)
             if ~isnothing(test_new_pos)
                 push!(all_positions, current_pos)
             end
