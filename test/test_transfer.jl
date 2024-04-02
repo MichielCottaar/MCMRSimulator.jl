@@ -167,7 +167,7 @@ end
     @testset "Setting surface MRI properties" begin
         geometry = mr.Walls(repeats=1, R2_surface=1e6)
         init = mr.Snapshot(10000)
-        sequence = GradientEcho(TE=1000)
+        seq = GradientEcho(TE=1000)
         for density in (0, 0.5, 1)
             for dwell_time in (1, 2)
                 @testset "Density = $density; dwell_time = $dwell_time" begin
