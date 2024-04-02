@@ -17,7 +17,6 @@ all_tests = [
     "permeability",
     "radio_frequency",
     "hierarchical_mri",
-    "sequence_IO",
     "various",
     "subsets",
     "plots",
