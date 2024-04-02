@@ -289,6 +289,9 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     if new_time < current_time
         error("New requested time ($(new_time)) is less than current time ($(snapshot.time)). Simulator does not work backwards in time.")
     end
+    if new_time == current_time
+        return snapshot
+    end
     spins::Vector{Spin{N}} = deepcopy.(snapshot.spins)
 
     linear_sequences = LinearSequence(simulation.sequences, current_time, new_time)
@@ -339,7 +342,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
             draw_step!(spin, simulation, parts, timestep, B0s)
         end
     end
-    return Snapshot(spins, current_time)
+    return Snapshot(spins, new_time)
 end
 
 end
