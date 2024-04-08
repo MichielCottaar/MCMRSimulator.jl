@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `mcmr sequence plot` can now be used to plot sequence diagrams from the command line.
 ### Changed
+- `random_positions_radii` now has an additional step of repulsion between the cylinders/spheres. This ensures a much smoother density distribution in the output.
 - The plotting in MCMRSimulator has been refactored:
     - `plot_sequence` produces an actual sequence diagram
     - More keywords can be passed on to `plot_geometry`, `plot_off_resonance`, `plot_snapshot`, `plot_sequence`, and `plot_trajectory`. The documentation of these functions now reflects these new keywords.
