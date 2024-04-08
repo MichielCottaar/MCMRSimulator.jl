@@ -20,7 +20,7 @@
     "#off_resonance_inside_description": "Additional off-resonance field offset (kHz). Inside property. Field is required. Expected type: Float64.",
     "off_resonance_inside": 0.0,
     "#position_description": "Spatial offset of obstruction from origin. Field is required. Expected type: StaticArraysCore.MVector{2, Float64}.",
-    "position": [[-0.23631965921838338,-0.33853219923971345],[1.0010387470592685,1.885613593261187],[-0.45188348777746246,2.11703536546249],[2.3726197970155916,0.9838864274409342],[1.9792776732541384,-0.36853439125176646],[-2.437679331963513,-2.0601440601786045]],
+    "position": [[-0.16147146331421747,-0.37122973940146037],[0.9762654340701362,1.9647767071206423],[-0.4324598996651149,2.1288732001745485],[2.338578177557019,0.9324160233900128],[1.9823922487135934,-0.3708779477856009],[-2.5602607065549607,-2.043028556183963]],
     "#g_ratio_description": "Inner/outer radius used for susceptibility calculation Field can be null. Expected type: Float64.",
     "g_ratio": 1.0,
     "#susceptibility_iso_description": "Isotropic component of the susceptibility (in ppm). Field can be null. Expected type: Float64.",

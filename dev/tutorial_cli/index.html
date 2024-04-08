@@ -352,7 +352,7 @@ mcmr sequence dwi dwi.json --bval=2 --TR=1000 --TE=80 --scanner=Siemens_Prisma</
     &quot;#off_resonance_inside_description&quot;: &quot;Additional off-resonance field offset (kHz). Inside property. Field is required. Expected type: Float64.&quot;,
     &quot;off_resonance_inside&quot;: 0.0,
     &quot;#position_description&quot;: &quot;Spatial offset of obstruction from origin. Field is required. Expected type: StaticArraysCore.MVector{2, Float64}.&quot;,
-    &quot;position&quot;: [[-0.23631965921838338,-0.33853219923971345],[1.0010387470592685,1.885613593261187],[-0.45188348777746246,2.11703536546249],[2.3726197970155916,0.9838864274409342],[1.9792776732541384,-0.36853439125176646],[-2.437679331963513,-2.0601440601786045]],
+    &quot;position&quot;: [[-0.16147146331421747,-0.37122973940146037],[0.9762654340701362,1.9647767071206423],[-0.4324598996651149,2.1288732001745485],[2.338578177557019,0.9324160233900128],[1.9823922487135934,-0.3708779477856009],[-2.5602607065549607,-2.043028556183963]],
     &quot;#g_ratio_description&quot;: &quot;Inner/outer radius used for susceptibility calculation Field can be null. Expected type: Float64.&quot;,
     &quot;g_ratio&quot;: 1.0,
     &quot;#susceptibility_iso_description&quot;: &quot;Isotropic component of the susceptibility (in ppm). Field can be null. Expected type: Float64.&quot;,
@@ -378,27 +378,27 @@ mcmr sequence dwi dwi.json --bval=2 --TR=1000 --TE=80 --scanner=Siemens_Prisma</
  Row │ sequence   sequence_index  bvec   TR     readout  subset  nspins  longitudinal  transverse  phase     Sx           Sy
      │ SubStrin…  Int64           Int64  Int64  Int64    Int64   Int64   Float64       Float64     Float64   Float64      Float64
 ─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-   1 │ b0.json                 1      0      1        1       0   10000   0.0          10000.0      180.0    -10000.0        0.0
-   2 │ dwi.json                2      1      1        1       0   10000  -1.13687e-12   9599.35    -179.883   -9599.33     -19.5381
-   3 │ dwi.json                2      2      1        1       0   10000  -1.11444e-12    344.301    169.707    -338.761     61.5199
-   4 │ dwi.json                2      3      1        1       0   10000  -1.11622e-12   5962.68     178.942   -5961.67     110.073
-   5 │ dwi.json                2      4      1        1       0   10000  -1.10689e-12   1534.67    -175.889   -1530.72    -110.023
-   6 │ dwi.json                2      5      1        1       0   10000  -1.13887e-12   7984.92    -179.222   -7984.18    -108.386
-   7 │ dwi.json                2      6      1        1       0   10000  -1.11045e-12   6203.48    -179.0     -6202.53    -108.262
-   8 │ dwi.json                2      7      1        1       0   10000  -1.11711e-12   2044.12     178.149   -2043.06      66.0135
-   9 │ dwi.json                2      8      1        1       0   10000  -1.11444e-12    168.892    134.781    -118.966    119.881
-  10 │ dwi.json                2      9      1        1       0   10000  -1.10045e-12    589.419    168.717    -578.027    115.327
-  11 │ dwi.json                2     10      1        1       0   10000  -1.10201e-12     61.1931   -72.9        17.9932   -58.488
+   1 │ b0.json                 1      0      1        1       0   10000   0.0          10000.0      180.0    -10000.0       0.0
+   2 │ dwi.json                2      1      1        1       0   10000  -1.13509e-12   8949.82     179.954   -8949.82      7.11503
+   3 │ dwi.json                2      2      1        1       0   10000  -1.1009e-12     264.422   -177.341    -264.137   -12.2689
+   4 │ dwi.json                2      3      1        1       0   10000  -1.12221e-12   5689.22    -179.386   -5688.89    -60.9708
+   5 │ dwi.json                2      4      1        1       0   10000  -1.11511e-12   1466.52     179.913   -1466.52      2.22875
+   6 │ dwi.json                2      5      1        1       0   10000  -1.13043e-12   7298.25     179.589   -7298.06     52.3723
+   7 │ dwi.json                2      6      1        1       0   10000  -1.10201e-12   5892.4      179.407   -5892.08     60.9532
+   8 │ dwi.json                2      7      1        1       0   10000  -1.10356e-12   1924.71    -179.219   -1924.53    -26.2421
+   9 │ dwi.json                2      8      1        1       0   10000  -1.11311e-12     71.7578   154.888     -64.9752   30.4534
+  10 │ dwi.json                2      9      1        1       0   10000  -1.10889e-12    504.581   -177.892    -504.24    -18.561
+  11 │ dwi.json                2     10      1        1       0   10000  -1.10933e-12     84.4137    10.261      83.0637   15.0368
 </code></pre><pre><code class="nohighlight hljs">sequence,sequence_index,bvec,TR,readout,subset,nspins,longitudinal,transverse,phase,Sx,Sy
 b0.json,1,0,1,1,0,10000,0.0,10000.0,180.0,-10000.0,0.0
-dwi.json,2,1,1,1,0,10000,-1.1368683772161603e-12,9599.35442322919,-179.88338263497764,-9599.334539718599,-19.5380995833416
-dwi.json,2,2,1,1,0,10000,-1.1144418721187321e-12,344.3013339479271,169.70710115216622,-338.7605582915465,61.51985617930009
-dwi.json,2,3,1,1,0,10000,-1.1162182289581324e-12,5962.68269489545,178.94224072139136,-5961.6666151578365,110.07311078630683
-dwi.json,2,4,1,1,0,10000,-1.106892355551281e-12,1534.6695215579214,-175.88883550741116,-1530.7205593711844,-110.0232226268061
-dwi.json,2,5,1,1,0,10000,-1.1388667786604856e-12,7984.920042418202,-179.22225385971734,-7984.184404051278,-108.38581971935513
-dwi.json,2,6,1,1,0,10000,-1.1104450692300816e-12,6203.476622798129,-179.0000349272778,-6202.531869258384,-108.26181430668562
-dwi.json,2,7,1,1,0,10000,-1.1171064073778325e-12,2044.1231476269043,178.1493507984753,-2043.0569388678298,66.01353806708734
-dwi.json,2,8,1,1,0,10000,-1.1144418721187321e-12,168.89163738936307,134.78061006950446,-118.96626244807253,119.88083074118411
-dwi.json,2,9,1,1,0,10000,-1.1004530620084552e-12,589.4192607318258,168.7166427061336,-578.026690389051,115.32653692681545
-dwi.json,2,10,1,1,0,10000,-1.1020073742429304e-12,61.1931340021102,-72.90003383902535,17.99321448082537,-58.487980659681114
-</code></pre><p>Note that the multiple gradient orientations are only applied to the sequence with diffusion-weighted gradients, not the b0 sequence. So, in total we have 11 sequences, one for the b0 sequence, and 10 for each bvec for the dwi sequence.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../tutorial_julia/">« Tutorial (Julia)</a><a class="docs-footer-nextpage" href="../geometry/">Geometry »</a><div class="flexbox-break"></div></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Wednesday 17 January 2024 15:01">Wednesday 17 January 2024</span>. Using Julia version 1.10.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+dwi.json,2,1,1,1,0,10000,-1.13509202037676e-12,8949.82345334611,179.95445034430318,-8949.820625150902,7.1150325097335685
+dwi.json,2,2,1,1,0,10000,-1.1008971512183052e-12,264.42169568981205,-177.34058961603935,-264.13691235307084,-12.268850152387262
+dwi.json,2,3,1,1,0,10000,-1.1222134332911082e-12,5689.21544696165,-179.38595441954791,-5688.888728118188,-60.970821192374935
+dwi.json,2,4,1,1,0,10000,-1.1151080059335072e-12,1466.5185999214225,179.9129243388041,-1466.5169063411226,2.2287510297081643
+dwi.json,2,5,1,1,0,10000,-1.1304290836733344e-12,7298.2520189213055,179.58884176089586,-7298.06410466622,52.37228151759093
+dwi.json,2,6,1,1,0,10000,-1.1020073742429304e-12,5892.398484321281,179.40730031868455,-5892.083214527069,60.95318794035143
+dwi.json,2,7,1,1,0,10000,-1.1035616864774056e-12,1924.7137957530222,-179.21878846955414,-1924.5348911725018,-26.24210779745282
+dwi.json,2,8,1,1,0,10000,-1.113109604489182e-12,71.75784240428348,154.88785518443763,-64.9752095071648,30.45340861082753
+dwi.json,2,9,1,1,0,10000,-1.1088907569956064e-12,504.58102428455237,-177.89189770019124,-504.2395248229821,-18.56102568128281
+dwi.json,2,10,1,1,0,10000,-1.1093348462054564e-12,84.41371351856543,10.26096029385861,83.06365463035206,15.036765258659516
+</code></pre><p>Note that the multiple gradient orientations are only applied to the sequence with diffusion-weighted gradients, not the b0 sequence. So, in total we have 11 sequences, one for the b0 sequence, and 10 for each bvec for the dwi sequence.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../tutorial_julia/">« Tutorial (Julia)</a><a class="docs-footer-nextpage" href="../geometry/">Geometry »</a><div class="flexbox-break"></div></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.3.0 on <span class="colophon-date" title="Monday 8 April 2024 14:47">Monday 8 April 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
