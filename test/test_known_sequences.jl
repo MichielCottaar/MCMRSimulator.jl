@@ -2,42 +2,43 @@
     @testset "Diffusion MRI sequences" begin
         @testset "PGSE with various gradient durations and no diffusion" begin
             for (δ, Δ) in [
-                (nothing, 0.1),
-                (0.1, 0.1),
-                (0.1, 70.),
+                (nothing, 30.),
+                (10., 30.),
                 (nothing, nothing),
-                (0.1, nothing),
+                (10., nothing),
                 (0, nothing),
-                (0, 70),
+                (0, 70.),
                 (0, 0.1),
             ]
-                nspins = 300
-                type = iszero(δ) ? :instant : :trapezoid
-                sequence = DWI(bval=0.3, TE=TE, Δ=Δ, gradient=(type=type, δ=δ))
-                sim = mr.Simulation(sequence, diffusivity=0.)
-                snap = mr.readout(nspins, sim, return_snapshot=true)
-                @test snap.time == 80.
-                @test mr.transverse(snap) ≈ nspins rtol=1e-2
+                @testset "δ=$δ; Δ=$Δ" begin
+                    nspins = 300
+                    gradient = (isnothing(δ) || !iszero(δ)) ? (type=:trapezoid, δ=δ) : (type=:instant, )
+                    sequence = @test_nowarn DWI(bval=0.3, TE=80., Δ=Δ, gradient=gradient, scanner=Siemens_Connectom)
+                    sim = mr.Simulation(sequence, diffusivity=0.)
+                    snap = mr.readout(nspins, sim, return_snapshot=true)
+                    @test snap.time ≈ 80.
+                    @test mr.transverse(snap) ≈ nspins rtol=1e-2
+                end
             end
         end
         @testset "PGSE with various gradient durations and free diffusion" begin
             for (δ, Δ) in [
-                (nothing, 1),
-                (1, 1),
-                (1, 70.),
+                (nothing, 30.),
+                (10, 30.),
+                (20, 40.),
                 (nothing, nothing),
-                (1, nothing),
+                (10, nothing),
                 (0, nothing),
                 (0, 70),
-                (0, 1),
+                (0, 30.),
             ]
                 nspins = 3000
                 TE = 80.
-                type = iszero(δ) ? :instant : :trapezoid
-                sequence = DWI(bval=0.3, TE=TE, Δ=Δ, gradient=(type=type, δ=δ))
+                gradient = (isnothing(δ) || !iszero(δ)) ? (type=:trapezoid, δ=δ) : (type=:instant, )
+                sequence = DWI(bval=0.3, TE=TE, Δ=Δ, gradient=gradient)
                 sim = mr.Simulation(sequence, diffusivity=0.5)
                 snap = mr.readout(nspins, sim, return_snapshot=true)
-                @test snap.time == TE
+                @test snap.time ≈ TE
                 @test mr.transverse(snap) ≈ nspins * exp(-0.15) rtol=0.05
             end
         end
