@@ -313,8 +313,8 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
                 # apply pulse to all spins
                 pulse = linear_sequences[index_seq].instant_pulses[index_part]
                 rotation = Rotations.RotationVec(
-                    pulse.flip_angle * cosd(pulse.phase),
-                    pulse.flip_angle * sind(pulse.phase),
+                    deg2rad(pulse.flip_angle) * cosd(pulse.phase),
+                    deg2rad(pulse.flip_angle) * sind(pulse.phase),
                     0.
                 )
                 for spin in spins
