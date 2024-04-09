@@ -45,7 +45,7 @@ function relax!(spin::Spin{N}, parts::SVector{N, SequencePart}, simulation, t1::
     for (orient, part, B0) in zip(spin.orientations, parts, B0s)
         off_resonance_kHz = off_resonance_unscaled * B0 + props.off_resonance
         if iszero(part.rf_amplitude)
-            relax!(orient, part.duration, props.R1, props.R2)
+            relax!(orient, (t2 - t1) * part.duration, props.R1, props.R2)
             grad = (spin.position - part.gradient_origin) ⋅ part.gradient((t1 + t2) / 2)
             orient.phase = orient.phase + (grad + off_resonance_kHz) * 360 * (t2 - t1) * part.duration
         else
