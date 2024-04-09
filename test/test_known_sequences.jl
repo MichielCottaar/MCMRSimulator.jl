@@ -43,11 +43,11 @@
             end
         end
         @testset "PGSE in realistic scanner with free diffusion" begin
-            nspins = 30000
-            sequence = DWI(bval=2, TE=80., scanner=Siemens_Prisma)
+            nspins = 100000
+            sequence = DWI(bval=2, TE=80., scanner=Siemens_Prisma, gradient=(δ=:max, ))
             sim = mr.Simulation(sequence, diffusivity=0.5)
             snap = mr.readout(nspins, sim)
-            @test mr.transverse(snap) ≈ nspins * exp(-1) rtol=0.05
+            @test mr.transverse(snap) ≈ nspins * exp(-1.) rtol=0.02
         end
         @testset "Diffusion within the sphere" begin
             for radius in (0.5, 1.)
