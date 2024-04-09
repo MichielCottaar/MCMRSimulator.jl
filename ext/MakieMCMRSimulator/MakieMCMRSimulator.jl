@@ -2,7 +2,6 @@ module MakieMCMRSimulator
 
 
 include("utils.jl")
-include("sequences.jl")
 include("geometries.jl")
 include("off_resonance.jl")
 include("snapshots.jl")
