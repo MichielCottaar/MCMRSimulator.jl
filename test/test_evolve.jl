@@ -32,7 +32,7 @@
         snaps = mr.readout(zeros(3), simulation, 0:0.5:2.8)
         @test mr.orientation(snaps[1]) ≈ SA[0., 0., 1.]
         for snap in snaps[2:end]
-            @test mr.orientation(snap) ≈ SA[0., 1., 0.]
+            @test mr.orientation(snap) ≈ SA[0., -1., 0.]
         end
         @test length(snaps) == 6
     end
