@@ -294,7 +294,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     end
     spins::Vector{Spin{N}} = deepcopy.(snapshot.spins)
 
-    linear_sequences = LinearSequence(simulation.sequences, current_time, new_time)
+    linear_sequences = LinearSequence(simulation.sequences, current_time, new_time; max_timestep=simulation.max_timestep)
     B0s = map(seq->seq.scanner.B0, simulation.sequences)
     if iszero(N)
         if isinf(simulation.max_timestep)
