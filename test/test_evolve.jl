@@ -71,7 +71,7 @@
         sphere = mr.Spheres(radius=1.)
         Random.seed!(12)
         diff = mr.Simulation(sequence, diffusivity=2., geometry=sphere)
-        snaps = mr.readout([mr.Spin(), mr.Spin()], diff, 0:0.5:TR(sequence), return_snapshot=true)
+        snaps = mr.readout([mr.Spin(), mr.Spin()], diff, 0:5:TR(sequence), return_snapshot=true)
         @test size(snaps) == (5, )
         for snap in snaps
             @test length(snap.spins) == 2
