@@ -14,7 +14,6 @@ Plotting support for the sequence and resulting signal is also available based o
 module MCMRSimulator
 include("constants.jl")
 include("methods.jl")
-include("scanners.jl")
 include("properties.jl")
 include("geometries/geometries.jl")
 include("spin.jl")
@@ -30,9 +29,6 @@ export gyromagnetic_ratio
 
 import .Methods: get_time, get_rotation
 export get_time, get_rotation
-
-import .Scanners: Scanner, B0, max_gradient, max_slew_rate, Siemens_Connectom, Siemens_Prisma, Siemens_Terra
-export Scanner, B0, max_gradient, max_slew_rate, Siemens_Connectom, Siemens_Prisma, Siemens_Terra
 
 import .Spins: position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, SpinOrientationSum, isinside, stuck, stuck_to, orientation
 export position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, isinside, stuck, stuck_to, orientation

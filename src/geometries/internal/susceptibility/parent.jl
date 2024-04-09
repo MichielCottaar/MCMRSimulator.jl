@@ -1,9 +1,9 @@
 module Parent
 
+import MRIBuilder: B0
 import StaticArrays: SVector, SMatrix
 import LinearAlgebra: norm
 import .....Constants: gyromagnetic_ratio
-import .....Scanners: B0
 import ..Base: BaseSusceptibility, single_susceptibility, single_susceptibility_gradient
 import ...Gridify: Grid, get_indices
 

@@ -3,12 +3,12 @@ Defines the command line interface to `mcmr sequence`.
 """
 module Sequence
 
+import MRIBuilder: Scanner, predefined_scanners, max_gradient
 import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_table!, add_arg_group!, parse_args
 import ...SequenceBuilder.Sequences.SpinEcho: spin_echo, dwi
 import ...SequenceBuilder.Sequences.GradientEcho: gradient_echo
 import ...SequenceBuilder.Diffusion: gen_crusher, duration
 import ...Sequences: InstantRFPulse, constant_pulse, write_sequence
-import ...Scanners: Scanner, predefined_scanners, max_gradient
 import ...Plot: print_sequence
 
 

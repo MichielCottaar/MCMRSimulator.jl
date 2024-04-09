@@ -14,7 +14,6 @@ Modules = [
     MCMRSimulator,
     MCMRSimulator.Constants,
     MCMRSimulator.Methods,
-    MCMRSimulator.Scanners,
     MCMRSimulator.Properties,
     MCMRSimulator.Geometries,
     MCMRSimulator.Geometries.User,
