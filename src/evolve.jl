@@ -160,17 +160,6 @@ Updates the spin based on a random movement through the given geometry for a giv
   This displacement will take into account the obstructions in `simulation.geometry`.
 - The spin orientation will be affected by relaxation (see [`relax!`](@ref)) and potentially by magnetisation transfer during collisions.
 """
-function draw_step!(spin :: Spin{N}, simulation::Simulation{N, 0}, parts::SVector{N, SequencePart}, timestep :: Float64, B0s::SVector{N, Float64}) where {N}
-    if iszero(timestep)
-        return
-    end
-    relax!(spin, parts, simulation, 0, 1//2, B0s)
-    @spin_rng spin begin
-        spin.position += randn(SVector{3, Float64}) .* sqrt(2 * simulation.diffusivity * timestep)
-    end
-    relax!(spin, parts, simulation, 1//2, 1, B0s)
-end
-
 function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N, SequencePart}, timestep :: Float64, B0s::SVector{N, Float64}, test_new_pos=nothing) where {N}
     if ~isnothing(test_new_pos)
         all_positions = [spin.position]
