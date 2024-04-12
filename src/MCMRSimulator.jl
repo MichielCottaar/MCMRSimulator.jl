@@ -17,6 +17,8 @@ include("methods.jl")
 include("properties.jl")
 include("geometries/geometries.jl")
 include("spin.jl")
+include("timesteps.jl")
+include("sequence_parts.jl")
 include("relax.jl")
 include("simulations.jl")
 include("subsets.jl")
@@ -32,6 +34,12 @@ export get_time, get_rotation
 
 import .Spins: position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, SpinOrientationSum, isinside, stuck, stuck_to, orientation
 export position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, isinside, stuck, stuck_to, orientation
+
+import .TimeSteps: TimeStep
+export TimeStep
+
+import .SequenceParts: SequencePart, split_times, split_into_parts
+export SequencePart, split_times, split_into_parts
 
 import .Simulations: Simulation, susceptibility_off_resonance
 export Simulation, susceptibility_off_resonance

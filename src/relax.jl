@@ -2,12 +2,12 @@ module Relax
 
 import StaticArrays: SVector
 import Rotations
-import MRIBuilder: LinearSequence, SequencePart
 import LinearAlgebra: ⋅
 import ..Constants: gyromagnetic_ratio
 import ..Spins: Spin, SpinOrientation, stuck, R1, R2, off_resonance, stuck_to, orientation
 import ..Geometries.Internal: susceptibility_off_resonance, MRIProperties
 import ..Properties: GlobalProperties
+import ..SequenceParts: SequencePart
 
 """
     relax!(spin_orientation, timestep, R1, R2)

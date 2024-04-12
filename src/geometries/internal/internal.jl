@@ -15,7 +15,7 @@ include("properties.jl")
 include("susceptibility/susceptibility.jl")
 include("isinside_mesh.jl")
 
-import .FixedObstructionGroups: FixedObstructionGroup, FixedGeometry, FixedMesh, repeating, isinside, detect_intersection, max_timestep_turtoisity
+import .FixedObstructionGroups: FixedObstructionGroup, FixedGeometry, FixedMesh, repeating, isinside, detect_intersection
 import .Reflections: Reflection, direction, previous_hit, has_hit, has_intersection, empty_reflection
 import .Intersections: Intersection, empty_intersection
 import .Gridify: Grid, Grid, get_indices

@@ -8,8 +8,9 @@ All of these functions call [`evolve_to_time`](@ref) under the hood to actually 
 module Evolve
 import StaticArrays: SVector, MVector
 import LinearAlgebra: norm, ⋅
-import MRIBuilder: SequencePart, LinearSequence, Sequence, readout_times, TR
+import MRIBuilder: Sequence, readout_times, TR
 import Rotations
+import ..SequenceParts: SequencePart
 import ..Methods: get_time
 import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation
 import ..Simulations: Simulation, _to_snapshot

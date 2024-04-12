@@ -2,10 +2,12 @@ module Simulations
 import StaticArrays: SVector
 import MRIBuilder: Sequence
 import ..Geometries: ObstructionGroup, fix, fix_susceptibility
-import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility, susceptibility_off_resonance, max_timestep_sticking, max_timestep_turtoisity
+import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility, susceptibility_off_resonance
 import ..Spins: Spin, Snapshot, SpinOrientation, stuck
 import ..Methods: get_time, B0
 import ..Properties: GlobalProperties, R1, R2, off_resonance, correct_for_timestep
+import ..TimeSteps: TimeStep
+import ..SequenceParts: split_into_parts
 
 """
     Simulation(
@@ -56,7 +58,7 @@ struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, O<:FixedSuscep
     geometry :: G
     inside_geometry :: IG
     susceptibility :: O
-    max_timestep :: Float64
+    timestep :: TimeStep
     flatten::Bool
     function Simulation(
         sequences, 
@@ -65,7 +67,7 @@ struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, O<:FixedSuscep
         geometry::FixedGeometry,
         inside_geometry::FixedGeometry,
         susceptibility::FixedSusceptibility,
-        max_timestep::Float64,
+        timestep::TimeStep,
         flatten::Bool,
     )
         nseq = length(sequences)
@@ -77,7 +79,7 @@ struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, O<:FixedSuscep
             geometry,
             inside_geometry,
             susceptibility,
-            max_timestep,
+            timestep,
             flatten
         )
     end
@@ -87,7 +89,6 @@ function Simulation(
     sequences;
     diffusivity=3,
     geometry=[],
-    max_timestep=nothing,
     permeability=0.,
     surface_density=0.,
     dwell_time=0.,
@@ -95,6 +96,10 @@ function Simulation(
     R1=0.,
     R2=0.,
     off_resonance=0.,
+    timestep=Inf,
+    gradient_precision=nothing,
+    turtoisity_precision=nothing,
+    precision=1.
 )
     flatten = false
     if isa(sequences, Sequence)
@@ -113,7 +118,6 @@ function Simulation(
     end
 
     default_properties = GlobalProperties(; R1=R1, R2=R2, off_resonance=off_resonance)
-    max_timestep = isnothing(max_timestep) ? min(max_timestep_sticking(geometry, diffusivity), max_timestep_turtoisity(geometry, diffusivity)) : max_timestep
     if iszero(diffusivity) && length(geometry) > 0
         @warn "Restrictive geometry will have no effect, because the diffusivity is set at zero"
     end
@@ -124,7 +128,7 @@ function Simulation(
         geometry,
         inside_geometry,
         susceptibility,
-        max_timestep,
+        TimeStep(; diffusivity=diffusivity, geometry=geometry, timestep=timestep, gradient_precision=gradient_precision, turtoisity_precision=turtoisity_precision, precision=precision),
         flatten,
     )
 end
@@ -195,5 +199,8 @@ The field is computed in ppm. Knowledge of the scanner [`B0`](@ref) is needed to
 """
 susceptibility_off_resonance(simulation::Simulation, spin::Spin) = susceptibility_off_resonance(simulation, spin.position, stuck(spin) ? spin.reflection.inside : nothing)
 susceptibility_off_resonance(simulation::Simulation, position::AbstractVector, inside::Union{Nothing, Bool}=nothing) = susceptibility_off_resonance(simulation.susceptibility, SVector{3, Float64}(position), inside)
+
+
+split_into_parts(simulation::Simulation, tstart::Number, tfinal::Number) = split_into_parts(simulation.sequences, tstart, tfinal, simulation.timestep)
 
 end
