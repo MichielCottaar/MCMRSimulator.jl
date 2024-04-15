@@ -1,8 +1,8 @@
 module SequenceParts
 import StaticArrays: SVector
 import LinearAlgebra: norm
-import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, gradient_strength, duration, edge_times, get_pulse, gradient_strength3, slew_rate3
-import MRIBuilder.Components: NoGradient, ConstantGradient, ChangingGradient, GenericPulse
+import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, gradient_strength, duration, edge_times, get_pulse, gradient_strength3, slew_rate3, iter_instant_gradients, iter_instant_pulses, TR
+import MRIBuilder.Components: NoGradient, ConstantGradient, ChangingGradient, GenericPulse, InstantGradient3D, InstantPulse
 import ..TimeSteps: TimeStep
 
 
@@ -20,18 +20,15 @@ To break down a generic sequence in these parts will require some approximations
 abstract type SequencePart end
 
 struct EmptyPart <: SequencePart
-    duration :: Float64
 end
 
 
 struct ConstantPart <: SequencePart
-    duration :: Float64
     strength :: SVector{3, Float64}
 end
 
 
 struct LinearPart <: SequencePart
-    duration :: Float64
     start :: SVector{3, Float64}
     final :: SVector{3, Float64}
 end
@@ -81,7 +78,6 @@ function split_times(sequences::AbstractVector{<:BaseSequence}, tstart::Number, 
         max_grad = maximum(map(seq -> norm(gradient_strength(get_gradient(seq, tmean)[1])), sequences))
 
         use_timestep = timestep(max_grad)
-        @show use_timestep
         nsteps = isinf(use_timestep) ? 1 : Int(div(t2 - t1, use_timestep, RoundUp))
         append!(splits, range(t1, t2, length=nsteps+1))
     end
@@ -90,17 +86,65 @@ end
 
 
 """
-    split_into_parts(simulation)
-    split_into_parts(sequences, t1, t2, timestep)
+    MultSequencePart(duration, parts)
+
+A set of N [`SequencePart`](@ref) objects representing overlapping parts of `N` sequences.
+"""
+struct MultSequencePart{N, T<:SequencePart}
+    duration :: Float64
+    parts :: SVector{N, T}
+    function MultSequencePart(duration::Number, parts::AbstractVector{<:SequencePart})
+        N = length(parts)
+        if iszero(N)
+            return new{0, EmptyPart}(Float64(duration), EmptyPart[])
+        end
+        base_type = typeof(parts[1])
+        if all(p -> p isa base_type, parts)
+            T = base_type
+        else
+            T = SequencePart
+        end
+        return new{N, T}(
+            Float64(duration),
+            SVector{N, T}(parts)
+        )
+    end
+end
+
+struct SplitSequence{N}
+    parts :: Vector{MultSequencePart{N}}
+    instants :: Vector{SVector{N, <:Union{Nothing, InstantGradient3D, InstantPulse}}}
+end
+
+"""
+    SplitSequence(simulation, t1, t2)
+    SplitSequence(sequences, t1, t2, timestep)
+
+Splits each sequence between times `t1` and `t2`.
+"""
+function SplitSequence(sequences::AbstractVector{<:BaseSequence}, tstart::Number, tfinal::Number, timestep::TimeStep)
+    N = length(sequences)
+    if iszero(N)
+        ts = timestep.max_timestep
+        Nsteps = isinf(ts) ? 1 : Int(div(tfinal - tstart, ts, RoundUp))
+        duration = (tfinal - tstart) / Nsteps
+        msp = MultSequencePart(duration, SequencePart[])
+        no_instants = SVector{0, Nothing}()
+        return SplitSequence{0}([msp for _ in 1:Nsteps], [no_instants for _ in 1:Nsteps])
+    end
+    times = split_times(sequences, tstart, tfinal, timestep)
+    flipped_parts = [split_into_parts(seq, times) for seq in sequences]
+    return SplitSequence{N}(
+        [MultSequencePart(times[j+1] - times[j], [flipped_parts[i][j] for i in 1:N]) for j in eachindex(flipped_parts[1])],
+        get_instants_array(sequences, times),
+    )
+end
+
+"""
     split_into_parts(sequence, times)
 
 Splits a sequence into a series of [`SequencePart`](@ref) objects.
 """
-function split_into_parts(sequences::AbstractVector{<:BaseSequence}, tstart::Number, tfinal::Number, timestep::TimeStep)
-    times = split_times(sequences, tstart, tfinal, timestep)
-    return hcat([split_into_parts(seq, times) for seq in sequences]...)
-end
-
 function split_into_parts(sequence::BaseSequence{N}, times::AbstractVector{<:Number}) where {N}
     res = SequencePart[]
     for (t1, t2) in zip(times[1:end-1], times[2:end])
@@ -109,11 +153,11 @@ function split_into_parts(sequence::BaseSequence{N}, times::AbstractVector{<:Num
         (gradient, _) = get_gradient(sequence, tmean)
         if isnothing(gp)
             if gradient isa NoGradient
-                push!(res, EmptyPart(t2 - t1))
+                push!(res, EmptyPart())
             elseif gradient isa ConstantGradient
-                push!(res, ConstantPart(t2 - t1, gradient_strength3(gradient)))
+                push!(res, ConstantPart(gradient_strength3(gradient)))
             elseif gradient isa ChangingGradient
-                push!(res, LinearPart(t2 - t1, gradient_strength3(sequence, t1), gradient_strength3(sequence, t2)))
+                push!(res, LinearPart(gradient_strength3(sequence, t1), gradient_strength3(sequence, t2)))
             else
                 error("Gradient waveform $gradient is not implemented in the MCMR simulator yet.")
             end
@@ -130,6 +174,29 @@ function split_into_parts(sequence::BaseSequence{N}, times::AbstractVector{<:Num
     return res
 end
 
+function get_instants_array(sequences::AbstractVector{<:BaseSequence}, times::AbstractVector{<:Number})
+    orig_instants = [get_instants_array(seq, times) for seq in sequences]
+    flipped_instants = [[orig_instants[i][j] for i in eachindex(sequences)] for j in eachindex(times)]
+    return [Union{typeof.(instants)...}[instants...] for instants in flipped_instants]
+end
+
+function get_instants_array(sequence::BaseSequence, times::AbstractVector{<:Number})
+    res = Any[nothing for _ in times]
+
+    TR1 = div(times[1], TR(sequence), RoundDown)
+    TR2 = div(times[end], TR(sequence), RoundUp)
+    for (t_instant, instant) in [iter_instant_gradients(sequence)..., iter_instant_pulses(sequence)...]
+        for current_TR in TR1:TR2
+            t_total = t_instant + current_TR * TR(sequence)
+            if (t_total < times[1]) || (t_total > times[end])
+                continue
+            end
+            (_, index) = findmin(t -> abs(t - t_total), times)
+            res[index] = instant
+        end
+    end
+    return res
+end
 
 
 end

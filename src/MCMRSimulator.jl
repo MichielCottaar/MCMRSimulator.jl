@@ -38,8 +38,8 @@ export position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientatio
 import .TimeSteps: TimeStep
 export TimeStep
 
-import .SequenceParts: SequencePart, split_times, split_into_parts
-export SequencePart, split_times, split_into_parts
+import .SequenceParts: split_times, SplitSequence
+export split_times, SplitSequence
 
 import .Simulations: Simulation, susceptibility_off_resonance
 export Simulation, susceptibility_off_resonance
