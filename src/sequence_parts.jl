@@ -111,17 +111,17 @@ struct MultSequencePart{N, T<:SequencePart}
     end
 end
 
-struct SplitSequence{N}
-    parts :: Vector{MultSequencePart{N}}
-    instants :: Vector{SVector{N, <:Union{Nothing, InstantGradient3D, InstantPulse}}}
-end
-
 """
     SplitSequence(simulation, t1, t2)
     SplitSequence(sequences, t1, t2, timestep)
 
 Splits each sequence between times `t1` and `t2`.
 """
+struct SplitSequence{N}
+    parts :: Vector{MultSequencePart{N}}
+    instants :: Vector{SVector{N, <:Union{Nothing, InstantGradient3D, InstantPulse}}}
+end
+
 function SplitSequence(sequences::AbstractVector{<:BaseSequence}, tstart::Number, tfinal::Number, timestep::TimeStep)
     N = length(sequences)
     if iszero(N)
