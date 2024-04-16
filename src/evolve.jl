@@ -182,17 +182,25 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
 end
 
 """
-    draw_step!(spin, simulation, sequence_parts, timestep)
+    draw_step!(spin(s), simulation, mult_sequence_part, B0s)
 
 Updates the spin based on a random movement through the given geometry for a given `timestep`:
 - draws the next location of the particle after `timestep` with given `simulation.diffusivity`.  
   This displacement will take into account the obstructions in `simulation.geometry`.
 - The spin orientation will be affected by relaxation (see [`relax!`](@ref)) and potentially by magnetisation transfer during collisions.
 """
-function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N, SequencePart}, timestep :: Float64, B0s::SVector{N, Float64}, test_new_pos=nothing) where {N}
+function draw_step!(spins::Vector{Spin{N}}, simulation::Simulation{N}, sequence_part::MultSequencePart{N}, B0s::SVector{N, Float64}) where {N}
+    Threads.@threads for spin in spins
+        draw_step!(spin, simulation, sequence_part, B0s)
+    end
+end
+
+
+function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequencePart{N}, B0s::SVector{N, Float64}, test_new_pos=nothing) where {N}
     if ~isnothing(test_new_pos)
         all_positions = [spin.position]
     end
+    timestep = parts.duration
     if iszero(timestep)
         if ~isnothing(test_new_pos)
             return all_positions
@@ -247,9 +255,7 @@ function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N
             next_fraction_timestep = fraction_timestep + (1 - fraction_timestep) * use_distance
 
             # spin relaxation
-            relax_pos_dist = rand() * use_distance
-            spin.position = map((p1, p2) -> relax_pos_dist * p1 + (1 - relax_pos_dist) * p2, new_pos, current_pos)
-            relax!(spin, parts, simulation, fraction_timestep, next_fraction_timestep, B0s)
+            relax!(spin, new_pos, simulation, parts, fraction_timestep, next_fraction_timestep, B0s)
 
             if ~has_intersection(collision)
                 spin.position = new_pos
@@ -314,7 +320,7 @@ apply_instants!(spins::Vector{Spin{N}}, instants::SVector{N, Nothing}) where {N}
 apply_instants!(spins::Vector{Spin{N}}, index::Int, ::Nothing) = nothing
 
 function apply_instants!(spins::Vector{Spin{N}}, index::Int, grad::InstantGradient3D)
-    for spin in spins
+    Threads.@threads for spin in spins
         new_phase = rad2deg(spin.position ⋅ grad)
         spin.orientations[index].phase += new_phase
     end
@@ -326,7 +332,7 @@ function apply_instants!(spins::Vector{Spin{N}}, index::Int, pulse::InstantPulse
         deg2rad(pulse.flip_angle) * sind(pulse.phase),
         0.
     )
-    for spin in spins
+    Threads.@threads for spin in spins
         orient = spin.orientations[index]
         new_orient = SpinOrientation(rotation * orientation(orient))
         orient.longitudinal = new_orient.longitudinal
