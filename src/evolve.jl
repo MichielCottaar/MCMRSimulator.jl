@@ -8,9 +8,10 @@ All of these functions call [`evolve_to_time`](@ref) under the hood to actually 
 module Evolve
 import StaticArrays: SVector, MVector
 import LinearAlgebra: norm, ⋅
-import MRIBuilder: Sequence, readout_times, TR
+import MRIBuilder: Sequence, readout_times, TR, B0
+import MRIBuilder.Components: InstantGradient3D, InstantPulse
 import Rotations
-import ..SequenceParts: SequencePart
+import ..SequenceParts: SequencePart, MultSequencePart, SplitSequence
 import ..Methods: get_time
 import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation
 import ..Simulations: Simulation, _to_snapshot
@@ -154,6 +155,33 @@ function evolve(spins, simulation::Simulation{N}, new_time=nothing; bounding_box
 end
 
 """
+    evolve_to_time(snapshot, simulation, new_time)
+
+Evolves the full [`Snapshot`](@ref) through the [`Simulation`](@ref) to the given `new_time`.
+Multi-threading is used to evolve multiple spins in parallel.
+This is used internally when calling any of the snapshot evolution methods (e.g., [`evolve`](@ref)).
+"""
+function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_time::Float64) where {N}
+    current_time::Float64 = snapshot.time
+    if new_time < current_time
+        error("New requested time ($(new_time)) is less than current time ($(snapshot.time)). Simulator does not work backwards in time.")
+    end
+    if new_time == current_time
+        return snapshot
+    end
+    spins::Vector{Spin{N}} = deepcopy.(snapshot.spins)
+
+    split_sequence = SplitSequence(simulation, current_time, new_time)
+    B0s = map(B0, snapshot.sequences)
+
+    for index_part in eachindex(split_sequence.parts)
+        apply_instants!(spins, split_sequence.instants[index_part])
+        draw_step!(spins, simulation, split_sequence.parts[index_part], B0s)
+    end
+    return Snapshot(spins, new_time)
+end
+
+"""
     draw_step!(spin, simulation, sequence_parts, timestep)
 
 Updates the spin based on a random movement through the given geometry for a given `timestep`:
@@ -266,73 +294,45 @@ function draw_step!(spin :: Spin{N}, simulation::Simulation{N}, parts::SVector{N
     end
 end
 
-
 """
-    evolve_to_time(snapshot, simulation, new_time)
+    apply_instants!(spins, instants)
 
-Evolves the full [`Snapshot`](@ref) through the [`Simulation`](@ref) to the given `new_time`.
-Multi-threading is used to evolve multiple spins in parallel.
-This is used internally when calling any of the snapshot evolution methods (e.g., [`evolve`](@ref)).
+Apply a set of `N` instants to a vector of spins for each of the `N` sequences being simulated.
+
+Each instant can be:
+- `nothing`: do nothing
+- `MRIBuilder.Components.InstantPulse`: apply RF pulse rotation
+- `MRIBuilder.Components.InstantGradient3D`: add phase corresponding to gradient
 """
-function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_time::Float64) where {N}
-    current_time::Float64 = snapshot.time
-    if new_time < current_time
-        error("New requested time ($(new_time)) is less than current time ($(snapshot.time)). Simulator does not work backwards in time.")
+function apply_instants!(spins::Vector{Spin{N}}, instants::SVector{N}) where {N}
+    for i in 1:N
+        apply_instants!(spins, i, instants[i])
     end
-    if new_time == current_time
-        return snapshot
-    end
-    spins::Vector{Spin{N}} = deepcopy.(snapshot.spins)
+end
 
-    linear_sequences = LinearSequence(simulation.sequences, current_time, new_time; max_timestep=simulation.max_timestep)
-    B0s = map(seq->seq.scanner.B0, simulation.sequences)
-    if iszero(N)
-        if isinf(simulation.max_timestep)
-            Nparts = 1
-        else
-            Nparts = Int(div(new_time - current_time, simulation.max_timestep, RoundUp))
-        end
-    else
-        Nparts = length(linear_sequences[1].finite_parts)
-    end
+apply_instants!(spins::Vector{Spin{N}}, instants::SVector{N, Nothing}) where {N} = nothing
+apply_instants!(spins::Vector{Spin{N}}, index::Int, ::Nothing) = nothing
 
-    for index_part in 1:Nparts
-        # apply instant components
-        for index_seq in 1:N
-            if !isnothing(linear_sequences[index_seq].instant_pulses[index_part])
-                # apply pulse to all spins
-                pulse = linear_sequences[index_seq].instant_pulses[index_part]
-                rotation = Rotations.RotationVec(
-                    deg2rad(pulse.flip_angle) * cosd(pulse.phase),
-                    deg2rad(pulse.flip_angle) * sind(pulse.phase),
-                    0.
-                )
-                for spin in spins
-                    orient = spin.orientations[index_seq]
-                    new_orient = SpinOrientation(rotation * orientation(orient))
-                    orient.longitudinal = new_orient.longitudinal
-                    orient.transverse = new_orient.transverse
-                    orient.phase = new_orient.phase
-                end
-            end
-            if !isnothing(linear_sequences[index_seq].instant_gradient[index_part])
-                # apply gradient to all spins
-                grad = linear_sequences[index_seq].instant_gradient[index_part].qvec
-                for spin in spins
-                    new_phase = rad2deg(spin.position ⋅ grad)
-                    spin.orientations[index_seq].phase += new_phase
-                end
-            end
-        end
-
-        parts = map(seq -> seq.finite_parts[index_part], linear_sequences)
-        timestep = iszero(N) ? (new_time - current_time) / Nparts : parts[1].duration
-        # evolve all spins to next interesting time
-        Threads.@threads for spin in spins
-            draw_step!(spin, simulation, parts, timestep, B0s)
-        end
+function apply_instants!(spins::Vector{Spin{N}}, index::Int, grad::InstantGradient3D)
+    for spin in spins
+        new_phase = rad2deg(spin.position ⋅ grad)
+        spin.orientations[index].phase += new_phase
     end
-    return Snapshot(spins, new_time)
+end
+
+function apply_instants!(spins::Vector{Spin{N}}, index::Int, pulse::InstantPulse)
+    rotation = Rotations.RotationVec(
+        deg2rad(pulse.flip_angle) * cosd(pulse.phase),
+        deg2rad(pulse.flip_angle) * sind(pulse.phase),
+        0.
+    )
+    for spin in spins
+        orient = spin.orientations[index]
+        new_orient = SpinOrientation(rotation * orientation(orient))
+        orient.longitudinal = new_orient.longitudinal
+        orient.transverse = new_orient.transverse
+        orient.phase = new_orient.phase
+    end
 end
 
 end
