@@ -19,22 +19,24 @@ To break down a generic sequence in these parts will require some approximations
 """
 abstract type SequencePart end
 
-struct EmptyPart <: SequencePart
+abstract type NoPulsePart <: SequencePart end
+
+struct EmptyPart <: NoPulsePart
 end
 
 
-struct ConstantPart <: SequencePart
+struct ConstantPart <: NoPulsePart
     strength :: SVector{3, Float64}
 end
 
 
-struct LinearPart <: SequencePart
+struct LinearPart <: NoPulsePart
     start :: SVector{3, Float64}
     final :: SVector{3, Float64}
 end
 
 
-struct PulsePart{T<:GradientPart} <: SequencePart
+struct PulsePart{T<:NoPulsePart} <: SequencePart
     pulse :: GenericPulse
     gradient :: T
 end
