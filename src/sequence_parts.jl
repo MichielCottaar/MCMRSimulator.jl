@@ -34,9 +34,9 @@ struct LinearPart <: SequencePart
 end
 
 
-struct PulsePart <: SequencePart
+struct PulsePart{T<:GradientPart} <: SequencePart
     pulse :: GenericPulse
-    gradient :: SVector{3, Float64}
+    gradient :: T
 end
 
 """
@@ -151,24 +151,24 @@ function split_into_parts(sequence::BaseSequence{N}, times::AbstractVector{<:Num
         tmean = (t1 + t2) / 2.
         gp = get_pulse(sequence, tmean)
         (gradient, _) = get_gradient(sequence, tmean)
-        if isnothing(gp)
-            if gradient isa NoGradient
-                push!(res, EmptyPart())
-            elseif gradient isa ConstantGradient
-                push!(res, ConstantPart(gradient_strength3(gradient)))
-            elseif gradient isa ChangingGradient
-                push!(res, LinearPart(gradient_strength3(sequence, t1), gradient_strength3(sequence, t2)))
-            else
-                error("Gradient waveform $gradient is not implemented in the MCMR simulator yet.")
-            end
+        if gradient isa NoGradient
+            grad_part = EmptyPart()
+        elseif gradient isa ConstantGradient
+            grad_part = ConstantPart(gradient_strength3(gradient))
+        elseif gradient isa ChangingGradient
+            grad_part = LinearPart(gradient_strength3(sequence, t1), gradient_strength3(sequence, t2))
         else
-            @assert gradient isa Union{NoGradient, ConstantGradient}
+            error("Gradient waveform $gradient is not implemented in the MCMR simulator yet.")
+        end
+        if isnothing(gp)
+            push!(res, grad_part)
+        else
             (pulse, pulse_tmean) = gp
             pulse_t1 = pulse_tmean - tmean + t1
             pulse_t2 = pulse_tmean - tmean + t2
             as_generic = GenericPulse(pulse, pulse_t1, pulse_t2)
 
-            push!(res, PulsePart(as_generic, gradient_strength3(sequence, tmean)))
+            push!(res, PulsePart{typeof(grad_part)}(as_generic, grad_part))
         end
     end
     return res
