@@ -7,69 +7,123 @@ import ..Constants: gyromagnetic_ratio
 import ..Spins: Spin, SpinOrientation, stuck, R1, R2, off_resonance, stuck_to, orientation
 import ..Geometries.Internal: susceptibility_off_resonance, MRIProperties
 import ..Properties: GlobalProperties
-import ..SequenceParts: SequencePart
-
-"""
-    relax!(spin_orientation, timestep, R1, R2)
-
-Updates [`SpinOrientation`] after evolving for `timestep` with given `R1` (1/ms) and `R2` (1/ms).
-"""
-function relax!(orientation :: SpinOrientation, timestep :: Real, R1, R2)
-    @assert timestep >= 0
-    if iszero(timestep)
-        return
-    end
-    timestep = Float64(timestep)
-    orientation.longitudinal = (1 - (1 - orientation.longitudinal) * exp(-R1 * timestep))
-    orientation.transverse *= exp(-R2 * timestep)
-end
+import ..SequenceParts: MultSequencePart, SequencePart, NoPulsePart, EmptyPart, ConstantPart, LinearPart, PulsePart, ConstantPulse
 
 
 """
-    relax!(spin, sequence_parts, simulation, t1, t2)
+    relax!(spin, new_pos, simulations, sequence_parts, t1, t2, B0s)
 
-Evolves a `spin` during part of a sequence represented by one or more [`SequencePart`](@ref) (one for each [`SpinOrientation`](@ref) in the [`Spin`](@ref)).
+Evolves a `spin` during part of a sequence represented a [`MultSequencePart`](@ref) (containing one [`SequencePart`](@ref) for each [`SpinOrientation`](@ref) in the [`Spin`](@ref)).
+
 The spin is evolved for the duration from `t1` and `t2`, where `t=0` corresponds to the start of the sequence part and `t=1` to the end.
-The spin is assumed to be stationary during this period.
+The spin is assumed to travel from `spin.position` to `new_pos` during this period.
 
 The spin will precess around an effective RF pulse and relax with a given `R1` and `R2`.
 The R1 and R2 are determined based on the [`Simulation`](@ref) parameters, potentially influenced by the geometry.
 The effective RF pulse is determined by the sequence and any changes in the off-resonance field due to the geometry or set in the [`Simulation`](@ref).
 """
-function relax!(spin::Spin{N}, parts::SVector{N, SequencePart}, simulation, t1::Number, t2::Number, B0s::SVector{N, <:Number}) where {N}
-    props = MRIProperties(simulation.geometry, simulation.inside_geometry, simulation.properties, spin.position, spin.reflection)
+function relax!(spin::Spin{N}, new_pos::SVector{3, Float64}, simulation::Simulation{N}, parts::MultSequencePart{N}, t1::Float64, t2::Float64, B0s::SVector{N, Float64}) where {N}
 
-    off_resonance_unscaled = susceptibility_off_resonance(simulation, spin) * 1e-6 * gyromagnetic_ratio
+    mean_pos = (spin.position .+ new_pos) ./ 2
+    props = MRIProperties(simulation.geometry, simulation.inside_geometry, simulation.properties, mean_pos, spin.reflection)
 
+    off_resonance_unscaled = susceptibility_off_resonance(simulation, spin.position, new_pos) * 1e-6 * gyromagnetic_ratio
+    off_resonance = off_resonance_unscaled .* B0s
+
+    for index in 1:N
+        relax!(spin.orientations[index], spin.position, new_pos, parts.parts[index], props, parts.duration, t1, t2, off_resonance)
+    end
+end
+
+
+# no active RF pulse
+function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, part::NoPulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64)
+    full_off_resonance = off_resonance + props.off_resonance + grad_off_resonance(part, old_pos, new_pos, t1, t2)
+    timestep = (t2 - t1) * duration
+    orient.phase += full_off_resonance * timestep * 360
+    relax_single_step!(orient, props, timestep)
+end
+
+
+function relax_single_step!(orient::SpinOrientation, props::MRIProperties, timestep::Float64)
+    orient.longitudinal = (1 - (1 - orient.longitudinal) * exp(-props.R1 * timestep)) 
+    orient.transverse *= exp(-props.R2 * timestep)
+end
+
+# with active RF pulse
+function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, pulse::PulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64)
     relax_time = 1 / max(props.R1, props.R2)
-    for (orient, part, B0) in zip(spin.orientations, parts, B0s)
-        off_resonance_kHz = off_resonance_unscaled * B0 + props.off_resonance
-        if iszero(part.rf_amplitude)
-            relax!(orient, (t2 - t1) * part.duration, props.R1, props.R2)
-            grad = (spin.position - part.gradient_origin) ⋅ part.gradient((t1 + t2) / 2)
-            orient.phase = orient.phase + (grad + off_resonance_kHz) * 360 * (t2 - t1) * part.duration
+    internal_timestep = 1/length(pulse.pulse)
+    nsplit_rotation = Val(Int(div(internal_timestep * duration, relax_time / 10, RoundUp)))
+    relax!(orient, old_pos, new_pos, pulse, props, duraiton, t1, t2, off_resonance, nsplit_rotation)
+end
+    
+function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, pulse::PulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, split_rotation::Val)
+    started = iszero(t1)
+    for (index, part) in enumerate(pulse.pulse)
+        t_int = internal_timestep * index
+        if !started
+            if t_int > t1
+                if t_int > t2
+                    apply_pulse!(orient, old_pos, new_pos, part, pulse.gradient, props, duration, t1, t2, off_resonance, split_rotation)
+                    return
+                else
+                    apply_pulse!(orient, old_pos, new_pos, part, pulse.gradient, props, duration, t1, t_int, off_resonance, split_rotation)
+                end
+                started = true
+            end
         else
-            nsteps = isinf(relax_time) ? 1 : Int(div(part.duration * (t2 - t1), relax_time / 10, RoundUp))
-            step_ratio = (t2 - t1) / nsteps
-            step_size = part.duration * step_ratio
-            relax!(orient, step_size/2, props.R1, props.R2)
-            t_end = t1
-            for index in 1:nsteps
-                t_start = t_end
-                t_end += step_ratio
-                grad = (spin.position - part.gradient_origin) ⋅ part.gradient(t_start + step_ratio/2)
-
-                # rotation step
-                rotation = RF_pulse_rotation(part, t_start, t_end, grad + off_resonance_kHz)
-                new_orient = SpinOrientation(rotation * orientation(orient))
-                orient.longitudinal = new_orient.longitudinal
-                orient.transverse = new_orient.transverse
-                orient.phase = new_orient.phase + part.rf_phase(t_end) - part.rf_phase(t_start)
-
-                relax!(orient, index == nsteps ? step_size/2 : step_size, props.R1, props.R2)
+            if t_int > t2
+                apply_pulse!(orient, old_pos, new_pos, part, pulse.gradient, props, duration, t_int - internal_timestep, t2, off_resonance, split_rotation)
+                return
+            else
+                apply_pulse!(orient, old_pos, new_pos, part, pulse.gradient, props, duration, t_int - internal_timestep, t_int, off_resonance, split_rotation)
             end
         end
     end
+    @assert isone(t2)
+end
+
+function apply_pulse!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, pulse::ConstantPulse, grad::NoPulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, ::Val{0})
+    # relaxation times are long compared with rotation
+    full_off_resonance = off_resonance + props.off_resonance + grad_off_resonance(grad, old_pos, new_pos, t1, t2)
+
+    flip_angle = pulse.amplitude * π * duration * (t2 - t1)
+    rotation = Rotations.RotationVec(
+        flip_angle * cosd(pulse.phase),
+        flip_angle * sind(pulse.phase),
+        (full_off_resonance - pulse.frequency) * duration * (t2 - t1)
+    )
+
+    relax_single_step!(orient, props, duration * (t2 - t1) / 2)
+    new_orient = SpinOrientation(rotation * orientation(orient))
+    orient.longitudinal = new_orient.longitudinal
+    orient.transverse = new_orient.transverse
+    orient.phase = new_orient.phase + (part.frequency * 180 * duration * (t2 - t1))
+    relax_single_step!(orient, props, duration * (t2 - t1) / 2)
+end
+
+function apply_pulse!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, pulse::ConstantPulse, grad::NoPulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, ::Val{N}) where {N}
+    # relaxation times are short compared with rotation
+    internal_stepsize = (t2 - t1) / N
+    for i in 1:N
+        t2_sub = t1 + i * internal_stepsize
+        t1_sub = t2 - internal_stepsize
+        apply_pulse!(orient, old_pos, new_pos, pulse, grad, props, duration, t1_sub, t2_sub, off_resonance, ::Val{0})
+    end
+end
+
+grad_off_resonance(grad::EmptyPart, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, old_time::Float64, new_time::Float64) = 0.
+
+grad_off_resonance(grad::ConstantPart, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, old_time::Float64, new_time::Float64) = ((old_pos .+ new_pos) ⋅ grad.strength) / 2
+
+function grad_off_resonance(grad::LinearPart, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, old_time::Float64, new_time::Float64)
+    old_grad = iszero(old_time) ? grad.start : (old_time * grad.final + (1 - old_time) * grad.start)
+    new_grad = isone(new_time) ? grad.final : (new_time * grad.final + (1 - new_time) * grad.start)
+    return (
+        (2 .* old_pos .+ new_pos) ⋅ old_grad +
+        (old_pos .+ 2 .* new_pos) ⋅ new_grad
+    ) / 6
 end
 
 
@@ -82,18 +136,6 @@ function transfer!(orientation :: SpinOrientation, fraction::Float64)
     inv_fraction = 1 - fraction
     orientation.longitudinal = 1 - (1 - orientation.longitudinal) * inv_fraction
     orientation.transverse *= inv_fraction
-end
-
-
-function RF_pulse_rotation(part::SequencePart, t1, t2, off_resonance)
-    frequency = (part.rf_phase.final - part.rf_phase.start) / (360 * part.duration)  # in kHz
-    flip_angle = (part.rf_amplitude(t1) + part.rf_amplitude(t2)) * π * part.duration * (t2 - t1)
-    phase = part.rf_phase(t1)
-    Rotations.RotationVec(
-        flip_angle * cosd(phase),
-        flip_angle * sind(phase),
-        off_resonance - frequency
-    )
 end
 
 end

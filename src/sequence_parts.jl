@@ -2,7 +2,7 @@ module SequenceParts
 import StaticArrays: SVector
 import LinearAlgebra: norm
 import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, gradient_strength, duration, edge_times, get_pulse, gradient_strength3, slew_rate3, iter_instant_gradients, iter_instant_pulses, TR
-import MRIBuilder.Components: NoGradient, ConstantGradient, ChangingGradient, GenericPulse, InstantGradient3D, InstantPulse
+import MRIBuilder.Components: NoGradient, ConstantGradient, ChangingGradient, make_generic, InstantGradient3D, InstantPulse, split_timestep, amplitude, phase, freuqency
 import ..TimeSteps: TimeStep
 
 
@@ -36,8 +36,14 @@ struct LinearPart <: NoPulsePart
 end
 
 
+struct ConstantPulse
+    amplitude :: Float64
+    phase :: Float64
+    frequency :: Float64
+end
+
 struct PulsePart{T<:NoPulsePart} <: SequencePart
-    pulse :: GenericPulse
+    pulse :: Vector{ConstantPulse}
     gradient :: T
 end
 
@@ -168,9 +174,19 @@ function split_into_parts(sequence::BaseSequence{N}, times::AbstractVector{<:Num
             (pulse, pulse_tmean) = gp
             pulse_t1 = pulse_tmean - tmean + t1
             pulse_t2 = pulse_tmean - tmean + t2
-            as_generic = GenericPulse(pulse, pulse_t1, pulse_t2)
 
-            push!(res, PulsePart{typeof(grad_part)}(as_generic, grad_part))
+            max_ts = split_timestep(pulse)
+
+            nparts = isinf(max_ts) ? 1 : Int(div(pulse_t2 - pulse_t1, max_ts, RoundUp))
+            ts = (pulse_t2 - pulse_t1) / nparts
+
+            time_parts = ((1:nparts) .- 0.5) .* ts .+ pulse_t1
+            parts = [
+                ConstantPulse(amplitude(pulse, t), phase(pulse, t) - frequency(pulse, t) * 180 * ts, frequency(pulse, t))
+                for t in time_parts
+            ]
+
+            push!(res, PulsePart{typeof(grad_part)}(parts, grad_part))
         end
     end
     return res
