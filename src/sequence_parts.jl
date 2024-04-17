@@ -175,7 +175,7 @@ function split_into_parts(sequence::BaseSequence{N}, times::AbstractVector{<:Num
             pulse_t1 = pulse_tmean - tmean + t1
             pulse_t2 = pulse_tmean - tmean + t2
 
-            max_ts = split_timestep(pulse)
+            max_ts = split_timestep(pulse, 1e-3)
 
             nparts = isinf(max_ts) ? 1 : Int(div(pulse_t2 - pulse_t1, max_ts, RoundUp))
             ts = (pulse_t2 - pulse_t1) / nparts
