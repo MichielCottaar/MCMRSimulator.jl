@@ -122,12 +122,11 @@ function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bo
     if noflatten
         return result
     end
-
     return result[
         # remove first dimension if simulation was initalised with scalar sequence
         simulation.flatten ? 1 : :,
         # remove second dimension if there are no sequences with multiple Readouts or new_readout_times is set to a scalar number
-        (isnothing(new_readout_times) && isone(nreadout_per_TR)) || readout_times isa Number ? 1 : :,
+        (isnothing(new_readout_times) && isone(nreadout_per_TR)) || new_readout_times isa Number ? 1 : :,
         # remove third dimension if nTR is not explicitly set by the user
         isnothing(nTR) ? 1 : :,
         single_subset ? 1 : :,
