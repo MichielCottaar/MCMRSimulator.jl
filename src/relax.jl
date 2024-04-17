@@ -95,7 +95,7 @@ function apply_pulse!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new
     # relaxation times are long compared with rotation
     full_off_resonance = off_resonance + props.off_resonance + grad_off_resonance(grad, old_pos, new_pos, t1, t2)
 
-    flip_angle = pulse.amplitude * π * duration * (t2 - t1)
+    flip_angle = pulse.amplitude * 2π * duration * (t2 - t1)
     rotation = Rotations.RotationVec(
         flip_angle * cosd(pulse.phase),
         flip_angle * sind(pulse.phase),
