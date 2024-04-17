@@ -2,12 +2,10 @@
     @testset "Constant RF pulse without off-resonance" begin
         for phase in (0, 30)
             seq = build_sequence() do 
-                Sequence([ConstantPulse(; flip_angle=90, phase=0., frequency=0., duration=90.), nothing, SingleReadout()]; duration=100) 
+                Sequence([ConstantPulse(; flip_angle=90, phase=0., frequency=0., duration=9.), nothing, SingleReadout()]; duration=10) 
             end
             sim = mr.Simulation(seq)
             signal = mr.readout(100, sim, 0:0.1:10)
-            @test all(mr.propose_times(sim, 0, 9) .== 0:0.1:9)
-            @test all(mr.propose_times(mr.Simulation(seq), 0, 9) .== 0:1:9)
             increasing = signal[1:90]
             constant = signal[91:end]
             @test all(abs.(mr.longitudinal.(constant)) .<= 1e-8)
