@@ -59,7 +59,7 @@ function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::
         nsplit_rotation = Val(1)
     else
         internal_timestep = 1/length(pulse.pulse)
-        nsplit_rotation = Val(Int(div(internal_timestep * duration, relax_time / 10, RoundUp)))
+        nsplit_rotation = Val(Int(div(internal_timestep * duration, relax_time/10, RoundUp)))
     end
     relax!(orient, old_pos, new_pos, pulse, props, duration, t1, t2, off_resonance, nsplit_rotation)
 end
@@ -119,7 +119,7 @@ function apply_pulse!(orient::SpinOrientation, pulse::ConstantPulse, props::MRIP
     internal_stepsize = (t2 - t1) / N
     for i in 1:N
         t2_sub = t1 + i * internal_stepsize
-        t1_sub = t2 - internal_stepsize
+        t1_sub = t2_sub - internal_stepsize
         apply_pulse!(orient, pulse, props, duration, t1_sub, t2_sub, full_off_resonance, Val(1))
     end
 end
