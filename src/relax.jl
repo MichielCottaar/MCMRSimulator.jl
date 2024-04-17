@@ -67,35 +67,38 @@ end
 function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::PulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, split_rotation::Val)
     started = iszero(t1)
     internal_timestep = 1/length(pulse.pulse)
+    call_apply_pulse!(part, t1_use, t2_use) = apply_pulse!(
+        orient, part, props, duration, t1_use, t2_use, 
+        off_resonance + props.off_resonance + grad_off_resonance(pulse.gradient, old_pos, new_pos, t1_use, t2_use), split_rotation
+    )
+
     for (index, part) in enumerate(pulse.pulse)
         t_int = internal_timestep * index
         if !started
             if t_int > t1
                 if t_int > t2
-                    apply_pulse!(orient, old_pos, new_pos, part, pulse.gradient, props, duration, t1, t2, off_resonance, split_rotation)
+                    call_apply_pulse!(part, t1, t2)
                     return
                 else
-                    apply_pulse!(orient, old_pos, new_pos, part, pulse.gradient, props, duration, t1, t_int, off_resonance, split_rotation)
+                    call_apply_pulse!(part, t1, t_int)
                 end
                 started = true
             end
         else
             if t_int > t2
-                apply_pulse!(orient, old_pos, new_pos, part, pulse.gradient, props, duration, t_int - internal_timestep, t2, off_resonance, split_rotation)
+                call_apply_pulse!(part, t_int - internal_timestep, t2)
                 return
             else
-                apply_pulse!(orient, old_pos, new_pos, part, pulse.gradient, props, duration, t_int - internal_timestep, t_int, off_resonance, split_rotation)
+                call_apply_pulse!(part, t_int - internal_timestep, t_int)
             end
         end
     end
     @assert isone(t2)
 end
 
-function apply_pulse!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::ConstantPulse, grad::NoPulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, ::Val{1})
-    # relaxation times are long compared with rotation
-    full_off_resonance = off_resonance + props.off_resonance + grad_off_resonance(grad, old_pos, new_pos, t1, t2)
-
+function apply_pulse!(orient::SpinOrientation, pulse::ConstantPulse, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, full_off_resonance::Float64, ::Val{1})
     flip_angle = pulse.amplitude * 2π * duration * (t2 - t1)
+
     rotation = Rotations.RotationVec(
         flip_angle * cosd(pulse.phase),
         flip_angle * sind(pulse.phase),
@@ -110,13 +113,13 @@ function apply_pulse!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new
     relax_single_step!(orient, props, duration * (t2 - t1) / 2)
 end
 
-function apply_pulse!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::ConstantPulse, grad::NoPulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, ::Val{N}) where {N}
+function apply_pulse!(orient::SpinOrientation, pulse::ConstantPulse, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, full_off_resonance::Float64, ::Val{N}) where {N}
     # relaxation times are short compared with rotation
     internal_stepsize = (t2 - t1) / N
     for i in 1:N
         t2_sub = t1 + i * internal_stepsize
         t1_sub = t2 - internal_stepsize
-        apply_pulse!(orient, old_pos, new_pos, pulse, grad, props, duration, t1_sub, t2_sub, off_resonance, Val(1))
+        apply_pulse!(orient, pulse, props, duration, t1_sub, t2_sub, full_off_resonance, Val(1))
     end
 end
 
