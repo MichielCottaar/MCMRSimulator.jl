@@ -43,9 +43,9 @@
         beta = f * π / μ
     
         amplitude = @. ω * (1 / cosh(beta * t_axis))
-        phase = @. log(amplitude / ω) * μ
+        pulse_phase = @. log(amplitude / ω) * μ
 
-        pulse = GenericPulse(t_axis .+ t .+ 0.5, amplitude, rad2deg.(phase))
+        pulse = GenericPulse(t_axis .+ t .+ 1e-10, amplitude, rad2deg.(pulse_phase))
         bb = BuildingBlock([(0, [1., 0., 0.]), (2 * t + 1, [1., 0., 0.])], [(0., pulse)])
         seq = build_sequence() do 
             Sequence([bb, nothing, SingleReadout()], duration=2 * t + 2) 
