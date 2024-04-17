@@ -8,7 +8,7 @@ All of these functions call [`evolve_to_time`](@ref) under the hood to actually 
 module Evolve
 import StaticArrays: SVector, MVector
 import LinearAlgebra: norm, ⋅
-import MRIBuilder: Sequence, readout_times, TR, B0
+import MRIBuilder: Sequence, readout_times, TR, B0, qval3
 import MRIBuilder.Components: InstantGradient, InstantPulse
 import Rotations
 import ..SequenceParts: SequencePart, MultSequencePart, SplitSequence
@@ -321,7 +321,7 @@ apply_instants!(spins::Vector{<:Spin}, index::Int, ::Nothing) = nothing
 
 function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::InstantGradient)
     Threads.@threads for spin in spins
-        new_phase = rad2deg(spin.position ⋅ grad)
+        new_phase = rad2deg(spin.position ⋅ qval3(grad))
         spin.orientations[index].phase += new_phase
     end
 end
