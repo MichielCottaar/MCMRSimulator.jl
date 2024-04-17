@@ -103,7 +103,7 @@ function apply_pulse!(orient::SpinOrientation, pulse::ConstantPulse, props::MRIP
     rotation = Rotations.RotationVec(
         flip_angle * cosd(start_phase),
         flip_angle * sind(start_phase),
-        (full_off_resonance - pulse.frequency) * duration * (t2 - t1)
+        (full_off_resonance - pulse.frequency) * 2π * duration * (t2 - t1)
     )
 
     relax_single_step!(orient, props, duration * (t2 - t1) / 2)
