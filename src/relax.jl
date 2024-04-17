@@ -68,7 +68,7 @@ function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::
     started = iszero(t1)
     internal_timestep = 1/length(pulse.pulse)
     call_apply_pulse!(part, index, t1_use, t2_use) = apply_pulse!(
-        orient, part, props, duration * (t2_use - t1_use), t1_use - (index - 1) * internal_timestep, t2_use - (index - 1) * internal_timestep,
+        orient, part, props, duration * (t2_use - t1_use), t1_use / internal_timestep - index + 1, t2_use / internal_timestep - index + 1,
         off_resonance + props.off_resonance + grad_off_resonance(pulse.gradient, old_pos, new_pos, t1_use, t2_use), split_rotation
     )
 
