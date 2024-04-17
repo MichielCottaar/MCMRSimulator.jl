@@ -9,7 +9,7 @@ module Evolve
 import StaticArrays: SVector, MVector
 import LinearAlgebra: norm, ⋅
 import MRIBuilder: Sequence, readout_times, TR, B0
-import MRIBuilder.Components: InstantGradient3D, InstantPulse
+import MRIBuilder.Components: InstantGradient, InstantPulse
 import Rotations
 import ..SequenceParts: SequencePart, MultSequencePart, SplitSequence
 import ..Methods: get_time
@@ -308,7 +308,7 @@ Apply a set of `N` instants to a vector of spins for each of the `N` sequences b
 Each instant can be:
 - `nothing`: do nothing
 - `MRIBuilder.Components.InstantPulse`: apply RF pulse rotation
-- `MRIBuilder.Components.InstantGradient3D`: add phase corresponding to gradient
+- `MRIBuilder.Components.InstantGradient`: add phase corresponding to gradient
 """
 function apply_instants!(spins::Vector{Spin{N}}, instants::SVector{N}) where {N}
     for i in 1:N
@@ -319,7 +319,7 @@ end
 apply_instants!(spins::Vector{Spin{N}}, instants::SVector{N, Nothing}) where {N} = nothing
 apply_instants!(spins::Vector{<:Spin}, index::Int, ::Nothing) = nothing
 
-function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::InstantGradient3D)
+function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::InstantGradient)
     Threads.@threads for spin in spins
         new_phase = rad2deg(spin.position ⋅ grad)
         spin.orientations[index].phase += new_phase

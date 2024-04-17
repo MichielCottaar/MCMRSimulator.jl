@@ -2,7 +2,7 @@ module SequenceParts
 import StaticArrays: SVector
 import LinearAlgebra: norm
 import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, gradient_strength, duration, edge_times, get_pulse, gradient_strength3, slew_rate3, iter_instant_gradients, iter_instant_pulses, TR, amplitude, phase, frequency, make_generic
-import MRIBuilder.Components: NoGradient, ConstantGradient, ChangingGradient, InstantGradient3D, InstantPulse, split_timestep
+import MRIBuilder.Components: NoGradient, ConstantGradient, ChangingGradient, InstantGradient, InstantPulse, split_timestep
 import ..TimeSteps: TimeStep
 
 
@@ -127,7 +127,7 @@ Splits each sequence between times `t1` and `t2`.
 """
 struct SplitSequence{N}
     parts :: Vector{MultSequencePart{N}}
-    instants :: Vector{SVector{N, <:Union{Nothing, InstantGradient3D, InstantPulse}}}
+    instants :: Vector{SVector{N, Union{Nothing, InstantGradient, InstantPulse}}}
 end
 
 function SplitSequence(sequences::AbstractVector{<:BaseSequence}, tstart::Number, tfinal::Number, timestep::TimeStep)
@@ -193,9 +193,10 @@ function split_into_parts(sequence::BaseSequence{N}, times::AbstractVector{<:Num
 end
 
 function get_instants_array(sequences::AbstractVector{<:BaseSequence}, times::AbstractVector{<:Number})
+    N = length(sequences)
     orig_instants = [get_instants_array(seq, times) for seq in sequences]
     flipped_instants = [[orig_instants[i][j] for i in eachindex(sequences)] for j in eachindex(times)]
-    return [Union{typeof.(instants)...}[instants...] for instants in flipped_instants]
+    return SVector{N, Union{Nothing, InstantGradient, InstantPulse}}[SVector{N, Union{typeof.(instants)...}}(instants...) for instants in flipped_instants]
 end
 
 function get_instants_array(sequence::BaseSequence, times::AbstractVector{<:Number})
