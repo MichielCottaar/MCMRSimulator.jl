@@ -172,7 +172,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     spins::Vector{Spin{N}} = deepcopy.(snapshot.spins)
 
     split_sequence = SplitSequence(simulation, current_time, new_time)
-    B0s = map(B0, snapshot.sequences)
+    B0s = map(B0, simulation.sequences)
 
     for index_part in eachindex(split_sequence.parts)
         apply_instants!(spins, split_sequence.instants[index_part])
@@ -229,7 +229,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
             if is_stuck
                 td = dwell_time(simulation.geometry, spin.reflection)
                 fraction_stuck = -log(rand()) * td / timestep
-                relax!(spin, parts, simulation, fraction_timestep, min(one(Float64), fraction_timestep + fraction_stuck), B0s)
+                relax!(spin, simulation.reflection.inside, simulation, parts, fraction_timestep, min(one(Float64), fraction_timestep + fraction_stuck), B0s)
                 fraction_timestep += fraction_stuck
                 if fraction_timestep >= 1
                     found_solution = true
@@ -317,16 +317,16 @@ function apply_instants!(spins::Vector{Spin{N}}, instants::SVector{N}) where {N}
 end
 
 apply_instants!(spins::Vector{Spin{N}}, instants::SVector{N, Nothing}) where {N} = nothing
-apply_instants!(spins::Vector{Spin{N}}, index::Int, ::Nothing) = nothing
+apply_instants!(spins::Vector{<:Spin}, index::Int, ::Nothing) = nothing
 
-function apply_instants!(spins::Vector{Spin{N}}, index::Int, grad::InstantGradient3D)
+function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::InstantGradient3D)
     Threads.@threads for spin in spins
         new_phase = rad2deg(spin.position ⋅ grad)
         spin.orientations[index].phase += new_phase
     end
 end
 
-function apply_instants!(spins::Vector{Spin{N}}, index::Int, pulse::InstantPulse)
+function apply_instants!(spins::Vector{<:Spin}, index::Int, pulse::InstantPulse)
     rotation = Rotations.RotationVec(
         deg2rad(pulse.flip_angle) * cosd(pulse.phase),
         deg2rad(pulse.flip_angle) * sind(pulse.phase),

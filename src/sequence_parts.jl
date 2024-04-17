@@ -1,8 +1,8 @@
 module SequenceParts
 import StaticArrays: SVector
 import LinearAlgebra: norm
-import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, gradient_strength, duration, edge_times, get_pulse, gradient_strength3, slew_rate3, iter_instant_gradients, iter_instant_pulses, TR
-import MRIBuilder.Components: NoGradient, ConstantGradient, ChangingGradient, make_generic, InstantGradient3D, InstantPulse, split_timestep, amplitude, phase, freuqency
+import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, gradient_strength, duration, edge_times, get_pulse, gradient_strength3, slew_rate3, iter_instant_gradients, iter_instant_pulses, TR, amplitude, phase, frequency, make_generic
+import MRIBuilder.Components: NoGradient, ConstantGradient, ChangingGradient, InstantGradient3D, InstantPulse, split_timestep
 import ..TimeSteps: TimeStep
 
 

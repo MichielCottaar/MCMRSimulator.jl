@@ -8,7 +8,10 @@ import ..Spins: Spin, SpinOrientation, stuck, R1, R2, off_resonance, stuck_to, o
 import ..Geometries.Internal: susceptibility_off_resonance, MRIProperties
 import ..Properties: GlobalProperties
 import ..SequenceParts: MultSequencePart, SequencePart, NoPulsePart, EmptyPart, ConstantPart, LinearPart, PulsePart, ConstantPulse
+import ..Simulations: Simulation
 
+
+const NewPosType = Union{SVector{3, Float64}, Nothing, Bool}
 
 """
     relax!(spin, new_pos, simulations, sequence_parts, t1, t2, B0s)
@@ -22,22 +25,21 @@ The spin will precess around an effective RF pulse and relax with a given `R1` a
 The R1 and R2 are determined based on the [`Simulation`](@ref) parameters, potentially influenced by the geometry.
 The effective RF pulse is determined by the sequence and any changes in the off-resonance field due to the geometry or set in the [`Simulation`](@ref).
 """
-function relax!(spin::Spin{N}, new_pos::SVector{3, Float64}, simulation::Simulation{N}, parts::MultSequencePart{N}, t1::Float64, t2::Float64, B0s::SVector{N, Float64}) where {N}
+function relax!(spin::Spin{N}, new_pos::NewPosType, simulation::Simulation{N}, parts::MultSequencePart{N}, t1::Float64, t2::Float64, B0s::SVector{N, Float64}) where {N}
 
     mean_pos = (spin.position .+ new_pos) ./ 2
     props = MRIProperties(simulation.geometry, simulation.inside_geometry, simulation.properties, mean_pos, spin.reflection)
 
     off_resonance_unscaled = susceptibility_off_resonance(simulation, spin.position, new_pos) * 1e-6 * gyromagnetic_ratio
-    off_resonance = off_resonance_unscaled .* B0s
 
     for index in 1:N
-        relax!(spin.orientations[index], spin.position, new_pos, parts.parts[index], props, parts.duration, t1, t2, off_resonance)
+        relax!(spin.orientations[index], spin.position, new_pos, parts.parts[index], props, parts.duration, t1, t2, off_resonance_unscaled * B0s[index])
     end
 end
 
 
 # no active RF pulse
-function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, part::NoPulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64)
+function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, part::NoPulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64)
     full_off_resonance = off_resonance + props.off_resonance + grad_off_resonance(part, old_pos, new_pos, t1, t2)
     timestep = (t2 - t1) * duration
     orient.phase += full_off_resonance * timestep * 360
@@ -51,14 +53,14 @@ function relax_single_step!(orient::SpinOrientation, props::MRIProperties, times
 end
 
 # with active RF pulse
-function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, pulse::PulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64)
+function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::PulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64)
     relax_time = 1 / max(props.R1, props.R2)
     internal_timestep = 1/length(pulse.pulse)
     nsplit_rotation = Val(Int(div(internal_timestep * duration, relax_time / 10, RoundUp)))
     relax!(orient, old_pos, new_pos, pulse, props, duraiton, t1, t2, off_resonance, nsplit_rotation)
 end
     
-function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, pulse::PulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, split_rotation::Val)
+function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::PulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, split_rotation::Val)
     started = iszero(t1)
     for (index, part) in enumerate(pulse.pulse)
         t_int = internal_timestep * index
@@ -84,7 +86,7 @@ function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::
     @assert isone(t2)
 end
 
-function apply_pulse!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, pulse::ConstantPulse, grad::NoPulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, ::Val{0})
+function apply_pulse!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::ConstantPulse, grad::NoPulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, ::Val{0})
     # relaxation times are long compared with rotation
     full_off_resonance = off_resonance + props.off_resonance + grad_off_resonance(grad, old_pos, new_pos, t1, t2)
 
@@ -103,27 +105,34 @@ function apply_pulse!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new
     relax_single_step!(orient, props, duration * (t2 - t1) / 2)
 end
 
-function apply_pulse!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, pulse::ConstantPulse, grad::NoPulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, ::Val{N}) where {N}
+function apply_pulse!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::ConstantPulse, grad::NoPulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, ::Val{N}) where {N}
     # relaxation times are short compared with rotation
     internal_stepsize = (t2 - t1) / N
     for i in 1:N
         t2_sub = t1 + i * internal_stepsize
         t1_sub = t2 - internal_stepsize
-        apply_pulse!(orient, old_pos, new_pos, pulse, grad, props, duration, t1_sub, t2_sub, off_resonance, ::Val{0})
+        apply_pulse!(orient, old_pos, new_pos, pulse, grad, props, duration, t1_sub, t2_sub, off_resonance, Val(0))
     end
 end
 
-grad_off_resonance(grad::EmptyPart, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, old_time::Float64, new_time::Float64) = 0.
+grad_off_resonance(grad::EmptyPart, old_pos::SVector{3, Float64}, new_pos::NewPosType, old_time::Float64, new_time::Float64) = 0.
 
 grad_off_resonance(grad::ConstantPart, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, old_time::Float64, new_time::Float64) = ((old_pos .+ new_pos) ⋅ grad.strength) / 2
+grad_off_resonance(grad::ConstantPart, old_pos::SVector{3, Float64}, ::Union{Nothing, Bool}, old_time::Float64, new_time::Float64) = old_pos ⋅ grad.strength
 
 function grad_off_resonance(grad::LinearPart, old_pos::SVector{3, Float64}, new_pos::SVector{3, Float64}, old_time::Float64, new_time::Float64)
-    old_grad = iszero(old_time) ? grad.start : (old_time * grad.final + (1 - old_time) * grad.start)
-    new_grad = isone(new_time) ? grad.final : (new_time * grad.final + (1 - new_time) * grad.start)
+    old_grad = iszero(old_time) ? grad.start : (old_time .* grad.final .+ (1 - old_time) .* grad.start)
+    new_grad = isone(new_time) ? grad.final : (new_time .* grad.final .+ (1 - new_time) .* grad.start)
     return (
         (2 .* old_pos .+ new_pos) ⋅ old_grad +
         (old_pos .+ 2 .* new_pos) ⋅ new_grad
     ) / 6
+end
+
+function grad_off_resonance(grad::LinearPart, old_pos::SVector{3, Float64}, ::Union{Nothing, Bool}, old_time::Float64, new_time::Float64)
+    mean_time = (old_time + new_time) / 2
+    mean_grad = (mean_time .* grad.final .+ (1 - mean_time) .* grad.start)
+    return mean_grad ⋅ old_pos
 end
 
 

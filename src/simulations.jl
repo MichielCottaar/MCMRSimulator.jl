@@ -199,6 +199,7 @@ The field is computed in ppm. Knowledge of the scanner [`B0`](@ref) is needed to
 """
 susceptibility_off_resonance(simulation::Simulation, spin::Spin) = susceptibility_off_resonance(simulation, spin.position, stuck(spin) ? spin.reflection.inside : nothing)
 susceptibility_off_resonance(simulation::Simulation, position::AbstractVector, inside::Union{Nothing, Bool}=nothing) = susceptibility_off_resonance(simulation.susceptibility, SVector{3, Float64}(position), inside)
+susceptibility_off_resonance(simulation::Simulation, old_pos::AbstractVector, new_pos::AbstractVector) = susceptibility_off_resonance(simulation.susceptibility, (old_pos .+ new_pos) ./2, nothing)
 
 
 SplitSequence(simulation::Simulation, tstart::Number, tfinal::Number) = SplitSequence(simulation.sequences, tstart, tfinal, simulation.timestep)
