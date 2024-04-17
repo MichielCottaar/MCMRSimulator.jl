@@ -63,7 +63,7 @@
     @testset "Correct number of stuck particles for long timesteps" begin
         Random.seed!(1234)
         geometry = mr.Walls(repeats=1, surface_density=0.5, dwell_time=1.)
-        sim = mr.Simulation([], diffusivity=3., geometry=geometry, max_timestep=10)
+        sim = mr.Simulation([], diffusivity=3., geometry=geometry, timestep=10)
         nspins = 10000
         snapshot = mr.evolve(nspins, sim, 0)
         fraction_stuck = sum(mr.stuck.(snapshot)) / nspins
@@ -114,7 +114,7 @@ end
             geometry = mr.Walls(surface_relaxivity=actual_transfer)
             spins = [mr.Spin(position=Random.rand(3) .* wall_dist) for _ in 1:nspins]
             sequence = GradientEcho(TE=1e5)
-            simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=diffusivity, max_timestep=timestep)
+            simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=diffusivity, timestep=timestep)
             signal = mr.readout(spins, simulation, [timestep])
             @test length(signal) == 1
             fhit = frachit(wall_dist, diffusivity, timestep)
@@ -132,7 +132,7 @@ end
 
         reference = nothing
         for timestep in (0.01, 0.1, 1)
-            simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=1., max_timestep=timestep)
+            simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=1., timestep=timestep)
             signal = mean([mr.transverse(mr.evolve(10000, simulation, 10.)) for _ in 1:Int(timestep/0.01)]) / 10000
             if isnothing(reference)
                 reference = signal
