@@ -16,17 +16,19 @@
         end
     end
     @testset "Constant RF pulse with off-resonance" begin
-        seq = build_sequence() do 
-            Sequence([ConstantPulse(; flip_angle=90, phase=0., frequency=1., duration=9.), nothing, SingleReadout()]; duration=10) 
+        for phase in (0, 30)
+            seq = build_sequence() do 
+                Sequence([ConstantPulse(; flip_angle=90, phase=phase, frequency=1., duration=9.), nothing, SingleReadout()]; duration=10) 
+            end
+            sim = mr.Simulation(seq, off_resonance=1)
+            signal = mr.readout(100, sim, 0:0.1:10)
+            increasing = signal[1:90]
+            constant = signal[91:end]
+            @test all(abs.(mr.longitudinal.(constant)) .<= 1e-8)
+            @test all(mr.transverse.(constant) .≈ 100.)
+            @test all(mr.longitudinal.(increasing) .≈ cosd.(0:89) .* 100.)
+            @test all(mr.transverse.(increasing) .≈ sind.(0:89) .* 100.)
         end
-        sim = mr.Simulation(seq, off_resonance=1)
-        signal = mr.readout(100, sim, 0:0.1:10)
-        increasing = signal[1:90]
-        constant = signal[91:end]
-        @test all(abs.(mr.longitudinal.(constant)) .<= 3)
-        @test all(isapprox.(mr.transverse.(constant), 100., rtol=0.1))
-        @test all(isapprox.(mr.longitudinal.(increasing), cosd.(0:89) .* 100., rtol=0.1))
-        @test all(isapprox.(mr.transverse.(increasing), sind.(0:89) .* 100., rtol=0.1))
     end
     @testset "Adiabatic pulse test" begin
         # Adopted from a jupyter notebook from Will Clarke

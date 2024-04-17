@@ -67,8 +67,8 @@ end
 function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::PulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, split_rotation::Val)
     started = iszero(t1)
     internal_timestep = 1/length(pulse.pulse)
-    call_apply_pulse!(part, t1_use, t2_use) = apply_pulse!(
-        orient, part, props, duration, t1_use, t2_use, 
+    call_apply_pulse!(part, index, t1_use, t2_use) = apply_pulse!(
+        orient, part, props, duration * (t2_use - t1_use), t1_use - (index - 1) * internal_timestep, t2_use - (index - 1) * internal_timestep,
         off_resonance + props.off_resonance + grad_off_resonance(pulse.gradient, old_pos, new_pos, t1_use, t2_use), split_rotation
     )
 
@@ -77,19 +77,19 @@ function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::
         if !started
             if t_int > t1
                 if t_int > t2
-                    call_apply_pulse!(part, t1, t2)
+                    call_apply_pulse!(part, index, t1, t2)
                     return
                 else
-                    call_apply_pulse!(part, t1, t_int)
+                    call_apply_pulse!(part, index, t1, t_int)
                 end
                 started = true
             end
         else
             if t_int > t2
-                call_apply_pulse!(part, t_int - internal_timestep, t2)
+                call_apply_pulse!(part, index, t_int - internal_timestep, t2)
                 return
             else
-                call_apply_pulse!(part, t_int - internal_timestep, t_int)
+                call_apply_pulse!(part, index, t_int - internal_timestep, t_int)
             end
         end
     end
@@ -99,9 +99,10 @@ end
 function apply_pulse!(orient::SpinOrientation, pulse::ConstantPulse, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, full_off_resonance::Float64, ::Val{1})
     flip_angle = pulse.amplitude * 2π * duration * (t2 - t1)
 
+    start_phase = pulse.phase - pulse.frequency * 360 * (0.5 - t1)
     rotation = Rotations.RotationVec(
-        flip_angle * cosd(pulse.phase),
-        flip_angle * sind(pulse.phase),
+        flip_angle * cosd(start_phase),
+        flip_angle * sind(start_phase),
         (full_off_resonance - pulse.frequency) * duration * (t2 - t1)
     )
 
@@ -109,7 +110,7 @@ function apply_pulse!(orient::SpinOrientation, pulse::ConstantPulse, props::MRIP
     new_orient = SpinOrientation(rotation * orientation(orient))
     orient.longitudinal = new_orient.longitudinal
     orient.transverse = new_orient.transverse
-    orient.phase = new_orient.phase + (pulse.frequency * 180 * duration * (t2 - t1))
+    orient.phase = new_orient.phase + (pulse.frequency * 360 * duration * (t2 - t1))
     relax_single_step!(orient, props, duration * (t2 - t1) / 2)
 end
 
