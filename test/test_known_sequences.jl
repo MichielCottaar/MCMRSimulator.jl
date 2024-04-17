@@ -77,7 +77,7 @@
                 @testset "Stejskal-Tanner approximation at long diffusion times for a=$distance" begin
                     # equation 6 from Balinov, B. et al. (1993) ‘The NMR Self-Diffusion Method Applied to Restricted Diffusion. Simulation of Echo Attenuation from Molecules in Spheres and between Planes’, Journal of Magnetic Resonance, Series A, 104(1), pp. 17–25. doi:10.1006/jmra.1993.1184.
                     qvals = [0.01, 0.1, 1.]
-                    sequences = [DWI(TE=101, diffusion_time=100, qval=qval, gradient=(type=:instant, orientation=[1., 0., 0.])) for qval in qvals]
+                    sequences = [DWI(TE=101, diffusion_time=100, gradient=(type=:instant, orientation=[1., 0., 0.], qval=qval)) for qval in qvals]
                     simulation = mr.Simulation(sequences; geometry=walls, diffusivity=3.)
                     at_readout = mr.readout(snap, simulation, return_snapshot=true)
                     for (qval, readout) in zip(qvals, at_readout)
