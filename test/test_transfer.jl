@@ -165,17 +165,18 @@ end
         end
     end
     @testset "Setting surface MRI properties" begin
+        Random.seed!(1234)
         geometry = mr.Walls(repeats=1, R2_surface=1e6)
-        init = mr.Snapshot(10000)
+        init = mr.Snapshot(100000)
         seq = GradientEcho(TE=1000)
         for density in (0, 0.5, 1)
             for dwell_time in (1, 2)
                 @testset "Density = $density; dwell_time = $dwell_time" begin
-                    simulation = mr.Simulation([seq], geometry=geometry, diffusivity=2, surface_density=density, dwell_time=dwell_time)
+                    simulation = mr.Simulation(seq, geometry=geometry, diffusivity=2, surface_density=density, dwell_time=dwell_time)
                     fraction_stuck = density / (1 + density)
                     release_rate = fraction_stuck / dwell_time
                     collision_rate = release_rate / (1 - fraction_stuck)
-                    log_signal = log(mr.transverse(mr.evolve(init, simulation, 3)) / 1e4)
+                    log_signal = log(mr.transverse(mr.readout(init, simulation, 3)) / length(init))
                     @test log_signal ≈ -collision_rate * 3 rtol=0.1
                 end
             end
