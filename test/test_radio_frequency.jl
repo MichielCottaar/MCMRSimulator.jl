@@ -17,7 +17,7 @@
     end
     @testset "Constant RF pulse with off-resonance" begin
         seq = build_sequence() do 
-            Sequence([ConstantPulse(; flip_angle=90, phase=0., frequency=1., duration=90.), nothing, SingleReadout()]; duration=100) 
+            Sequence([ConstantPulse(; flip_angle=90, phase=0., frequency=1., duration=9.), nothing, SingleReadout()]; duration=10) 
         end
         sim = mr.Simulation(seq, off_resonance=1)
         signal = mr.readout(100, sim, 0:0.1:10)
