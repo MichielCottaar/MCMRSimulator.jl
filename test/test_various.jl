@@ -23,10 +23,10 @@ end
 @testset "Apply Sequence components" begin
     @testset "0 degree flip angle pulses should do nothing" begin
         for pulse_phase in (-90, -45, 0., 30., 90., 180, 22.123789)
-            pulse = mr.InstantRFPulse(0., 0., pulse_phase)
+            pulse = InstantPulse(0., 0., nothing)
             for spin_phase in (-90, -45, 0., 30., 90., 170, 22.123789)
                 spin = mr.Spin(phase=spin_phase, transverse=1.)
-                mr.apply!(pulse, spin)
+                mr.Evolve.apply_instants!([spin], 1, pulse)
                 @test mr.phase(spin) ≈ spin_phase
                 @test mr.longitudinal(spin) ≈ 1.
                 @test mr.transverse(spin) ≈ 1.
@@ -35,29 +35,29 @@ end
     end
     @testset "180 degree pulses should flip longitudinal" begin
         for pulse_phase in (-90, -45, 0., 30., 90., 180, 22.123789)
-            pulse = mr.InstantRFPulse(0., 180., pulse_phase)
+            pulse = InstantPulse(180., pulse_phase, nothing)
             spin = mr.Spin()
             @test mr.longitudinal(spin) == 1.
-            mr.apply!(pulse, spin)
+            mr.Evolve.apply_instants!([spin], 1, pulse)
             @test mr.longitudinal(spin) ≈ -1.
         end
     end
     @testset "90 degree pulses should eliminate longitudinal" begin
         for pulse_phase in (-90, -45, 0., 30., 90., 180, 22.123789)
-            pulse = mr.InstantRFPulse(0., 90., pulse_phase)
+            pulse = InstantPulse(90., pulse_phase, nothing)
             spin = mr.Spin()
             @test mr.longitudinal(spin) == 1.
-            mr.apply!(pulse, spin)
+            mr.Evolve.apply_instants!([spin], 1, pulse)
             @test mr.longitudinal(spin) ≈ 0. atol=1e-7
         end
     end
     @testset "Spins with same phase as pulse are unaffected by pulse" begin
         for pulse_phase in (-90, -45, 0., 30., 90., 170, 22.123789)
             for flip_angle in (10, 90, 120, 180)
-                pulse = mr.InstantRFPulse(0., flip_angle, pulse_phase)
+                pulse = InstantPulse(flip_angle, pulse_phase, nothing)
 
                 spin = mr.Spin(longitudinal=0., transverse=1., phase=pulse_phase)
-                mr.apply!(pulse, spin)
+                mr.Evolve.apply_instants!([spin], 1, pulse)
                 @test mr.longitudinal(spin) ≈ zero(Float64) atol=1e-7
                 @test mr.transverse(spin) ≈ one(Float64)
                 @test mr.phase(spin) ≈ Float64(pulse_phase)
@@ -66,19 +66,19 @@ end
     end
     @testset "180 pulses flips phase around axis" begin
         for spin_phase in (0., 22., 30., 80.)
-            pulse = mr.InstantRFPulse(0., 180, 0.)
+            pulse = InstantPulse(180, 0., nothing)
 
             spin = mr.Spin(longitudinal=0., transverse=1., phase=spin_phase)
-            mr.apply!(pulse, spin)
+            mr.Evolve.apply_instants!([spin], 1, pulse)
             @test mr.longitudinal(spin) ≈ 0. atol=1e-7
             @test mr.transverse(spin) ≈ 1.
             @test mr.phase(spin) ≈ -spin_phase
         end
         for pulse_phase in (0., 22., 30., 80.)
-            pulse = mr.InstantRFPulse(0., 180, pulse_phase)
+            pulse = InstantPulse(180, pulse_phase, nothing)
 
             spin = mr.Spin(longitudinal=0., transverse=1., phase=0.)
-            mr.apply!(pulse, spin)
+            mr.Evolve.apply_instants!([spin], 1, pulse)
             @test mr.longitudinal(spin) ≈ 0. atol=1e-7
             @test mr.transverse(spin) ≈ 1.
             @test mr.phase(spin) ≈ 2 * pulse_phase
@@ -86,9 +86,9 @@ end
     end
     @testset "90 pulses flips longitudinal spin into transverse plane" begin
         for pulse_phase in (0., 22., 30., 80.)
-            pulse = mr.InstantRFPulse(0., 90, pulse_phase)
+            pulse = InstantPulse(90, pulse_phase, nothing)
             spin = mr.Spin()
-            mr.apply!(pulse, spin)
+            mr.Evolve.apply_instants!([spin], 1, pulse)
             @test mr.longitudinal(spin) ≈ 0. atol=1e-7
             @test mr.transverse(spin) ≈ 1.
             @test mr.phase(spin) ≈ pulse_phase - 90
@@ -96,10 +96,10 @@ end
     end
     @testset "90 pulses flips transverse spin into longitudinal plane" begin
         for pulse_phase in (0., 22., 30., 80.)
-            pulse = mr.InstantRFPulse(0., 90, pulse_phase)
-            spin_phase = (pulse_phase + 90)
+            pulse = InstantPulse(90, pulse_phase, nothing)
+            spin_phase = (pulse_phase - 90)
             spin = mr.Spin(longitudinal=0., transverse=1., phase=spin_phase)
-            mr.apply!(pulse, spin)
+            mr.Evolve.apply_instants!([spin], 1, pulse)
             @test mr.longitudinal(spin) ≈ -1.
             @test mr.transverse(spin) ≈ 0. atol=1e-7
         end
@@ -107,13 +107,13 @@ end
     @testset "Gradient should do nothing at origin" begin
         spin = mr.Spin(position=SA[0, 2, 2], transverse=1., phase=90.)
         @test mr.phase(spin) ≈ Float64(90.)
-        mr.apply!(mr.InstantGradient(qvec=SA[4, 0, 0]), spin)
+        mr.Evolve.apply_instants!([spin], 1, InstantGradient(qval=SA[4, 0, 0]))
         @test mr.phase(spin) ≈ Float64(90.)
     end
     @testset "Test instant gradient effect away from origin" begin
         spin = mr.Spin(position=SA[2, 2, 2], transverse=1., phase=90.)
         @test mr.phase(spin) ≈ Float64(90.)
-        mr.apply!(mr.InstantGradient(qvec=SA[0.01, 0, 0]), spin)
+        mr.Evolve.apply_instants!([spin], 1, InstantGradient(qval=SA[0.01, 0, 0]))
         @test mr.phase(spin) ≈ Float64(90. + 0.02 * 360 / 2π)
     end
 end
