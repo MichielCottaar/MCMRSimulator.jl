@@ -231,10 +231,10 @@ end
     size_scale(g) = mr.Geometries.Internal.size_scale(mr.fix(g))
 
     @test isinf(size_scale(mr.Walls(position=0)))
-    @test size_scale(mr.Walls(position=[0, 2])) == 2
-    @test size_scale(mr.Walls(repeats=5)) == 5
-    @test size_scale(mr.Walls(position=[0, 2], repeats=5)) == 2
-    @test size_scale(mr.Walls(position=[0, 4], repeats=5)) == 1
+    @test isinf(size_scale(mr.Walls(position=[0, 2])))
+    @test isinf(size_scale(mr.Walls(repeats=5)))
+    @test isinf(size_scale(mr.Walls(position=[0, 2], repeats=5)))
+    @test isinf(size_scale(mr.Walls(position=[0, 4], repeats=5)))
 
     @test size_scale(mr.Cylinders(radius=[0.3, 0.8], repeats=[2, 3])) == 0.3
     @test size_scale(mr.Spheres(radius=[0.3, 0.8])) == 0.3
