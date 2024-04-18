@@ -125,7 +125,7 @@ end
         test_MT_walls(10., 3., 0.1; transfer=0.5)
         test_MT_walls(10., 1., 0.1; transfer=0.5)
     end
-    @testset "Test that transfer rate does not depend on timestep" begin
+    @testset "Test that surface relaxivity does not depend on timestep" begin
         Random.seed!(1234)
         geometry = mr.Walls(repeats=1, surface_relaxivity=0.1)
         sequence = GradientEcho(TE=1e5)
@@ -146,10 +146,11 @@ end
     @testset "Particles getting stuck reduces diffusivity" begin
         Random.seed!(123)
         geometry = mr.Walls(repeats=1)
+        nspins = Int(1e4)
         for density in (0, 0.5, 1, 2)
             @testset "Density = $density" begin
-                simulation = mr.Simulation([], geometry=geometry, diffusivity=1, surface_density=density, dwell_time=0.5)
-                snap1 = mr.evolve(100000, simulation, 0)
+                simulation = mr.Simulation([], geometry=geometry, diffusivity=1, surface_density=density, dwell_time=0.5, timestep=0.01)
+                snap1 = mr.evolve(nspins, simulation, 0)
                 snap2 = mr.evolve(snap1, simulation, 10)
                 displacement = mr.position.(snap2) .- mr.position.(snap1)
 
@@ -157,8 +158,8 @@ end
                 @test var(map(d->d[2], displacement)) ≈ (1 - fraction_stuck) * 20 rtol=0.03
                 @test var(map(d->d[3], displacement)) ≈ (1 - fraction_stuck) * 20 rtol=0.03
                 @test all(map(d->(abs(d[1]) <= 1.00001), displacement))
-                @test sum(mr.stuck.(snap1)) ≈ fraction_stuck * 1e5 rtol=0.03
-                @test sum(mr.stuck.(snap2)) ≈ fraction_stuck * 1e5 rtol=0.03
+                @test sum(mr.stuck.(snap1)) ≈ fraction_stuck * nspins rtol=0.03
+                @test sum(mr.stuck.(snap2)) ≈ fraction_stuck * nspins rtol=0.03
 
                 @test all(mr.isinside(simulation.geometry, snap1) .== mr.isinside(simulation.geometry, snap2))
             end
