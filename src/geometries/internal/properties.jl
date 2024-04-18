@@ -108,7 +108,9 @@ end
 """
     max_timestep_sticking(geometry, diffusivity)
 
-Returns the maximum timestep that can be used while keeping [`stick_probability`](@ref) lower than 1.
+Returns the maximum timestep that can be used while:
+1. keeping [`stick_probability`](@ref) lower than 25%
+2. and keeping the timestep below the [`dwell_time`](@ref)
 """
 function max_timestep_sticking(geometry::FixedGeometry, diffusivity::Number)
     minimum([max_timestep_sticking(group, diffusivity) for group in geometry])
@@ -117,7 +119,11 @@ end
 max_timestep_sticking(geometry::FixedGeometry{0}, diffusivity::Number) = Inf
 
 function max_timestep_sticking(group::FixedObstructionGroup, diffusivity::Number)
-    return maximum(stick_probability.(group.surface.surface_density, group.surface.dwell_time, diffusivity, 1))^-2
+    get_dwell_time(surface_density, dwell_time) = iszero(surface_density) ? Inf : dwell_time
+    return min(
+        maximum(stick_probability.(group.surface.surface_density, group.surface.dwell_time, diffusivity, 1))^-2 / 4,
+        minimum(get_dwell_time.(group.surface.surface_density, group.surface.dwell_time))
+    )
 end
 
 end
