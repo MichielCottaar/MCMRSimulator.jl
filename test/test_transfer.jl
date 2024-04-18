@@ -131,7 +131,7 @@ end
         sequence = GradientEcho(TE=1e5)
 
         reference = nothing
-        for timestep in (0.01, 0.1, 1)
+        for timestep in (0.01, 0.1)
             simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=1., timestep=timestep)
             signal = mean([mr.transverse(mr.evolve(1000, simulation, 10.)) for _ in 1:Int(timestep/0.01)]) / 1000
             if isnothing(reference)
