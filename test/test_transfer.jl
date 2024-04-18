@@ -133,11 +133,11 @@ end
         reference = nothing
         for timestep in (0.01, 0.1, 1)
             simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=1., timestep=timestep)
-            signal = mean([mr.transverse(mr.evolve(10000, simulation, 10.)) for _ in 1:Int(timestep/0.01)]) / 10000
+            signal = mean([mr.transverse(mr.evolve(1000, simulation, 10.)) for _ in 1:Int(timestep/0.01)]) / 1000
             if isnothing(reference)
                 reference = signal
             else
-                @test log(reference) ≈ log(signal) rtol=0.1
+                @test log(reference) ≈ log(signal) rtol=0.03
             end
         end
     end
