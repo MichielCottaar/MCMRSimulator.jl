@@ -250,12 +250,11 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 phit,
             )
 
+            use_distance = collision === empty_intersection ? 1. : max(prevfloat(collision.distance), 0.)
             if collision === empty_intersection
-                use_distance = 1.
                 next_fraction_timestep = 1.
                 collision_pos = new_pos
             else
-                use_distance = max(prevfloat(collision.distance), 0.)
                 next_fraction_timestep = fraction_timestep + (1 - fraction_timestep) * use_distance
                 collision_pos = map((p1, p2) -> use_distance * p1 + (1 - use_distance) * p2, new_pos, current_pos)
             end
