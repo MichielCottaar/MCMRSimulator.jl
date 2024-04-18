@@ -4,7 +4,8 @@ import Colors
 import MCMRSimulator.Spins: Spin, SpinOrientation, phase, transverse
 import MCMRSimulator: Snapshot, ObstructionGroup
 import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup
-import MCMRSimulator.Plot: PlotPlane
+import MCMRSimulator.Plot: PlotPlane, print_sequence
+import MRIBuilder: plot_sequence
 
 
 """
@@ -26,4 +27,10 @@ const Projectable = Union{GeometryLike, Snapshot, Vector{<:Snapshot}}
 Makie.args_preferred_axis(::Projectable) = Makie.LScene
 Makie.args_preferred_axis(::PlotPlane) = Makie.Axis
 
+function print_sequence(; sequence_file, output_file, t0, t1, kwargs...)
+    sequence = read_sequence(sequence_file)
+    f = plot_sequence(sequence)
+    xlims!(f.axis, t0, t1)
+    Makie.save(output_file, f)
+end
 end
