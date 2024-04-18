@@ -4,7 +4,7 @@ import ..Constants: gyromagnetic_ratio
 import ..Geometries.Internal: size_scale, max_timestep_sticking
 
 """
-    TimeStep(simulation; timestep=Inf, turtoisity_precision=3e-3 * <precision>, gradient_precision=1e-4 * <precision>, precision=1.)
+    TimeStep(simulation; timestep=Inf, turtoisity_precision=3e-2 * <precision>, gradient_precision=1e-4 * <precision>, precision=1.)
 
 Creates an object controlling the timestep of the MCMR simulation.
 
@@ -24,7 +24,7 @@ function TimeStep(; diffusivity, geometry, timestep=Inf, turtoisity_precision=no
     return TimeStep(
         min(
             timestep,
-            (isnothing(turtoisity_precision) ? (1e-2 * precision) : turtoisity_precision) * size_scale(geometry)^2 / diffusivity,
+            (isnothing(turtoisity_precision) ? (3e-2 * precision) : turtoisity_precision) * size_scale(geometry)^2 / diffusivity,
             max_timestep_sticking(geometry, diffusivity)
         ),
         (isnothing(gradient_precision) ? (1e-4 * precision) : gradient_precision) / diffusivity
