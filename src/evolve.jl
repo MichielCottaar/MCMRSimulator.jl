@@ -250,11 +250,18 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 phit,
             )
 
-            use_distance = collision === empty_intersection ? 1. : max(prevfloat(collision.distance), 0.)
-            next_fraction_timestep = fraction_timestep + (1 - fraction_timestep) * use_distance
+            if collision === empty_intersection
+                use_distance = 1.
+                next_fraction_timestep = 1.
+                collision_pos = new_pos
+            else
+                use_distance = max(prevfloat(collision.distance), 0.)
+                next_fraction_timestep = fraction_timestep + (1 - fraction_timestep) * use_distance
+                collision_pos = map((p1, p2) -> use_distance * p1 + (1 - use_distance) * p2, new_pos, current_pos)
+            end
 
             # spin relaxation
-            relax!(spin, new_pos, simulation, parts, fraction_timestep, next_fraction_timestep, B0s)
+            relax!(spin, collision_pos, simulation, parts, fraction_timestep, next_fraction_timestep, B0s)
 
             if ~has_intersection(collision)
                 spin.position = new_pos
@@ -273,7 +280,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 reflection.distance_moved + norm(new_pos - current_pos) * use_distance, 
                 passes_through
             )
-            current_pos = spin.position = map((p1, p2) -> use_distance * p1 + (1 - use_distance) * p2, new_pos, current_pos)
+            current_pos = spin.position = collision_pos
             if ~isnothing(test_new_pos)
                 push!(all_positions, current_pos)
             end
