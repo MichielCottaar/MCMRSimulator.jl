@@ -181,9 +181,10 @@
         @testset "Test variance of parallel displacement within cylinder" begin
             Random.seed!(1234)
             sim = mr.Simulation([], geometry=mr.Cylinders(radius=0.8), diffusivity=3.)
-            snap = mr.evolve(zeros(100000, 3), sim, 10)
+            snap = mr.evolve(zeros(10000, 3), sim, 10)
             zval = map(spin -> spin.position[3], snap)
             @test var(zval) ≈ 60. rtol=0.05
+            @test maximum(spin -> norm(spin.position[1:2]), snap) ≈ 0.8 rtol=0.01
         end
     end
     @testset "Ray-grid intersections with undefined grid" begin
