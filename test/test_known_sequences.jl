@@ -13,7 +13,7 @@
                 @testset "δ=$δ; Δ=$Δ" begin
                     nspins = 300
                     gradient = (isnothing(δ) || !iszero(δ)) ? (type=:trapezoid, δ=δ) : (type=:instant, )
-                    sequence = @test_nowarn DWI(bval=0.3, TE=80., Δ=Δ, gradient=gradient)
+                    sequence = @test_nowarn DWI(bval=0.3, TE=80., Δ=Δ, gradient=gradient, scanner=Siemens_Connectom)
                     sim = mr.Simulation(sequence, diffusivity=0.)
                     snap = mr.readout(nspins, sim, return_snapshot=true)
                     @test snap.time ≈ 80.
