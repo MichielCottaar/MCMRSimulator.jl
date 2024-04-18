@@ -107,7 +107,21 @@ function size_scale(g::FixedObstructionGroup)
     else
         min_radius = minimum(size_scale.(g.obstructions))
     end
-    return min_radius
+    if g.obstructions[1] isa Shift
+        for i in 1:length(g.obstructions)
+            for j in 1:i-1
+                distance = norm(g.obstructions[i].shift .- g.obstructions[j].shift)
+                if distance < min_radius && distance > 0
+                    min_radius = distance
+                end
+            end
+        end
+    end
+    if ~repeating(g)
+        return min_radius
+    else
+        return min(min_radius, g.grid.size...)
+    end
 end
 
 size_scale(g::FixedGeometry) = minimum(size_scale.(g))
