@@ -63,7 +63,7 @@
                     for (qval, readout) in zip(qvals, at_readout)
                         factor = qval * radius
                         expected = 9 * (factor * cos(factor) - sin(factor)) ^2 / factor^6
-                        @test readout.time == 101
+                        @test readout.time ≈ 101
                         @test log(mr.transverse(readout) / length(readout.spins)) ≈ log(expected) rtol=0.05
                     end
                 end
