@@ -7,14 +7,12 @@ Functions:
 module CLI
 include("run.jl")
 include("geometry.jl")
-include("sequence.jl")
 
 import ArgParse
 import Markdown
 import Pkg
 import .Run
 import .Geometry
-import .Sequence
 
 
 """
@@ -84,13 +82,11 @@ function run_main(args=ARGS; kwargs...)
             return Run.run_main(args[2:end]; kwargs...)
         elseif args[1] == "geometry"
             return Geometry.run_main(args[2:end]; kwargs...)
-        elseif args[1] == "sequence"
-            return Sequence.run_main(args[2:end]; kwargs...)
         else
             println(stderr, "Invalid mcmr command $(args[1]) given.\n")
         end
     end
-    println(stderr, "usage: mcmr {run/geometry/sequence}")
+    println(stderr, "usage: mcmr {run/geometry}")
     return Cint(1)
 end
 
