@@ -50,7 +50,7 @@ export Subset, get_subset
 import .Evolve: evolve, readout
 export evolve, readout
 
-import .CLI: run_main
+import .CLI: run_main, install_cli
 
 import .Geometries: 
     ObstructionGroup, IndexedObstruction,

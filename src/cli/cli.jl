@@ -11,9 +11,70 @@ include("sequence.jl")
 
 import ArgParse
 import Markdown
+import Pkg
 import .Run
 import .Geometry
 import .Sequence
+
+
+"""
+    install_cli()
+
+Installs the command line interface for 
+"""
+function install_cli(;
+    command::AbstractString="mcmr",
+    destdir::AbstractString=joinpath(DEPOT_PATH[1], "bin"),
+    force::Bool=false
+    )
+    # The code in this function is for a major part taken from the jpkg.jl package (/Applications/Julia-1.9.app/Contents/Resources/julia/bin/).
+    julia_executable = joinpath(Sys.BINDIR, "julia")
+    if Sys.iswindows()
+        @warn "Installing the CLI is untested on Windows. The installer will continue, but don't be surprised if it does not work."
+    end
+    full_destdir = abspath(expanduser(destdir))
+    exec = joinpath(full_destdir, command)
+
+    if !isdir(full_destdir)
+        if destdir === joinpath(DEPOT_PATH[1], "bin")
+            mkdir(destdir)
+        else
+            error("Destination directory $destdir does not exist. Please create the directory or set `MCMRSimulator.install_cli(destdir=)` to a valid directory.")
+        end
+    end
+
+    previous_install = Sys.which(command)
+    if !isnothing(previous_install)
+        if samefile(previous_install, exec)
+            if !force
+                error("$command is already installed at $(destdir). Use `MCMRSimulator.install_cli(force=true)` to overwrite.")
+            end
+        else
+            error("Command $command is already available at $previous_install. Continuing with this install would conflict with this. Please remove previous installations or change the name of the executable (`MCMRSimulator.install_cli(command=...)`)")
+        end
+    elseif ispath(exec)
+        error("File/directory $exec already exists and does not appear to be an MCMR executable. I'm not going to overwrite it. Please delete it if you want to install MCMR here.")
+    end
+
+
+    open(exec, "w") do f
+        write(f, 
+        """
+        #!/usr/bin/env bash
+
+        $(julia_executable) --startup-file=no --project=$(Pkg.project().path) -e 'import MCMRSimulator.CLI: run_main; run_main()' -- "\$@"
+        """
+        )
+        
+    end
+    chmod(exec, 0o0100775) # equivalent to -rwxrwxr-x (chmod +x exec)
+    
+    @info "Installed MCMRSimulator command line tool to '$exec'"
+
+    if isnothing(Sys.which(command))
+        @warn "The directory that the MCMRSimulator CLI was installed too does not appear to be on the PATH. Either use the complete executable ('$(Base.contractuser(exec))') or add '$(full_destdir)' to your PATH variable."
+    end
+end
 
 function run_main(args=ARGS; kwargs...)
     if length(args) == 0
