@@ -62,8 +62,8 @@ function stimulated_echo(TE,
             TE/2 - duration(excitation_pulse) + excitation_time - stimulate_time,
             stimulate_pulse,
             stimulate_interval - duration(stimulate_pulse),
-            # interval_spoiler,
-            stimulate_pulse,
+            interval_spoiler,
+            # stimulate_pulse,
             TE/2 - duration(stimulate_pulse) + stimulate_time,
             Readout()
         ]

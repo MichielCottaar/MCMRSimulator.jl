@@ -85,7 +85,7 @@
                         @test log(mr.transverse(readout) / length(snap)) ≈ log(expected) rtol=0.05
                     end
                 end
-                @testset "Mitra approximation at long diffusion times" begin
+                @testset "Mitra approximation at short diffusion times" begin
                     # equation 3 from Mitra, P.P. et al. (1992) ‘Diffusion propagator as a probe of the structure of porous media’, Physical Review Letters, 68(24), pp. 3555–3558. doi:10.1103/physrevlett.68.3555.
                     diffusion_times = [0.003, 0.01]
                     sequences = [
@@ -210,7 +210,7 @@
         #                 @test log(signal / length(snap)) ≈ -2. * effective_diffusion rtol=0.2
         #             end
         #         end
-        #     end
+            end
         end
     end
 end
