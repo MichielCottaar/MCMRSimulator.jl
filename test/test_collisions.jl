@@ -90,14 +90,25 @@
             ])
         end
         @testset "Particle remain between reflecting walls" begin
-            Random.seed!(1234)
-            geometry = mr.Walls(position=0.5, repeats=1)
-            simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
-            snap = mr.Snapshot(10000)
-            snap2 = mr.evolve(snap, simulation, 100)
-            
-            get_pos(spin) = round(spin.position[1])
-            @test all(get_pos.(snap) .== get_pos.(snap2))
+            for (position, repeats) in [
+                (0.5, 1.),
+                (0.8, 1.6),
+                (0., 11.3),
+                (0., 10.7),
+                (0.1, 1.6),
+                (0.1, 11.3),
+            ]
+                @testset "$(repeats) um repeating wall placed at $position um" begin
+                    Random.seed!(1234)
+                    geometry = mr.Walls(position=position, repeats=repeats)
+                    simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
+                    snap = mr.Snapshot(10000)
+                    snap2 = mr.evolve(snap, simulation, 100)
+                    
+                    get_pos(spin) = div(spin.position[1] - position, repeats, RoundDown)
+                    @test all(get_pos.(snap) .== get_pos.(snap2))
+                end
+            end
         end
     end
     @testset "Sphere reflections" begin

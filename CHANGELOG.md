@@ -1,9 +1,38 @@
 # Changelog
-All notable changes to MCMRSimulator.jl will be documented in this file.
+All notable changes to MCMRSimulator.jl will be documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+## [v0.9.0]
+### Added
+- Text files can be used to set geometry positions/radii/etc from the command line.
+- New obstruction type: `BendyCylinder`. This cylinder can follow an arbitrary path (defined using splines) and vary in diameter.
+- 3D plotting for meshes (and `BendyCylinder`) is now available. Just call `plot(mesh)` or `plot_geometry3d(mesh)`.
+### Changed
+- Multiple values passed on the `mcmr geometry` on the command line should now be separated by commas and semi-colons rather than spaces
+- The `save_memory` option has been removed from meshes, because it did not work properly.
+### Fixed
+- Fixed occasional leakage through `Walls` that are exactly at the edge of a grid cell or repeat.
+- Creation of large meshes has been sped up (and no longer leads to `StackOverflow` errors for very large meshes).
+- Off-resonance fields generated from meshes are now correctly modelled using magnetic dipoles rather than magnetic monopoles.
+- Size calculation of meshes has been fixed (used in the calculation of the maximum timestep).
+- Determining the inside of meshes has been fixed.
+- Fixed printing of arrays of `Snapshot`.
+### Changed
+- CSV output files now contain the name of the sequence file (CLI)
+## [v0.8.0]
+### Added
+- New `mcmr run --bvecs` flag and `rotate_bvecs` function that apply a rotation to all diffusion-weighted gradeints in an MRI sequences
+- New `mcmr sequence <name> --scanner` flag to select one of the predefined scanners.
+### Changed
+- Crusher gradients have been added to the pre-defined sequences (`gradient_echo`, `spin_echo`, and `dwi`).
+- For a 3D geometry (i.e., mesh or spheres) if the orientation is set as a vector, this vector represents the new orientation of the geometry x-axis (previously it was the z-axis).
+### Fixed
+- Greatly speed up generation of Snapshots for simulations with large voxels.
+- Playing out the sequence occassionally broke down after multiple repetition times. This has been fixed.
+- The `--seed` flag is now actually used in `mcmr run` and also available in `mcmr create-random`
+- Fixed an issue that caused `mcmr create-random` to crash
 ## [v0.7.1]
 ### Fixed
 - Fix parsing of `position` flag in CLI.
@@ -90,8 +119,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added citation instructions
 
 
-[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.7.1...main
-[v0.7.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.7.0...v0.7.1
+[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.9.0...main
+[v0.9.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.8.0...v0.9.0
+[v0.8.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.7.1...v0.8.0
+[v0.7.1]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.7.0...v0.7.1
 [v0.7.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.6.0...v0.7.0
 [v0.6.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.5.0...v0.6.0
 [v0.5.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.4.0...v0.5.0

@@ -73,7 +73,7 @@ function parse_instant(d::Dict)
     if haskey(d, "flip_angle")
         InstantRFPulse(; time=d["time"], flip_angle=d["flip_angle"], phase=d["phase"])
     else
-        InstantGradient(; qvec=d["qvec"], q_origin=d["q_origin"], time=d["time"])
+        InstantGradient(; qvec=d["qvec"], origin=d["origin"], time=d["time"], apply_bvec=d["apply_bvec"])
     end
 end
 
@@ -88,7 +88,8 @@ end
 function parse_gradients(d::Dict)
     MRGradients(
         parse_shape(d["shape"], SVector{3, Float64}),
-        d["origin"]
+        d["origin"],
+        d["apply_bvec"],
     )
 end
 

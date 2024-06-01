@@ -11,7 +11,7 @@ import LinearAlgebra: norm, ⋅
 import NearestNeighbors: KDTree, nn
 import StaticArrays: SVector
 import Statistics: mean
-import ..Obstructions.Triangles: FullTriangle, IndexTriangle, normal, triangle_size, detect_intersection_partial
+import ..Obstructions.Triangles: FullTriangle, IndexTriangle, normal, detect_intersection_partial
 import ..FixedObstructionGroups: FixedMesh, detect_intersection_non_repeating, isinside, rotate_from_global, repeating, detect_intersection_loop
 import ..BoundingBoxes: BoundingBox
 import ..Reflections: Reflection, empty_reflection
@@ -24,14 +24,14 @@ This function assumes that the mesh has been normalised (i.e., all normals point
 """
 function isinside_grid(mesh::FixedMesh)
     mean_triangles = map(o->mean(mesh.vertices[o.indices]), mesh.obstructions)
+    if repeating(mesh)
+        sz = mesh.grid.size
+        mean_triangles = [@. mod(t + sz/2, sz) - sz/2 for t in mean_triangles]
+    end
     tree = KDTree(mean_triangles)
-    bb = BoundingBox(mesh)
     inside_arr = zeros(Bool, size(mesh.grid.indices))
     for index in Tuple.(eachindex(IndexCartesian(), inside_arr))
         centre = @. (index - 0.5) * mesh.grid.resolution + mesh.grid.lower
-        if ~isinside(bb, centre)
-            continue
-        end
 
         triangle_index = nn(tree, centre)[1]
         new_index = triangle_index
@@ -41,19 +41,19 @@ function isinside_grid(mesh::FixedMesh)
             (new_index, _) = detect_intersection_non_repeating(mesh, mean_triangles[triangle_index], centre, triangle_index, true)
             ntry += 1
             if ntry > 1000
-                error("Grid voxel centre falls exactly on the edge between triangles. Please shift the mesh a tiny amount to fix this.")
+                error("Grid voxel centre $centre falls exactly on the edge between triangles. Please shift the mesh a tiny amount to fix this.")
             end
         end
         inpr = (centre - mean_triangles[triangle_index]) ⋅ normal(FullTriangle(mesh.obstructions[triangle_index], mesh.vertices))
         if iszero(inpr)
-            error("Grid voxel centre falls exactly on the mesh element. This will lead to trouble, please shift the mesh a tiny amount.")
+            @warn "Grid voxel centre falls exactly on the mesh element. This will lead to erroneous estimations of what is the inside of a grid. You might want to shift the mesh a tiny amount."
         end
         inside_arr[index...] = inpr < 0
     end
     return inside_arr
 end
 
-function isinside(mesh::FixedMesh{L, R, O}, pos::SVector{3}, stuck_to::Reflection=empty_reflection) where {L, R, O}
+function isinside(mesh::FixedMesh{R, O}, pos::SVector{3}, stuck_to::Reflection=empty_reflection) where {R, O}
     rotated = rotate_from_global(mesh, pos)
 
     if R
@@ -72,9 +72,17 @@ function isinside(mesh::FixedMesh{L, R, O}, pos::SVector{3}, stuck_to::Reflectio
     end
 
     nhit = 0
-    for (index, _) in mesh.grid.indices[grid_index...]
+    for (index, shift_index) in mesh.grid.indices[grid_index...]
         obstruction = FullTriangle(mesh.obstructions[index], mesh.vertices)
-        (new_intersection, partial) = detect_intersection_partial(obstruction, centre, normed)
+        if iszero(shift_index)
+            centre_use = centre
+            normed_use = normed
+        else
+            centre_use = centre .- mesh.grid.shifts[shift_index]
+            normed_use = normed .- mesh.grid.shifts[shift_index]
+        end
+
+        (new_intersection, partial) = detect_intersection_partial(obstruction, centre_use, normed_use)
 
         if (new_intersection.distance >= 0) && (new_intersection.distance < 1)
             if partial

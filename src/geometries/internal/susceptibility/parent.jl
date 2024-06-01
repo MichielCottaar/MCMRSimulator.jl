@@ -28,10 +28,10 @@ Tuple containing all susceptibility sources
 const FixedSusceptibility{N} = NTuple{N, ParentSusceptibility}
 
 """
-    susceptibility_off_resonance(susceptibility/geometry, position[, inside])
+    susceptibility_off_resonance(susceptibility, position[, inside])
 
 Computes the susceptibility off-resonance caused by a single [`BaseSusceptibility`](@ref) 
-or all the susceptibility sources in a [`FixedGeometry`](@ref) at the given position.
+or all the susceptibility sources in a simulation or [`FixedSusceptibility`](@ref) at the given position.
 
 The field is computed in ppm. Knowledge of the scanner [`B0`](@ref) is needed to convert it into KHz.
 """

@@ -46,8 +46,8 @@ export position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientatio
 import .Timestep: TimeController, propose_times
 export TimeController, propose_times
 
-import .Simulations: Simulation
-export Simulation
+import .Simulations: Simulation, susceptibility_off_resonance
+export Simulation, susceptibility_off_resonance
 
 import .Subsets: Subset, get_subset
 export Subset, get_subset
@@ -63,10 +63,11 @@ import .Geometries:
     Cylinder, Cylinders,
     Wall, Walls,
     Sphere, Spheres,
+    Ring, BendyCylinder,
     Triangle, Mesh, split_mesh,
     load_mesh, fix, fix_susceptibility,
     random_positions_radii, write_geometry, read_geometry
-export Annuli, Cylinders, Walls, Spheres, Mesh, load_mesh, fix, random_positions_radii, split_mesh
+export Annuli, Cylinders, Walls, Spheres, Mesh, load_mesh, fix, random_positions_radii, split_mesh, BendyCylinder
 
 import .Geometries.Internal: BoundingBox, FixedGeometry, surface_relaxivity, surface_density, dwell_time, permeability
 export BoundingBox
@@ -80,11 +81,11 @@ export previous_pulse, current_pulse, next_pulse, previous_gradient, current_gra
 import .Sequences: constant_pulse, read_pulseq
 export constant_pulse, read_pulseq
 
-import .SequenceBuilder: BuildingBlock, define_sequence, add_linear_diffusion_weighting, gradient_echo, spin_echo, dwi, dwssfp
-export BuildingBlock, define_sequence, add_linear_diffusion_weighting, gradient_echo, spin_echo, dwi, dwssfp
+import .SequenceBuilder: BuildingBlock, define_sequence, add_linear_diffusion_weighting, gradient_echo, spin_echo, dwi, trapezium_gradient, dwssfp, stimulated_echo, dwste
+export BuildingBlock, define_sequence, add_linear_diffusion_weighting, gradient_echo, spin_echo, dwi, trapezium_gradient, dwssfp, stimulated_echo, dwste
 
-import .Plot: PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d, simulator_movie, plot_off_resonance
-export PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d, simulator_movie, plot_off_resonance
+import .Plot: PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d, simulator_movie, plot_off_resonance, plot_geometry3d, plot_geometry3d!
+export PlotPlane, plot_snapshot, image_snapshot, dyad_snapshot, plot_geometry, plot_trajectory2d, plot_trajectory3d, simulator_movie, plot_off_resonance, plot_geometry3d, plot_geometry3d!
 
 import .Plot: plot_snapshot!, image_snapshot!, dyad_snapshot!, plot_geometry!, plot_trajectory2d!, plot_trajectory3d!, plot_off_resonance!
 export plot_snapshot!, image_snapshot!, dyad_snapshot!, plot_geometry!, plot_trajectory2d!, plot_trajectory3d!, plot_off_resonance!

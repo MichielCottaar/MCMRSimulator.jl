@@ -30,7 +30,7 @@ function TimeController(geometry::FixedGeometry, susceptibility::FixedSusceptibi
     mt_stick = max_timestep_sticking(geometry, diffusivity)
     if isnothing(max_timestep)
         max_timestep = min(
-            size_scale(geometry),
+            size_scale(geometry)^2 / diffusivity,
             max_timestep_internal_gradient(susceptibility, gradient_precision, diffusivity, B0),
             mt_stick
         )
@@ -82,9 +82,7 @@ function propose_times(time_controller::TimeController, t_start::Number, t_end::
         end
         Ntimepoints = Int(div(t1 - t0, mt, RoundUp))
         if Ntimepoints > 1
-            for new_timepoint in range(t0, t1, length=Ntimepoints+1)[2:end-1]
-                push!(timepoints, new_timepoint)
-            end
+            append!(timepoints, range(t0, t1, length=Ntimepoints+1)[2:end-1])
         end
     end
     return sort(unique(timepoints))

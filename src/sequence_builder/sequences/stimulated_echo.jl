@@ -1,6 +1,6 @@
 module StimulatedEcho
-import ....Scanners: Scanner
-import ....Sequences: InstantRFPulse, Readout, RFPulse, InstantGradient
+import ....Scanners: Scanner, max_gradient, max_slew_rate
+import ....Sequences: InstantRFPulse, Readout, RFPulse, InstantGradient, MRGradients, rotate_bvec
 import ...DefineSequence: define_sequence
 import ...Diffusion: add_linear_diffusion_weighting
 import ...BuildingBlocks: duration
@@ -17,12 +17,12 @@ stimulated_echo(TE,
     refocus_time=nothing,
 )
 
-Creates a gradient echo sequence consisting of:
+Creates a stimulated echo sequence consisting of:
 - `excitation_pulse`: by default this is an [`InstantRFPulse`](@ref), but can be replaced with an [`RFPulse`](@ref). If the excitation does not take place halfway the RF pulse, `excitation_time` should be set as well.
 - a delay
-- `refocus_pulse`: by default this is an [`InstantRFPulse`](@ref), but can be replaced with an [`RFPulse`](@ref). If the refocus does not take place halfway the RF pulse, `refocus_time` should be set as well.
+- `stimulate_pulse`: by default this is an [`InstantRFPulse`](@ref), but can be replaced with an [`RFPulse`](@ref). If the excitation does not take place halfway the RF pulse, `stimulate_time` should be set as well.
 - a readout `TE` ms after the excitation.
-The refocus time is always halfway the excitation time and the readout.
+
 """
 
 function stimulated_echo(TE, 
@@ -33,16 +33,36 @@ function stimulated_echo(TE,
     excitation_time=nothing,
     stimulate_pulse=InstantRFPulse(flip_angle=90, phase=90),
     stimulate_time=nothing,
-    
+    spoiler_orientation=SVector{3, Float64}([1., 0., 0.])
 )
+    if isinf(max_gradient(scanner)) || isinf(max_slew_rate(scanner)) # Maybe implement a check for only inf gradient max in scanner()?
+        ramp_time = 0.0000001 # Non-zero to avoid timing issues
+    else
+        ramp_time = max_gradient(scanner) / max_slew_rate(scanner)
+    end
+
+    if isinf(max_gradient(scanner))
+        g_spoiler = 10000 # Can't use infinite gradient strength as it smh breaks the propose_time
+    else
+        g_spoiler = max_gradient(scanner)
+    end
+
+    interval_spoiler = rotate_bvec(MRGradients([
+        (0, 0.), 
+        (ramp_time, g_spoiler),
+        (stimulate_interval - ramp_time - duration(stimulate_pulse), g_spoiler),
+        (stimulate_interval - duration(stimulate_pulse), 0.), 
+    ], apply_bvec=true), spoiler_orientation)
+
     excitation_time = isnothing(excitation_time) ? duration(excitation_pulse) / 2 : excitation_time
-    stimulate_time = isnothing(stimulate_time) ? duration(rstimulate_pulse) / 2 : stimulate_time
+    stimulate_time = isnothing(stimulate_time) ? duration(stimulate_pulse) / 2 : stimulate_time
     define_sequence(scanner, TR) do 
         [
             excitation_pulse,
             TE/2 - duration(excitation_pulse) + excitation_time - stimulate_time,
             stimulate_pulse,
             stimulate_interval - duration(stimulate_pulse),
+            # interval_spoiler,
             stimulate_pulse,
             TE/2 - duration(stimulate_pulse) + stimulate_time,
             Readout()
@@ -59,10 +79,11 @@ end
         bval/qval/gradient_strength=<one is required>, orientation=:x,
         )
 
-Creates a gradient echo sequence consisting of:
+Creates a stimulated echo sequence consisting of:
 - `excitation_pulse`: by default this is an [`InstantRFPulse`](@ref), but can be replaced with an [`RFPulse`](@ref). If the excitation does not take place halfway the RF pulse, `excitation_time` should be set as well.
 - diffusion weighting
-- `refocus_pulse`: by default this is an [`InstantRFPulse`](@ref), but can be replaced with an [`RFPulse`](@ref). If the refocus does not take place halfway the RF pulse, `refocus_time` should be set as well.
+- 2x `stimulate_pulse`: by default this is an [`InstantRFPulse`](@ref), but can be replaced with an [`RFPulse`](@ref). If the excitation does not take place halfway the RF pulse, `refocus_time` should be set as well.
+- 'stimulate_interval' between 2 stimulate_pulses
 - identical diffusion weighting cancelling out the first one
 - a readout `TE` ms after the excitation.
 The refocus time is always halfway the excitation time and the readout.
@@ -79,9 +100,9 @@ function dwste(stimulate_interval;
     TE=20.,
     TR=nothing,
     scanner=Scanner(B0=3.),
-    excitation_pulse=InstantRFPulse(flip_angle=90, phase=-90),
+    excitation_pulse=InstantRFPulse(flip_angle=90, phase=90),
     excitation_time=nothing,
-    stimulate_pulse=InstantRFPulse(flip_angle=180, phase=0),
+    stimulate_pulse=InstantRFPulse(flip_angle=90, phase=90),
     stimulate_time=nothing,
     bval=nothing,
     diffusion_time=nothing,
@@ -91,12 +112,13 @@ function dwste(stimulate_interval;
     readout_time=0.,
     orientation=SVector{3, Float64}([1., 0., 0.]),
 )
+
     define_sequence(scanner, TR) do
         sequence = stimulated_echo(
             TE,
             stimulate_interval;
             excitation_pulse=excitation_pulse, excitation_time=excitation_time,
-            stimulate_pulse=refocus_pulse, stimulate_time=refocus_time, scanner=scanner
+            stimulate_pulse=stimulate_pulse, stimulate_time=stimulate_time, scanner=scanner, spoiler_orientation=orientation
         )
 
         if !iszero(readout_time)

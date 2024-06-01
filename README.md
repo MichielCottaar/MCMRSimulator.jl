@@ -24,7 +24,7 @@ This software can be cited using the information in the CITATION.cff file.
   month        = nov,
   year         = 2022,
   publisher    = {Zenodo},
-  version      = {V0.7},
+  version      = {V0.9},
   doi          = {10.5281/zenodo.7318657},
   url          = {https://doi.org/10.5281/zenodo.7318657}
 }
@@ -32,25 +32,29 @@ This software can be cited using the information in the CITATION.cff file.
 
 ## Developer documentation
 ### Release procedure
+- Check out the branch "v<major>.<minor>" (might already exist if this is a patch update)
+  - Rebase the main branch into the version branch
 - Update the version number in "Project.toml" and "README.md" citation section.
 - Update the "CHANGELOG.md"
   - Check `[Unreleased]` link for any missing additions to the Changelog
   - Add line with `## [v<version number>]` just below `## [Ureleased]`
   - Add new link at bottom: `[v<version number>]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v<previous version>...v<version_number>`
-  - Update unreleased link at bottom with new version number: `[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v<previous version>...main`
+  - Update unreleased link at bottom with new version number: `[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v<version number>...main`
 - Login into [zenodo](https://doi.org/10.5281/zenodo.7318656)
   - In the MCMRSimulator.jl repository click "New version"
   - Click "Reserve doi" (should already be clicked)
-  - Add new citation information to CITATION.cff
+  - Add new citation information to CITATION.cff (do not update doi in README)
     ```
       - description: "This is the archived snapshot of version <version number> of MCMRSimulator.jl"
         type: doi
         value: <reserved doi>
     ```
-  - Keep this page open
+  - Keep the zenodo page open
 - Commit changes
 - Add tag `v<version number>`
 - git push
+- Create and auto-merge merge request from version branch back into main
+  -  Ensure "delete branch after merge" is not selected!
 - Create release on gitlab (https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl/-/releases)
   - title: `v<version number>`; Release notes: "See CHANGELOG.md for list of changes.";
   - Upload spanshot (.zip) to zenodo

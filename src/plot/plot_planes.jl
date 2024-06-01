@@ -37,7 +37,7 @@ function PlotPlane(
     if isnothing(sizey)
         sizey = size
     end
-    rotation = get_rotation(normal, 3)
+    rotation = get_rotation(normal, 3; reference_dimension=:z)
     position = SVector{3}(position)
     transform = CoordinateTransformations.AffineMap(rotation, position)
     PlotPlane(CoordinateTransformations.inv(transform), sizex, sizey)

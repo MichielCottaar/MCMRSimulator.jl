@@ -28,6 +28,7 @@ Modules = [
     MCMRSimulator.Geometries.User.RandomDistribution,
     MCMRSimulator.Geometries.User.SplitMesh,
     MCMRSimulator.Geometries.User.JSON,
+    MCMRSimulator.Geometries.User.ToMesh,
     MCMRSimulator.Geometries.Internal,
     MCMRSimulator.Geometries.Internal.RayGridIntersection,
     MCMRSimulator.Geometries.Internal.BoundingBoxes,

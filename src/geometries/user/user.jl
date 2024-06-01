@@ -9,6 +9,7 @@ include("fix_susceptibility.jl")
 include("load_mesh.jl")
 include("random_distribution.jl")
 include("json.jl")
+include("to_mesh.jl")
 import .Fix: fix
 import .FixSusceptibility: fix_susceptibility
 import .Obstructions: ObstructionGroup, IndexedObstruction,
@@ -16,7 +17,8 @@ import .Obstructions: ObstructionGroup, IndexedObstruction,
     Cylinder, Cylinders,
     Sphere, Spheres,
     Annulus, Annuli,
-    Triangle, Mesh
+    Triangle, Mesh,
+    Ring, BendyCylinder
 import .SplitMesh: split_mesh
 import .RandomDistribution: random_positions_radii
 import .LoadMesh: load_mesh

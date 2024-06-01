@@ -1,13 +1,17 @@
 # [Obstructions to free diffusion](@id geometry)
 MCMRSimulator.jl comes with a variety of basic components that can be used to represent various components in the tissue microstructure.
 
-| Component     | Constructor         |  Dimensionality |
-| ------------- | ------------------- |  -------------- |
-| infinite walls | [`Walls`](@ref)  |  1 |
-| hollow infinite cylinder |  [`Cylinders`](@ref)   |  2 |
-| Annulus with inner and outer cylinders | [`Annuli`](@ref)   |  2 |
-| hollow sphere |  [`Spheres`](@ref)   |  3 |
-| mesh | [`Mesh`](@ref) |  3 |
+
+| Component:             | infinite walls     | hollow cylinder    | myelinated annuli  | hollow sphere      | mesh               | bendy cylinder     |
+|------------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|
+| Constructor (Julia)         | [`Walls`](@ref)    | [`Cylinders`](@ref) | [`Annuli`](@ref)  | [`Spheres`](@ref)   | [`Mesh`](@ref)     | [`BendyCylinder`](@ref) |
+| Constructor (CLI)         | `mcmr geometry create walls` | `mcmr geometry create cylinders` or `mcmr geometry create-random cylinders` | `mcmr geometry create annuli` or `mcmr geometry create-random annuli` | `mcmr geometry create spheres` or `mcmr geometry create-random spheres` | Generate mesh from tissue samples or generative models (e.g., [palomboGenerativeModelRealistic2019](@cite), [Ginsburger_2019](@cite), [Callaghan_2020](@cite), [villarreal-haroCACTUSComputationalFramework2023](@cite)) | `mcmr geometry create bendy-cylinder` |
+| Hinder diffusion       | ✅ | ✅ |                    | ✅ | ✅ | ✅ |
+| Surface relaxation     | ✅| ✅ |                    | ✅ | ✅ | ✅ |
+| Magnetisation transfer | ✅  | ✅ |                    | ✅ | ✅ | ✅ |
+| Generate off-resonance field    |                    | ✅ | ✅ |                    | 🚧     | 🚧     |
+| Different relaxation inside    |                    | ✅ | ✅ |  ✅                  | ✅     | ✅     |
+| Intrinsic dimensionality| 1                   | 2 | 2 |  3                  | 3     | 3     |
 
 The constructors for these components all have a similar interface.
 Some expect certain component-specific keyword arguments (e.g., radius for [`Spheres`](@ref) and [`Cylinders`](@ref), or the keywords regarding the myelin-induced off-resonance field produced by [`Cylinders`](@ref) or [`Annuli`](@ref)).
@@ -24,12 +28,12 @@ The `rotation` keyword can be used to define these components along other lines/
 
 From the command line all of these keywords are available as flags, which can be seen by running:
 ```bash
-mcmr geometry create walls/cylinders/annuli/spheres --help
+mcmr geometry create walls/cylinders/annuli/spheres/bendy_cylinder --help
 ```
 
 In Julia, the easiest way to get the documentation for all keywords is to run:
 ```
-?Walls/Cylinders/Annuli/Spheres/Mesh
+?Walls/Cylinders/Annuli/Spheres/Mesh/BendyCylinder
 ```
 or by following the links in the table above.
 

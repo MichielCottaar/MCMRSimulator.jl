@@ -3,6 +3,7 @@
 *.jl.mem
 Manifest.toml
 /docs/build/
+/docs/src/installation.md
 /lcov.info
 /.julia
 /local
