@@ -8,7 +8,7 @@ All of these functions call [`evolve_to_time`](@ref) under the hood to actually 
 module Evolve
 import StaticArrays: SVector, MVector
 import LinearAlgebra: norm, ⋅
-import MRIBuilder: Sequence, readout_times, TR, B0, qval3
+import MRIBuilder: Sequence, variables, B0
 import MRIBuilder.Components: InstantGradient, InstantPulse
 import Rotations
 import ..SequenceParts: SequencePart, MultSequencePart, SplitSequence
@@ -56,7 +56,7 @@ function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bo
         if iszero(N)
             nreadout_per_TR = 0
         else
-            nreadout_per_TR = maximum((length(readout_times(seq)) for seq in simulation.sequences))
+            nreadout_per_TR = maximum((length(variables.readout_times(seq)) for seq in simulation.sequences))
         end
     else
         nreadout_per_TR = length(new_readout_times)
@@ -68,8 +68,8 @@ function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bo
     store_times = fill(-1., (N, nreadout_per_TR, use_nTR))
 
     for (i, seq) in enumerate(simulation.sequences)
-        current_TR = Int(div(get_time(snapshot), TR(seq), RoundDown))
-        time_in_TR = get_time(snapshot) - current_TR * TR(seq)
+        current_TR = Int(div(get_time(snapshot), variables.duration(seq), RoundDown))
+        time_in_TR = get_time(snapshot) - current_TR * variables.duration(seq)
 
         rt = isnothing(new_readout_times) ? readout_times(seq) : new_readout_times
         if rt isa Number
@@ -85,7 +85,7 @@ function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bo
 
         for (j, relative_time) in enumerate(rt)
             for k in 1:use_nTR
-                new_readout_time = ((skip_TR + k - 1) * TR(seq)) + relative_time
+                new_readout_time = ((skip_TR + k - 1) * variables.duration(seq)) + relative_time
                 if new_readout_time < snapshot.time
                     warn("Skipping readouts scheduled before the current snapshot. Did you provide negative `new_readout_times`?")
                     continue
@@ -144,8 +144,8 @@ If undefined `new_time` will be set to the start of the next TR.
 function evolve(spins, simulation::Simulation{N}, new_time=nothing; bounding_box=500) where {N}
     snapshot = _to_snapshot(spins, simulation, bounding_box)
     if isnothing(new_time)
-        first_TR = TR(simulation.sequences[1])
-        if !all(TR(s) ≈ first_TR for s in simulation.sequences)
+        first_TR = variables.duration(simulation.sequences[1])
+        if !all(variables.duration(s) ≈ first_TR for s in simulation.sequences)
             error("Cannot evolve snapshot for a single TR, because the simulation contains sequences with different TRs. Please set a `new_time` explicitly.")
         end
         new_time = (div(nextfloat(snapshot.time), first_TR, RoundDown) + 1) * first_TR
@@ -326,7 +326,7 @@ apply_instants!(spins::Vector{<:Spin}, index::Int, ::Nothing) = nothing
 
 function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::InstantGradient)
     Threads.@threads for spin in spins
-        new_phase = rad2deg(spin.position ⋅ qval3(grad))
+        new_phase = rad2deg(spin.position ⋅ variables.qval(grad))
         spin.orientations[index].phase += new_phase
     end
 end

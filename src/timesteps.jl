@@ -1,5 +1,4 @@
 module TimeSteps
-import MRIBuilder: gradient_strength
 import ..Constants: gyromagnetic_ratio
 import ..Geometries.Internal: size_scale, max_timestep_sticking
 

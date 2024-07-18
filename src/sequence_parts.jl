@@ -1,7 +1,7 @@
 module SequenceParts
 import StaticArrays: SVector
 import LinearAlgebra: norm
-import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, gradient_strength, duration, edge_times, get_pulse, gradient_strength3, slew_rate3, iter_instant_gradients, iter_instant_pulses, TR, amplitude, phase, frequency, make_generic
+import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, edge_times, get_pulse, iter_instant_gradients, iter_instant_pulses, make_generic, variables
 import MRIBuilder.Components: NoGradient, ConstantGradient, ChangingGradient, InstantGradient, InstantPulse, split_timestep
 import ..TimeSteps: TimeStep
 
@@ -61,16 +61,16 @@ The split times will include any time when (for any of the provided sequences):
 Continuous gradient waveforms or RF pulses might be split up further to ensure that the maximum timestep is obeyed.
 """
 split_times(sequence::BaseSequence, args...; kwargs...) = split_times([sequence], args...; kwargs...)
-split_times(sequences::AbstractVector{<:BaseSequence}, timestep::TimeStep; kwargs...) = split_times(sequences, 0., maximum(duration.(sequences)), timestep; kwargs...)
+split_times(sequences::AbstractVector{<:BaseSequence}, timestep::TimeStep; kwargs...) = split_times(sequences, 0., maximum(variables.duration.(sequences)), timestep; kwargs...)
 
 function split_times(sequences::AbstractVector{<:BaseSequence}, tstart::Number, tfinal::Number, timestep::TimeStep)
     edges = Float64.([tstart, tfinal])
     for sequence in sequences
         raw_edges = edge_times(sequence)
-        nTR_start = Int(div(tstart, duration(sequence), RoundDown))
-        nTR_final = Int(div(tfinal, duration(sequence), RoundUp))
+        nTR_start = Int(div(tstart, variables.duration(sequence), RoundDown))
+        nTR_final = Int(div(tfinal, variables.duration(sequence), RoundUp))
         for nTR in nTR_start:nTR_final
-            for time in raw_edges .+ (nTR * duration(sequence))
+            for time in raw_edges .+ (nTR * variables.duration(sequence))
                 if tstart < time < tfinal
                     push!(edges, time)
                 end
@@ -83,7 +83,7 @@ function split_times(sequences::AbstractVector{<:BaseSequence}, tstart::Number, 
     for (t1, t2) in zip(edges[1:end-1], edges[2:end])
         tmean = (t1 + t2) / 2
 
-        max_grad = maximum(map(seq -> norm(gradient_strength(get_gradient(seq, tmean)[1])), sequences))
+        max_grad = maximum(map(seq -> norm(variables.gradient_strength(get_gradient(seq, tmean)[1])), sequences))
 
         use_timestep = timestep(max_grad)
         nsteps = isinf(use_timestep) ? 1 : Int(div(t2 - t1, use_timestep, RoundUp))
@@ -162,9 +162,9 @@ function split_into_parts(sequence::BaseSequence{N}, times::AbstractVector{<:Num
         if gradient isa NoGradient
             grad_part = EmptyPart()
         elseif gradient isa ConstantGradient
-            grad_part = ConstantPart(gradient_strength3(gradient))
+            grad_part = ConstantPart(variables.gradient_strength(gradient))
         elseif gradient isa ChangingGradient
-            grad_part = LinearPart(gradient_strength3(sequence, t1), gradient_strength3(sequence, t2))
+            grad_part = LinearPart(variables.gradient_strength(sequence, t1), variables.gradient_strength(sequence, t2))
         else
             error("Gradient waveform $gradient is not implemented in the MCMR simulator yet.")
         end
@@ -182,7 +182,7 @@ function split_into_parts(sequence::BaseSequence{N}, times::AbstractVector{<:Num
 
             time_parts = ((1:nparts) .- 0.5) .* ts .+ pulse_t1
             parts = [
-                ConstantPulse(amplitude(pulse, t), phase(pulse, t) - frequency(pulse, t) * 180 * ts, frequency(pulse, t))
+                ConstantPulse(variables.amplitude(pulse, t), variables.phase(pulse, t) - variables.frequency(pulse, t) * 180 * ts, variables.frequency(pulse, t))
                 for t in time_parts
             ]
 
@@ -202,11 +202,11 @@ end
 function get_instants_array(sequence::BaseSequence, times::AbstractVector{<:Number})
     res = Any[nothing for _ in times]
 
-    TR1 = div(times[1], TR(sequence), RoundDown)
-    TR2 = div(times[end], TR(sequence), RoundUp)
+    TR1 = div(times[1], variables.duration(sequence), RoundDown)
+    TR2 = div(times[end], variables.duration(sequence), RoundUp)
     for (t_instant, instant) in [iter_instant_gradients(sequence)..., iter_instant_pulses(sequence)...]
         for current_TR in TR1:TR2
-            t_total = t_instant + current_TR * TR(sequence)
+            t_total = t_instant + current_TR * variables.duration(sequence)
             if (t_total < times[1]) || (t_total > times[end])
                 continue
             end
