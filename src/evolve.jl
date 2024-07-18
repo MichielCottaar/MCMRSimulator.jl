@@ -71,7 +71,7 @@ function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bo
         current_TR = Int(div(get_time(snapshot), variables.duration(seq), RoundDown))
         time_in_TR = get_time(snapshot) - current_TR * variables.duration(seq)
 
-        rt = isnothing(new_readout_times) ? readout_times(seq) : new_readout_times
+        rt = isnothing(new_readout_times) ? variables.readout_times(seq) : new_readout_times
         if rt isa Number
             rt = [rt]
         end
