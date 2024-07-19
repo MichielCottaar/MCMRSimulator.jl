@@ -326,7 +326,7 @@ apply_instants!(spins::Vector{<:Spin}, index::Int, ::Nothing) = nothing
 
 function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::InstantGradient)
     Threads.@threads for spin in spins
-        new_phase = rad2deg(spin.position ⋅ variables.qval(grad))
+        new_phase = rad2deg(spin.position ⋅ variables.qvec(grad))
         spin.orientations[index].phase += new_phase
     end
 end
