@@ -105,15 +105,15 @@ end
         end
     end
     @testset "Gradient should do nothing at origin" begin
-        spin = mr.Spin(position=SA[0, 2, 2], transverse=1., phase=90.)
+        spin = mr.Spin(position=[0, 2, 2], transverse=1., phase=90.)
         @test mr.phase(spin) ≈ Float64(90.)
-        mr.Evolve.apply_instants!([spin], 1, InstantGradient(qval=SA[4, 0, 0]))
+        mr.Evolve.apply_instants!([spin], 1, InstantGradient(qvec=[4, 0, 0]))
         @test mr.phase(spin) ≈ Float64(90.)
     end
     @testset "Test instant gradient effect away from origin" begin
-        spin = mr.Spin(position=SA[2, 2, 2], transverse=1., phase=90.)
+        spin = mr.Spin(position=[2, 2, 2], transverse=1., phase=90.)
         @test mr.phase(spin) ≈ Float64(90.)
-        mr.Evolve.apply_instants!([spin], 1, InstantGradient(qval=SA[0.01, 0, 0]))
+        mr.Evolve.apply_instants!([spin], 1, InstantGradient(qvec=[0.01, 0, 0]))
         @test mr.phase(spin) ≈ Float64(90. + 0.02 * 360 / 2π)
     end
 end
