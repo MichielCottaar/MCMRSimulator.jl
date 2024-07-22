@@ -22,20 +22,30 @@ Makie.plottype(::PlotPlane, ::Snapshot) = Plot_Snapshot
 Makie.convert_arguments(::Plot_Snapshot, pp::PlotPlane, snapshot::Snapshot) = (pp, snapshot)
 
 
-function generic_kwargs(scene::Plot_Snapshot)
-    return Dict([key => scene[key] for key in [
-        :visible, :overdraw, :transparency, :fxaa, :inspectable, :depth_shift, :model, :space,
-        :marker, :markersize, :strokecolor, :strokewidth, :glowcolor, :glowwidth,
-        :interpolate,
+generic_keys = [
+    :visible, :overdraw, :transparency, :fxaa, 
+    :inspectable, :depth_shift, :model, :space,
+]
+
+specific_keys = Dict(
+    :image => [:interpolate],
+    :scatter => [:marker, :markersize, :strokecolor, :strokewidth, :glowcolor, :glowwidth],
+    :dyad => [
         :arrowsize, :arrowhead, :arrowtail, :linestyle, :lengthscale, :quality, :inspectable, :markerspace,
         :diffuse, :specular, :shininess, :ssao
-    ]])
+    ],
+)
+
+
+
+function get_kwargs(scene::Plot_Snapshot, image_type::Symbol)
+    return Dict([key => scene[key] for key in vcat(generic_keys, specific_keys[image_type])])
 end
 
 # 3-dimensional plotting
 function scatter_snapshot!(scene::Plot_Snapshot{<:Tuple{<:Snapshot}})
     @extract scene (snapshot, sequence, color)
-    kwargs = generic_kwargs(scene)
+    kwargs = get_kwargs(scene, :scatter)
     colors = @lift $color == Makie.automatic ? Utils.color.($snapshot; sequence=$sequence) : $color
     pos = @lift Makie.Point3f.(position.($snapshot))
     Makie.scatter!(scene, pos; color=colors, kwargs...)
@@ -43,7 +53,7 @@ end
 
 function dyad_snapshot!(scene::Plot_Snapshot{<:Tuple{<:Snapshot}})
     @extract scene (snapshot, sequence, color)
-    kwargs = generic_kwargs(scene)
+    kwargs = get_kwargs(scene, :dyad)
     colors = @lift $color == Makie.automatic ? Utils.color.($snapshot; sequence=$sequence) : $color
     pos = @lift Makie.Point3f.(position.($snapshot))
     directions = @lift [Makie.Point3f(orientation(get_sequence(s, $sequence))) for s in $snapshot]
@@ -60,7 +70,7 @@ function scatter_snapshot!(scene::Plot_Snapshot{<:Tuple{PlotPlane, Snapshot}})
     plot_plane = scene[1]
     snapshot = scene[2]
     @extract scene (sequence, color)
-    kwargs = generic_kwargs(scene)
+    kwargs = get_kwargs(scene, :scatter)
     colors = @lift $color == Makie.automatic ? Utils.color.($snapshot; sequence=$sequence) : $color
     pos = @lift [Makie.Point2f(project($plot_plane, position(spin))[1:2]) for spin in $snapshot]
     Makie.scatter!(scene, pos; color=colors, kwargs...)
@@ -70,7 +80,7 @@ function dyad_snapshot!(scene::Plot_Snapshot{<:Tuple{PlotPlane, Snapshot}})
     plot_plane = scene[1]
     snapshot = scene[2]
     @extract scene (sequence, color)
-    kwargs = generic_kwargs(scene)
+    kwargs = get_kwargs(scene, :dyad)
     colors = @lift $color == Makie.automatic ? Utils.color.($snapshot; sequence=$sequence) : $color
     pos = @lift [Makie.Point2f(project($plot_plane, position(spin))[1:2]) for spin in $snapshot]
     directions = @lift [Makie.Point2f(orientation(get_sequence(s, $sequence))[1:2]) for s in $snapshot]
@@ -81,7 +91,7 @@ function image_snapshot!(scene::Plot_Snapshot{<:Tuple{PlotPlane, Snapshot}})
     plot_plane = scene[1]
     snapshot = scene[2]
     @extract scene (sequence, ngrid)
-    kwargs = generic_kwargs(scene)
+    kwargs = get_kwargs(scene, :image)
     projection = @lift project_on_grid($plot_plane, get_sequence($snapshot, $sequence), $ngrid)
     @lift Makie.heatmap!(scene, $projection[1], $projection[2], Utils.color.($projection[3]); kwargs...)
 end
