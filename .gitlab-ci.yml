@@ -25,7 +25,7 @@ build_pages:
   script:
     - apt-get update
     - apt-get install -y git
-    - julia --project=docs -e 'using Pkg; Pkg.add(url="https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl.git"); Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); include("docs/make.jl")'
+    - julia --project=docs -e 'using Pkg; Pkg.add(url="https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl.git"); Pkg.add(path=pwd()); Pkg.instantiate(); include("docs/make.jl")'
   rules:
     - if:   $CI_PIPELINE_SOURCE == "merge_request_event"
       when: never
