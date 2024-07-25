@@ -51,7 +51,7 @@ Modules = [
     MCMRSimulator.Geometries.Internal.Susceptibility.Triangle,
     MCMRSimulator.Geometries.Internal.IsInsideMesh,
     MCMRSimulator.Spins,
-    MCMRSimulator.Timesteps,
+    MCMRSimulator.TimeSteps,
     MCMRSimulator.Relax,
     MCMRSimulator.Simulations,
     MCMRSimulator.Subsets,

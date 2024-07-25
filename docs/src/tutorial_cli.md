@@ -4,10 +4,12 @@ The spins in this simulation will be constrained by regularly packed cylinders.
 This tutorial will use the command line interface, which we assume is available through the `mcmr` command (see [installation instructions](@ref installation)).
 If you would prefer to interact with MCMRSimulator in Julia, you can find a tutorial doing the same analysis [here](@ref tutorial_julia).
 
-In general, running a simulation will consist of the following three steps:
-- Creating a geometry using one or more calls to `mcmr geometry` ([full description](@ref geometry))
-- Defining a sequence using `mcmr sequence` ([full description](@ref sequence))
-- Running the actual simulation using `mcmr run`
+The command line tool requires one or more MRI sequence definitions as input.
+These can be supplied as [pulseq](http://pulseq.github.io/) files, such as those produced by [MRIBuilder.jl](https://open.win.ox.ac.uk/pages/ndcn0236/mribuilder.jl/dev/).
+
+In general, running a simulation will consist of the following two steps:
+- Creating a geometry using one or more calls to `mcmr geometry` ([full description](@ref geometry)).
+- Running the actual simulation using `mcmr run`.
 We will look through each of these steps below.
 
 ## Defining the geometry
@@ -44,44 +46,21 @@ The procedure to create [`Walls`](@ref), [`Spheres`](@ref), or [`Annuli`](@ref) 
 Randomly distributed cylinders, annuli, and spheres can be created using `mcmr geometry create-random`.
 
 ## Defining the sequence
-The next step is to define a sequence (see [here](@ref sequence) for more details). 
-There are several built-in sequences available, which you can see listed by running:
-```bash
-mcmr sequence
-```
-```@eval
-import MCMRSimulator.CLI: run_main_docs
-run_main_docs("sequence")
-```
-Alternatively, you can skip this step and use a sequence defined using [pulseq](https://pulseq.github.io) instead.
+In this case we will use an idealised DWI sequence produced by [`MRIBuilder.jl`](https://open.win.ox.ac.uk/pages/ndcn0236/mribuilder.jl/dev/).
+Note that any [pulseq](http://pulseq.github.io/) file can be used instead.
+```@example
+using MRIBuilder
+seq = DWI(TE=80, bval=2., Δ=40, δ=:min)
+write_sequence("dwi.seq", seq)
 
-Here, we will create a diffusion-weighted sequence:
-```bash
-mcmr sequence dwi dwi.json --bval=2 --TR=1000 --TE=80 --B0=3
+# Optional to plot the sequence
+using CairoMakie
+f = plot_sequence(seq)
+f
+save("tutorial_cli_sequence.png", f); # hide
+nothing # hide
 ```
-```@eval
-import MCMRSimulator.CLI: run_main_docs
-run_main_docs("sequence dwi dwi.json --bval=2 --TR=1000 --TE=80 --B0=3")
-```
-
-This produces another JSON:
-```@eval
-import Markdown
-text = read("dwi.json", String)
-Markdown.parse("```json\n$(text)\n```")
-```
-This one is less readable or editable by users, but basically describes the sequence diagram.
-
-We can plot the sequence diagram using
-```bash
-mcmr sequence plot dwi.json dwi_plot.png --t1 150
-```
-```@eval
-import MCMRSimulator.CLI: run_main_docs
-run_main_docs("sequence plot dwi.json dwi_plot.png --t1 120")
-```
-![](dwi_plot.png)
-
+![](tutorial_cli_sequence.png)
 
 ## Running the simulation
 To get instructions on running the simulations, we can check the help message of `mcmr run`:
@@ -100,11 +79,11 @@ This initial state might also contain bound spins (if the `--density` flag was s
 
 The DWI sequence defined above contains a [`Readout`](@ref) object at the echo time (80 ms). By default, this is used for readout:
 ```bash
-mcmr run geometry.json dwi.json -o signal.csv
+mcmr run geometry.json dwi.seq -o signal.csv
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run geometry.json dwi.json -o signal.csv --seed=1")
+run_main_docs("run geometry.json dwi.seq -o signal.csv --seed=1")
 ```
 
 This produces the CSV file, which looks like
@@ -129,11 +108,11 @@ The columns in this file store the following information:
 
 We can also output the signal of specific subsets of spins. For example, in the following we request to separately the output for just the spins inside the cylinders and just the spins outside of the cylinders.
 ```bash
-mcmr run geometry.json dwi.json -o signal.csv --subset inside --subset outside
+mcmr run geometry.json dwi.seq -o signal.csv --subset inside --subset outside
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run geometry.json dwi.json -o signal2.csv --subset inside --subset outside --seed=2")
+run_main_docs("run geometry.json dwi.seq -o signal2.csv --subset inside --subset outside --seed=2")
 ```
 
 We can see two additional rows in the output. 
@@ -151,11 +130,11 @@ All the spins are either inside or outside the cylinders, so in this case the fi
 A more complete state of all the spins can be produced using the `--output-snapshot` flag.
 For example, the command
 ```bash
-mcmr run geometry.json dwi.json --output-snapshot snapshot.csv
+mcmr run geometry.json dwi.seq --output-snapshot snapshot.csv
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run geometry.json dwi.json --output-snapshot snapshot.csv --seed=3")
+run_main_docs("run geometry.json dwi.seq --output-snapshot snapshot.csv --seed=3")
 ```
 will produce a file named "snapshot.csv" with:
 ```@eval
@@ -169,72 +148,3 @@ Each row corresponds to the state of a single spin. In addition to all the colum
 - "x"/"y"/"z": floats; position of the spin at the time of the readout
 
 The readout times can be adjusted using the `--nTR`, `--time`, and `--skip-TR` flags.
-
-## Full diffusion-weighted MRI acquisition
-As a more involved example, we will run the simulations for a single-shell diffusion-weighted MRI sequence.
-We presume we have a set of gradient orientations for the single shell, which is stored in a file named "bvecs".
-This file contains:
-```@eval
-import Markdown
-bvecs = "1  0  0  
-0.6745407374  -0.01795697854  -0.7380192006  
-0.7236803088  0.6359626605  -0.2680266875  
--0.4393837408  0.7100360545  0.5502642362  
-0.6745407272  -0.7191533962  0.1667728998  
-0.2765856485  0.9281564296  0.2490502383  
--0.01390244774  0.8653306796  -0.5010085198  
--0.2765856448  -0.4727794531  -0.8366480561  
--0.7236803023  0.1008527628  -0.6827265487  
--0.01390247052  -0.2692289608  0.9629758502"
-open("bvecs", "w") do f
-  write(f, bvecs)
-end
-Markdown.parse("```\n$(bvecs)\n```")
-```
-
-We then define two sequences, one for the b0 and the other for the diffusion-weighted MRI:
-```bash
-mcmr sequence dwi b0.json --bval=0 --TR=1000 --TE=80 --scanner=Siemens_Prisma
-mcmr sequence dwi dwi.json --bval=2 --TR=1000 --TE=80 --scanner=Siemens_Prisma
-```
-```@eval
-import MCMRSimulator.CLI: run_main_docs
-run_main_docs("sequence dwi b0.json --bval=0 --TR=1000 --TE=80 --scanner=Siemens_Prisma")
-run_main_docs("sequence dwi dwi.json --bval=2 --TR=1000 --TE=80 --scanner=Siemens_Prisma")
-nothing
-```
-Here we set the scanner to `Siemens_Prisma`, which is used to set the B0 field as well as the maximum gradient and slew rate.
-
-Let's evaluate these sequences for some randomly distributed cylinders:
-```bash
-mcmr geometry create-random cylinders 0.6 random_cylinders.json --mean-radius=1. --var-radius=0.1 --repeats 5,5
-```
-```@eval
-import MCMRSimulator.CLI: run_main_docs
-run_main_docs("geometry create-random cylinders 0.6 random_cylinders.json --mean-radius=1. --var-radius=0.1 --repeats 5,5 --seed=4")
-```
-
-The resulting cylinder JSON file look like:
-```@eval
-import Markdown
-text = read("random_cylinders.json", String)
-Markdown.parse("```json\n$(text)\n```")
-```
-
-And, finally run the simulation:
-```bash
-mcmr run random_cylinders.json b0.json dwi.json --bvecs=bvecs -o full_dwi.csv
-```
-```@eval
-import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run random_cylinders.json b0.json dwi.json --bvecs=bvecs -o full_dwi.csv --seed=5")
-```
-
-```@eval
-import Markdown
-text = read("full_dwi.csv", String)
-Markdown.parse("```\n$(text)\n```")
-```
-
-Note that the multiple gradient orientations are only applied to the sequence with diffusion-weighted gradients, not the b0 sequence.
-So, in total we have 11 sequences, one for the b0 sequence, and 10 for each bvec for the dwi sequence.

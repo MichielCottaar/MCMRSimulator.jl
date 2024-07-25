@@ -25,7 +25,7 @@ This `Simulation` will contain information on the microstructure, how spins inte
 These different steps are described in more detail in other sections of this documentation:
 - [How to define the microstrutural geometry](@ref geometry)
 - [Controlling spin behaviour](@ref properties)
-- [Sequence generation](@ref sequence)
+For a discussion on sequence generation see [MRIBuilder.jl](https://open.win.ox.ac.uk/pages/ndcn0236/mribuilder.jl/dev/).
 
 First we will define a geometry formed of regularly packed axons.
 This is represented by a single cylinder with a radius of 1 micrometer that repeats itself every 2.5 micrometer (in both the x-, and y-direction).
@@ -45,14 +45,12 @@ nothing # hide
 More complicated geometries can be generated as described [here](@ref geometry).
 More details on plotting geometries can be found in the [`plot_geometry`](@ref) documentation.
 
-The next step is to define a sequence (see [here](@ref sequence) for more details). 
+The next step is to define a sequence using [MRIBuilder.jl](https://open.win.ox.ac.uk/pages/ndcn0236/mribuilder.jl/dev/). 
 Here we will adopt a single diffusion-weighted MRI sequence.
 ```@example tutorial
-sequence = DWI(bval=2., TR=1000, TE=80, scanner=Siemens_Prisma)  # default gradient orientation in the x-direction
-f = plot(sequence)
-hideydecorations!(f.axis)
-hidespines!(f.axis, :l, :r, :t)
-xlims!(f.axis, -10, 110)
+using MRIBuilder
+sequence = DWI(bval=2., TE=80, scanner=Siemens_Prisma)  # default gradient orientation in the x-direction
+f = plot_sequence(sequence)
 f
 save("tutorial_sequence.png", f); # hide
 nothing # hide
@@ -116,7 +114,7 @@ In addition, to the total signal, we can also get the signal associated with ind
 readout(1000, simulation, subset=[Subset(inside=true), Subset(inside=false)])
 ```
 Note that we now get two signal outputs.
-The first respresents teh signal within the cylinders, which is very close to number of spins, 
+The first respresents the signal within the cylinders, which is very close to number of spins, 
 indicating that there has been very little dephasing due to the diffusion weighting inside the cylinders.
 On the other hand, we did lose most of the signal outside of the cylinders.
 All the spins are either inside or outside the cylinders, so in this case the first row is simply the sum of the next two.

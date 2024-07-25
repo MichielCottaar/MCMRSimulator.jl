@@ -1,5 +1,5 @@
 # [Simulation properties](@id properties)
-How the spins behave is determined by the tissue [geometry](@ref geometry), the applied [MRI sequences](@ref sequence), and user-provided flags determining how the spin magnetisation evolves. Here we discuss how the spin magnetisation evolution can be affected by these user-provided flags.
+How the spins behave is determined by the tissue [geometry](@ref geometry), the applied MRI sequences, and user-provided flags determining how the spin magnetisation evolves. Here we discuss how the spin magnetisation evolution can be affected by these user-provided flags.
 
 For example, one such flag is the `diffusivity`, which can be set as a keyword argument while generating the [`Simulation`](@ref).
 ## MRI properties
