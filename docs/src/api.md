@@ -53,13 +53,13 @@ Modules = [
     MCMRSimulator.Spins,
     MCMRSimulator.TimeSteps,
     MCMRSimulator.Relax,
+    MCMRSimulator.SequenceParts,
     MCMRSimulator.Simulations,
     MCMRSimulator.Subsets,
     MCMRSimulator.Evolve,
     MCMRSimulator.Plot,
     MCMRSimulator.CLI,
     MCMRSimulator.CLI.Geometry,
-    MCMRSimulator.CLI.Sequence,
     MCMRSimulator.CLI.Run,
 ]
 ```
