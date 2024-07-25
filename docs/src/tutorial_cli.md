@@ -77,7 +77,7 @@ We can see that in addition to defining the geometry and the sequence, we can al
 The simulation is initialised by randomly distributing a number of spins (set by `--Nspins`) uniformly across a bounding box with size given by `--voxel-size`.
 This initial state might also contain bound spins (if the `--density` flag was set to a non-zero value during the geometry generation).
 
-The DWI sequence defined above contains a [`Readout`](@ref) object at the echo time (80 ms). By default, this is used for readout:
+The DWI sequence defined above contains a `MRIBuilder.SingleReadout` object at the echo time (80 ms). By default, this is used for readout:
 ```bash
 mcmr run geometry.json dwi.seq -o signal.csv
 ```

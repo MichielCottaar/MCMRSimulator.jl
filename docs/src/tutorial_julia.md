@@ -96,7 +96,7 @@ There are various ways to define when the output will be read out (as described 
 
 Here, we will illustrate various examples of using this function:
 ## Simple signal readouts
-Most sequences will contain one or more [`Readout`](@ref) objects, which define when the sequence will be read out during each repetition time (TR).
+Most sequences will contain one or more `MRIBuilder.SingleReadout` or `MRIBuilder.ADC` objects, which define when the sequence will be read out during each repetition time (TR).
 To get the signal at this time, we can simply call:
 ```@example tutorial
 readout(1000, simulation)
@@ -183,7 +183,7 @@ nothing # hide
 More details on plotting trajectories can be found in the [`plot_trajectory`](@ref) documentation.
 
 We can also use this future to plot the complete [`Snapshot`](@ref) at a specific time. 
-In this example we do not set this time explicitly, so it will default to the time of the sequence [`Readout`](@ref) as discussed above:
+In this example we do not set this time explicitly, so it will default to the time of the sequence `MRIBuilder.SingleReadout`/`MRIBuilder.ADC` as discussed above:
 ```@example tutorial
 snapshot = readout(3000, simulation, return_snapshot=true)
 pp = PlotPlane(size=2.5)
@@ -201,7 +201,7 @@ Note that object returned when `return_snapshot=true` is the same [`Snapshot`](@
 This means that it can be used as an initialisation for future simulations.
 
 One complication with this occurs when running a [`Simulation`](@ref) with multiple sequences.
-Often, these different sequences will readout at different times (because of different [`Readout`](@ref) objects and/or different TRs).
+Often, these different sequences will readout at different times.
 So, each [`Snapshot`](@ref) object returned by [`readout`](@ref) will only contain the spin magnetisation of the sequence that is readout at that particular time.
 To get a [`Snapshot`](@ref) object with the spin states for all sequences, you can use the [`evolve`](@ref) function instead.
 
