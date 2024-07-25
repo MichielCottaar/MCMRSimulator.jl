@@ -74,6 +74,13 @@ function install_cli(;
     end
 end
 
+"""
+    run_main(args=ARGS; kwargs...)
+
+Main run command for the command line interface.
+
+Any keyword arguments are passed on to `ArgParse.ArgParseSettings`.
+"""
 function run_main(args=ARGS; kwargs...)
     if length(args) == 0
         println(stderr, "No mcmr command given.\n")
