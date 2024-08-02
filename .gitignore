@@ -2,6 +2,7 @@
 *.jl.cov
 *.jl.mem
 /Manifest.toml
+/benchmark/*.json
 /docs/build/
 /docs/src/installation.md
 /lcov.info
