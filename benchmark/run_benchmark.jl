@@ -17,7 +17,7 @@ using PkgBenchmark
 
  group_baseline = benchmarkpkg(
      dirname(@__DIR__),
-     mkconfig(id = "main"),
+     mkconfig(id = "add-benchmark"),
      resultfile = joinpath(@__DIR__, "result-baseline.json"),
  )
 
