@@ -49,7 +49,7 @@ The next step is to define a sequence using [MRIBuilder.jl](https://open.win.ox.
 Here we will adopt a single diffusion-weighted MRI sequence.
 ```@example tutorial
 using MRIBuilder
-sequence = DWI(bval=2., TE=80, scanner=Siemens_Prisma)  # default gradient orientation in the x-direction
+sequence = DWI(bval=2., TE=80, TR=300, scanner=Siemens_Prisma)
 f = plot_sequence(sequence)
 f
 save("tutorial_sequence.png", f); # hide

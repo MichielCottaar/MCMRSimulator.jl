@@ -50,7 +50,7 @@ In this case we will use an idealised DWI sequence produced by [`MRIBuilder.jl`]
 Note that any [pulseq](http://pulseq.github.io/) file can be used instead.
 ```@example
 using MRIBuilder
-seq = DWI(TE=80, bval=2., Δ=40, δ=:min)
+seq = DWI(TE=80, bval=2., Δ=40, δ=:min, TR=2000)
 write_sequence("dwi.seq", seq)
 
 # Optional to plot the sequence
