@@ -12,7 +12,8 @@ geometries = Dict(
 )
 
 simulations = Dict{String, Simulation}(
-    key => Simulation(main_seq; geometry=geometry, diffusivity=2.)
+    key => Simulation(main_seq; geometry=geometry, diffusivity=2., timestep=1e-2, precision=Inf)
     for (key, geometry) in pairs(geometries)
 )
-simulations["no_diff"] = Simulation(main_seq; diffusivity=0.);
+simulations["no_diff"] = Simulation(main_seq; diffusivity=0., timestep=1e-2, precision=Inf);
+simulations["free_diff"] = Simulation(main_seq; diffusivity=0., timestep=1e-2, precision=Inf);
