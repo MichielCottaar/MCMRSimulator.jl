@@ -15,8 +15,8 @@ has_inside(::Type{Wall}) = false
 isinside(::Wall, ::SVector{1, Float64}) = false
 
 
-negative_normal = SVector{1, Float64}([-1])
-positive_normal = SVector{1, Float64}([1])
+const negative_normal = SVector{1, Float64}([-1])
+const positive_normal = SVector{1, Float64}([1])
 
 function detect_intersection(::Wall, start::AbstractVector, dest::AbstractVector)
     origin = start[1]
