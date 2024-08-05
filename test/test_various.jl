@@ -3,7 +3,7 @@
 @test length(detect_ambiguities(mr)) == 0
 
 @testset "Draw random positions and radii" begin
-    pos, rad = random_positions_radii([20., 20.], 0.7, 2; variance=0.01)
+    pos, rad = mr.random_positions_radii([20., 20.], 0.7, 2; variance=0.01)
     n_too_close = 0
     for i in 1:length(pos)
         for j in i+1:length(pos)
@@ -13,7 +13,7 @@
             end
         end
     end
-    @test iszero(n_too_close)
+    @test n_too_close == 0
 end
 @testset "Spin conversions" begin
     vec = SA[1, 0, 0]
