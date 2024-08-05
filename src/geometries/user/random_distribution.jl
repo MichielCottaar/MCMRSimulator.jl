@@ -68,49 +68,17 @@ function repel_position!(positions::AbstractVector{SVector{N, Float64}}, radii::
 
     half_box_size = box_size ./ 2
 
-    # function does_repulsed_have_a_collision(proposed_pos, index, positions)
+    function does_repulsed_have_a_collision(proposed_pos, index, positions)
 
-    #     for i in eachindex(proposed_pos)
-    #         if i != index
-    #             min_dist_sq = (radii[index] + radii[i])^2
-    #             dist_sq = sum(norm_dist.(proposed_pos .- positions[i], half_box_size) .^ 2)
-    #             if min_dist_sq >= dist_sq
-    #                 return true
-    #             end
-    #         end
-    #     end
-    #     return false
-    # end
-
-    function does_repulsed_have_a_collision(circle, index, pos)
-
-        if circle[1] > half_box_size[1] || circle[1] < -half_box_size[1]
-            return true
-        elseif circle[2] > half_box_size[2] || circle[2] < -half_box_size[2]
-            return true
-        end
-        for i in eachindex(pos)
+        for i in eachindex(positions)
             if i != index
-                other_circle = pos[i]
-                other_radius = radii[i]
-                min_dist = radii[index] + other_radius
-                x = mod((circle[1] - other_circle[1] + half_box_size[1]), box_size[1]) - half_box_size[1]
-                y = mod((circle[2] - other_circle[2] + half_box_size[2]), box_size[2]) - half_box_size[2]
-
-                if N == 2
-                    
-                    if min_dist >= sqrt(x^2 + y^2)
-                        return true
-                    end
-                elseif N == 3
-                    z = mod((circle[3] - other_circle[3] + half_box_size[3]), box_size[3]) - half_box_size[3]
-                    if min_dist >= sqrt(x^2 + y^2 + z^2)
-                        return true
-                    end
+                min_dist_sq = (radii[index] + radii[i])^2
+                dist_sq = sum(norm_dist.(proposed_pos .- positions[i], half_box_size) .^ 2)
+                if min_dist_sq >= dist_sq
+                    return true
                 end
             end
         end
-
         return false
     end
     
