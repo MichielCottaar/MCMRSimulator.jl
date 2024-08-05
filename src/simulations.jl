@@ -41,7 +41,7 @@ They can be overriden for individual objects for each [`ObstructionGroup`].
 Note that `MT_fraction` and `permeability` are internally adjusted to make their effect independent of the timestep (see [`correct_for_timestep`](@ref)).
 
 ## Timestep parameters
-These parameters (`max_timestep`, `gradient_precision`, and `rf_rotation`) control the timepoints at which the simulation is evaluated.
+These parameters (`timestep`, `precision`, `gradient_precision`, and `turtoisity_precision`) control the timepoints at which the simulation is evaluated.
 The default values should work well.
 For more details on how to adjust them, see [`TimeController`](@ref).
 
