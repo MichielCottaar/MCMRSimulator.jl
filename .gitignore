@@ -6,7 +6,4 @@
 /docs/build/
 /docs/src/installation.md
 /lcov.info
-/.julia
-/local
-/examples/annulus.jl
-/compile/mcmr
+/.vscode
