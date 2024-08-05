@@ -20,6 +20,9 @@ end
 
 
 function TimeStep(; diffusivity, geometry, timestep=Inf, turtoisity_precision=nothing, gradient_precision=nothing, precision=1.)
+    if iszero(diffusivity)
+        return TimeStep(timestep, Inf)
+    end
     return TimeStep(
         min(
             timestep,
