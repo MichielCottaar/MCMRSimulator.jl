@@ -1,6 +1,20 @@
 
 @testset "test_various.jl" begin
 @test length(detect_ambiguities(mr)) == 0
+
+@testset "Draw random positions and radii" begin
+    pos, rad = random_positions_radii([20., 20.], 0.7, 2; variance=0.01)
+    n_too_close = 0
+    for i in 1:length(pos)
+        for j in i+1:length(pos)
+            dist = norm(@. mod(pos[i] - pos[j] + 15, 30) - 15)
+            if dist < (rad[i] + rad[j])
+                n_too_close += 1
+            end
+        end
+    end
+    @test iszero(n_too_close)
+end
 @testset "Spin conversions" begin
     vec = SA[1, 0, 0]
     @test mr.SpinOrientation(vec).longitudinal ≈ 0.
