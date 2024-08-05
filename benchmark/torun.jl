@@ -8,7 +8,7 @@ geometries = Dict(
     "cylinders_myelin" => Cylinders(position=pos, radius=rad, repeats=(30., 30.), g_ratio=0.8),
     "cylinders_MT" => Cylinders(position=pos, radius=rad, repeats=(30., 30.), surface_density=1., dwell_time=30.),
     "cylinders_perm" => Cylinders(position=pos, radius=rad, repeats=(30., 30.), permeability=1.),
-    "bendy_cylinder" => BendyCylinder([[0., 0., 0.], [0., 0.5, 1.], [0.5, 0., 2.]], radius=[0.6, 0.4, 0.5], repeats=[2., 2., 3.], closed=[0, 0, 1]),
+    "bendy_cylinder" => BendyCylinder(control_point=[[0., 0., 0.], [0., 0.5, 1.], [0.5, 0., 2.]], radius=[0.6, 0.4, 0.5], repeats=[2., 2., 3.], closed=[0, 0, 1]),
 )
 
 simulations = Dict{String, Simulation}(
