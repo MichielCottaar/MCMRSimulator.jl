@@ -68,7 +68,7 @@ function repel_position!(positions::AbstractVector{SVector{N, Float64}}, radii::
 
     half_box_size = box_size ./ 2
 
-    function does_repulsed_have_a_collision(proposed_pos, index)
+    function does_repulsed_have_a_collision(proposed_pos, index, positions)
         for i in eachindex(proposed_pos)
             if i != index
                 min_dist_sq = (radii[index] + radii[i])^2
@@ -99,7 +99,7 @@ function repel_position!(positions::AbstractVector{SVector{N, Float64}}, radii::
                 end
             end
             # Abandon changes if there's overlap
-            if !does_repulsed_have_a_collision(proposed_pos, i)
+            if !does_repulsed_have_a_collision(proposed_pos, i, positions)
                 positions[i] = proposed_pos
                 success_count += 1
             end
