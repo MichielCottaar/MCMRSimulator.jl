@@ -133,7 +133,7 @@ Arguments:
 """
 function random_positions_radii(
     box_size, target_density::Real, ndim::Int;
-    distribution=nothing, mean=1., variance=1., max_iter=1000,
+    distribution=nothing, mean=1., variance=0.1, max_iter=1000,
     repulsion_strength=1e-3, max_iter_repulse=1000,
     min_radius=0.1, max_radius=Inf,
 )

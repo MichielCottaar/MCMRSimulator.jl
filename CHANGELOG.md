@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Major**: the sequence generation, I/O, and plotting has now been moved to its own package: [`MRIBuilder.jl`](https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl).
 - `random_positions_radii` now has an additional step of repulsion between the cylinders/spheres. This ensures a much smoother density distribution in the output.
+- The default variance of the distribution used to generate the radii of the cylinders/spheres in `random_positions_radii` has been decreased from 1 to 0.1 um^2.
 - The plotting in MCMRSimulator has been refactored:
     - `plot_sequence` has been moved to `MRIBuilder.jl` and now produces an actual sequence diagram
     - More keywords can be passed on to `plot_geometry`, `plot_off_resonance`, `plot_snapshot`, and `plot_trajectory`. The documentation of these functions now reflects these new keywords.
