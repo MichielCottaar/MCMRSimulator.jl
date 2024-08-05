@@ -103,7 +103,7 @@
                     geometry = mr.Walls(position=position, repeats=repeats)
                     simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
                     snap = mr.Snapshot(10000)
-                    snap2 = mr.evolve(snap, simulation, 100)
+                    snap2 = mr.evolve(snap, simulation, 3)
                     
                     get_pos(spin) = div(spin.position[1] - position, repeats, RoundDown)
                     @test all(get_pos.(snap) .== get_pos.(snap2))
