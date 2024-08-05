@@ -20,7 +20,7 @@ all_tests = [
     "various",
     "subsets",
     "plots",
-#    "cli",
+    "cli",
 ]
 
 if length(ARGS) == 0
