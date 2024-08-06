@@ -1,6 +1,6 @@
 module TimeSteps
 import ..Constants: gyromagnetic_ratio
-import ..Geometries.Internal: size_scale, max_timestep_sticking
+import ..Geometries: Internal
 
 """
     TimeStep(simulation; timestep=Inf, turtoisity_precision=3e-2 * <precision>, gradient_precision=1e-4 * <precision>, precision=1.)
@@ -19,15 +19,18 @@ mutable struct TimeStep
 end
 
 
-function TimeStep(; diffusivity, geometry, timestep=Inf, turtoisity_precision=nothing, gradient_precision=nothing, precision=1.)
+function TimeStep(; diffusivity, geometry, timestep=Inf, size_scale=nothing, turtoisity_precision=nothing, gradient_precision=nothing, precision=1.)
     if iszero(diffusivity)
         return TimeStep(timestep, Inf)
+    end
+    if isnothing(size_scale)
+        size_scale = Internal.size_scale(geometry)
     end
     return TimeStep(
         min(
             timestep,
-            (isnothing(turtoisity_precision) ? (3e-2 * precision) : turtoisity_precision) * size_scale(geometry)^2 / diffusivity,
-            max_timestep_sticking(geometry, diffusivity)
+            (isnothing(turtoisity_precision) ? (3e-2 * precision) : turtoisity_precision) * size_scale^2 / diffusivity,
+            Internal.max_timestep_sticking(geometry, diffusivity)
         ),
         (isnothing(gradient_precision) ? (1e-4 * precision) : gradient_precision) / diffusivity
     )

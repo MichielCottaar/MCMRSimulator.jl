@@ -97,6 +97,7 @@ function Simulation(
     R2=0.,
     off_resonance=0.,
     timestep=Inf,
+    size_scale=nothing,
     gradient_precision=nothing,
     turtoisity_precision=nothing,
     precision=1.
@@ -128,7 +129,7 @@ function Simulation(
         geometry,
         inside_geometry,
         susceptibility,
-        TimeStep(; diffusivity=diffusivity, geometry=geometry, timestep=timestep, gradient_precision=gradient_precision, turtoisity_precision=turtoisity_precision, precision=precision),
+        TimeStep(; diffusivity=diffusivity, geometry=geometry, timestep=timestep, gradient_precision=gradient_precision, turtoisity_precision=turtoisity_precision, precision=precision, size_scale=size_scale),
         flatten,
     )
 end
