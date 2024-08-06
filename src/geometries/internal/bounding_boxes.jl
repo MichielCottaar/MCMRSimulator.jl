@@ -50,7 +50,7 @@ upper(bb::BoundingBox{N}) where {N} = bb.upper
 function BoundingBox(bounding_boxes::Union{AbstractVector{<:BoundingBox{M}}, NTuple{N, BoundingBox{M}}}) where {N, M}
     lowers = map(lower, bounding_boxes)
     uppers = map(upper, bounding_boxes)
-    BoundingBox(
+    BoundingBox{M}(
         [minimum([l[i] for l in lowers]) for i in 1:M], 
         [maximum([u[i] for u in uppers]) for i in 1:M]
     )
