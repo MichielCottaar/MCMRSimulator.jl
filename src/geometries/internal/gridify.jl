@@ -51,7 +51,7 @@ function Grid(obstructions::Vector{BoundingBox{N}}, grid_resolution::Float64, re
     bb = BoundingBox(bb_actual.lower .- extend_by, bb_actual.upper .+ extend_by)
     sz = upper(bb) .- lower(bb)
     if isinf(grid_resolution)
-        dims = fill(1, N)
+        dims = SVector{3, Int}(fill(1, N))
     else
         dims = Int.(div.(sz, grid_resolution, RoundUp))
     end
