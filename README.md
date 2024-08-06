@@ -32,7 +32,7 @@ This software can be cited using the information in the CITATION.cff file.
 
 ## Developer documentation
 ### Release procedure
-- Check out the branch "v<major>.<minor>" (might already exist if this is a patch update)
+- Check out the branch "`v<major>.<minor>`" (might already exist if this is a patch update)
   - Rebase the main branch into the version branch
 - Update the version number in "Project.toml" and "README.md" citation section.
 - Update the "CHANGELOG.md"
