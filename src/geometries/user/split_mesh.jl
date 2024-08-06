@@ -59,8 +59,10 @@ Returns a fixed mesh, where all normals point outwards.
 """
 function fix_mesh(old_mesh::Mesh)
     new_triangles = MVector{3, Int}.(old_mesh.triangles.value)
-    for (triangle_indices, _, _) in connected_components(old_mesh.triangles.value)
-        triangles = new_triangles[triangle_indices]
+    vertex_indices = connected_indices(old_mesh.triangles.value)
+    triangle_indices = [vertex_indices[t[1]] for t in old_mesh.triangles.value]
+    for index in unique(triangle_indices)
+        triangles = new_triangles[triangle_indices .== index]
         make_normals_consistent!(triangles)
         if curvature(triangles, old_mesh.vertices.value) < 0
             # flip all triangles
@@ -82,7 +84,7 @@ Adjust the triangles to all point outwards or all point inwards.
 Assumes that all the triangles are connected (can be enforced using [`connected_components`](@ref)).
 """
 function make_normals_consistent!(triangles::AbstractVector)
-    edges(t) = [(t[1], t[2]), (t[2], t[3]), (t[3], t[1])]
+    edges(t) = ((t[1], t[2]), (t[2], t[3]), (t[3], t[1]))
     counter = Dict{Tuple{Int, Int}, Int}()
     for triangle in triangles
         for (index1, index2) in edges(triangle)
@@ -140,13 +142,11 @@ end
 
 Create a nverticesxnvertices sparse boolean matrix, which is true for any connected vertices.
 """
-function connectivity_matrix(triangles, nvertices=nothing)
+function connectivity_matrix(triangles)
     t1 = [t[1] for t in triangles]
     t2 = [t[2] for t in triangles]
     t3 = [t[3] for t in triangles]
-    if isnothing(nvertices)
-        nvertices = max(maximum(t1), maximum(t2), maximum(t3))
-    end
+    nvertices = max(maximum(t1), maximum(t2), maximum(t3))
     sparse(vcat(t1, t2, t3), vcat(t2, t3, t1), true, nvertices, nvertices)
 end
 
@@ -155,13 +155,12 @@ end
 
 Splits the mesh represented by `triangles` into a sequences of meshes that are actually internally connected.
 """
-function connected_components(triangles::AbstractVector, nvertices=nothing)
-    connected_components(SVector{3, Int}.(triangles), nvertices)
+function connected_components(triangles::AbstractVector)
+    connected_components(SVector{3, Int}.(triangles))
 end
 
-function connected_components(triangles::AbstractVector{SVector{3, Int}}, nvertices=nothing)
-    m = connectivity_matrix(triangles, nvertices)
-    vertex_indices = connected_components(m)
+function connected_components(triangles::AbstractVector{SVector{3, Int}})
+    vertex_indices = connected_indices(m)
     indices = [vertex_indices[t[1]] for t in triangles]
     function get_index(i)
         vertex_index = (1:length(vertex_indices))[vertex_indices .== i]
@@ -174,11 +173,16 @@ function connected_components(triangles::AbstractVector{SVector{3, Int}}, nverti
 end
 
 """
-    connected_components(connectivity_matrix)
+    connected_indices(connectivity_matrix)
+    connected_indices(triangles)
 
 Returns a vector of indices, where each connected component has been given a unique index (starting with 1).
+
+For the triangles, each vertex will be given an index (not each triangle).
 """
-function connected_components(m::SparseMatrixCSC)
+connected_indices(t::AbstractVector) = connected_indices(connectivity_matrix(t))
+
+function connected_indices(m::SparseMatrixCSC)
     nvertices = size(m, 1)
     not_assigned = fill(true, nvertices)
     result = fill(0, nvertices)
@@ -195,7 +199,7 @@ function connected_components(m::SparseMatrixCSC)
         while repeat
             repeat = false
             for i in 1:nvertices
-                if tocheck[i]
+                if @inbounds tocheck[i]
                     for j in m.rowval[m.colptr[i]:m.colptr[i + 1] - 1]
                         if ~new_component[j]
                             new_component[j] = true
