@@ -4,6 +4,7 @@ All notable changes to MCMRSimulator.jl will be documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+## [v0.10.0]
 ### Changed
 - **Major**: the sequence generation, I/O, and plotting has now been moved to its own package: [`MRIBuilder.jl`](https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl).
 - `random_positions_radii` now has an additional step of repulsion between the cylinders/spheres. This ensures a much smoother density distribution in the output.
@@ -129,7 +130,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added citation instructions
 
 
-[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.9.0...main
+[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.10.0...main
+[v0.10.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.9.0...v0.10.0
 [v0.9.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.8.0...v0.9.0
 [v0.8.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.7.1...v0.8.0
 [v0.7.1]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.7.0...v0.7.1
