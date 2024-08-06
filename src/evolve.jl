@@ -144,6 +144,9 @@ If undefined `new_time` will be set to the start of the next TR.
 function evolve(spins, simulation::Simulation{N}, new_time=nothing; bounding_box=500) where {N}
     snapshot = _to_snapshot(spins, simulation, bounding_box)
     if isnothing(new_time)
+        if iszero(N)
+            error("Simulation time needs to be set explicitly for simulations that do not contain any sequences.")
+        end
         first_TR = variables.duration(simulation.sequences[1])
         if !all(variables.duration(s) ≈ first_TR for s in simulation.sequences)
             error("Cannot evolve snapshot for a single TR, because the simulation contains sequences with different TRs. Please set a `new_time` explicitly.")
