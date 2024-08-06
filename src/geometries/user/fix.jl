@@ -3,7 +3,7 @@ import LinearAlgebra: I, transpose
 import StaticArrays: SVector
 import ...Internal: FixedObstructionGroup, FixedGeometry, Internal, get_quadrant, Grid, isinside_grid, FixedMesh
 import ..Obstructions: ObstructionType, ObstructionGroup, Walls, Cylinders, Spheres, Annuli, Mesh, fields, isglobal, BendyCylinder, value_as_vector
-import ..SplitMesh: split_mesh, fix_mesh
+import ..SplitMesh: fix_mesh
 
 """
     fix(user_geometry; permeability=0., density=0., dwell_time=0., relaxivity=0.)
