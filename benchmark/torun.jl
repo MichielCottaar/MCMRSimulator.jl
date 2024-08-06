@@ -11,6 +11,13 @@ geometries = Dict(
     "bendy_cylinder" => BendyCylinder(control_point=[[0., 0., 0.], [0., 0.5, 1.], [0.5, 0., 2.]], radius=[0.6, 0.4, 0.5], repeats=[2., 2., 3.], closed=[0, 0, 1]),
 )
 
+mesh_fn = "/Users/michielcottaar/Work/data/microstructure-meshes/from_Palombo/cell_tissue/cell_tissue_replicated_kappa6.ply"
+if isfile(mesh_fn)
+    geometries["mesh"] = load_mesh(mesh_fn)
+    geometries["mesh"].repeats = (40, 40, 40)
+    geometries["mesh_no_repeats"] = load_mesh(mesh_fn)
+end
+
 simulations = Dict{String, Simulation}(
     key => Simulation(main_seq; geometry=geometry, diffusivity=2., timestep=1e-2, precision=Inf)
     for (key, geometry) in pairs(geometries)
