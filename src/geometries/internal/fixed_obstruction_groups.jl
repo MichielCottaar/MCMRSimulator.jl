@@ -241,11 +241,11 @@ function detect_intersection(g::FixedObstructionGroup{N}, start::SVector{3}, des
 end
 
 function detect_intersection_non_repeating(g::FixedObstructionGroup{N}, start::SVector{N}, dest::SVector{N}, prev_index::Int, prev_inside::Bool) where {N}
-    if prod(size(g.grid.indices)) == 1
-        return detect_intersection_loop(g, start, dest, prev_index, prev_inside, zero(SVector{N, Int}) .+ 1)
-    end
     if ~could_intersect(BoundingBox(g.grid), start, dest)
         return (0, empty_intersection)
+    end
+    if prod(size(g.grid.indices)) == 1
+        return detect_intersection_loop(g, start, dest, prev_index, prev_inside, zero(SVector{N, Int}) .+ 1)
     end
     found_intersection = empty_obstruction_intersections[N]
     found_intersection_index = zero(Int32)
