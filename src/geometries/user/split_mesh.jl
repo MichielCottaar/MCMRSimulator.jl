@@ -72,7 +72,7 @@ function make_normals_consistent!(triangles::AbstractVector)
                 for (index1, index2) in edges(triangle)
                     norm_edge = index2 > index1 ? (index1, index2) : (index2, index1)
                     if counter[norm_edge] != 2
-                    continue
+                        continue
                     end
                     if (index1, index2) in edges_seen
                         @assert flip_required in (-1, 1)
