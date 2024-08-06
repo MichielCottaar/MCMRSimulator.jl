@@ -1,0 +1,65 @@
+[VERSION]
+major 1
+minor 4
+revision 0
+
+
+[DEFINITIONS]
+Name DiffusionSpinEcho
+AdcRasterTime 1.0e-9
+BlockDurationRaster 1.0e-9
+RadiofrequencyRasterTime 1.0e-9
+GradientRasterTime 1.0e-9
+TotalDuration 2.0000000000000795
+B0 1.5
+
+
+[BLOCKS]
+1 0 0 0 0 0 0 1
+2 0 0 0 0 0 0 0
+3 23510783 0 1 0 0 0 0
+4 16489217 0 0 0 0 0 0
+5 0 0 0 0 0 0 2
+6 0 0 0 0 0 0 0
+7 23510783 0 2 0 0 0 0
+8 16489217 0 0 0 0 0 0
+9 0 0 0 0 0 1 0
+10 1920000000 0 0 0 0 0 0
+
+
+[GRADIENTS]
+1 1.7030653902114754 1 2 0
+2 1.7030653903667978 1 2 0
+
+
+[ADC]
+1 0 0.0 0 0.0 0.0
+
+
+[EXTENSIONS]
+1 1 1 0
+2 1 2 0
+
+extension InstantPulse 1
+1 0.0 90.0 0.0
+2 0.0 180.0 0.0
+
+
+
+[SHAPES]
+
+shape_id 1
+num_samples 4
+0.0
+1.0
+1.0
+0.0
+
+shape_id 2
+num_samples 4
+0.0
+0.00023529519774819196
+0.02327548781080548
+0.023510783008553676
+
+

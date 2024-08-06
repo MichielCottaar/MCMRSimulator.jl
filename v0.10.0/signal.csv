@@ -1,0 +1,2 @@
+sequence,sequence_index,bvec,TR,readout,subset,nspins,longitudinal,transverse,phase,Sx,Sy
+dwi.seq,1,0,1,1,0,10000,-4.440892098500626e-12,10000.0,90.0,0.0,10000.0
