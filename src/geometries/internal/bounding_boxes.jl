@@ -24,7 +24,6 @@ struct BoundingBox{N}
     lower :: SVector{N, Float64}
     upper :: SVector{N, Float64}
     function BoundingBox(lower::SVector{N, Float64}, upper::SVector{N, Float64}) where {N}
-        @assert all(upper .>= lower)
         new{N}(lower, upper)
     end
 end
