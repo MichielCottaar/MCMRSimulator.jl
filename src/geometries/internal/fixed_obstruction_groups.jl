@@ -12,7 +12,7 @@ Methods:
 module FixedObstructionGroups
 
 import Random: rand
-import LinearAlgebra: inv, transpose, norm, cross, ⋅
+import LinearAlgebra: inv, transpose, norm, cross, ⋅, I
 import StaticArrays: SVector, SMatrix
 import ..Obstructions:
     FixedObstruction, has_inside, isinside, obstruction_type, random_surface_positions,
@@ -55,6 +55,7 @@ struct FixedObstructionGroup{
     # rotations
     rotation :: SMatrix{3, N, Float64, K}
     inv_rotation :: SMatrix{N, 3, Float64, K}
+    identity_rotation :: Bool
 
     # obstruction indices
     grid :: Grid{N}
@@ -70,10 +71,12 @@ struct FixedObstructionGroup{
     # empty vector if this is not a mesh
     vertices :: Vector{SVector{3, Float64}}
     function FixedObstructionGroup(obstructions, parent_index, original_index, rotation, grid, bounding_boxes, volume, surface, vertices)
+        identity_rotation = size(rotation, 2) == 3 && all(rotation .≈ I(3))
+
         new{
             size(rotation, 2), grid.repeating, eltype(obstructions),
             typeof(bounding_boxes), typeof(volume), typeof(surface), 3 * size(rotation, 2)
-        }(obstructions, parent_index, original_index, rotation, transpose(rotation), grid, bounding_boxes, volume, surface, vertices)
+        }(obstructions, parent_index, original_index, rotation, transpose(rotation), identity_rotation, grid, bounding_boxes, volume, surface, vertices)
     end
 end
 
@@ -91,8 +94,8 @@ repeating(::Type{<:FixedObstructionGroup{N, R}}) where {N, R} = R
 
 obstruction_type(::Type{<:FixedObstructionGroup{N, R, O}}) where {N, R, O} = obstruction_type(O)
 
-rotate_from_global(g::FixedObstructionGroup, pos::SVector{3}) = g.inv_rotation * pos
-rotate_to_global(g::FixedObstructionGroup{N}, pos::SVector{N}) where {N} = g.rotation * pos
+rotate_from_global(g::FixedObstructionGroup, pos::SVector{3}) = g.identity_rotation ? pos : g.inv_rotation * pos
+rotate_to_global(g::FixedObstructionGroup{N}, pos::SVector{N}) where {N} = g.identity_rotation ? pos : g.rotation * pos
 
 has_inside(::Type{<:FixedObstructionGroup{N, R, O}}) where {N, R, O} = has_inside(O)
 has_inside(::Type{<:FixedMesh}) = true
