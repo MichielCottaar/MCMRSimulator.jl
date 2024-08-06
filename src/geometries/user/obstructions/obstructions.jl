@@ -5,7 +5,7 @@ include("obstruction_groups.jl")
 import StaticArrays: MVector
 import .ObstructionTypes: ObstructionType, fields
 import .Fields: Field, FieldValue, isglobal, description, value_as_vector
-import .ObstructionGroups: ObstructionGroup, IndexedObstruction, key_value_pairs
+import .ObstructionGroups: ObstructionGroup, IndexedObstruction, key_value_pairs, nvolumes
 import ....Methods: get_rotation
 
 function field_to_docs(key::Symbol, field_value::FieldValue{T}) where {T}
@@ -46,13 +46,14 @@ for obstruction_type in (
             Field{Float64}(:radius, "Radius of the cylinder.", required=true), 
         ]),
     ObstructionType(
-        :Triangle; plural=:Mesh, ndim=3, include_shift=false, fields=[
+        :Triangle; plural=:Mesh, ndim=3, include_shift=false, group_volumes=true, fields=[
             Field{MVector{3, Int}}(:triangles, "Each triangle is defined by 3 vertices into the mesh.", required=true),
             Field{Vector{MVector{3, Float64}}}(:vertices, "Positions of the corners of the triangular mesh.", required=true, only_group=true),
             Field{Bool}(:myelin, "Whether the mesh is myelinated.", false, required=true), 
             Field{Float64}(:susceptibility_iso, "Isotropic component of the myelin susceptibility (in ppm).", -0.1),
             Field{Float64}(:susceptibility_aniso, "Ansotropic component of the myelin susceptibility (in ppm).", -0.1),
             Field{Float64}(:lorentz_radius, "Only compute field explicitly for triangles with this Lorentz radius.", 5.),
+            Field{Int}(:components, "Which component this triangle belongs to. If not provided explicitly, this will be determined based on connectivity.", required=false),
         ]),
     ObstructionType(
         :Ring; plural=:BendyCylinder, ndim=3, include_shift=false, fields=[

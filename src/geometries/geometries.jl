@@ -13,6 +13,6 @@ import .User:
     Annulus, Annuli,
     Triangle, Mesh,
     Ring, BendyCylinder,
-    load_mesh, random_positions_radii, split_mesh,
+    load_mesh, random_positions_radii, nvolumes,
     write_geometry, read_geometry
 end

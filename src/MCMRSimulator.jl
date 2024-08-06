@@ -59,10 +59,10 @@ import .Geometries:
     Wall, Walls,
     Sphere, Spheres,
     Ring, BendyCylinder,
-    Triangle, Mesh, split_mesh,
+    Triangle, Mesh, nvolumes,
     load_mesh, fix, fix_susceptibility,
     random_positions_radii, write_geometry, read_geometry
-export Annuli, Cylinders, Walls, Spheres, Mesh, load_mesh, fix, random_positions_radii, split_mesh, BendyCylinder
+export Annuli, Cylinders, Walls, Spheres, Mesh, load_mesh, fix, random_positions_radii, BendyCylinder
 
 import .Geometries.Internal: BoundingBox, FixedGeometry, surface_relaxivity, surface_density, dwell_time, permeability
 export BoundingBox

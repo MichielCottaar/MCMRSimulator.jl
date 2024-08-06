@@ -118,6 +118,9 @@ function Base.setproperty!(v::FieldValue{T}, s::Symbol, value) where {T}
         if v.field.only_group && ~isglobal(v, value)
             error("Cannot set an array of values to $(v.field), which expects to be the same across obstructions.")
         end
+        if v.n_obstructions > 0 && ~isglobal(v, value) && length(value) != v.n_obstructions
+            error("Expected one value for each of the $(v.n_obstructions) obstructions to $(v.field), not $(length(value)) values.")
+        end
     end
     setfield!(v, s, value)
 end

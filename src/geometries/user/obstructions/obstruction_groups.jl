@@ -51,6 +51,24 @@ function Base.setproperty!(io::IndexedObstruction, s::Symbol, value)
     io.group.field_values[s][io.index] = value
 end
 
+"""
+    nvolumes(group)
+
+For any `ObstructionType` with group_volumes, this computes the number of distinct volumes.
+
+This is mainly used to compute the number of distinct components in a mesh.
+"""
+function nvolumes(group::ObstructionGroup)
+    if length(group.type.volumes) == 0
+        error("Getting the number of volumes is not defiend for $(group.type)")
+    end
+    if group.type.group_volumes
+        return 1
+    else
+        return group.n_obstructions
+    end
+end
+
 function ObstructionGroup(type::ObstructionType; number=nothing, kwargs...)
 
     (unique_keys, field_values) = key_value_pairs(type, isnothing(number) ? 0 : number)
@@ -61,21 +79,32 @@ function ObstructionGroup(type::ObstructionType; number=nothing, kwargs...)
     if isnothing(number)
         # try to guess the number of obstructions
         for fv in values(field_values)
+            if fv.field.per_volume && type.group_volumes
+                continue
+            end
             if ~isglobal(fv)
+                if !isnothing(number) && length(fv.value) != number
+                    error("Inconsistent number of obstructions inferred when constructing $(type). Are there $number or $(length(fv.value)) elements?")
+                end
                 number = length(fv.value)
-                println("There are $number $(type) based on values for $(fv.field)")
-                break
             end
         end
         if isnothing(number)
             number = 1
         end
-        for fv in values(field_values)
-            fv.n_obstructions = number
-        end
     end
 
     group = ObstructionGroup(type, field_values, unique_keys, number)
+    for fv in values(field_values)
+        if fv.field.per_volume && type.group_volumes
+            fv.n_obstructions = nvolumes(group)
+        else
+            fv.n_obstructions = number
+        end
+        if ~isglobal(fv) && (length(fv.value) != fv.n_obstructions)
+            error("Incorrect number of values for $fv. Expected $(fv.n_obstructions); got $(length(fv.value)).")
+        end
+    end
     return group
 end
 

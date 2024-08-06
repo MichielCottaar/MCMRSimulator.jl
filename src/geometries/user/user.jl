@@ -12,14 +12,13 @@ include("json.jl")
 include("to_mesh.jl")
 import .Fix: fix
 import .FixSusceptibility: fix_susceptibility
-import .Obstructions: ObstructionGroup, IndexedObstruction,
+import .Obstructions: ObstructionGroup, IndexedObstruction, nvolumes,
     Wall, Walls,
     Cylinder, Cylinders,
     Sphere, Spheres,
     Annulus, Annuli,
     Triangle, Mesh,
     Ring, BendyCylinder
-import .SplitMesh: split_mesh
 import .RandomDistribution: random_positions_radii
 import .LoadMesh: load_mesh
 import .JSON: write_geometry, read_geometry

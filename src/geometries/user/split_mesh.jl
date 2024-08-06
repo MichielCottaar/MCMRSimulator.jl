@@ -9,47 +9,7 @@ import SparseArrays: sparse, SparseMatrixCSC
 import LinearAlgebra: norm, ⋅
 import Statistics: mean
 import ...Internal.Obstructions.Triangles: normal, curvature
-import ..Obstructions: Mesh, isglobal
-
-"""
-    split_mesh(mesh::Mesh)
-
-Returns a vector of meshes that have been adjusted in the following ways:
-1. the complete mesh has been split into its connected components.
-2. the order of the indices in the triangles has been fixed, so that all normals point outwards.
-"""
-function split_mesh(old_mesh::Mesh)
-    result = Mesh[]
-    for (triangle_indices, vertex_indices, triangles) in connected_components(old_mesh.triangles.value)
-        make_normals_consistent!(triangles)
-        if curvature(triangles, old_mesh.vertices.value[vertex_indices]) < 0
-            # flip all triangles
-            for t in triangles
-                v = t[1]
-                t[1] = t[2]
-                t[2] = v
-            end
-        end
-        kwargs = Dict{Symbol, Any}()
-        for key in old_mesh.unique_keys
-            if key == :triangles
-                kwargs[key] = triangles
-            elseif key == :vertices
-                kwargs[key] = old_mesh.vertices.value[vertex_indices]
-            else
-                fv = getproperty(old_mesh, key)
-                if isglobal(fv)
-                    kwargs[key] = fv.value
-                else
-                    kwargs[key] = fv.value[triangle_indices]
-                end
-            end
-        end
-
-        push!(result, Mesh(; number=length(triangles), kwargs...))
-    end
-    return result
-end
+import ..Obstructions: Mesh, isglobal, nvolumes
 
 
 """
@@ -59,9 +19,8 @@ Returns a fixed mesh, where all normals point outwards.
 """
 function fix_mesh(old_mesh::Mesh)
     new_triangles = MVector{3, Int}.(old_mesh.triangles.value)
-    vertex_indices = connected_indices(old_mesh.triangles.value)
-    triangle_indices = [vertex_indices[t[1]] for t in old_mesh.triangles.value]
-    for index in unique(triangle_indices)
+    triangle_indices = components(old_mesh)
+    for index in unique(components(old_mesh))
         triangles = new_triangles[triangle_indices .== index]
         make_normals_consistent!(triangles)
         if curvature(triangles, old_mesh.vertices.value) < 0
@@ -150,27 +109,6 @@ function connectivity_matrix(triangles)
     sparse(vcat(t1, t2, t3), vcat(t2, t3, t1), true, nvertices, nvertices)
 end
 
-"""
-    connected_components(triangles)
-
-Splits the mesh represented by `triangles` into a sequences of meshes that are actually internally connected.
-"""
-function connected_components(triangles::AbstractVector)
-    connected_components(SVector{3, Int}.(triangles))
-end
-
-function connected_components(triangles::AbstractVector{SVector{3, Int}})
-    vertex_indices = connected_indices(m)
-    indices = [vertex_indices[t[1]] for t in triangles]
-    function get_index(i)
-        vertex_index = (1:length(vertex_indices))[vertex_indices .== i]
-        triangle_index = (1:length(indices))[indices .== i]
-        new_index = zeros(Int, length(vertex_indices))
-        new_index[vertex_indices .== i] = 1:length(vertex_index)
-        return (triangle_index, vertex_index, MVector{3, Int}.([(new_index[t[1]], new_index[t[2]], new_index[t[3]]) for t in triangles[indices .== i]]))
-    end
-    return get_index.(1:maximum(indices))
-end
 
 """
     connected_indices(connectivity_matrix)
@@ -222,5 +160,23 @@ function connected_indices(m::SparseMatrixCSC)
     @assert all(result .> 0)
     return result
 end
+
+
+"""
+    components(mesh)
+
+Returns which component each element in the mesh belongs to.
+
+If not set explicitly (using `mesh.components=[...]`), it will be computed once based on the connectivity structure.
+"""
+function components(mesh::Mesh)
+    if isnothing(mesh.components.value)
+        vertex_indices = connected_indices(mesh.triangles.value)
+        mesh.components.value = [vertex_indices[t[1]] for t in mesh.triangles.value]
+    end
+    return mesh.components.value
+end
+
+nvolumes(mesh::Mesh) = maximum(components(mesh))
 
 end
