@@ -165,7 +165,7 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
         original_index,
         rotation,
         grid,
-        user_obstruction.use_boundingbox.value ? bounding_boxes : nothing,
+        user_obstructions.use_boundingbox.value ? bounding_boxes : nothing,
         volume,
         surface,
         vertices
@@ -178,7 +178,7 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
             original_index,
             rotation,
             grid,
-            user_obstruction.use_boundingbox.value ? bounding_boxes : nothing,
+            user_obstructions.use_boundingbox.value ? bounding_boxes : nothing,
             volume,
             surface,
             vertices
