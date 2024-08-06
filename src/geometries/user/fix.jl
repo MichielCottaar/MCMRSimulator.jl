@@ -3,7 +3,7 @@ import LinearAlgebra: I, transpose
 import StaticArrays: SVector
 import ...Internal: FixedObstructionGroup, FixedGeometry, Internal, get_quadrant, Grid, isinside_grid, FixedMesh
 import ..Obstructions: ObstructionType, ObstructionGroup, Walls, Cylinders, Spheres, Annuli, Mesh, fields, isglobal, BendyCylinder, value_as_vector
-import ..SplitMesh: split_mesh
+import ..SplitMesh: split_mesh, fix_mesh
 
 """
     fix(user_geometry; permeability=0., density=0., dwell_time=0., relaxivity=0.)
@@ -84,7 +84,7 @@ end
 
 
 function fix_type(mesh::Mesh, index::Int, original_index::Int; kwargs...)
-    [fix_type_single(m, index + i - 1, original_index; kwargs...) for (i, m) in enumerate(split_mesh(mesh))]
+    return fix_type_single(fix_mesh(mesh), index, original_index; kwargs...)
 end
 
 function fix_type_single(mesh::Mesh, index::Int, original_index::Int; kwargs...)

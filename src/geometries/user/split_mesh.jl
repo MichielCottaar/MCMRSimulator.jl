@@ -53,6 +53,29 @@ end
 
 
 """
+    fix_mesh(mesh)
+
+Returns a fixed mesh, where all normals point outwards.
+"""
+function fix_mesh(old_mesh::Mesh)
+    new_triangles = MVector{3, Int}.(old_mesh.triangles.value)
+    for (triangle_indices, _, _) in connected_components(old_mesh.triangles.value)
+        triangles = new_triangles[triangle_indices]
+        make_normals_consistent!(triangles)
+        if curvature(triangles, old_mesh.vertices.value) < 0
+            # flip all triangles
+            for t in triangles
+                v = t[1]
+                t[1] = t[2]
+                t[2] = v
+            end
+        end
+    end
+    kwargs = Dict{Symbol, Any}(key => getproperty(old_mesh, key).value for key in old_mesh.unique_keys)
+    return Mesh(; number=length(new_triangles), kwargs..., triangles=new_triangles)
+end
+
+"""
     make_normals_consistent!(triangles)
 
 Adjust the triangles to all point outwards or all point inwards.
@@ -148,14 +171,6 @@ function connected_components(triangles::AbstractVector{SVector{3, Int}}, nverti
         return (triangle_index, vertex_index, MVector{3, Int}.([(new_index[t[1]], new_index[t[2]], new_index[t[3]]) for t in triangles[indices .== i]]))
     end
     return get_index.(1:maximum(indices))
-end
-
-function get_index(i, triangles, indices, vertex_indices)
-    vertex_index = (1:length(vertex_indices))[vertex_indices .== i]
-    triangle_index = (1:length(indices))[indices .== i]
-    new_index = zeros(Int, length(vertex_indices))
-    new_index[vertex_indices .== i] = 1:length(vertex_index)
-    return (triangle_index, vertex_index, [(new_index[t[1]], new_index[t[2]], new_index[t[3]]) for t in triangles[indices .== i]])
 end
 
 """
