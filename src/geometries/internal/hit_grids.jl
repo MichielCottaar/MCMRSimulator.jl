@@ -327,20 +327,13 @@ function grid_inside_mesh_internal(grid::HitGrid{3, IndexTriangle}, repeats, ver
         end
 
         triangle_index = Int32(nn(tree, centre)[1])
-        new_index = triangle_index
-        ntry = 0
-        while ~iszero(new_index)
+        (new_index, _) = detect_intersection_grid(grid, centre, mean_triangles[triangle_index], triangle_index, true, vertices)
+        if ~iszero(new_index)
             triangle_index = new_index
-            (new_index, _) = detect_intersection_grid(grid, mean_triangles[triangle_index], centre, triangle_index, true, vertices)
-            ntry += 1
-            if ntry > 100
-                break
-                error("Grid voxel centre $centre falls exactly on the edge between triangles. Please shift the mesh a tiny amount to fix this.")
-            end
         end
         inpr = (centre - mean_triangles[triangle_index]) ⋅ normal(FullTriangle(triangles[triangle_index], vertices))
         if iszero(inpr)
-            @warn "Grid voxel centre falls exactly on the mesh element. This will lead to erroneous estimations of what is the inside of a grid. You might want to shift the mesh a tiny amount."
+            @warn "Grid voxel centre falls exactly on a mesh element. This will lead to erroneous estimations of what is the inside of a grid. You might want to shift the mesh a tiny amount."
         end
         inside_arr[index...] = inpr < 0
     end
