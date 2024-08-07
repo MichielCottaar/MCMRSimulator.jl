@@ -271,7 +271,7 @@ function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:GeometryLike}})
 
     function plot_group(group, color)
         vert = GeometryBasics.Point{3, Float64}.(group.args[1])
-        tri = [GeometryBasics.TriangleFace{Int}(o.indices) for o in group.obstructions]
+        tri = [GeometryBasics.TriangleFace{Int}(o.indices) for o in obstructions(group)]
         patch_color = @lift $default_color == Makie.automatic ? color : $default_color
         geometry_mesh = GeometryBasics.Mesh(vert, tri)
         Makie.mesh!(scene, geometry_mesh; color=patch_color, kwargs...)
