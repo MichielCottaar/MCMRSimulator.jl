@@ -1,8 +1,11 @@
 module HitGrids
 
 import StaticArrays: SVector
-import ..BoundingBoxes: BoundingBox, lower, upper
-import ..Obstructions: FixedObstruction, detect_intersection, ObstructionIntersection, isinside
+import Statistics: mean
+import NearestNeighbors: KDTree, nn
+import LinearAlgebra: ⋅
+import ..BoundingBoxes: BoundingBox, lower, upper, could_intersect
+import ..Obstructions: FixedObstruction, detect_intersection, ObstructionIntersection, isinside, empty_obstruction_intersections
 import ..Obstructions.Triangles: normal, detect_intersection_partial, IndexTriangle, FullTriangle
 import ..RayGridIntersection: ray_grid_intersections
 
@@ -214,7 +217,7 @@ function detect_intersection_grid(grid::HitGrid{N}, start::SVector{N, Float64}, 
             end
         end
         valid_voxel = true
-        (intersection_index, intersection) = detect_intersection_inner(g, start, dest, prev_index, prev_inside, voxel .+ 1, args...)
+        (intersection_index, intersection) = detect_intersection_inner(grid, start, dest, prev_index, prev_inside, voxel .+ 1, args...)
         if intersection.distance < found_intersection.distance
             found_intersection = intersection
             found_intersection_index = intersection_index
@@ -226,7 +229,7 @@ function detect_intersection_grid(grid::HitGrid{N}, start::SVector{N, Float64}, 
     return (found_intersection_index, found_intersection)
 end
 
-function detect_intersection_inner(grid::HitGrid{N, O}, start::SVector{N, Float64}, dest::SVector{N, Float64}, prev_index::Int32, prev_inside::Bool, voxel::SVector{3, Int32}, args...) where {N, O}
+function detect_intersection_inner(grid::HitGrid{N, O}, start::SVector{N, Float64}, dest::SVector{N, Float64}, prev_index::Int32, prev_inside::Bool, voxel::SVector{3, Int}, args...) where {N, O}
     intersection_index = zero(Int32)
     intersection = empty_obstruction_intersections[N]
     for packed in grid.indices[voxel...]
@@ -269,20 +272,21 @@ function grid_inside_mesh(grid::HitGrid{3, IndexTriangle}, vertices::AbstractVec
     tree = KDTree(mean_triangles)
     inside_arr = zeros(Bool, size(grid.indices))
     for index in Tuple.(eachindex(IndexCartesian(), inside_arr))
-        centre = @. (index - 0.5) * mesh.grid.resolution + mesh.grid.lower
+        centre = (@. (index - 0.5) / grid.inv_resolution) .+ lower(grid)
 
         triangle_index = Int32(nn(tree, centre)[1])
         new_index = triangle_index
         ntry = 0
         while ~iszero(new_index)
             triangle_index = new_index
-            (new_index, _) = detect_intersection_grid(grid, mean_triangles[triangle_index], centre, triangle_index, true)
+            (new_index, _) = detect_intersection_grid(grid, mean_triangles[triangle_index], centre, triangle_index, true, vertices)
             ntry += 1
             if ntry > 1000
+                break
                 error("Grid voxel centre $centre falls exactly on the edge between triangles. Please shift the mesh a tiny amount to fix this.")
             end
         end
-        inpr = (centre - mean_triangles[triangle_index]) ⋅ normal(FullTriangle(triangles[triangle_index], mesh.vertices))
+        inpr = (centre - mean_triangles[triangle_index]) ⋅ normal(FullTriangle(triangles[triangle_index], vertices))
         if iszero(inpr)
             @warn "Grid voxel centre falls exactly on the mesh element. This will lead to erroneous estimations of what is the inside of a grid. You might want to shift the mesh a tiny amount."
         end

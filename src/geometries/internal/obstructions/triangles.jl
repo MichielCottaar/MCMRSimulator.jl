@@ -11,7 +11,8 @@ abstract type Triangle <: FixedObstruction{3} end
 
 
 struct IndexTriangle <: Triangle
-    indices :: SVector{3, Int}
+    indices :: SVector{3, Int32}
+    component :: Int32
 end
 
 struct FullTriangle <: Triangle
@@ -24,7 +25,7 @@ Base.getindex(t::FullTriangle, i::Int) = (t.a, t.b, t.c)[i]
 
 const Vertices = Vector{SVector{3, Float64}}
 
-function FullTriangle(indices::SVector{3, Int}, vertices::Vertices)
+function FullTriangle(indices::SVector{3, <:Integer}, vertices::Vertices)
     FullTriangle(
         vertices[indices[1]],
         vertices[indices[2]],
@@ -92,6 +93,10 @@ end
 
 function detect_intersection(triangle::FullTriangle, start::SVector{N}, dest::SVector{N}, inside=nothing) where {N}
     return detect_intersection_partial(triangle, start, dest, inside)[1]
+end
+
+function detect_intersection(triangle::IndexTriangle, start::SVector{N}, dest::SVector{N}, vertices::AbstractVector, inside=nothing) where {N}
+    return detect_intersection(FullTriangle(triangle, vertices), start, dest, inside)
 end
 
 """
