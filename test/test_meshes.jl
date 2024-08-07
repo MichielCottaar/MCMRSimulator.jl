@@ -50,18 +50,19 @@ end
 end
 
 @testset "Computing inside for mesh" begin
-    for grid_resolution in (0.1, 0.5, Inf)
-        for repeats in (nothing, [1.5, 1.5, 1.5])
-            mesh = box_mesh(center=[-0.11, -0.11, -0.11], grid_resolution=grid_resolution, repeats=repeats)
-            @test mr.isinside(mesh, [0, 0, 0]) == 1
-            @test mr.isinside(mesh, [-0.5, 0, 0]) == 1
-            @test mr.isinside(mesh, [-0.5, 0, -0.5]) == 1
-            @test mr.isinside(mesh, [-0.5, 0, 0.5]) == 0
-            @test mr.isinside(mesh, [0.5, 0, 0.5]) == 0
-            @test mr.isinside(mesh, [0.7, 0, -0.7]) == 0
+    for center in ([0, 0, 0], [-0.11, 0, 0.], [-0.11, -0.11, -0.11])
+        for grid_resolution in (0.1, 0.5, Inf)
+            for repeats in (nothing, [1.5, 1.5, 1.5])
+                mesh = box_mesh(center=[-0.11, -0.11, -0.11], grid_resolution=grid_resolution, repeats=repeats)
+                @test mr.isinside(mesh, [0, 0, 0]) == 1
+                @test mr.isinside(mesh, [-0.5, 0, 0]) == 1
+                @test mr.isinside(mesh, [-0.5, 0, -0.5]) == 1
+                @test mr.isinside(mesh, [-0.5, 0, 0.5]) == 0
+                @test mr.isinside(mesh, [0.5, 0, 0.5]) == 0
+                @test mr.isinside(mesh, [0.7, 0, -0.7]) == 0
+            end
         end
     end
-    @test_throws "Grid voxel centre " mr.fix(box_mesh(center=[0, 0, 0], repeats=[1.5, 1.5, 1.5], grid_resolution=0.5))
 end
 if false
     @testset "1x1x1 grid mesh intersection" begin
