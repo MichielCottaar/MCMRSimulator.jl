@@ -4,7 +4,7 @@ import MRIBuilder: B0
 import StaticArrays: SVector, SMatrix
 import LinearAlgebra: norm
 import .....Constants: gyromagnetic_ratio
-import ...HitGrids: HitGrid, get_objects
+import ...HitGrids: HitGrid, get_objects, obstructions
 import ...Obstructions: FixedObstruction 
 import ...BoundingBoxes: BoundingBox 
 import ..Base: BaseSusceptibility, single_susceptibility, single_susceptibility_gradient
@@ -103,8 +103,10 @@ Internally, computed for each susceptibility sources using [`single_susceptibili
 The maximum out of these is returned.
 """
 function off_resonance_gradient(parent::ParentSusceptibility, B0)
-    return maximum(single_susceptibility_gradient.(parent.base)) * B0 * gyromagnetic_ratio * 1e-6
+    return maximum(single_susceptibility_gradient.(obstructions(parent.grid))) * B0 * gyromagnetic_ratio * 1e-6
 end
+
+single_susceptibility_gradient(shifted::ShiftedSusceptibility) = single_susceptibility_gradient(shifted.base)
 
 function off_resonance_gradient(sources::FixedSusceptibility, B0)
     return maximum(off_resonance_gradient.(sources, B0))
