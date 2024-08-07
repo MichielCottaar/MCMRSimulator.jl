@@ -40,8 +40,7 @@ function obstructions(g::HitGrid{N, O}) where {N, O}
             individual[pack[1]] = pack[end]
         end
     end
-    @assert all(sort([keys(individual)...]) .== 1:length(individual))
-    return map(key -> individual[key], 1:length(individual))
+    return map(key -> individual[key], sort([keys(individual)...]))
 end
 
 
@@ -68,26 +67,28 @@ function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_res
     return HitGrid(obstructions, grid_resolution, SVector{N, Float64}(repeats), args...)
 end
 
+fix_bb_repeats(bb::BoundingBox, repeats::Nothing) = bb
+function fix_bb_repeats(bb::BoundingBox{N}, repeats::AbstractVector) where {N}
+    new_lower = map(bb.lower, bb.upper, repeats) do l, u, r
+        if u > r/2
+            return -r/2
+        else
+            return l
+        end
+    end
+    new_upper = map(bb.lower, bb.upper, repeats) do l, u, r
+        if l < -r/2
+            return r/2
+        else
+            return u
+        end
+    end
+    return BoundingBox(new_lower, new_upper)
+end
+
 function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::Union{Nothing, SVector{N, Float64}}, args...) where {N}
     bounding_boxes = map(o->BoundingBox(o, args...), obstructions)
-    bb_actual = BoundingBox(bounding_boxes)
-    if ~isnothing(repeats)
-        new_lower = map(bb_actual.lower, bb_actual.upper, repeats) do l, u, r
-            if u > r/2
-                return -r/2
-            else
-                return l
-            end
-        end
-        new_upper = map(bb_actual.lower, bb_actual.upper, repeats) do l, u, r
-            if l < -r/2
-                return r/2
-            else
-                return u
-            end
-        end
-        bb_actual = BoundingBox(new_lower, new_upper)
-    end
+    bb_actual = fix_bb_repeats(BoundingBox(bounding_boxes), repeats)
     extend_by = isfinite(grid_resolution) ? grid_resolution / 100 : 1e-3
     bb = BoundingBox(bb_actual.lower .- extend_by, bb_actual.upper .+ extend_by)
     sz = upper(bb) - lower(bb)
@@ -262,17 +263,62 @@ function detect_intersection_inner(grid::HitGrid{N, O}, start::SVector{N, Float6
 end
 
 
-function grid_inside_mesh(grid::HitGrid{3, IndexTriangle}, vertices::AbstractVector)
-    triangles = map(o -> o.indices, obstructions(grid))
+function map_indices(indices, selector)
+    new_indices = zeros(Int32, length(selector))
+    new_indices[selector] = 1:sum(selector)
+    return map(indices) do ind_list
+        map(filter(ind -> selector[ind[1]], ind_list)) do ind
+            (new_indices[ind[1]], ind[2:end]...)
+        end
+    end
+end
+
+select_sub_grid(g::HitGridNoRepeat, selector) = HitGridNoRepeat(
+    g.bounding_box,
+    g.inv_resolution,
+    map_indices(g.indices, selector),
+)
+
+select_sub_grid(g::HitGridRepeat, selector) = HitGridRepeat(
+    g.bounding_box,
+    g.inv_resolution,
+    map_indices(g.indices, selector),
+    g.shifts,
+)
+
+function grid_inside_mesh(grid::HitGrid{3, IndexTriangle}, repeats, vertices::AbstractVector)
+    components = [o.component for o in obstructions(grid)]
+    res = BitArray(undef, (maximum(components), size(grid.indices)...))
+    for c in 1:maximum(components)
+        res[c, :, :, :] = grid_inside_mesh_internal(select_sub_grid(grid, components .== c), repeats, vertices)
+    end
+    return res
+end
+
+function grid_inside_mesh_internal(grid::HitGrid{3, IndexTriangle}, repeats, vertices::AbstractVector)
+    objects = obstructions(grid)
+    triangles = map(o -> o.indices, objects)
     mean_triangles = map(t->mean(vertices[t]), triangles)
     if grid isa HitGridRepeat
         sz = upper(grid) .- lower(grid)
         mean_triangles = [@. mod(t + sz/2, sz) - sz/2 for t in mean_triangles]
     end
+    bb_res = fix_bb_repeats(BoundingBox(map(t -> BoundingBox(t, vertices), objects)), repeats)
+    bb_actual = BoundingBox(
+        bb_res.lower .- 0.5 ./ grid.inv_resolution,
+        bb_res.upper .+ 0.5 ./ grid.inv_resolution,
+    )
     tree = KDTree(mean_triangles)
     inside_arr = zeros(Bool, size(grid.indices))
     for index in Tuple.(eachindex(IndexCartesian(), inside_arr))
         centre = (@. (index - 0.5) / grid.inv_resolution) .+ lower(grid)
+        if all([
+            centre[dim] < bb_actual.lower[dim] || centre[dim] > bb_actual.upper[dim]
+            for dim in 1:3
+        ])
+            inside_arr[index...] = false
+            continue
+        end
 
         triangle_index = Int32(nn(tree, centre)[1])
         new_index = triangle_index
@@ -281,7 +327,7 @@ function grid_inside_mesh(grid::HitGrid{3, IndexTriangle}, vertices::AbstractVec
             triangle_index = new_index
             (new_index, _) = detect_intersection_grid(grid, mean_triangles[triangle_index], centre, triangle_index, true, vertices)
             ntry += 1
-            if ntry > 1000
+            if ntry > 100
                 break
                 error("Grid voxel centre $centre falls exactly on the edge between triangles. Please shift the mesh a tiny amount to fix this.")
             end
