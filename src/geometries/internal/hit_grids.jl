@@ -5,11 +5,6 @@ import ..BoundingBoxes: BoundingBox, lower, upper
 import ..Obstructions: FixedObstruction, detect_intersection, ObstructionIntersection
 import ..RayGridIntersection: ray_grid_intersections
 
-BoundingBox(g::HitGrid) = g.bounding_box
-inv_resolution(g::HitGrid) = g.inv_resolution
-lower(g::HitGrid) = lower(BoundingBox(g))
-upper(g::HitGrid) = upper(BoundingBox(g))
-
 
 """
     HitGrid(obstructions, vertices, grid_resolution[, repeats])
@@ -19,7 +14,12 @@ A precomputed grid that makes it easier to compute the interactions between a tr
 Predetermines the interactions between the obstructions and the grid.
 This is determined purely based on the bounding boxes (could be improved by considering the shape of each obstruction).
 """
-abstract type HitGrid{N, O} <: AbstractGrid{N, O} end
+abstract type HitGrid{N, O} end
+
+BoundingBox(g::HitGrid) = g.bounding_box
+inv_resolution(g::HitGrid) = g.inv_resolution
+lower(g::HitGrid) = lower(BoundingBox(g))
+upper(g::HitGrid) = upper(BoundingBox(g))
 
 
 """
@@ -44,6 +44,23 @@ end
 function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::Union{Nothing, SVector{N, Float64}}=nothing) where {N}
     bounding_boxes = BoundingBox.(obstructions)
     bb_actual = BoundingBox(bounding_boxes)
+    if ~isnothing(repeats)
+        new_lower = map(bb_actual.lower, bb.actual.upper, repeats) do l, u, r
+            if u > r/2
+                return -r/2
+            else
+                return l
+            end
+        end
+        new_upper = map(bb_actual.lower, bb.actual.upper, repeats) do l, u, r
+            if l < -r/2
+                return r/2
+            else
+                return u
+            end
+        end
+        bb_actual = BoundingBox(new_lower, new_upper)
+    end
     extend_by = isfinite(grid_resolution) ? grid_resolution / 100 : 1e-3
     bb = BoundingBox(bb_actual.lower .- extend_by, bb_actual.upper .+ extend_by)
     sz = upper(bb) - lower(bb)
@@ -109,7 +126,7 @@ end
 
 Get the indices of obstructions that contain the `position`.
 """
-function get_indices(grid::Grid, position::AbstractVector)
+function get_indices(grid::HitGrid, position::AbstractVector)
     index = @. Int(div(position - grid.lower, grid.resolution, RoundDown)) + 1
     if any(index .< 1) || any(index .> size(grid.indices))
         return Int32[]
