@@ -209,8 +209,7 @@ function isinside(grid::HitGrid{N}, position::SVector{N, Float64}, stuck_to::Int
             if iszero(shift)
                 pos_shift = position
             else
-                shift = g.grid.shifts[shift_index]
-                pos_shift = position .- shift
+                pos_shift = position .- grid.shifts[shift]
             end
         end
         if index == stuck_to
