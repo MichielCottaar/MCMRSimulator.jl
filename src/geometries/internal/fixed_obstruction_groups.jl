@@ -139,30 +139,12 @@ function isinside(g::FixedObstructionGroup, pos::SVector{3}, stuck_to, inside::B
 
     if repeating(g)
         repeats = g.grid.size
-        half_repeats = repeats/2
         voxel = @. Int(div(rotated, repeats, RoundNearest))
         normed = rotated .- voxel .* repeats
     else
         normed = rotated
     end
-    indices = Int[]
-    for (index, shift) in get_indices(g.grid, normed)
-        if stuck_to == index
-            if inside
-                push!(indices, index)
-            end
-            continue
-        end
-        if iszero(shift)
-            shifted = normed
-        else
-            shifted = normed .- g.grid.shifts[shift]
-        end
-        if isinside(g.obstructions[index], shifted)
-            push!(indices, index)
-        end
-    end
-    return indices
+    return isinside(g.hit_grid, normed, stuck_to, inside, g.args...)
 end
 
 
@@ -223,13 +205,13 @@ function detect_intersection_repeating(g::FixedObstructionGroup{N}, start::SVect
     voxel_f = round.(grid_start)
     if all(voxel_f .== round.(grid_dest))
         voxel_f2 = voxel_f .* g.repeats
-        return detect_intersection_grid(g.grid, start .- voxel_f2, dest .- voxel_f2, prev_index, prev_inside)
+        return detect_intersection_grid(g.grid, start .- voxel_f2, dest .- voxel_f2, prev_index, prev_inside, g.args...)
     end
     found_index = zero(Int32)
     found_intersection = empty_obstruction_intersections[N]
     for (voxel, _, _, t2, _) in ray_grid_intersections(grid_start .+ 0.5, grid_dest .+ 0.5)
         scaled_voxel = voxel .* g.repeats
-        (index, intersection) = detect_intersection_grid(g.grid, start .- scaled_voxel, dest .- scaled_voxel, prev_index, prev_inside)
+        (index, intersection) = detect_intersection_grid(g.grid, start .- scaled_voxel, dest .- scaled_voxel, prev_index, prev_inside, g.args...)
         if found_intersection.distance > intersection.distance
             found_intersection = intersection
             found_index = index

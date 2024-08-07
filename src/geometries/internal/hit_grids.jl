@@ -2,7 +2,7 @@ module HitGrids
 
 import StaticArrays: SVector
 import ..BoundingBoxes: BoundingBox, lower, upper
-import ..Obstructions: FixedObstruction, detect_intersection, ObstructionIntersection
+import ..Obstructions: FixedObstruction, detect_intersection, ObstructionIntersection, isinside
 import ..RayGridIntersection: ray_grid_intersections
 
 
@@ -121,18 +121,39 @@ function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_res
 end
 
 
+function get_coordinates(grid::HitGrid{N}, position::SVector{N, Float64}) where {N}
+    return @. Int(floor((position - lower(grid)) * grid.inv_resolution)) + 1
+end
+
 """
-    get_indices(grid, position)
+    isinside(grid, position)
 
 Get the indices of obstructions that contain the `position`.
 """
-function get_indices(grid::HitGrid, position::AbstractVector)
-    index = @. Int(div(position - grid.lower, grid.resolution, RoundDown)) + 1
-    if any(index .< 1) || any(index .> size(grid.indices))
-        return Int32[]
-    else
-        return grid.indices[index...]
+function isinside(grid::HitGrid{N}, position::SVector{N, Float64}, stuck_to::Int32, inside::Bool) where {N}
+    res = Int32[]
+    for pack in grid.indices[get_coordinates(grid, position)...]
+        if grid isa HitGridNoRepeat
+            (index, obstruction) = packed
+            pos_shift = position
+        else
+            (index, shift, obstruction) = packed
+            if iszero(shift)
+                pos_shift = position
+            else
+                shift = g.grid.shifts[shift_index]
+                pos_shift = position .- shift
+            end
+        end
+        if index == stuck_to
+            if inside
+                push!(res, index)
+            end
+        elseif isinside(obstruction, pos_shift)
+            push!(res, index)
+        end
     end
+    return res
 end
 
 
