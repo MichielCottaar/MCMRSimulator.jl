@@ -343,36 +343,41 @@ end
 
 function isinside(grid::HitGrid{N, IndexTriangle}, position::SVector{N, Float64}, stuck_to::Int32, inside::Bool, vertices, inside_mask) where {N}
     grid_index = get_coordinates(grid, position)
-    centre = @. (grid_index - 0.5) / grid.inv_resolution + mesh.grid.lower
+    centre = (@. (grid_index - 0.5) / grid.inv_resolution) .+ lower(grid)
     if any(grid_index .< 1) || any(grid_index .> size(mesh.grid.indices))
         return Int32[]
     end
 
-    nhit = 0
-    for (index, shift_index, obstruction) in mesh.grid.indices[grid_index...]
-        if iszero(shift_index)
-            centre_use = centre
-            normed_use = normed
+    nhit = zeros(Int, size(inside_mask)[1])
+    nhit[inside_mask[:, voxel...]] = 2
+    for packed in grid.indices[voxel...]
+        if grid isa HitGridNoRepeat
+            (index, obstruction) = packed
+            start_shift = centre
+            dest_shift = normed
         else
-            centre_use = centre .- mesh.grid.shifts[shift_index]
-            normed_use = normed .- mesh.grid.shifts[shift_index]
+            (index, shift_index, obstruction) = packed
+            if iszero(shift_index)
+                start_shift = centre
+                dest_shift = normed
+            else
+                shift = grid.shifts[shift_index]
+                start_shift = centre .- shift
+                dest_shift = normed .- shift
+            end
         end
 
         (new_intersection, partial) = detect_intersection_partial(obstruction, centre_use, normed_use)
 
         if (new_intersection.distance >= 0) && (new_intersection.distance < 1)
             if partial
-                nhit += 1
+                nhit[obstruction.component] += 1
             else
-                nhit += 2
+                nhit[obstruction.component] += 2
             end
         end
     end
-    if xor(~iszero(nhit % 4), mesh.grid.isinside[grid_index...])
-        return Int[0]
-    else
-        return Int[]
-    end
+    return findall(h->h%4 != 0, nhit)
 end
 
 end
