@@ -95,7 +95,7 @@ function detect_intersection(triangle::FullTriangle, start::SVector{N}, dest::SV
     return detect_intersection_partial(triangle, start, dest, inside)[1]
 end
 
-function detect_intersection(triangle::IndexTriangle, start::SVector{N}, dest::SVector{N}, vertices::AbstractVector, inside=nothing) where {N}
+function detect_intersection(triangle::IndexTriangle, start::SVector{N}, dest::SVector{N}, vertices::AbstractVector, ::BitArray, inside=nothing) where {N}
     return detect_intersection(FullTriangle(triangle, vertices), start, dest, inside)
 end
 
