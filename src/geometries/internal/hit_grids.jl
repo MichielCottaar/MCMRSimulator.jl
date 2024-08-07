@@ -327,7 +327,7 @@ function grid_inside_mesh_internal(grid::HitGrid{3, IndexTriangle}, repeats, ver
         end
 
         triangle_index = Int32(nn(tree, centre)[1])
-        (new_index, _) = detect_intersection_grid(grid, centre, mean_triangles[triangle_index], triangle_index, true, vertices)
+        (new_index, _) = detect_intersection_grid(grid, centre, mean_triangles[triangle_index], triangle_index, true, vertices, BitArray(undef))
         if ~iszero(new_index)
             triangle_index = new_index
         end
