@@ -5,7 +5,7 @@ import StaticArrays: SVector, SMatrix
 import LinearAlgebra: norm
 import .....Constants: gyromagnetic_ratio
 import ..Base: BaseSusceptibility, single_susceptibility, single_susceptibility_gradient
-import ...Gridify: Grid, get_indices
+#import ...Gridify: Grid, get_indices
 
 """
     ParentSusceptibility(base::BaseSusceptibility, rotation, repeats, lorentz_radius)
@@ -14,7 +14,7 @@ Group of `L` [`BaseSusceptibility`](@ref) susceptibility sources.
 """
 struct ParentSusceptibility{L, N, O<:BaseSusceptibility{N}, R<:Union{Nothing, SVector{N, Float64}}, K}
     base :: Vector{O}
-    grid :: Grid{N}
+    #grid :: Grid{N}
     positions_radii :: Vector{Tuple{SVector{N, Float64}, Float64}}
     rotation :: SMatrix{N, 3, Float64, K}
     half_repeats :: R

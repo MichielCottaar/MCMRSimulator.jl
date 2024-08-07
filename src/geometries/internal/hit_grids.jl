@@ -3,6 +3,7 @@ module HitGrids
 import StaticArrays: SVector
 import ..BoundingBoxes: BoundingBox, lower, upper
 import ..Obstructions: FixedObstruction, detect_intersection, ObstructionIntersection, isinside
+import ..Obstructions.Triangles: normal, detect_intersection_partial, IndexTriangle, FullTriangle
 import ..RayGridIntersection: ray_grid_intersections
 
 
@@ -20,6 +21,25 @@ BoundingBox(g::HitGrid) = g.bounding_box
 inv_resolution(g::HitGrid) = g.inv_resolution
 lower(g::HitGrid) = lower(BoundingBox(g))
 upper(g::HitGrid) = upper(BoundingBox(g))
+
+
+"""
+    obstructions(grid/fixed_obstructions)
+
+Returns a sequence of all the obstructions included in this group.
+
+This operation is very slow and should be avoided within inner loops.
+"""
+function obstructions(g::HitGrid{N, O}) where {N, O}
+    individual = Dict{Int32, O}()
+    for index_list in g.indices
+        for pack in index_list
+            individual[pack[1]] = pack[end]
+        end
+    end
+    @assert all(sort([keys(individual)...]) .== 1:length(individual))
+    return map(key -> individual[key], 1:length(individual))
+end
 
 
 """
@@ -42,7 +62,7 @@ struct HitGridRepeat{N, O} <: HitGrid{N, O}
 end
 
 function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::Union{Nothing, SVector{N, Float64}}, args...) where {N}
-    bounding_boxes = map(o->Internal.BoundingBox(o, args...), internal_obstructions)
+    bounding_boxes = map(o->BoundingBox(o, args...), obstructions)
     bb_actual = BoundingBox(bounding_boxes)
     if ~isnothing(repeats)
         new_lower = map(bb_actual.lower, bb.actual.upper, repeats) do l, u, r
@@ -69,16 +89,22 @@ function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_res
     else
         dims = Int.(div.(sz, grid_resolution, RoundUp))
     end
+    actual_grid_resolution = sz ./ dims
 
+    shifts = SVector{N, Float64}[]
     grid = [Tuple{Int32, Int32}[] for _ in Iterators.product(UnitRange.(1, dims)...)]
-    for this_bb in bounding_boxes
+    for (index, this_bb) in enumerate(bounding_boxes)
         if isnothing(repeats)
-            range_repeats = SVector{N, UnitRange{Int64}}(fill(N, 0:0))
+            range_repeats = SVector{N, UnitRange{Int64}}(fill(0:0, N))
         else
             range_repeats = UnitRange.(Int.(div.(this_bb.lower, repeats, RoundNearest)), Int.(div.(this_bb.upper, repeats, RoundNearest)))
         end
         for int_shifts in Iterators.product(range_repeats...)
-            shift = -SVector{N, Float64}(int_shifts .* repeats)
+            if isnothing(repeats)
+                shift = zero(SVector{N, Float64})
+            else
+                shift = -SVector{N, Float64}(int_shifts .* repeats)
+            end
 
             l = max.(Int.(div.((lower(this_bb) .+ shift .- lower(bb)), actual_grid_resolution, RoundUp)), 1)
             u = min.(Int.(div.((upper(this_bb) .+ shift .- lower(bb)), actual_grid_resolution, RoundDown)) .+ 1, dims)
@@ -103,7 +129,7 @@ function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_res
         return HitGridNoRepeat(
             bb,
             dims ./ sz,
-            map(grid_indices) do index_arr
+            map(grid) do index_arr
                 map(i -> (i[1], obstructions[i[1]]), index_arr)
             end,
         )
@@ -111,7 +137,7 @@ function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_res
         return HitGridRepeat(
             bb,
             dims ./ sz,
-            map(grid_indices) do index_arr
+            map(grid) do index_arr
                 map(i -> (i[1], i[2], obstructions[i[1]]), index_arr)
             end,
             shifts,
@@ -226,6 +252,73 @@ function detect_intersection_inner(grid::HitGrid{N, O}, start::SVector{N, Float6
         end
     end
     return (intersection_index, intersection)
+end
+
+
+function grid_inside_mesh(grid::HitGrid{3, IndexTriangle}, vertices::AbstractVector)
+    triangles = map(o -> o.indices, obstructions(grid))
+    mean_triangles = map(t->mean(vertices[t]), triangles)
+    if grid isa HitGridRepeat
+        sz = mesh.grid.size
+        mean_triangles = [@. mod(t + sz/2, sz) - sz/2 for t in mean_triangles]
+    end
+    tree = KDTree(mean_triangles)
+    inside_arr = zeros(Bool, size(grid.indices))
+    for index in Tuple.(eachindex(IndexCartesian(), inside_arr))
+        centre = @. (index - 0.5) * mesh.grid.resolution + mesh.grid.lower
+
+        triangle_index = Int32(nn(tree, centre)[1])
+        new_index = triangle_index
+        ntry = 0
+        while ~iszero(new_index)
+            triangle_index = new_index
+            (new_index, _) = detect_intersection_grid(grid, mean_triangles[triangle_index], centre, triangle_index, true)
+            ntry += 1
+            if ntry > 1000
+                error("Grid voxel centre $centre falls exactly on the edge between triangles. Please shift the mesh a tiny amount to fix this.")
+            end
+        end
+        inpr = (centre - mean_triangles[triangle_index]) ⋅ normal(FullTriangle(triangles[triangle_index], mesh.vertices))
+        if iszero(inpr)
+            @warn "Grid voxel centre falls exactly on the mesh element. This will lead to erroneous estimations of what is the inside of a grid. You might want to shift the mesh a tiny amount."
+        end
+        inside_arr[index...] = inpr < 0
+    end
+    return inside_arr
+end
+
+function isinside(grid::HitGrid{N, IndexTriangle}, position::SVector{N, Float64}, stuck_to::Int32, inside::Bool, vertices, inside_mask) where {N}
+    grid_index = get_coordinates(grid, position)
+    centre = @. (grid_index - 0.5) / grid.inv_resolution + mesh.grid.lower
+    if any(grid_index .< 1) || any(grid_index .> size(mesh.grid.indices))
+        return Int32[]
+    end
+
+    nhit = 0
+    for (index, shift_index, obstruction) in mesh.grid.indices[grid_index...]
+        if iszero(shift_index)
+            centre_use = centre
+            normed_use = normed
+        else
+            centre_use = centre .- mesh.grid.shifts[shift_index]
+            normed_use = normed .- mesh.grid.shifts[shift_index]
+        end
+
+        (new_intersection, partial) = detect_intersection_partial(obstruction, centre_use, normed_use)
+
+        if (new_intersection.distance >= 0) && (new_intersection.distance < 1)
+            if partial
+                nhit += 1
+            else
+                nhit += 2
+            end
+        end
+    end
+    if xor(~iszero(nhit % 4), mesh.grid.isinside[grid_index...])
+        return Int[0]
+    else
+        return Int[]
+    end
 end
 
 end

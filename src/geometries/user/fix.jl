@@ -158,6 +158,10 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
         args = ()
     end
     grid = HitGrid(internal_obstructions, user_obstructions.grid_resolution.value, user_obstructions.repeats.value, args...)
+
+    if eltype(internal_obstructions) <: Internal.IndexTriangle
+        args = (args..., grid_inside_mesh(grid, args...))
+    end
     
     result = FixedObstructionGroup(
         internal_obstructions,

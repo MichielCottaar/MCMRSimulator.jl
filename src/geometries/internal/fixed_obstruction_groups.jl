@@ -20,7 +20,7 @@ import ..Obstructions:
 import ..BoundingBoxes: BoundingBox, could_intersect
 import ..Intersections: Intersection, empty_intersection
 import ..Reflections: Reflection, empty_reflection
-import ..HitGrids: HitGrid, detect_intersection_grid
+import ..HitGrids: HitGrid, detect_intersection_grid, obstructions
 
 
 """
@@ -75,14 +75,16 @@ struct FixedObstructionGroup{
             size(rotation, 2), typeof(repeats), eltype(obstructions), typeof(grid),
             typeof(volume), typeof(surface), typeof(args), 3 * size(rotation, 2)
         }(
-            obstructions, repeats, 
-            parent_index, original_index, 
+            repeats, parent_index, original_index, 
             rotation, transpose(rotation), 
             grid, volume, surface,
             size_scale, args,
         )
     end
 end
+
+obstructions(g::FixedObstructionGroup) = obstructions(g.hit_grid)
+Base.length(g::FixedObstructionGroup) = length(obstructions(g))
 
 """
     FixedGeometry([obstruction_groups...])
@@ -105,21 +107,12 @@ size_scale(g::FixedGeometry) = minimum(size_scale.(g))
 size_scale(g::FixedGeometry{0}) = Inf
 
 function Base.show(io::IO, geom::FixedObstructionGroup)
-    print(io, length(geom.obstructions), " ")
+    print(io, length(geom), " ")
     if repeating(geom)
         print(io, "repeating ")
     end
     print(io, String(nameof(obstruction_type(typeof(geom)))) * " objects")
 end
-
-"""
-    BoundingBox(obstruction_group)
-
-Finds the bounding box containing all the obstructions in the [`FixedObstructionGroup`](@ref) ignoring any repeats or rotation.
-"""
-BoundingBox(group::FixedObstructionGroup) = BoundingBox(group.obstructions, group.vertices)
-BoundingBox(obstructions::Vector{<:FixedObstruction}, vertices::Vector{SVector{3, Float64}}) = BoundingBox(BoundingBox.(obstructions))
-BoundingBox(obstructions::Vector{IndexTriangle}, vertices::Vector{SVector{3, Float64}}) = BoundingBox([BoundingBox(o, vertices) for o in obstructions])
 
 """
     isinside(obstruction_group, position[, stuck_to])
