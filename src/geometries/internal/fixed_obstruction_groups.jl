@@ -181,7 +181,7 @@ function detect_intersection(g::FixedObstructionGroup{N}, start::SVector{3}, des
     if repeating(g)
         (index, intersection) = detect_intersection_repeating(g, rotated_start, rotated_dest, previous_index, prev_inside)
     else
-        (index, intersection) = detect_intersection_grid(g.hit_grid, rotated_start, rotated_dest, previous_index, prev_inside)
+        (index, intersection) = detect_intersection_grid(g.hit_grid, rotated_start, rotated_dest, previous_index, prev_inside, g.args...)
     end
     if intersection.distance > 1.
         return empty_intersection
