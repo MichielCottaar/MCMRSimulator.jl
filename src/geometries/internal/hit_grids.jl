@@ -366,7 +366,7 @@ function isinside(grid::HitGrid{N, IndexTriangle}, position::SVector{N, Float64}
             end
         end
 
-        (new_intersection, partial) = detect_intersection_partial(obstruction, start_shift, dest_shift)
+        (new_intersection, partial) = detect_intersection_partial(FullTriangle(obstruction, vertices), start_shift, dest_shift)
 
         if (new_intersection.distance >= 0) && (new_intersection.distance < 1)
             if partial
