@@ -51,8 +51,8 @@ function BoundingBox(bounding_boxes::Union{AbstractVector{<:BoundingBox{M}}, NTu
     lowers = map(lower, bounding_boxes)
     uppers = map(upper, bounding_boxes)
     BoundingBox(
-        SVector{3, Float64}(minimum([l[i] for l in lowers]) for i in 1:M), 
-        SVector{3, Float64}(maximum([u[i] for u in uppers]) for i in 1:M)
+        SVector{M, Float64}(minimum([l[i] for l in lowers]) for i in 1:M), 
+        SVector{M, Float64}(maximum([u[i] for u in uppers]) for i in 1:M)
     )
 end
 
