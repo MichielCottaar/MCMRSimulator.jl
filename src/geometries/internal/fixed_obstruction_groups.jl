@@ -16,13 +16,11 @@ import LinearAlgebra: inv, transpose, norm, cross, ⋅, I
 import StaticArrays: SVector, SMatrix
 import ..Obstructions:
     FixedObstruction, has_inside, isinside, obstruction_type, random_surface_positions,
-    IndexTriangle, FullTriangle, size_scale, Shift, Wall, curvature,
-    ObstructionIntersection, empty_obstruction_intersections, detect_intersection
+    IndexTriangle, FullTriangle, size_scale, Shift, Wall, curvature
 import ..BoundingBoxes: BoundingBox, could_intersect
 import ..Intersections: Intersection, empty_intersection
 import ..Reflections: Reflection, empty_reflection
-import ..RayGridIntersection: ray_grid_intersections
-import ..Gridify: Grid, get_indices
+import ..HitGrids: HitGrid, detect_intersection_grid
 
 
 """
@@ -43,40 +41,46 @@ Properties:
 - `vertices`: vector of vertices (only used for a mesh).
 """
 struct FixedObstructionGroup{
-    N, R, O <: FixedObstruction{N},
-    B <: Union{Nothing, Vector{BoundingBox{N}}},
+    N, 
+    R <: Union{Nothing, SVector{N, Float64}}, 
+    O <: FixedObstruction{N},
+    G <: HitGrid{N, O},
     V <: NamedTuple{(:R1, :R2, :off_resonance)},
-    S <: NamedTuple{(:R1, :R2, :off_resonance, :permeability, :surface_density, :dwell_time, :surface_relaxivity)}, K
+    S <: NamedTuple{(:R1, :R2, :off_resonance, :permeability, :surface_density, :dwell_time, :surface_relaxivity)},
+    A <: Tuple,
+    K
     }
-    obstructions :: Vector{O}
+    repeats :: R
     parent_index :: Int
     original_index :: Int
 
     # rotations
     rotation :: SMatrix{3, N, Float64, K}
     inv_rotation :: SMatrix{N, 3, Float64, K}
-    identity_rotation :: Bool
 
     # obstruction indices
-    grid :: Grid{N}
-
-    # helper bounding boxes (only used if not gridified)
-    bounding_boxes :: B
+    hit_grid :: G
 
     # MRI and collision properties
     # single value, or one value per obstruction stored in NamedTuple
     volume :: V
     surface :: S
 
-    # empty vector if this is not a mesh
-    vertices :: Vector{SVector{3, Float64}}
-    function FixedObstructionGroup(obstructions, parent_index, original_index, rotation, grid, bounding_boxes, volume, surface, vertices)
-        identity_rotation = size(rotation, 2) == 3 && all(rotation .≈ I(3))
+    size_scale :: Float64
 
+    # Additional arguments that should be passed around for the `obstructions` to work
+    args :: A
+    function FixedObstructionGroup(obstructions, repeats, parent_index, original_index, rotation, grid, volume, surface, size_scale, args...)
         new{
-            size(rotation, 2), grid.repeating, eltype(obstructions),
-            typeof(bounding_boxes), typeof(volume), typeof(surface), 3 * size(rotation, 2)
-        }(obstructions, parent_index, original_index, rotation, transpose(rotation), identity_rotation, grid, bounding_boxes, volume, surface, vertices)
+            size(rotation, 2), typeof(repeats), eltype(obstructions), typeof(grid),
+            typeof(volume), typeof(surface), typeof(args), 3 * size(rotation, 2)
+        }(
+            obstructions, repeats, 
+            parent_index, original_index, 
+            rotation, transpose(rotation), 
+            grid, volume, surface,
+            size_scale, args,
+        )
     end
 end
 
@@ -87,18 +91,14 @@ A collection of [`FixedObstructionGroup`](@ref) objects each reperesenting part 
 """
 const FixedGeometry{N} = NTuple{N, FixedObstructionGroup}
 
-const FixedMesh{R, B, V, S} = FixedObstructionGroup{3, R, IndexTriangle, B, V, S}
-
-repeating(::FixedObstructionGroup{N, R}) where {N, R} = R
-repeating(::Type{<:FixedObstructionGroup{N, R}}) where {N, R} = R
+repeating(::FixedObstructionGroup{N, R}) where {N, R} = R <: SVector{N, Float64}
+repeating(::Type{<:FixedObstructionGroup{N, R}}) where {N, R} = R <: SVector{N, Float64}
 
 obstruction_type(::Type{<:FixedObstructionGroup{N, R, O}}) where {N, R, O} = obstruction_type(O)
 
-rotate_from_global(g::FixedObstructionGroup, pos::SVector{3}) = g.identity_rotation ? pos : g.inv_rotation * pos
-rotate_to_global(g::FixedObstructionGroup{N}, pos::SVector{N}) where {N} = g.identity_rotation ? pos : g.rotation * pos
+rotate_from_global(g::FixedObstructionGroup, pos::SVector{3}) = g.inv_rotation * pos
+rotate_to_global(g::FixedObstructionGroup{N}, pos::SVector{N}) where {N} = g.rotation * pos
 
-has_inside(::Type{<:FixedObstructionGroup{N, R, O}}) where {N, R, O} = has_inside(O)
-has_inside(::Type{<:FixedMesh}) = true
 
 curvature(g::FixedMesh) = length(g.obstructions) == 1 ? 0. : curvature(g.obstructions, g.vertices)
 
@@ -229,7 +229,7 @@ function detect_intersection(g::FixedObstructionGroup{N}, start::SVector{3}, des
     if repeating(g)
         (index, intersection) = detect_intersection_repeating(g, rotated_start, rotated_dest, previous_index, prev_inside)
     else
-        (index, intersection) = detect_intersection_non_repeating(g, rotated_start, rotated_dest, previous_index, prev_inside)
+        (index, intersection) = detect_intersection_grid(g.grid, rotated_start, rotated_dest, previous_index, prev_inside)
     end
     if intersection.distance > 1.
         return empty_intersection
@@ -243,75 +243,19 @@ function detect_intersection(g::FixedObstructionGroup{N}, start::SVector{3}, des
     )
 end
 
-function detect_intersection_non_repeating(g::FixedObstructionGroup{N}, start::SVector{N}, dest::SVector{N}, prev_index::Int, prev_inside::Bool) where {N}
-    if ~could_intersect(BoundingBox(g.grid), start, dest)
-        return (zero(Int32), empty_obstruction_intersections[N])
-    end
-    if prod(size(g.grid.indices)) == 1
-        return detect_intersection_loop(g, start, dest, prev_index, prev_inside, zero(SVector{N, Int}) .+ 1)
-    end
-    found_intersection = empty_obstruction_intersections[N]
-    found_intersection_index = zero(Int32)
-    for (voxel, _, _, t2, _) in ray_grid_intersections((start .- g.grid.lower) ./ g.grid.resolution, (dest .- g.grid.lower) ./ g.grid.resolution)
-        if any(voxel .< 0) || any(voxel .>= size(g.grid.indices))
-            continue
-        end
-        (intersection_index, intersection) = detect_intersection_loop(g, start, dest, prev_index, prev_inside, voxel .+ 1)
-        if intersection.distance < found_intersection.distance
-            found_intersection = intersection
-            found_intersection_index = intersection_index
-        end
-        if found_intersection.distance <= t2
-            return (found_intersection_index, found_intersection)
-        end
-    end
-    return (found_intersection_index, found_intersection)
-end
-
-function detect_intersection_loop(g::FixedObstructionGroup{N, R, O}, start, dest, prev_index, prev_inside, voxel) where {N, R, O}
-    new_indices = g.grid.indices[voxel...]
-    intersection_index = zero(Int32)
-    intersection = empty_obstruction_intersections[N]
-    for (index, shift_index) in new_indices
-        if iszero(shift_index)
-            start_shift = start
-            dest_shift = dest
-        else
-            shift = g.grid.shifts[shift_index]
-            start_shift = start .- shift
-            dest_shift = dest .- shift
-        end
-        if ~(isnothing(g.bounding_boxes) || could_intersect(g.bounding_boxes[index], start_shift, dest_shift))
-            continue
-        end
-        obstruction = O <: IndexTriangle ? FullTriangle(g.obstructions[index], g.vertices) : g.obstructions[index]
-        if prev_index == index
-            new_intersection = detect_intersection(obstruction, start_shift, dest_shift, prev_inside)
-        else
-            new_intersection = detect_intersection(obstruction, start_shift, dest_shift)
-        end
-        if (new_intersection.distance >= 0) && (new_intersection.distance < intersection.distance)
-            intersection = new_intersection
-            intersection_index = index
-        end
-    end
-    return (intersection_index, intersection)
-end
-
 function detect_intersection_repeating(g::FixedObstructionGroup{N}, start::SVector{N}, dest::SVector{N}, prev_index::Int, prev_inside::Bool) where {N}
-    repeats = g.grid.size
-    grid_start = start ./ repeats
-    grid_dest = dest ./ repeats
+    grid_start = start ./ g.repeats
+    grid_dest = dest ./ g.repeats
     voxel_f = round.(grid_start)
     if all(voxel_f .== round.(grid_dest))
-        voxel_f2 = voxel_f .* repeats
-        return detect_intersection_non_repeating(g, start .- voxel_f2, dest .- voxel_f2, prev_index, prev_inside)
+        voxel_f2 = voxel_f .* g.repeats
+        return detect_intersection_grid(g.grid, start .- voxel_f2, dest .- voxel_f2, prev_index, prev_inside)
     end
     found_index = zero(Int32)
     found_intersection = empty_obstruction_intersections[N]
     for (voxel, _, _, t2, _) in ray_grid_intersections(grid_start .+ 0.5, grid_dest .+ 0.5)
-        scaled_voxel = voxel .* repeats
-        (index, intersection) = detect_intersection_non_repeating(g, start .- scaled_voxel, dest .- scaled_voxel, prev_index, prev_inside)
+        scaled_voxel = voxel .* g.repeats
+        (index, intersection) = detect_intersection_grid(g.grid, start .- scaled_voxel, dest .- scaled_voxel, prev_index, prev_inside)
         if found_intersection.distance > intersection.distance
             found_intersection = intersection
             found_index = index
@@ -379,7 +323,7 @@ function random_surface_positions(group::FixedObstructionGroup{N}, bb::BoundingB
     get_random_pos(o, d) = random_surface_positions(o, group.vertices, d)
 
     if repeating(group)
-        repeats = group.grid.size
+        repeats = group.repeats
         normals = [group.rotation[:, i] for i in 1:N]
         nrepeats_lower = div.([bb.lower ⋅ abs.(n) for n in normals], group.grid.size, RoundDown) .- 5
         nrepeats_upper = div.([bb.upper ⋅ abs.(n) for n in normals], group.grid.size, RoundUp) .+ 5
