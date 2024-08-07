@@ -1,5 +1,5 @@
 module SizeScales
-import ..Obstructions: ObstructionGroup, Walls, Cylinders, Annuli, Sphere, Mesh
+import ..Obstructions: ObstructionGroup, Walls, Cylinders, Annuli, Spheres, Mesh
 import ...Internal.Obstructions.Triangles: normal, curvature
 
 """
@@ -19,9 +19,9 @@ end
 
 
 function compute_size_scale(obstruction::ObstructionGroup)
-    repeats = isnothing(obstruction.repeats.value) ? [Inf] : obstruction.repeats.value
+    repeats = isnothing(obstruction.repeats.value) ? Inf : minimum(obstruction.repeats.value)
     return min(
-        minimum(repeats),
+        repeats,
         compute_obstruction_size_scale(obstruction)
     )
 end
@@ -33,7 +33,7 @@ compute_obstruction_size_scale(a::Annuli) = min(
     minimum(a.outer.value),
     minimum(a.outer.value .- a.inner.value),
 )
-compute_obstruction_size_scale(s::Sphere) = minimum(s.radius.value)
+compute_obstruction_size_scale(s::Spheres) = minimum(s.radius.value)
 function compute_obstruction_size_scale(m::Mesh)
     c = m.n_obstructions > 1 ? curvature(m.triangles.value, m.vertices.value) : 0.
     return 1 / (2 * c)
