@@ -63,8 +63,8 @@ struct HitGridRepeat{N, O} <: HitGrid{N, O}
     shifts :: Vector{SVector{N, Float64}}
 end
 
-function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::AbstractArray, args...) where {N}
-    return HitGrid(obstructions, grid_resolution, SVector{N, Float64}(repeats), args...)
+function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::AbstractArray, args...; kwargs...) where {N}
+    return HitGrid(obstructions, grid_resolution, SVector{N, Float64}(repeats), args...; kwargs...)
 end
 
 fix_bb_repeats(bb::BoundingBox, repeats::Nothing) = bb
@@ -86,8 +86,11 @@ function fix_bb_repeats(bb::BoundingBox{N}, repeats::AbstractVector) where {N}
     return BoundingBox(new_lower, new_upper)
 end
 
-function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::Union{Nothing, SVector{N, Float64}}, args...) where {N}
+function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::Union{Nothing, SVector{N, Float64}}, args...; extend=nothing) where {N}
     bounding_boxes = map(o->BoundingBox(o, args...), obstructions)
+    if ~isnothing(extend)
+        bounding_boxes = map(bb->BoundingBox(bb.lower .- extend, bb.upper .+ extend), bounding_boxes)
+    end
     bb_actual = fix_bb_repeats(BoundingBox(bounding_boxes), repeats)
     extend_by = isfinite(grid_resolution) ? grid_resolution / 100 : 1e-3
     bb = BoundingBox(bb_actual.lower .- extend_by, bb_actual.upper .+ extend_by)
@@ -159,6 +162,31 @@ function get_coordinates(grid::HitGrid{N}, position::SVector{N, Float64}) where 
     l = lower(grid)
     return @. Int(floor((position - l) * grid.inv_resolution)) + 1
 end
+
+function get_objects(grid::HitGridNoRepeat{N, O}, position::SVector{N, Float64}) where {N, O}
+    grid_index = get_coordinates(grid, position)
+    if any(grid_index .< 1) || any(grid_index .> size(grid.indices))
+        return Tuple{SVector{N, Float64}, O}[]
+    end
+    return map(grid.indices[grid_index...]) do c
+        (position, c[end])
+    end
+end
+
+function get_objects(grid::HitGridRepeat{N, O}, position::SVector{N, Float64}) where {N, O}
+    grid_index = get_coordinates(grid, position)
+    if any(grid_index .< 1) || any(grid_index .> size(grid.indices))
+        return Tuple{SVector{N, Float64}, O}[]
+    end
+    return map(grid.indices[grid_index...]) do _, shift, base
+        if iszero(shift)
+            return (position, grid)
+        else
+            return (position .- grid.shifts[shift], grid)
+        end
+    end
+end
+
 
 """
     isinside(grid, position)

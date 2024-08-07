@@ -1,8 +1,8 @@
 module FixSusceptibility
 import StaticArrays: SVector
 import LinearAlgebra: transpose
-import ...Internal.Susceptibility: FixedSusceptibility, ParentSusceptibility, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, TriangleSusceptibility
-import ...Internal: Grid, BoundingBox, FullTriangle, radius
+import ...Internal.Susceptibility: FixedSusceptibility, ParentSusceptibility, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, TriangleSusceptibility, ShiftedSusceptibility
+import ...Internal: HitGrid, BoundingBox, FullTriangle, radius
 import ..Obstructions: ObstructionType, ObstructionGroup, Walls, Cylinders, Spheres, Annuli, Mesh, fields, isglobal, BendyCylinder
 
 """
@@ -81,17 +81,17 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
         radii = isglobal(user_radius) ? fill(user_radius.value, length(internal)) : user_radius.value
     end
 
+    shifted = ShiftedSusceptibility.(positions, radii, internal)
+
     repeats = isnothing(user.repeats.value) ? nothing : SVector{N}(user.repeats.value)
-    bbs = map((p, r) -> BoundingBox(p .- (r + user.lorentz_radius.value), p .+ (r + user.lorentz_radius.value)), positions, radii)
-    grid = Grid(
-        bbs,
+    grid = HitGrid(
+        shifted,
         user.grid_resolution.value,
-        repeats
+        repeats;
+        extend=user.lorentz_radius.value
     )
-    ParentSusceptibility{length(internal), N, eltype(internal), typeof(repeats), N * 3}(
-        internal,
+    ParentSusceptibility{N, eltype(internal), typeof(repeats), N * 3}(
         grid,
-        Tuple{SVector{N, Float64}, Float64}[(p, r) for (p, r) in zip(positions, radii)],
         transpose(user.rotation.value),
         isnothing(repeats) ? nothing : repeats ./ 2,
         user.lorentz_radius.value,
