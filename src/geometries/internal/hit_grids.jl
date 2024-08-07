@@ -156,7 +156,8 @@ end
 
 
 function get_coordinates(grid::HitGrid{N}, position::SVector{N, Float64}) where {N}
-    return @. Int(floor((position - lower(grid)) * grid.inv_resolution)) + 1
+    l = lower(grid)
+    return @. Int(floor((position - l) * grid.inv_resolution)) + 1
 end
 
 """
@@ -344,13 +345,13 @@ end
 function isinside(grid::HitGrid{N, IndexTriangle}, position::SVector{N, Float64}, stuck_to::Int32, inside::Bool, vertices, inside_mask) where {N}
     grid_index = get_coordinates(grid, position)
     centre = (@. (grid_index - 0.5) / grid.inv_resolution) .+ lower(grid)
-    if any(grid_index .< 1) || any(grid_index .> size(mesh.grid.indices))
+    if any(grid_index .< 1) || any(grid_index .> size(grid.indices))
         return Int32[]
     end
 
     nhit = zeros(Int, size(inside_mask)[1])
-    nhit[inside_mask[:, voxel...]] = 2
-    for packed in grid.indices[voxel...]
+    nhit[inside_mask[:, grid_index...]] .= 2
+    for packed in grid.indices[grid_index...]
         if grid isa HitGridNoRepeat
             (index, obstruction) = packed
             start_shift = centre

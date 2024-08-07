@@ -123,17 +123,17 @@ Returns a vector of indices with all the obstructions in [`FixedObstructionGroup
 For obstructions with only a single inside, will return an empty vector ("[]") if the particle is outside and a "[0]" if inside.
 """
 function isinside(g::FixedObstructionGroup, pos::SVector{3}, stuck_to::Reflection=empty_reflection)
-    isinside(g, pos, stuck_to.geometry_index == g.parent_index ? stuck_to.obstruction_index : 0, stuck_to.inside)
+    isinside(g, pos, stuck_to.geometry_index == g.parent_index ? stuck_to.obstruction_index : zero(Int32), stuck_to.inside)
 end
 
-function isinside(g::FixedObstructionGroup, pos::SVector{3}, stuck_to, inside::Bool)
-    if ~has_inside(typeof(g))
-        return Int[]
+function isinside(g::FixedObstructionGroup{N, R, O}, pos::SVector{3}, stuck_to::Int32, inside::Bool) where {N, R, O}
+    if ~has_inside(O)
+        return Int32[]
     end
     rotated = rotate_from_global(g, pos)
 
     if repeating(g)
-        repeats = g.grid.size
+        repeats = g.repeats
         voxel = @. Int(div(rotated, repeats, RoundNearest))
         normed = rotated .- voxel .* repeats
     else

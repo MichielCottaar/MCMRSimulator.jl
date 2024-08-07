@@ -59,7 +59,7 @@ function radius(t::FullTriangle)
     return maximum(bb.upper .- bb.lower) / 2
 end
 
-has_inside(::Type{Triangle}) = false
+has_inside(::Type{<:Triangle}) = true
 isinside(::Triangle, ::SVector{3, Float64}) = false
 
 """
