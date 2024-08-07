@@ -74,7 +74,7 @@ function susceptibility_off_resonance_repeating(parent::ParentSusceptibility{N},
     b0_field = parent.rotation[:, 3]
 
     for (use_pos, shifted) in get_objects(parent.grid, normed)
-        offset = use_pos .- shifted.center
+        offset = use_pos .- shifted.position
         if N == 1
             dist = abs(offset[1])
         elseif N == 2
@@ -83,7 +83,7 @@ function susceptibility_off_resonance_repeating(parent::ParentSusceptibility{N},
             dist = sqrt(offset[1] * offset[1] + offset[2] * offset[2] + offset[3] * offset[3])
         end
         if dist < (parent.lorentz_radius + shifted.radius)
-            field += single_susceptibility(parent.base[index], offset, dist, inside, b0_field)
+            field += single_susceptibility(shifted.base, offset, dist, inside, b0_field)
         end
     end
     return field

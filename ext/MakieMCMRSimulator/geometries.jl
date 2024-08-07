@@ -5,7 +5,7 @@ import LinearAlgebra: cross, ⋅, norm
 import Colors
 import GeometryBasics
 import MCMRSimulator.Plot: PlotPlane, Plot_Geometry
-import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere
+import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, obstructions
 import MCMRSimulator.Geometries: ObstructionGroup, fix, Mesh, Cylinders
 import ..Utils: GeometryLike
 
@@ -59,10 +59,9 @@ function project_geometry(plot_plane::PlotPlane, group::FixedObstructionGroup{N}
     obstruction_coordinates_in_plot_plane = SVector{N, SVector{3, Float64}}(map(p->SVector{3, Float64}(plot_plane.transformation(p)) .- center_obstruction_space, eachcol(group.rotation)))
 
     projections = []
-    repeats = group.grid.repeating ? group.grid.size : nothing
-    for obstruction in group.obstructions
+    for obstruction in obstructions(group)
         obstruction_center_in_plot_plane = plot_plane.transformation(group.rotation * obstruction.shift)
-        append!(projections, project_obstruction(obstruction.base, obstruction_center_in_plot_plane, obstruction_coordinates_in_plot_plane, repeats, (plot_plane.sizex, plot_plane.sizey)))
+        append!(projections, project_obstruction(obstruction.base, obstruction_center_in_plot_plane, obstruction_coordinates_in_plot_plane, group.repeats, (plot_plane.sizex, plot_plane.sizey)))
     end
     projections
 end

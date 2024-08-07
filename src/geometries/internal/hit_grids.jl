@@ -178,11 +178,11 @@ function get_objects(grid::HitGridRepeat{N, O}, position::SVector{N, Float64}) w
     if any(grid_index .< 1) || any(grid_index .> size(grid.indices))
         return Tuple{SVector{N, Float64}, O}[]
     end
-    return map(grid.indices[grid_index...]) do _, shift, base
+    return map(grid.indices[grid_index...]) do (_, shift, base)
         if iszero(shift)
-            return (position, grid)
+            return (position, base)
         else
-            return (position .- grid.shifts[shift], grid)
+            return (position .- grid.shifts[shift], base)
         end
     end
 end

@@ -18,7 +18,7 @@ include("susceptibility/susceptibility.jl")
 import .FixedObstructionGroups: FixedObstructionGroup, FixedGeometry, repeating, isinside, detect_intersection
 import .Reflections: Reflection, direction, previous_hit, has_hit, has_intersection, empty_reflection
 import .Intersections: Intersection, empty_intersection
-import .HitGrids: HitGrid, detect_intersection_grid, grid_inside_mesh
+import .HitGrids: HitGrid, detect_intersection_grid, grid_inside_mesh, obstructions
 import .Obstructions: 
     FixedObstruction, ObstructionIntersection, empty_obstruction_intersections,
     Wall, Round, Cylinder, Sphere, Triangle, IndexTriangle, FullTriangle, Shift,
