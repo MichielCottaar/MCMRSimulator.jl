@@ -11,7 +11,7 @@ module Subsets
 import Base: @kwdef
 import ..Spins: Snapshot, Spin, stuck_to
 import ..Simulations: Simulation
-import ..Geometries.Internal: FixedGeometry, FixedMesh, isinside
+import ..Geometries.Internal: FixedGeometry, isinside
 
 _arguments = """
 - `bound`: set to true to return only bound spins, to false to return only free spins (default: whether spins are bound is not relevant).
@@ -66,9 +66,6 @@ function get_subset(snapshot::Snapshot{N}, geometry::FixedGeometry, subset::Subs
         else
             return snapshot
         end
-    end
-    if geometry[1] isa FixedMesh && ~isnothing(subset.obstruction_index)
-        error("Selecting subset of bound/inside particles for a single element of a mesh is not supported.")
     end
     include = ones(Bool, length(snapshot))
     fixed_geometry_indices = [g.parent_index for g in geometry]
