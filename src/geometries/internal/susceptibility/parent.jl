@@ -54,7 +54,7 @@ function susceptibility_off_resonance(parent::ParentSusceptibility, position::SV
     end
 end
 
-function susceptibility_off_resonance_non_repeating(parent::ParentSusceptibility{N}, position::SVector{N, Float64}, inside::Union{Nothing, Bool}) where {L, N}
+function susceptibility_off_resonance_non_repeating(parent::ParentSusceptibility{N}, position::SVector{N, Float64}, inside::Union{Nothing, Bool}) where {N}
     field = zero(Float64)
     b0_field = parent.rotation[:, 3]
     for (_, shifted) in get_objects(parent.grid, position)
@@ -67,7 +67,7 @@ function susceptibility_off_resonance_non_repeating(parent::ParentSusceptibility
     return field
 end
 
-function susceptibility_off_resonance_repeating(parent::ParentSusceptibility{N}, position::SVector{N, Float64}, inside::Union{Nothing, Bool}) where {L, N}
+function susceptibility_off_resonance_repeating(parent::ParentSusceptibility{N}, position::SVector{N, Float64}, inside::Union{Nothing, Bool}) where {N}
     field = zero(Float64)
 
     normed = @. mod(position + parent.half_repeats, 2 * parent.half_repeats) - parent.half_repeats
