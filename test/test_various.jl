@@ -224,7 +224,7 @@ end
 
     @test size_scale(mr.Cylinders(radius=[0.3, 0.8], repeats=[2, 3])) == 0.3
     @test size_scale(mr.Spheres(radius=[0.3, 0.8])) == 0.3
-    @test size_scale(mr.Annuli(inner=[0.5, 0.7], outer=[0.6, 0.8])) == 0.5
+    @test size_scale(mr.Annuli(inner=[0.5, 0.7], outer=[0.6, 0.9])) ≈ 0.1
 end
 
 @testset "Test geometry JSON I/O" begin
