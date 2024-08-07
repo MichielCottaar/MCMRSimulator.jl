@@ -7,7 +7,7 @@ module Internal
 include("ray_grid_intersection.jl")
 include("bounding_boxes.jl")
 include("obstructions/obstructions.jl")
-include("gridify.jl")
+include("hit_grids.jl")
 include("intersections.jl")
 include("reflections.jl")
 include("fixed_obstruction_groups.jl")
@@ -18,7 +18,7 @@ include("isinside_mesh.jl")
 import .FixedObstructionGroups: FixedObstructionGroup, FixedGeometry, FixedMesh, repeating, isinside, detect_intersection
 import .Reflections: Reflection, direction, previous_hit, has_hit, has_intersection, empty_reflection
 import .Intersections: Intersection, empty_intersection
-import .Gridify: Grid, Grid, get_indices
+import .HitGrids: HitGrid, detect_intersection_grid
 import .Obstructions: 
     FixedObstruction, ObstructionIntersection, empty_obstruction_intersections,
     Wall, Round, Cylinder, Sphere, Triangle, IndexTriangle, FullTriangle, Shift,
