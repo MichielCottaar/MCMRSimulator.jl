@@ -6,6 +6,9 @@ import Random
 import SpecialFunctions: erf
 using Statistics
 using MRIBuilder
+import Logging
+
+Logging.disable_logging(Logging.Info)
 
 all_tests = [
     "collisions",
