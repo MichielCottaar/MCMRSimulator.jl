@@ -102,6 +102,7 @@ function Mesh(bendy_cylinder::BendyCylinder)
     mesh_kwargs = Dict{Symbol, Any}(
         :vertices => vertices,
         :triangles => triangles,
+        :components => ones(Int, length(triangles)),
         :number => length(triangles),
     )
     for symbol in Mesh(number=0).unique_keys

@@ -170,6 +170,9 @@ Returns which component each element in the mesh belongs to.
 If not set explicitly (using `mesh.components=[...]`), it will be computed once based on the connectivity structure.
 """
 function components(mesh::Mesh)
+    if mesh.n_obstructions == 0
+        return Int[]
+    end
     if isnothing(mesh.components.value)
         vertex_indices = connected_indices(mesh.triangles.value)
         mesh.components.value = [vertex_indices[t[1]] for t in mesh.triangles.value]
@@ -177,6 +180,6 @@ function components(mesh::Mesh)
     return mesh.components.value
 end
 
-nvolumes(mesh::Mesh) = maximum(components(mesh))
+nvolumes(mesh::Mesh) = maximum(components(mesh); init=0)
 
 end
