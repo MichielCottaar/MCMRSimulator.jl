@@ -167,12 +167,12 @@ Get the indices of obstructions that contain the `position`.
 """
 function isinside(grid::HitGrid{N}, position::SVector{N, Float64}, stuck_to::Int32, inside::Bool) where {N}
     res = Int32[]
-    c = get_coordinates(grid, position)
+    grid_index = get_coordinates(grid, position)
     if any(grid_index .< 1) || any(grid_index .> size(grid.indices))
         return res
     end
 
-    for packed in grid.indices[c...]
+    for packed in grid.indices[grid_index...]
         if grid isa HitGridNoRepeat
             (index, obstruction) = packed
             pos_shift = position
