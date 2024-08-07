@@ -16,11 +16,12 @@ import LinearAlgebra: inv, transpose, norm, cross, ⋅, I
 import StaticArrays: SVector, SMatrix
 import ..Obstructions:
     FixedObstruction, has_inside, isinside, obstruction_type, random_surface_positions,
-    IndexTriangle, FullTriangle, size_scale, Shift, Wall, curvature
+    IndexTriangle, FullTriangle, size_scale, Shift, Wall, curvature, empty_obstruction_intersections
 import ..BoundingBoxes: BoundingBox, could_intersect
 import ..Intersections: Intersection, empty_intersection
 import ..Reflections: Reflection, empty_reflection
 import ..HitGrids: HitGrid, detect_intersection_grid, obstructions
+import ..RayGridIntersection: ray_grid_intersections
 
 
 """
@@ -171,16 +172,16 @@ function detect_intersection(g::FixedObstructionGroup{N}, start::SVector{3}, des
     rotated_dest = rotate_from_global(g, dest)
 
     if previous_hit[1] != g.parent_index
-        previous_index = 0
+        previous_index = zero(Int32)
         prev_inside = false
     else
-        previous_index = previous_hit[2]
+        previous_index = Int32(previous_hit[2])
         prev_inside = previous_hit[3]
     end
     if repeating(g)
         (index, intersection) = detect_intersection_repeating(g, rotated_start, rotated_dest, previous_index, prev_inside)
     else
-        (index, intersection) = detect_intersection_grid(g.grid, rotated_start, rotated_dest, previous_index, prev_inside)
+        (index, intersection) = detect_intersection_grid(g.hit_grid, rotated_start, rotated_dest, previous_index, prev_inside)
     end
     if intersection.distance > 1.
         return empty_intersection
@@ -194,19 +195,19 @@ function detect_intersection(g::FixedObstructionGroup{N}, start::SVector{3}, des
     )
 end
 
-function detect_intersection_repeating(g::FixedObstructionGroup{N}, start::SVector{N}, dest::SVector{N}, prev_index::Int, prev_inside::Bool) where {N}
+function detect_intersection_repeating(g::FixedObstructionGroup{N}, start::SVector{N}, dest::SVector{N}, prev_index::Int32, prev_inside::Bool) where {N}
     grid_start = start ./ g.repeats
     grid_dest = dest ./ g.repeats
     voxel_f = round.(grid_start)
     if all(voxel_f .== round.(grid_dest))
         voxel_f2 = voxel_f .* g.repeats
-        return detect_intersection_grid(g.grid, start .- voxel_f2, dest .- voxel_f2, prev_index, prev_inside, g.args...)
+        return detect_intersection_grid(g.hit_grid, start .- voxel_f2, dest .- voxel_f2, prev_index, prev_inside, g.args...)
     end
     found_index = zero(Int32)
     found_intersection = empty_obstruction_intersections[N]
     for (voxel, _, _, t2, _) in ray_grid_intersections(grid_start .+ 0.5, grid_dest .+ 0.5)
         scaled_voxel = voxel .* g.repeats
-        (index, intersection) = detect_intersection_grid(g.grid, start .- scaled_voxel, dest .- scaled_voxel, prev_index, prev_inside, g.args...)
+        (index, intersection) = detect_intersection_grid(g.hit_grid, start .- scaled_voxel, dest .- scaled_voxel, prev_index, prev_inside, g.args...)
         if found_intersection.distance > intersection.distance
             found_intersection = intersection
             found_index = index
