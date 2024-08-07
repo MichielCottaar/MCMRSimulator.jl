@@ -1,9 +1,10 @@
 module Fix
 import LinearAlgebra: I, transpose
 import StaticArrays: SVector
-import ...Internal: FixedObstructionGroup, FixedGeometry, Internal, get_quadrant, Grid, isinside_grid, FixedMesh
+import ...Internal: FixedObstructionGroup, FixedGeometry, Internal, get_quadrant, HitGrid, isinside_grid, FixedMesh
 import ..Obstructions: ObstructionType, ObstructionGroup, Walls, Cylinders, Spheres, Annuli, Mesh, fields, isglobal, BendyCylinder, value_as_vector
 import ..SplitMesh: fix_mesh
+import ..SizeScales: size_scale
 
 """
     fix(user_geometry; permeability=0., density=0., dwell_time=0., relaxivity=0.)
@@ -152,38 +153,25 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
     rotation = user_obstructions.rotation.value
 
     if eltype(internal_obstructions) <: Internal.IndexTriangle
-        vertices = SVector{3, Float64}.(user_obstructions.vertices.value)
+        args = (SVector{3, Float64}.(user_obstructions.vertices.value), )
     else
-        vertices = SVector{3, Float64}[]
+        args = ()
     end
     bounding_boxes = map(o->Internal.BoundingBox(o, vertices), internal_obstructions)
-    grid = Grid(bounding_boxes, user_obstructions.grid_resolution.value, user_obstructions.repeats.value)
+    grid = HitGrid(bounding_boxes, user_obstructions.grid_resolution.value, user_obstructions.repeats.value)
     
     result = FixedObstructionGroup(
         internal_obstructions,
+        user_obstructions.repeats.value,
         index,
         original_index,
         rotation,
         grid,
-        user_obstructions.use_boundingbox.value ? bounding_boxes : nothing,
         volume,
         surface,
-        vertices
+        size_scale(user_obstructions),
+        args
     )
-    if result isa FixedMesh
-        grid = Grid(bounding_boxes, user_obstructions.grid_resolution.value, user_obstructions.repeats.value; isinside=isinside_grid(result))
-        result = FixedObstructionGroup(
-            internal_obstructions,
-            index,
-            original_index,
-            rotation,
-            grid,
-            user_obstructions.use_boundingbox.value ? bounding_boxes : nothing,
-            volume,
-            surface,
-            vertices
-        )
-    end
     return result
 end
 

@@ -103,30 +103,7 @@ rotate_to_global(g::FixedObstructionGroup{N}, pos::SVector{N}) where {N} = g.rot
 curvature(g::FixedMesh) = length(g.obstructions) == 1 ? 0. : curvature(g.obstructions, g.vertices)
 
 
-function size_scale(g::FixedObstructionGroup)
-    if g isa FixedMesh
-        # the division by 2 is to take into account that for cylindrical meshes, the curvature along one of 2 dimensions is zero
-        min_radius = 1 / (2 * curvature(g))
-    else
-        min_radius = minimum(size_scale.(g.obstructions))
-    end
-    if g.obstructions[1] isa Shift
-        for i in 1:length(g.obstructions)
-            for j in 1:i-1
-                distance = norm(g.obstructions[i].shift .- g.obstructions[j].shift)
-                if distance < min_radius && distance > 0
-                    min_radius = distance
-                end
-            end
-        end
-    end
-    if ~repeating(g)
-        return min_radius
-    else
-        return min(min_radius, g.grid.size...)
-    end
-end
-
+size_scale(g::FixedObstructionGroup) = g.size_scale
 size_scale(g::FixedGeometry) = minimum(size_scale.(g))
 size_scale(g::FixedGeometry{0}) = Inf
 

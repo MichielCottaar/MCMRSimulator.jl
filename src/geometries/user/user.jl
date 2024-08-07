@@ -4,6 +4,7 @@ User interface for defining geometry.
 module User
 include("obstructions/obstructions.jl")
 include("split_mesh.jl")
+include("size_scales.jl")
 include("fix.jl")
 include("fix_susceptibility.jl")
 include("load_mesh.jl")
@@ -19,6 +20,7 @@ import .Obstructions: ObstructionGroup, IndexedObstruction, nvolumes,
     Annulus, Annuli,
     Triangle, Mesh,
     Ring, BendyCylinder
+import .SizeScales: size_scale
 import .RandomDistribution: random_positions_radii
 import .LoadMesh: load_mesh
 import .JSON: write_geometry, read_geometry
