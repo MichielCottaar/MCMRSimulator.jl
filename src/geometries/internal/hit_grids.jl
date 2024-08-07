@@ -61,7 +61,7 @@ struct HitGridRepeat{N, O} <: HitGrid{N, O}
     bounding_box :: BoundingBox{N}
     inv_resolution :: SVector{N, Float64}
     indices :: Array{Vector{Tuple{Int32, Int32, O}}, N}
-    shift :: Vector{SVector{N, Float64}}
+    shifts :: Vector{SVector{N, Float64}}
 end
 
 function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::AbstractArray, args...) where {N}
@@ -238,12 +238,12 @@ function detect_intersection_inner(grid::HitGrid{N, O}, start::SVector{N, Float6
             start_shift = start
             dest_shift = dest
         else
-            (index, shift, obstruction) = packed
-            if iszero(shift)
+            (index, shift_index, obstruction) = packed
+            if iszero(shift_index)
                 start_shift = start
                 dest_shift = dest
             else
-                shift = g.grid.shifts[shift_index]
+                shift = grid.shifts[shift_index]
                 start_shift = start .- shift
                 dest_shift = dest .- shift
             end
@@ -266,7 +266,7 @@ function grid_inside_mesh(grid::HitGrid{3, IndexTriangle}, vertices::AbstractVec
     triangles = map(o -> o.indices, obstructions(grid))
     mean_triangles = map(t->mean(vertices[t]), triangles)
     if grid isa HitGridRepeat
-        sz = mesh.grid.size
+        sz = upper(grid) .- lower(grid)
         mean_triangles = [@. mod(t + sz/2, sz) - sz/2 for t in mean_triangles]
     end
     tree = KDTree(mean_triangles)
