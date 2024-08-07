@@ -100,9 +100,6 @@ rotate_from_global(g::FixedObstructionGroup, pos::SVector{3}) = g.inv_rotation *
 rotate_to_global(g::FixedObstructionGroup{N}, pos::SVector{N}) where {N} = g.rotation * pos
 
 
-curvature(g::FixedMesh) = length(g.obstructions) == 1 ? 0. : curvature(g.obstructions, g.vertices)
-
-
 size_scale(g::FixedObstructionGroup) = g.size_scale
 size_scale(g::FixedGeometry) = minimum(size_scale.(g))
 size_scale(g::FixedGeometry{0}) = Inf
