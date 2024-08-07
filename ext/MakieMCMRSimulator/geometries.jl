@@ -5,7 +5,7 @@ import LinearAlgebra: cross, ⋅, norm
 import Colors
 import GeometryBasics
 import MCMRSimulator.Plot: PlotPlane, Plot_Geometry
-import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, FixedMesh
+import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere
 import MCMRSimulator.Geometries: ObstructionGroup, fix, Mesh, Cylinders
 import ..Utils: GeometryLike
 
@@ -271,11 +271,7 @@ function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:GeometryLike}})
     ))
 
     function plot_group(group, color)
-        if ~(group isa FixedMesh)
-            println("Skipping $group for 3D geometry plot.")
-            return
-        end
-        vert = GeometryBasics.Point{3, Float64}.(group.vertices)
+        vert = GeometryBasics.Point{3, Float64}.(group.args[1])
         tri = [GeometryBasics.TriangleFace{Int}(o.indices) for o in group.obstructions]
         patch_color = @lift $default_color == Makie.automatic ? color : $default_color
         geometry_mesh = GeometryBasics.Mesh(vert, tri)

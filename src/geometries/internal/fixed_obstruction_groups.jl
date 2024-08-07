@@ -17,7 +17,7 @@ import StaticArrays: SVector, SMatrix
 import ..Obstructions:
     FixedObstruction, has_inside, isinside, obstruction_type, random_surface_positions,
     IndexTriangle, FullTriangle, size_scale, Shift, Wall, curvature, empty_obstruction_intersections
-import ..BoundingBoxes: BoundingBox, could_intersect
+import ..BoundingBoxes: BoundingBox, could_intersect, lower, upper
 import ..Intersections: Intersection, empty_intersection
 import ..Reflections: Reflection, empty_reflection
 import ..HitGrids: HitGrid, detect_intersection_grid, obstructions
@@ -124,7 +124,7 @@ Returns a vector of indices with all the obstructions in [`FixedObstructionGroup
 For obstructions with only a single inside, will return an empty vector ("[]") if the particle is outside and a "[0]" if inside.
 """
 function isinside(g::FixedObstructionGroup, pos::SVector{3}, stuck_to::Reflection=empty_reflection)
-    isinside(g, pos, stuck_to.geometry_index == g.parent_index ? stuck_to.obstruction_index : zero(Int32), stuck_to.inside)
+    isinside(g, pos, stuck_to.geometry_index == g.parent_index ? Int32(stuck_to.obstruction_index) : zero(Int32), stuck_to.inside)
 end
 
 function isinside(g::FixedObstructionGroup{N, R, O}, pos::SVector{3}, stuck_to::Int32, inside::Bool) where {N, R, O}
@@ -247,10 +247,11 @@ For each drawn position will return a tuple with:
 """
 function random_surface_positions(group::FixedObstructionGroup{N}, bb::BoundingBox{3}, volume_density::Number) where {N}
     local_surface_density = group.surface.surface_density
+    all_obstructions = obstructions(group)
     if local_surface_density isa Vector
         surface_density = [isnothing(sd) ? default_surface_density : sd for sd in local_surface_density]
     else
-        surface_density = fill(local_surface_density, length(group.obstructions))
+        surface_density = fill(local_surface_density, length(all_obstructions))
     end
 
     if N == 1
@@ -272,22 +273,24 @@ function random_surface_positions(group::FixedObstructionGroup{N}, bb::BoundingB
     end
     normed_surface_density = surface_density .* (bb_area * volume_density)
 
-    get_random_pos(o, d) = random_surface_positions(o, group.vertices, d)
+    get_random_pos(o, d) = random_surface_positions(o, group.args..., d)
 
     if repeating(group)
         repeats = group.repeats
         normals = [group.rotation[:, i] for i in 1:N]
-        nrepeats_lower = div.([bb.lower ⋅ abs.(n) for n in normals], group.grid.size, RoundDown) .- 5
-        nrepeats_upper = div.([bb.upper ⋅ abs.(n) for n in normals], group.grid.size, RoundUp) .+ 5
+
+        sz = upper(group.hit_grid) .- lower(group.hit_grid)
+        nrepeats_lower = div.([bb.lower ⋅ abs.(n) for n in normals], sz, RoundDown) .- 5
+        nrepeats_upper = div.([bb.upper ⋅ abs.(n) for n in normals], sz, RoundUp) .+ 5
 
         total_repeats = prod(nrepeats_upper .- nrepeats_lower .+ 1)
-        sub_draws = get_random_pos.(group.obstructions, normed_surface_density .* total_repeats)
+        sub_draws = get_random_pos.(all_obstructions, normed_surface_density .* total_repeats)
         base_positions = [p for s in sub_draws for p in s[1]]
         normals = [p for s in sub_draws for p in s[2]]
         shifts = SVector{N, Float64}.(zip(rand.(UnitRange.(nrepeats_lower, nrepeats_upper), length(base_positions))...))
         positions = base_positions .+ [s .* repeats for s in shifts]
     else
-        sub_draws = get_random_pos.(group.obstructions, normed_surface_density)
+        sub_draws = get_random_pos.(all_obstructions, normed_surface_density)
         positions = [p for s in sub_draws for p in s[1]]
         normals = [p for s in sub_draws for p in s[2]]
     end
