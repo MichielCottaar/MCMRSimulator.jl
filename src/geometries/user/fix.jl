@@ -157,8 +157,7 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
     else
         args = ()
     end
-    bounding_boxes = map(o->Internal.BoundingBox(o, vertices), internal_obstructions)
-    grid = HitGrid(bounding_boxes, user_obstructions.grid_resolution.value, user_obstructions.repeats.value)
+    grid = HitGrid(internal_obstructions, user_obstructions.grid_resolution.value, user_obstructions.repeats.value, args...)
     
     result = FixedObstructionGroup(
         internal_obstructions,

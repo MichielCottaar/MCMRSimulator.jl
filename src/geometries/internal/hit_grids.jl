@@ -41,8 +41,8 @@ struct HitGridRepeat{N, O} <: HitGrid{N, O}
     shift :: SVector{N, Float64}
 end
 
-function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::Union{Nothing, SVector{N, Float64}}=nothing) where {N}
-    bounding_boxes = BoundingBox.(obstructions)
+function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::Union{Nothing, SVector{N, Float64}}, args...) where {N}
+    bounding_boxes = map(o->Internal.BoundingBox(o, args...), internal_obstructions)
     bb_actual = BoundingBox(bounding_boxes)
     if ~isnothing(repeats)
         new_lower = map(bb_actual.lower, bb.actual.upper, repeats) do l, u, r
