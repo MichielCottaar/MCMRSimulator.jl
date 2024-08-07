@@ -173,7 +173,7 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
         volume,
         surface,
         size_scale(user_obstructions),
-        args
+        args...
     )
     return result
 end
