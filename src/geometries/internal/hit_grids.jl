@@ -205,7 +205,7 @@ function detect_intersection_grid(grid::HitGrid{N}, start::SVector{N, Float64}, 
         return (zero(Int32), empty_obstruction_intersections[N])
     end
     if all(size(grid.indices) .== 1)
-        return detect_intersection_inner(g, start, dest, prev_index, prev_inside, zero(SVector{N, Int64}) .+ 1, args...)
+        return detect_intersection_inner(grid, start, dest, prev_index, prev_inside, zero(SVector{N, Int64}) .+ 1, args...)
     end
     found_intersection = empty_obstruction_intersections[N]
     found_intersection_index = zero(Int32)
@@ -231,7 +231,7 @@ function detect_intersection_grid(grid::HitGrid{N}, start::SVector{N, Float64}, 
     return (found_intersection_index, found_intersection)
 end
 
-function detect_intersection_inner(grid::HitGrid{N, O}, start::SVector{N, Float64}, dest::SVector{N, Float64}, prev_index::Int32, prev_inside::Bool, voxel::SVector{3, Int}, args...) where {N, O}
+function detect_intersection_inner(grid::HitGrid{N, O}, start::SVector{N, Float64}, dest::SVector{N, Float64}, prev_index::Int32, prev_inside::Bool, voxel::SVector{N, Int}, args...) where {N, O}
     intersection_index = zero(Int32)
     intersection = empty_obstruction_intersections[N]
     for packed in grid.indices[voxel...]
@@ -355,20 +355,20 @@ function isinside(grid::HitGrid{N, IndexTriangle}, position::SVector{N, Float64}
         if grid isa HitGridNoRepeat
             (index, obstruction) = packed
             start_shift = centre
-            dest_shift = normed
+            dest_shift = position
         else
             (index, shift_index, obstruction) = packed
             if iszero(shift_index)
                 start_shift = centre
-                dest_shift = normed
+                dest_shift = position
             else
                 shift = grid.shifts[shift_index]
                 start_shift = centre .- shift
-                dest_shift = normed .- shift
+                dest_shift = position .- shift
             end
         end
 
-        (new_intersection, partial) = detect_intersection_partial(obstruction, centre_use, normed_use)
+        (new_intersection, partial) = detect_intersection_partial(obstruction, start_shift, dest_shift)
 
         if (new_intersection.distance >= 0) && (new_intersection.distance < 1)
             if partial
