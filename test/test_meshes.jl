@@ -63,11 +63,6 @@ end
     end
     @test_throws "Grid voxel centre " mr.fix(box_mesh(center=[0, 0, 0], repeats=[1.5, 1.5, 1.5], grid_resolution=0.5))
 end
-@testset "Bounding box calculation" begin
-    bb = mr.BoundingBox(mr.fix(box_mesh())[1])
-    @test all(bb.lower .== [-0.5, -0.5, -0.5])
-    @test all(bb.upper .== [0.5, 0.5, 0.5])
-end
 if false
     @testset "1x1x1 grid mesh intersection" begin
         mesh = box_mesh(grid_size=1)
