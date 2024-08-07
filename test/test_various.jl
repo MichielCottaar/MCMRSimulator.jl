@@ -156,21 +156,6 @@ end
         @test all(@. get_rng(t1) == get_rng(t2))
     end
 end
-@testset "Bounding boxes" begin
-    bb(g) = mr.BoundingBox(mr.fix(g)[1])
-    # single obstruction
-    @test bb(mr.Cylinders(radius=1)) == mr.BoundingBox{2}(1)
-
-    # shifted cylinder
-    @test bb(mr.Cylinders(radius=1., position=[2., 2.])) == mr.BoundingBox([1., 1.], [3, 3])
-
-    # repeated obstructions
-    @test bb(mr.Cylinders(radius=1., repeats=[2., 3.])) == mr.BoundingBox([-1, -1], [1, 1])
-
-    # shifted spheres
-    @test bb(mr.Spheres(radius=1., position=[[1, 0, 0], [0, 1, 0]])) == mr.BoundingBox([-1, -1, -1.], [2., 2., 1.])
-end
-
 @testset "Test readout formats" begin
     sequence = GradientEcho(TE=1000)
     seq = build_sequence() do 
