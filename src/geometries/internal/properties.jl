@@ -60,7 +60,7 @@ function MRIProperties(full_geometry::FixedGeometry, inside_geometry::FixedGeome
     return res
 end
 
-function get_value(::Val{S}, properties::NamedTuple, index::Int) where {S}
+function get_value(::Val{S}, properties::NamedTuple, index::Integer) where {S}
     res = getproperty(properties, S)
     if res isa Vector
         return res[index]
