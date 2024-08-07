@@ -58,21 +58,25 @@ struct HitGridRepeat{N, O} <: HitGrid{N, O}
     bounding_box :: BoundingBox{N}
     inv_resolution :: SVector{N, Float64}
     indices :: Array{Vector{Tuple{Int32, Int32, O}}, N}
-    shift :: SVector{N, Float64}
+    shift :: Vector{SVector{N, Float64}}
+end
+
+function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::AbstractArray, args...) where {N}
+    return HitGrid(obstructions, grid_resolution, SVector{N, Float64}(repeats), args...)
 end
 
 function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::Union{Nothing, SVector{N, Float64}}, args...) where {N}
     bounding_boxes = map(o->BoundingBox(o, args...), obstructions)
     bb_actual = BoundingBox(bounding_boxes)
     if ~isnothing(repeats)
-        new_lower = map(bb_actual.lower, bb.actual.upper, repeats) do l, u, r
+        new_lower = map(bb_actual.lower, bb_actual.upper, repeats) do l, u, r
             if u > r/2
                 return -r/2
             else
                 return l
             end
         end
-        new_upper = map(bb_actual.lower, bb.actual.upper, repeats) do l, u, r
+        new_upper = map(bb_actual.lower, bb_actual.upper, repeats) do l, u, r
             if l < -r/2
                 return r/2
             else

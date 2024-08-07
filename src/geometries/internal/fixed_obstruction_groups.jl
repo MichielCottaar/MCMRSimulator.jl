@@ -71,8 +71,10 @@ struct FixedObstructionGroup{
     # Additional arguments that should be passed around for the `obstructions` to work
     args :: A
     function FixedObstructionGroup(obstructions, repeats, parent_index, original_index, rotation, grid, volume, surface, size_scale, args...)
+        N = size(rotation, 2)
+        repeats = isnothing(repeats) ? nothing : SVector{N, Float64}(repeats)
         new{
-            size(rotation, 2), typeof(repeats), eltype(obstructions), typeof(grid),
+            N, typeof(repeats), eltype(obstructions), typeof(grid),
             typeof(volume), typeof(surface), typeof(args), 3 * size(rotation, 2)
         }(
             repeats, parent_index, original_index, 
