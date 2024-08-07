@@ -26,7 +26,7 @@ function compute_size_scale(obstruction::ObstructionGroup)
     )
 end
 
-compute_obstruction_size_scale(::Walls) = 0.
+compute_obstruction_size_scale(::Walls) = Inf
 compute_obstruction_size_scale(c::Cylinders) = minimum(c.radius.value)
 compute_obstruction_size_scale(a::Annuli) = min(
     minimum(a.inner.value),
