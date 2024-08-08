@@ -40,7 +40,7 @@ function obstructions(g::HitGrid{N, O}) where {N, O}
             individual[pack[1]] = pack[end]
         end
     end
-    return map(key -> individual[key], sort([keys(individual)...]))
+    return map(key -> individual[key], sort(collect(keys(individual))))
 end
 
 
@@ -111,11 +111,11 @@ function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_res
             range_repeats = UnitRange.(Int.(div.(this_bb.lower, repeats, RoundNearest)), Int.(div.(this_bb.upper, repeats, RoundNearest)))
         end
         for int_shifts in Iterators.product(range_repeats...)
-            if isnothing(repeats)
-                shift = zero(SVector{N, Float64})
-            else
-                shift = -SVector{N, Float64}(int_shifts .* repeats)
-            end
+            shift = (
+                isnothing(repeats) ?
+                zero(SVector{N, Float64}) :
+                -SVector{N, Float64}(int_shifts .* repeats)
+            )
 
             l = max.(Int.(div.((lower(this_bb) .+ shift .- lower(bb)), actual_grid_resolution, RoundUp)), 1)
             u = min.(Int.(div.((upper(this_bb) .+ shift .- lower(bb)), actual_grid_resolution, RoundDown)) .+ 1, dims)
@@ -124,15 +124,15 @@ function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_res
 
             # found possible intersections
             if all(iszero.(shift))
-                index_shift = 0
+                index_shift = zero(Int32)
             else
                 if ~(shift in shifts)
                     push!(shifts, shift)
                 end
-                index_shift = findfirst(s->all(s.==shift), shifts)
+                index_shift = Int32(findfirst(s->all(s.==shift), shifts))
             end
             for grid_indices in Iterators.product(UnitRange.(l, u)...)
-                push!(grid[grid_indices...], (index, index_shift))
+                push!(grid[grid_indices...], (Int32(index), index_shift))
             end
         end
     end
