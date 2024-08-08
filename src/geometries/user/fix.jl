@@ -1,7 +1,7 @@
 module Fix
 import LinearAlgebra: I, transpose
 import StaticArrays: SVector
-import ...Internal: FixedObstructionGroup, FixedGeometry, Internal, get_quadrant, HitGrid, grid_inside_mesh, BoundingBox
+import ...Internal: FixedObstructionGroup, FixedGeometry, Internal, get_quadrant, HitGrid, BoundingBox
 import ..Obstructions: ObstructionType, ObstructionGroup, Walls, Cylinders, Spheres, Annuli, Mesh, fields, isglobal, BendyCylinder, value_as_vector
 import ..SplitMesh: fix_mesh, components
 import ..SizeScales: size_scale, grid_resolution
@@ -160,10 +160,12 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
     bb = BoundingBox(map(o->BoundingBox(o, args), internal_obstructions))
     grid = HitGrid(internal_obstructions, grid_resolution(user_obstructions, bb), user_obstructions.repeats.value, args)
 
-    if eltype(internal_obstructions) <: Internal.IndexTriangle && ~all(
-        all(iszero.(getproperty(volume, s))) for s in (:R1, :R2, :off_resonance)
-    )
-        args = (inside_mask=grid_inside_mesh(grid, user_obstructions.repeats.value, args), args...)
+    if eltype(internal_obstructions) <: Internal.IndexTriangle
+        args = (
+            inside_mask=BitArray(undef, (maximum(components(user_obstructions)), size(grid.indices)...)), 
+            inside_prepared=Ref(false),
+            args...
+        )
     end
     
     result = FixedObstructionGroup(

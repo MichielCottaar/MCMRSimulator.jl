@@ -319,13 +319,12 @@ select_sub_grid(g::HitGridRepeat, selector) = HitGridRepeat(
     g.shifts,
 )
 
-function grid_inside_mesh(grid::HitGrid{3, IndexTriangle}, repeats, args::NamedTuple)
+function grid_inside_mesh!(grid::HitGrid{3, IndexTriangle}, repeats, args::NamedTuple)
     components = [o.component for o in obstructions(grid)]
-    res = BitArray(undef, (maximum(components), size(grid.indices)...))
+    @assert maximum(components) == size(args.inside_mask, 1)
     Threads.@threads for c in 1:maximum(components)
-        res[c, :, :, :] = grid_inside_mesh_internal(select_sub_grid(grid, components .== c), repeats, args)
+        args.inside_mask[c, :, :, :] = grid_inside_mesh_internal(select_sub_grid(grid, components .== c), repeats, args)
     end
-    return res
 end
 
 function grid_inside_mesh_internal(grid::HitGrid{3, IndexTriangle}, repeats, args::NamedTuple)
@@ -374,6 +373,9 @@ function isinside(grid::HitGrid{N, IndexTriangle}, position::SVector{N, Float64}
         return Int32[]
     end
 
+    if ~args.inside_prepared[]
+        error("Trying to compute the inside of a grid before running `prepare_isinside`.")
+    end
     nhit = zeros(Int, size(args.inside_mask)[1])
     nhit[args.inside_mask[:, grid_index...]] .= 2
     for packed in grid.indices[grid_index...]

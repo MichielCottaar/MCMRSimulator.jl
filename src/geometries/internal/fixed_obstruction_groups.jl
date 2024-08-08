@@ -20,7 +20,7 @@ import ..Obstructions:
 import ..BoundingBoxes: BoundingBox, could_intersect, lower, upper
 import ..Intersections: Intersection, empty_intersection
 import ..Reflections: Reflection, empty_reflection
-import ..HitGrids: HitGrid, detect_intersection_grid, obstructions
+import ..HitGrids: HitGrid, detect_intersection_grid, obstructions, grid_inside_mesh!
 import ..RayGridIntersection: ray_grid_intersections
 
 
@@ -140,9 +140,27 @@ function isinside(g::FixedObstructionGroup{N, R, O}, pos::SVector{3}, stuck_to::
     else
         normed = rotated
     end
+    prepare_isinside!(g)
     return isinside(g.hit_grid, normed, stuck_to, inside, g.args)
 end
 
+"""
+    prepare_isinside!(fg::FixedObstructionGroup, )
+
+Prepare the [`FixedObstructionGroup`](@ref) for calls of [`isinside`](@ref).
+
+This function is not thread-safe, so it should be called before multi-threading in `evolve`.
+If called multiple times, it will only do the required work the first time.
+"""
+prepare_isinside!(::FixedObstructionGroup) = nothing
+function prepare_isinside!(mesh::FixedObstructionGroup{3, R, IndexTriangle}) where R
+    if mesh.args.inside_prepared[]
+        return
+    end
+    @info "Doing preparatory calculations for computing the inside of a mesh. This can take a while, but only needs to be done once."
+    grid_inside_mesh!(mesh.hit_grid, mesh.repeats, mesh.args)
+    mesh.args.inside_prepared[] = true
+end
 
 """
     isinside(geometry, position[, stuck_reflection])

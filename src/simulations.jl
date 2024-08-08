@@ -2,7 +2,7 @@ module Simulations
 import StaticArrays: SVector
 import MRIBuilder: Sequence
 import ..Geometries: ObstructionGroup, fix, fix_susceptibility
-import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility, susceptibility_off_resonance
+import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility, susceptibility_off_resonance, prepare_isinside!
 import ..Spins: Spin, Snapshot, SpinOrientation, stuck
 import ..Methods: get_time, B0
 import ..Properties: GlobalProperties, R1, R2, off_resonance, correct_for_timestep
@@ -115,6 +115,7 @@ function Simulation(
     inside_geometry = filter(geometry) do obstruction
         ~all(all(iszero.(getproperty(obstruction.volume, s))) for s in (:R1, :R2, :off_resonance))
     end
+    prepare_isinside!.(inside_geometry)
 
     default_properties = GlobalProperties(; R1=R1, R2=R2, off_resonance=off_resonance)
     if iszero(diffusivity) && length(geometry) > 0
