@@ -160,7 +160,9 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
     bb = BoundingBox(map(o->BoundingBox(o, args), internal_obstructions))
     grid = HitGrid(internal_obstructions, grid_resolution(user_obstructions, bb), user_obstructions.repeats.value, args)
 
-    if eltype(internal_obstructions) <: Internal.IndexTriangle
+    if eltype(internal_obstructions) <: Internal.IndexTriangle && ~all(
+        all(iszero.(getproperty(volume, s))) for s in (:R1, :R2, :off_resonance)
+    )
         args = (inside_mask=grid_inside_mesh(grid, user_obstructions.repeats.value, args), args...)
     end
     
