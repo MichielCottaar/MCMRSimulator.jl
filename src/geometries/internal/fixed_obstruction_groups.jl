@@ -250,6 +250,52 @@ function detect_intersection(geometries::FixedGeometry, start::SVector{3}, dest:
 end
 
 
+function get_edge(group::FixedObstructionGroup{1})
+    normal = group.rotation[:, 1]
+    e1 = cross(SVector{3}([1., 1, 0]), normal)
+    if all(iszero.(e1))
+        e1 = cross(SVector{3}([1., 0, 0]), normal)
+    end
+    e1 = e1 ./ norm(e1)
+    e2 = cross(normal, e1)
+    return (e1, e2)
+end
+
+function bb_area(group::FixedObstructionGroup{1}, bb::BoundingBox{3})
+    (e1, e2) = get_edge(group)
+    return (abs.(e1) ⋅ (bb.upper - bb.lower)) * (abs.(e2) ⋅ (bb.upper - bb.lower))
+end
+
+function get_edge(group::FixedObstructionGroup{2})
+    n1 = group.rotation[:, 1]
+    n2 = group.rotation[:, 2]
+    return cross(n1, n2)
+end
+
+function bb_area(group::FixedObstructionGroup{2}, bb::BoundingBox{3})
+    return abs.(get_edge(group)) ⋅ (bb.upper - bb.lower)
+end
+
+bb_area(group::FixedObstructionGroup{3}, bb::BoundingBox{3}) = 1.
+
+function to_global_positions(unrotated_positions, group::FixedObstructionGroup{1}, bb::BoundingBox{3})
+    (e1, e2) = get_edge(group)
+    l1l = abs.(e1) ⋅ bb.lower
+    l1u = abs.(e1) ⋅ bb.upper
+    l2l = abs.(e2) ⋅ bb.lower
+    l2u = abs.(e2) ⋅ bb.upper
+    return [(rand() * (l1u - l1l) .+ l1l) .* e1 .+ (rand() * (l2u - l2l) .+ l2l) .* e2 .+ p for p in unrotated_positions]
+end
+
+function to_global_positions(unrotated_positions, group::FixedObstructionGroup{2}, bb::BoundingBox{3})
+    edge = get_edge(group)
+    l1 = abs.(edge) ⋅ bb.lower
+    l2 = abs.(edge) ⋅ bb.upper
+    return [(rand() * (l2 - l1) .+ l1) .* edge .+ p for p in unrotated_positions]
+end
+
+to_global_positions(unrotated_positions, ::FixedObstructionGroup{3}, bb::BoundingBox{3}) = unrotated_positions
+
 """
     random_surface_positions(group/geometry, bounding_box, volume_density)
 
@@ -272,24 +318,7 @@ function random_surface_positions(group::FixedObstructionGroup{N}, bb::BoundingB
         surface_density = fill(local_surface_density, length(all_obstructions))
     end
 
-    if N == 1
-        normal = group.rotation[:, 1]
-        e1 = cross(SVector{3}([1., 1, 0]), normal)
-        if all(iszero.(e1))
-            e1 = cross(SVector{3}([1., 0, 0]), normal)
-        end
-        e1 = e1 ./ norm(e1)
-        e2 = cross(normal, e1)
-        bb_area = (abs.(e1) ⋅ (bb.upper - bb.lower)) * (abs.(e2) ⋅ (bb.upper - bb.lower))
-    elseif N == 2
-        n1 = group.rotation[:, 1]
-        n2 = group.rotation[:, 2]
-        edge = cross(n1, n2)
-        bb_area = abs.(edge) ⋅ (bb.upper - bb.lower)
-    else
-        bb_area = 1
-    end
-    normed_surface_density = surface_density .* (bb_area * volume_density)
+    normed_surface_density = surface_density .* (bb_area(group, bb) * volume_density)
 
     get_random_pos(o, d) = random_surface_positions(o, group.args, d)
 
@@ -297,15 +326,15 @@ function random_surface_positions(group::FixedObstructionGroup{N}, bb::BoundingB
         repeats = group.repeats
         normals = [group.rotation[:, i] for i in 1:N]
 
-        sz = upper(group.hit_grid) .- lower(group.hit_grid)
-        nrepeats_lower = div.([bb.lower ⋅ abs.(n) for n in normals], sz, RoundDown) .- 5
-        nrepeats_upper = div.([bb.upper ⋅ abs.(n) for n in normals], sz, RoundUp) .+ 5
+        nrepeats_lower = div.([bb.lower ⋅ abs.(n) for n in normals], repeats, RoundDown) .- 5
+        nrepeats_upper = div.([bb.upper ⋅ abs.(n) for n in normals], repeats, RoundUp) .+ 5
 
         total_repeats = prod(nrepeats_upper .- nrepeats_lower .+ 1)
         sub_draws = get_random_pos.(all_obstructions, normed_surface_density .* total_repeats)
         base_positions = [p for s in sub_draws for p in s[1]]
         normals = [p for s in sub_draws for p in s[2]]
-        shifts = SVector{N, Float64}.(zip(rand.(UnitRange.(nrepeats_lower, nrepeats_upper), length(base_positions))...))
+
+        shifts :: Vector{SVector{N, Float64}} = SVector{N, Float64}.(zip(rand.(UnitRange.(nrepeats_lower, nrepeats_upper), length(base_positions))...))
         positions = base_positions .+ [s .* repeats for s in shifts]
     else
         sub_draws = get_random_pos.(all_obstructions, normed_surface_density)
@@ -315,19 +344,7 @@ function random_surface_positions(group::FixedObstructionGroup{N}, bb::BoundingB
 
     global_normals = [rotate_to_global(group, n) for n in normals]
     unrotated_positions = [rotate_to_global(group, p) for p in positions]
-    if N == 3
-        global_positions = unrotated_positions
-    elseif N == 2
-        l1 = abs.(edge) ⋅ bb.lower
-        l2 = abs.(edge) ⋅ bb.upper
-        global_positions = [(rand() * (l2 - l1) .+ l1) .* edge .+ p for p in unrotated_positions]
-    else
-        l1l = abs.(e1) ⋅ bb.lower
-        l1u = abs.(e1) ⋅ bb.upper
-        l2l = abs.(e2) ⋅ bb.lower
-        l2u = abs.(e2) ⋅ bb.upper
-        global_positions = [(rand() * (l1u - l1l) .+ l1l) .* e1 .+ (rand() * (l2u - l2l) .+ l2l) .* e2 .+ p for p in unrotated_positions]
-    end
+    global_positions = to_global_positions(unrotated_positions, group, bb)
     geometry_index = fill(group.parent_index, length(positions))
     obstruction_index = vcat([fill(index, length(arr[1])) for (index, arr) in enumerate(sub_draws)]...)
 
