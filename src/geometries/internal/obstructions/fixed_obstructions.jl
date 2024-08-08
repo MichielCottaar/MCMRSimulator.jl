@@ -60,7 +60,8 @@ If `inside` is set, the last collision in the trajectory was with this `obstruct
 `inside` indicates whether this previous collision was with the inside of the `obstruction`.
 This is passed on to prevent the particle from colliding with the same obstruction multiple times without any intermediate movement.
 """
-detect_intersection(obstruction::FixedObstruction{N}, start::SVector{N}, dest::SVector{N}, ::NamedTuple, prev_inside::Union{Nothing, Bool}=nothing) where{N} = detect_intersection(obstruction, start, dest, prev_inside)
+detect_intersection(obstruction::FixedObstruction{N}, start::SVector{N}, dest::SVector{N}, ::NamedTuple, prev_inside::Union{Nothing, Bool}) where{N} = detect_intersection(obstruction, start, dest, prev_inside)
+detect_intersection(obstruction::FixedObstruction{N}, start::SVector{N}, dest::SVector{N}, ::NamedTuple) where{N} = detect_intersection(obstruction, start, dest)
 
 """
     has_inside(obstruction_type)
@@ -75,7 +76,8 @@ function has_inside end
 Returns true if the `position` is inside the `obstruction`.
 This will be inaccurate if the particle with that position is stuck on the surface of the obstruction.
 """
-isinside(o::FixedObstruction{N}, pos::AbstractVector) where {N} = isinside(o, SVector{N}(pos))
+isinside(o::FixedObstruction{N}, pos::AbstractVector, args...) where {N} = isinside(o, SVector{N}(pos), args...)
+isinside(o::FixedObstruction{N}, pos::SVector{N}, ::NamedTuple) where {N} = isinside(o, SVector{N}(pos))
 
 """
     obstruction_type(obstruction/geometry)
@@ -98,9 +100,7 @@ size_scale(o::FixedObstruction) = radius(o)
 Returns a vector of positions and normals on the normals of a specific obstruction.
 Normals should always assume that the particle is on the inside.
 """
-function random_surface_positions(obstruction::FixedObstruction, ::NamedTuple, surface_density::Number)
-    random_surface_positions(obstruction, surface_density)
-end
+random_surface_positions(obstruction::FixedObstruction, ::NamedTuple, surface_density::Number) = random_surface_positions(obstruction, surface_density)
 
 
 end

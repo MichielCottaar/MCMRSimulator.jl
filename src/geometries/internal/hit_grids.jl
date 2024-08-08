@@ -193,7 +193,7 @@ end
 
 Get the indices of obstructions that contain the `position`.
 """
-function isinside(grid::HitGrid{N}, position::SVector{N, Float64}, stuck_to::Int32, inside::Bool) where {N}
+function isinside(grid::HitGrid{N}, position::SVector{N, Float64}, stuck_to::Int32, inside::Bool, args::NamedTuple) where {N}
     res = Int32[]
     grid_index = get_coordinates(grid, position)
     if any(grid_index .< 1) || any(grid_index .> size(grid.indices))
@@ -216,7 +216,7 @@ function isinside(grid::HitGrid{N}, position::SVector{N, Float64}, stuck_to::Int
             if inside
                 push!(res, index)
             end
-        elseif isinside(obstruction, pos_shift)
+        elseif isinside(obstruction, pos_shift, args)
             push!(res, index)
         end
     end
