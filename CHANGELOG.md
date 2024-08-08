@@ -6,8 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Meshes are automatically split into individual components (based on connectivity). The R1/R2/off-resonance can be set individually within each of these components. The component index of each element can be overwritten using `mesh.component = [...]`.
-### Changed
+### Optimisations
 - A refactoring of the grid overlaying the obstructions has led to a large speedup in the code (due to more efficient memory access).
+- Grid resolution is set to a better default.
 ## [v0.10.0]
 ### Changed
 - **Major**: the sequence generation, I/O, and plotting has now been moved to its own package: [`MRIBuilder.jl`](https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl).
