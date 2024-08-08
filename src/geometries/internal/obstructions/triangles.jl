@@ -154,8 +154,8 @@ function detect_intersection_partial(triangle::FullTriangle, start::SVector{N}, 
     ), partial)
 end
 
-function random_surface_positions(triangle::IndexTriangle, vertices, ::BitArray, density::Number)
-    random_surface_positions(FullTriangle(triangle, vertices), density)
+function random_surface_positions(triangle::IndexTriangle, args::NamedTuple, density::Number)
+    random_surface_positions(FullTriangle(triangle, args.vertices), density)
 end
 
 function random_surface_positions(ft::FullTriangle, density::Number)
