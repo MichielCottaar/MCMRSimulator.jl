@@ -4,6 +4,10 @@ All notable changes to MCMRSimulator.jl will be documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+### Added
+- Meshes are automatically split into individual components (based on connectivity). The R1/R2/off-resonance can be set individually within each of these components. The component index of each element can be overwritten using `mesh.component = [...]`.
+### Changed
+- A refactoring of the grid overlaying the obstructions has led to a large speedup in the code (due to more efficient memory access).
 ## [v0.10.0]
 ### Changed
 - **Major**: the sequence generation, I/O, and plotting has now been moved to its own package: [`MRIBuilder.jl`](https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl).
