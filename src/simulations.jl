@@ -111,11 +111,9 @@ function Simulation(
     end
     susceptibility = fix_susceptibility(geometry)
     geometry = fix(geometry; permeability=permeability, density=surface_density, dwell_time=dwell_time, relaxivity=surface_relaxivity)
-    last_interesting_inside = findlast(g->~all(all(getproperty(g.volume, s) .== v) for (s, v) in ((:R1, 0), (:R2, 0), (:off_resonance, 0))), geometry)
-    if isnothing(last_interesting_inside)
-        inside_geometry = ()
-    else
-        inside_geometry = geometry[1:last_interesting_inside]
+
+    inside_geometry = filter(geometry) do obstruction
+        ~all(all(iszero.(getproperty(obstruction.volume, s))) for s in (:R1, :R2, :off_resonance))
     end
 
     default_properties = GlobalProperties(; R1=R1, R2=R2, off_resonance=off_resonance)

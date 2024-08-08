@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Meshes are automatically split into individual components (based on connectivity). The R1/R2/off-resonance can be set individually within each of these components. The component index of each element can be overwritten using `mesh.component = [...]`.
+### Changed
+- Particles within multiple compartments will now get the R1, R2, and off-resonance contribution from all of them.
 ### Optimisations
 - A refactoring of the grid overlaying the obstructions has led to a large speedup in the code (due to more efficient memory access).
 - Grid resolution is set to a better default.

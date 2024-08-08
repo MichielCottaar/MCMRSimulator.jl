@@ -49,12 +49,10 @@ function MRIProperties(full_geometry::FixedGeometry, inside_geometry::FixedGeome
     for group in inside_geometry
         props = group.volume
         indices = isinside(group, position, stuck_to)
-        if length(indices) > 0
-            index = indices[1]
+        for index in indices
             res.R1 += get_value(Val(:R1), props, index)
             res.R2 += get_value(Val(:R2), props, index)
             res.off_resonance += get_value(Val(:off_resonance), props, index)
-            break
         end
     end
     return res
