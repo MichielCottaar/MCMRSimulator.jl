@@ -48,7 +48,7 @@ struct FixedObstructionGroup{
     G <: HitGrid{N, O},
     V <: NamedTuple{(:R1, :R2, :off_resonance)},
     S <: NamedTuple{(:R1, :R2, :off_resonance, :permeability, :surface_density, :dwell_time, :surface_relaxivity)},
-    A <: Tuple,
+    A <: NamedTuple,
     K
     }
     repeats :: R
