@@ -13,8 +13,7 @@ geometries = Dict(
 
 mesh_fn = "/Users/michielcottaar/Work/data/microstructure-meshes/from_Palombo/cell_tissue/cell_tissue_replicated_kappa6.ply"
 if isfile(mesh_fn)
-    geometries["mesh"] = load_mesh(mesh_fn)
-    geometries["mesh"].repeats = (40, 40, 40)
+    geometries["mesh"] = load_mesh(mesh_fn, repeats=(40, 40, 40))
     geometries["mesh_no_repeats"] = load_mesh(mesh_fn)
 end
 
