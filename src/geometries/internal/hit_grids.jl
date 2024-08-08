@@ -322,7 +322,7 @@ select_sub_grid(g::HitGridRepeat, selector) = HitGridRepeat(
 function grid_inside_mesh(grid::HitGrid{3, IndexTriangle}, repeats, args::NamedTuple)
     components = [o.component for o in obstructions(grid)]
     res = BitArray(undef, (maximum(components), size(grid.indices)...))
-    for c in 1:maximum(components)
+    Threads.@threads for c in 1:maximum(components)
         res[c, :, :, :] = grid_inside_mesh_internal(select_sub_grid(grid, components .== c), repeats, args)
     end
     return res
