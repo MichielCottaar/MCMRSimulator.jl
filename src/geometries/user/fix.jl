@@ -66,7 +66,12 @@ function fix_type(spheres::Spheres, index::Int, original_index::Int; kwargs...)
     apply_properties(spheres, base_obstructions, index, original_index; surface="surface", volume="inside", kwargs...)
 end
 
-function fix_type(annuli::Annuli, index::Int, original_index::Int; kwargs...)
+function fix_type(base_annuli::Annuli, index::Int, original_index::Int; kwargs...)
+    annuli = deepcopy(base_annuli)
+    annuli.R1_inner_volume = annuli.R1_inner_volume.value .- annuli.R1_outer_volume.value
+    annuli.R2_inner_volume = annuli.R2_inner_volume.value .- annuli.R2_outer_volume.value
+    annuli.off_resonance_inner_volume = annuli.off_resonance_inner_volume.value .- annuli.off_resonance_outer_volume.value
+
     if isglobal(annuli.inner)
         base_inner = fill(Internal.Cylinder(annuli.inner.value), length(annuli))
     else
