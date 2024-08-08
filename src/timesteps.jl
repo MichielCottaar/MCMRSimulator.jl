@@ -31,21 +31,22 @@ function TimeStep(; diffusivity, geometry, timestep=Inf, size_scale=nothing, tur
         )
     idx = argmin(options)
     if verbose
-        @info "# Timestep determination"
+        lines = ["# Timestep determination"]
         if idx == 1
-            @info "Maximum timestep set by user to $(options[1]) ms."
+            push!(lines, "Maximum timestep set by user to $(options[1]) ms.")
         elseif idx == 2
-            @info "Maximum timestep set by turtoisity constraint based on size of geometry to $(options[2]) ms."
+            push!(lines, "Maximum timestep set by turtoisity constraint based on size of geometry to $(options[2]) ms.")
             if isnothing(size_scale)
-                @info "Size scale of smallest object in the simulation was automatically determined to be $(use_size_scale) um."
-                @info "If this value is too small, you can set the size scale explicitly by passing on `size_scale=<new_value>` to the `Simulator` constructor."
+                push!(lines, "Size scale of smallest object in the simulation was automatically determined to be $(use_size_scale) um.")
+                push!(lines, "If this value is too small, you can set the size scale explicitly by passing on `size_scale=<new_value>` to the `Simulator` constructor.")
             else
-                @info "Size scale was set to $(use_size_scale) um by the user."
+                push!(lines, "Size scale was set to $(use_size_scale) um by the user.")
             end
         elseif idx == 3
-            @info "Maximum timestep set by requirement to get sufficient transitions from free to bound spins to $(options[3]) ms."
+            push!(lines, "Maximum timestep set by requirement to get sufficient transitions from free to bound spins to $(options[3]) ms.")
         end
-        @info "The actual timestep might be further reduced based on the MR sequence(s)."
+        push!(lines, "The actual timestep might be further reduced based on the MR sequence(s).")
+        @info join(lines, '\n')
     end
     return TimeStep(minimum(options), (isnothing(gradient_precision) ? (1e-4 * precision) : gradient_precision) / diffusivity)
 end
