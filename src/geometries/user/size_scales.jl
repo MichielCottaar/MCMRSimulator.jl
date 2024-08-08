@@ -65,7 +65,7 @@ function compute_grid_resolution(obstruction::ObstructionGroup, bb::BoundingBox)
     else
         sz = obstruction.repeats.value
     end
-    nvoxels = min(max(obstruction.n_obstructions, 100), Int(1e6))
+    nvoxels = min(max(obstruction.n_obstructions, 100), Int(1e5))
     return (prod(sz) / nvoxels) ^ (1/length(sz))
 end
 
