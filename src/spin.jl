@@ -80,6 +80,7 @@ mutable struct SpinOrientation
 end
 
 SpinOrientation(orientation::AbstractVector) = SpinOrientation(SVector{3, Float64}(orientation))
+SpinOrientation(so::SpinOrientation) = SpinOrientation(so.longitudinal, so.transverse, so.phase)
 SpinOrientation(vector::SVector{3, Float64}) = SpinOrientation(
     vector[3],
     sqrt(vector[1] * vector[1] + vector[2] * vector[2]),
@@ -116,7 +117,7 @@ mutable struct Spin{N}
     reflection :: Reflection
     rng :: FixedXoshiro
     function Spin(position::AbstractArray{<:Real}, orientations::AbstractArray{SpinOrientation}, reflection=empty_reflection, rng::FixedXoshiro=FixedXoshiro()) 
-        new{length(orientations)}(SVector{3, Float64}(position), SVector{length(orientations)}(deepcopy.(orientations)), reflection, rng)
+        new{length(orientations)}(SVector{3, Float64}(position), SVector{length(orientations)}(SpinOrientation.(orientations)), reflection, rng)
     end
 end
 
