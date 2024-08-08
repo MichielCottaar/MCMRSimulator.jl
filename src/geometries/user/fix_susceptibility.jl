@@ -87,7 +87,8 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     grid = HitGrid(
         shifted,
         user.grid_resolution.value,
-        repeats;
+        repeats,
+        NamedTuple();
         extend=user.lorentz_radius.value
     )
     ParentSusceptibility{N, eltype(internal), typeof(repeats), N * 3}(
