@@ -47,7 +47,7 @@ Returns the smallest bounding box that fully encloses the [`FixedObstruction`](@
 `vertices` will only be provided for the [`IndexTriangle`] type.
 """
 BoundingBox(o::FixedObstruction{N}) where {N} = BoundingBox{N}(radius(o))
-BoundingBox(o::FixedObstruction, vertices::Vector{SVector{3, Float64}}) = BoundingBox(o)
+BoundingBox(o::FixedObstruction, ::NamedTuple) = BoundingBox(o)
 
 """
     detect_intersection(obstruction, start, dest[, inside])
@@ -60,7 +60,7 @@ If `inside` is set, the last collision in the trajectory was with this `obstruct
 `inside` indicates whether this previous collision was with the inside of the `obstruction`.
 This is passed on to prevent the particle from colliding with the same obstruction multiple times without any intermediate movement.
 """
-function detect_intersection end
+detect_intersection(obstruction::FixedObstruction{N}, start::SVector{N}, dest::SVector{N}, ::NamedTuple, prev_inside::Union{Nothing, Bool}=nothing) where{N} = detect_intersection(obstruction, start, dest, prev_inside)
 
 """
     has_inside(obstruction_type)

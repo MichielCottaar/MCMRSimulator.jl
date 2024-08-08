@@ -153,14 +153,14 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
     rotation = user_obstructions.rotation.value
 
     if eltype(internal_obstructions) <: Internal.IndexTriangle
-        args = (SVector{3, Float64}.(user_obstructions.vertices.value), )
+        args = (vertices=SVector{3, Float64}.(user_obstructions.vertices.value), )
     else
         args = ()
     end
-    grid = HitGrid(internal_obstructions, user_obstructions.grid_resolution.value, user_obstructions.repeats.value, args...)
+    grid = HitGrid(internal_obstructions, user_obstructions.grid_resolution.value, user_obstructions.repeats.value, args)
 
     if eltype(internal_obstructions) <: Internal.IndexTriangle
-        args = (args..., grid_inside_mesh(grid, user_obstructions.repeats.value, args...))
+        args = (grid_inside=grid_inside_mesh(grid, user_obstructions.repeats.value, args), args...)
     end
     
     result = FixedObstructionGroup(

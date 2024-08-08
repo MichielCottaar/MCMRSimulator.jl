@@ -52,7 +52,7 @@ function BoundingBox(t::FullTriangle)
     )
 end
 
-BoundingBox(t::IndexTriangle, vertices::Vertices) = BoundingBox(FullTriangle(t, vertices))
+BoundingBox(t::IndexTriangle, args::NamedTuple) = BoundingBox(FullTriangle(t, args.vertices))
     
 function radius(t::FullTriangle) 
     bb = BoundingBox(t)
@@ -91,12 +91,12 @@ function normal(t::FullTriangle)
 end
 
 
-function detect_intersection(triangle::FullTriangle, start::SVector{N}, dest::SVector{N}, inside=nothing) where {N}
+function detect_intersection(triangle::FullTriangle, start::SVector{N}, dest::SVector{N}, inside::Union{Nothing, Bool}) where {N}
     return detect_intersection_partial(triangle, start, dest, inside)[1]
 end
 
-function detect_intersection(triangle::IndexTriangle, start::SVector{N}, dest::SVector{N}, vertices::AbstractVector, ::BitArray, inside=nothing) where {N}
-    return detect_intersection(FullTriangle(triangle, vertices), start, dest, inside)
+function detect_intersection(triangle::IndexTriangle, start::SVector{N}, dest::SVector{N}, args::NamedTuple, inside::Union{Nothing, Bool}=nothing) where {N}
+    return detect_intersection(FullTriangle(triangle, args.vertices), start, dest, inside)
 end
 
 """

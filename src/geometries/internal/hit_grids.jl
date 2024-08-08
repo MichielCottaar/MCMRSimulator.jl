@@ -63,8 +63,8 @@ struct HitGridRepeat{N, O} <: HitGrid{N, O}
     shifts :: Vector{SVector{N, Float64}}
 end
 
-function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::AbstractArray, args...; kwargs...) where {N}
-    return HitGrid(obstructions, grid_resolution, SVector{N, Float64}(repeats), args...; kwargs...)
+function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::AbstractArray, args::NamedTuple; kwargs...) where {N}
+    return HitGrid(obstructions, grid_resolution, SVector{N, Float64}(repeats), args; kwargs...)
 end
 
 fix_bb_repeats(bb::BoundingBox, repeats::Nothing) = bb
@@ -86,8 +86,8 @@ function fix_bb_repeats(bb::BoundingBox{N}, repeats::AbstractVector) where {N}
     return BoundingBox(new_lower, new_upper)
 end
 
-function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::Union{Nothing, SVector{N, Float64}}, args...; extend=nothing) where {N}
-    bounding_boxes = map(o->BoundingBox(o, args...), obstructions)
+function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_resolution::Float64, repeats::Union{Nothing, SVector{N, Float64}}, args::NamedTuple; extend=nothing) where {N}
+    bounding_boxes = map(o->BoundingBox(o, args), obstructions)
     if ~isnothing(extend)
         bounding_boxes = map(bb->BoundingBox(bb.lower .- extend, bb.upper .+ extend), bounding_boxes)
     end
@@ -225,19 +225,19 @@ end
 
 
 """
-    detect_intersection_grid(grid, start, dest, prev_index, prev_inside, args...)
+    detect_intersection_grid(grid, start, dest, prev_index, prev_inside, args)
 
 Computes the first intersection between the trajectory from `start` to `dest` and the obstructions stored in `grid`.
 
 This function returns the index of the obstruction the trajectory intersects with and an [`ObstructionIntersection`](@ref) object describing the intersection in more detail.
 If `prev_index` is non-zero, it is assumed that the trajectory starts from hitting the obstruction with that index having hit at `prev_inside`.
 """
-function detect_intersection_grid(grid::HitGrid{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, prev_index::Int32, prev_inside::Bool, args...) where {N}
+function detect_intersection_grid(grid::HitGrid{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, prev_index::Int32, prev_inside::Bool, args::NamedTuple) where {N}
     if ~could_intersect(BoundingBox(grid), start, dest)
         return (zero(Int32), empty_obstruction_intersections[N])
     end
     if all(size(grid.indices) .== 1)
-        return detect_intersection_inner(grid, start, dest, prev_index, prev_inside, zero(SVector{N, Int64}) .+ 1, args...)
+        return detect_intersection_inner(grid, start, dest, prev_index, prev_inside, zero(SVector{N, Int64}) .+ 1, args)
     end
     found_intersection = empty_obstruction_intersections[N]
     found_intersection_index = zero(Int32)
@@ -251,7 +251,7 @@ function detect_intersection_grid(grid::HitGrid{N}, start::SVector{N, Float64}, 
             end
         end
         valid_voxel = true
-        (intersection_index, intersection) = detect_intersection_inner(grid, start, dest, prev_index, prev_inside, voxel .+ 1, args...)
+        (intersection_index, intersection) = detect_intersection_inner(grid, start, dest, prev_index, prev_inside, voxel .+ 1, args)
         if intersection.distance < found_intersection.distance
             found_intersection = intersection
             found_intersection_index = intersection_index
@@ -263,7 +263,7 @@ function detect_intersection_grid(grid::HitGrid{N}, start::SVector{N, Float64}, 
     return (found_intersection_index, found_intersection)
 end
 
-function detect_intersection_inner(grid::HitGrid{N, O}, start::SVector{N, Float64}, dest::SVector{N, Float64}, prev_index::Int32, prev_inside::Bool, voxel::SVector{N, Int}, args...) where {N, O}
+function detect_intersection_inner(grid::HitGrid{N, O}, start::SVector{N, Float64}, dest::SVector{N, Float64}, prev_index::Int32, prev_inside::Bool, voxel::SVector{N, Int}, args::NamedTuple) where {N, O}
     intersection_index = zero(Int32)
     intersection = empty_obstruction_intersections[N]
     for packed in grid.indices[voxel...]
@@ -283,9 +283,9 @@ function detect_intersection_inner(grid::HitGrid{N, O}, start::SVector{N, Float6
             end
         end
         if prev_index == index
-            new_intersection = detect_intersection(obstruction, start_shift, dest_shift, args..., prev_inside)
+            new_intersection = detect_intersection(obstruction, start_shift, dest_shift, args, prev_inside)
         else
-            new_intersection = detect_intersection(obstruction, start_shift, dest_shift, args...)
+            new_intersection = detect_intersection(obstruction, start_shift, dest_shift, args)
         end
         if (new_intersection.distance >= 0) && (new_intersection.distance < intersection.distance)
             intersection = new_intersection
@@ -319,24 +319,24 @@ select_sub_grid(g::HitGridRepeat, selector) = HitGridRepeat(
     g.shifts,
 )
 
-function grid_inside_mesh(grid::HitGrid{3, IndexTriangle}, repeats, vertices::AbstractVector)
+function grid_inside_mesh(grid::HitGrid{3, IndexTriangle}, repeats, args::NamedTuple)
     components = [o.component for o in obstructions(grid)]
     res = BitArray(undef, (maximum(components), size(grid.indices)...))
     for c in 1:maximum(components)
-        res[c, :, :, :] = grid_inside_mesh_internal(select_sub_grid(grid, components .== c), repeats, vertices)
+        res[c, :, :, :] = grid_inside_mesh_internal(select_sub_grid(grid, components .== c), repeats, args)
     end
     return res
 end
 
-function grid_inside_mesh_internal(grid::HitGrid{3, IndexTriangle}, repeats, vertices::AbstractVector)
+function grid_inside_mesh_internal(grid::HitGrid{3, IndexTriangle}, repeats, args::NamedTuple)
     objects = obstructions(grid)
     triangles = map(o -> o.indices, objects)
-    mean_triangles = map(t->mean(vertices[t]), triangles)
+    mean_triangles = map(t->mean(args.vertices[t]), triangles)
     if grid isa HitGridRepeat
         sz = upper(grid) .- lower(grid)
         mean_triangles = [@. mod(t + sz/2, sz) - sz/2 for t in mean_triangles]
     end
-    bb_res = fix_bb_repeats(BoundingBox(map(t -> BoundingBox(t, vertices), objects)), repeats)
+    bb_res = fix_bb_repeats(BoundingBox(map(t -> BoundingBox(t, args), objects)), repeats)
     bb_actual = BoundingBox(
         bb_res.lower .- 0.5 ./ grid.inv_resolution,
         bb_res.upper .+ 0.5 ./ grid.inv_resolution,
@@ -354,11 +354,11 @@ function grid_inside_mesh_internal(grid::HitGrid{3, IndexTriangle}, repeats, ver
         end
 
         triangle_index = Int32(nn(tree, centre)[1])
-        (new_index, _) = detect_intersection_grid(grid, centre, mean_triangles[triangle_index], triangle_index, true, vertices, BitArray(undef))
+        (new_index, _) = detect_intersection_grid(grid, centre, mean_triangles[triangle_index], triangle_index, true, args)
         if ~iszero(new_index)
             triangle_index = new_index
         end
-        inpr = (centre - mean_triangles[triangle_index]) ⋅ normal(FullTriangle(triangles[triangle_index], vertices))
+        inpr = (centre - mean_triangles[triangle_index]) ⋅ normal(FullTriangle(triangles[triangle_index], args.vertices))
         if iszero(inpr)
             @warn "Grid voxel centre falls exactly on a mesh element. This will lead to erroneous estimations of what is the inside of a grid. You might want to shift the mesh a tiny amount."
         end
@@ -367,7 +367,7 @@ function grid_inside_mesh_internal(grid::HitGrid{3, IndexTriangle}, repeats, ver
     return inside_arr
 end
 
-function isinside(grid::HitGrid{N, IndexTriangle}, position::SVector{N, Float64}, stuck_to::Int32, inside::Bool, vertices, inside_mask) where {N}
+function isinside(grid::HitGrid{N, IndexTriangle}, position::SVector{N, Float64}, stuck_to::Int32, inside::Bool, args::NamedTuple) where {N}
     grid_index = get_coordinates(grid, position)
     centre = (@. (grid_index - 0.5) / grid.inv_resolution) .+ lower(grid)
     if any(grid_index .< 1) || any(grid_index .> size(grid.indices))
@@ -393,7 +393,7 @@ function isinside(grid::HitGrid{N, IndexTriangle}, position::SVector{N, Float64}
             end
         end
 
-        (new_intersection, partial) = detect_intersection_partial(FullTriangle(obstruction, vertices), start_shift, dest_shift)
+        (new_intersection, partial) = detect_intersection_partial(FullTriangle(obstruction, args.vertices), start_shift, dest_shift)
 
         if (new_intersection.distance >= 0) && (new_intersection.distance < 1)
             if partial

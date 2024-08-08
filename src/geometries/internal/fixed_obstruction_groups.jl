@@ -140,7 +140,7 @@ function isinside(g::FixedObstructionGroup{N, R, O}, pos::SVector{3}, stuck_to::
     else
         normed = rotated
     end
-    return isinside(g.hit_grid, normed, stuck_to, inside, g.args...)
+    return isinside(g.hit_grid, normed, stuck_to, inside, g.args)
 end
 
 
@@ -181,7 +181,7 @@ function detect_intersection(g::FixedObstructionGroup{N}, start::SVector{3}, des
     if repeating(g)
         (index, intersection) = detect_intersection_repeating(g, rotated_start, rotated_dest, previous_index, prev_inside)
     else
-        (index, intersection) = detect_intersection_grid(g.hit_grid, rotated_start, rotated_dest, previous_index, prev_inside, g.args...)
+        (index, intersection) = detect_intersection_grid(g.hit_grid, rotated_start, rotated_dest, previous_index, prev_inside, g.args)
     end
     if intersection.distance > 1.
         return empty_intersection
@@ -201,13 +201,13 @@ function detect_intersection_repeating(g::FixedObstructionGroup{N}, start::SVect
     voxel_f = round.(grid_start)
     if all(voxel_f .== round.(grid_dest))
         voxel_f2 = voxel_f .* g.repeats
-        return detect_intersection_grid(g.hit_grid, start .- voxel_f2, dest .- voxel_f2, prev_index, prev_inside, g.args...)
+        return detect_intersection_grid(g.hit_grid, start .- voxel_f2, dest .- voxel_f2, prev_index, prev_inside, g.args)
     end
     found_index = zero(Int32)
     found_intersection = empty_obstruction_intersections[N]
     for (voxel, _, _, t2, _) in ray_grid_intersections(grid_start .+ 0.5, grid_dest .+ 0.5)
         scaled_voxel = voxel .* g.repeats
-        (index, intersection) = detect_intersection_grid(g.hit_grid, start .- scaled_voxel, dest .- scaled_voxel, prev_index, prev_inside, g.args...)
+        (index, intersection) = detect_intersection_grid(g.hit_grid, start .- scaled_voxel, dest .- scaled_voxel, prev_index, prev_inside, g.args)
         if found_intersection.distance > intersection.distance
             found_intersection = intersection
             found_index = index
@@ -273,7 +273,7 @@ function random_surface_positions(group::FixedObstructionGroup{N}, bb::BoundingB
     end
     normed_surface_density = surface_density .* (bb_area * volume_density)
 
-    get_random_pos(o, d) = random_surface_positions(o, group.args..., d)
+    get_random_pos(o, d) = random_surface_positions(o, group.args, d)
 
     if repeating(group)
         repeats = group.repeats
