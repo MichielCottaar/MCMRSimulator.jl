@@ -4,6 +4,7 @@ import LinearAlgebra: transpose
 import ...Internal.Susceptibility: FixedSusceptibility, ParentSusceptibility, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, TriangleSusceptibility, ShiftedSusceptibility
 import ...Internal: HitGrid, BoundingBox, FullTriangle, radius
 import ..Obstructions: ObstructionType, ObstructionGroup, Walls, Cylinders, Spheres, Annuli, Mesh, fields, isglobal, BendyCylinder
+import ..SizeScales: grid_resolution
 
 """
     fix_susceptibility(geometry)
@@ -86,7 +87,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     repeats = isnothing(user.repeats.value) ? nothing : SVector{N}(user.repeats.value)
     grid = HitGrid(
         shifted,
-        user.grid_resolution.value,
+        user.lorentz_radius.value,
         repeats,
         NamedTuple();
         extend=user.lorentz_radius.value
