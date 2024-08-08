@@ -374,8 +374,8 @@ function isinside(grid::HitGrid{N, IndexTriangle}, position::SVector{N, Float64}
         return Int32[]
     end
 
-    nhit = zeros(Int, size(inside_mask)[1])
-    nhit[inside_mask[:, grid_index...]] .= 2
+    nhit = zeros(Int, size(args.inside_mask)[1])
+    nhit[args.inside_mask[:, grid_index...]] .= 2
     for packed in grid.indices[grid_index...]
         if grid isa HitGridNoRepeat
             (index, obstruction) = packed
