@@ -227,7 +227,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
             reflection = Reflection(norm(new_pos - current_pos) / sqrt(2 * simulation.diffusivity * timestep))
             phit = (0, 0, false)
         end
-        for _ in 1:10000
+        for _ in 1:1000000
             if is_stuck
                 td = dwell_time(simulation.geometry, spin.reflection)
                 fraction_stuck = -log(rand()) * td / timestep
@@ -300,7 +300,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
         end
     end
     if !found_solution
-        error("Bounced single particle for 10000 times in single step; terminating!")
+        error("Bounced single particle for 1000000 times in single step; terminating!")
     end
     if ~isnothing(test_new_pos)
         push!(all_positions, spin.position)
