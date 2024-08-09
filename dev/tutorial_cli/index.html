@@ -6,8 +6,6 @@
     &quot;radius&quot;: 1.0,
     &quot;#rotation_description&quot;: &quot;Rotation applied to all obstructions in group. Can be set to a matrix or one of :x, :y, or, :z (see [`get_rotation`](@ref)). Field is required. Expected type: StaticArraysCore.SMatrix{3, 2, Float64, 6}.&quot;,
     &quot;rotation&quot;: [[1.0,0.0,0.0],[0.0,1.0,0.0]],
-    &quot;#grid_resolution_description&quot;: &quot;Resolution of the grid that the volume is split up into (um). Field is required. Expected type: Float64.&quot;,
-    &quot;grid_resolution&quot;: 1.0,
     &quot;#R1_surface_description&quot;: &quot;Additional longitudinal relaxation rate (kHz). Surface property. Field is required. Expected type: Float64.&quot;,
     &quot;R1_surface&quot;: 0.0,
     &quot;#R1_inside_description&quot;: &quot;Additional longitudinal relaxation rate (kHz). Inside property. Field is required. Expected type: Float64.&quot;,
@@ -34,6 +32,8 @@
     &quot;repeats&quot;: [2.5,2.5],
     &quot;#use_boundingbox_description&quot;: &quot;Use bounding boxes for an initial filtering of possible intersections. Field can be null. Expected type: Bool.&quot;,
     &quot;use_boundingbox&quot;: true,
+    &quot;#grid_resolution_description&quot;: &quot;Resolution of the grid that the volume is split up into (um). Defaults to roughly one grid element per obstruction. Field can be null. Expected type: Float64.&quot;,
+    &quot;grid_resolution&quot;: null,
     &quot;#dwell_time_description&quot;: &quot;Average time a particle stays stuck to the surface (ms). Surface property. Field can be null. Expected type: Float64.&quot;,
     &quot;dwell_time&quot;: null,
     &quot;#density_description&quot;: &quot;Surface density of stuck particles relative to the volume density (um). Surface property. Field can be null. Expected type: Float64.&quot;,
@@ -41,11 +41,12 @@
     &quot;#permeability_description&quot;: &quot;Probability of particle passing through the obstruction. Surface property. Field can be null. Expected type: Float64.&quot;,
     &quot;permeability&quot;: null,
     &quot;#relaxivity_description&quot;: &quot;Fraction of transverse spin lost each time it hits the obstruction. Surface property. Field can be null. Expected type: Float64.&quot;,
-    &quot;relaxivity&quot;: null
+    &quot;relaxivity&quot;: null,
+    &quot;#size_scale_description&quot;: &quot;Size of the smallest obstructions. If not set explicitly, this will be determined by the minimum radius or distance between objects (see `size_scale`). Field can be null. Expected type: Float64.&quot;,
+    &quot;size_scale&quot;: null
   }
 </code></pre><p>You can see how that the <code>repeats</code> and <code>radius</code> keywords have been set to our predefined values. You can alter these and other geometry properties by editing this JSON directly or using the flags when creating the geometry. For a full overview of these flags, you can run:</p><pre><code class="nohighlight hljs">mcmr geometry create cylinders --help</code></pre><pre><code class="language-stdout hljs">usage: mcmr geometry create cylinders --radius RADIUS
                         [--rotation ROTATION]
-                        [--grid_resolution GRID_RESOLUTION]
                         [--R1_surface R1_SURFACE]
                         [--R1_inside R1_INSIDE]
                         [--R2_surface R2_SURFACE]
@@ -57,9 +58,11 @@
                         [--susceptibility_aniso SUSCEPTIBILITY_ANISO]
                         [--lorentz_radius LORENTZ_RADIUS]
                         [--repeats REPEATS] [--no-use_boundingbox]
+                        [--grid_resolution GRID_RESOLUTION]
                         [--dwell_time DWELL_TIME] [--density DENSITY]
                         [--permeability PERMEABILITY]
-                        [--relaxivity RELAXIVITY] [-h] number
+                        [--relaxivity RELAXIVITY]
+                        [--size_scale SIZE_SCALE] [-h] number
                         output_file
 
 Create a geometry JSON file filled with only cylinders with any
@@ -83,12 +86,6 @@ optional arguments:
                         (type: RotationParser{2}, default:
                         RotationParser{2}([1.0 0.0; 0.0 1.0; 0.0
                         0.0]))
-  --grid_resolution GRID_RESOLUTION
-                        Resolution of the grid that the volume is
-                        split up into (um). Field is required.
-                        Expected type: Float64.  default value: 1.0
-                        (type: FieldParser{Float64}, default:
-                        FieldParser{Float64}(1.0))
   --R1_surface R1_SURFACE
                         Additional longitudinal relaxation rate (kHz).
                         Surface property. Field is required. Expected
@@ -161,6 +158,12 @@ optional arguments:
   --no-use_boundingbox  Use bounding boxes for an initial filtering of
                         possible intersections. Field can be null.
                         Expected type: Bool.  default value: true
+  --grid_resolution GRID_RESOLUTION
+                        Resolution of the grid that the volume is
+                        split up into (um). Defaults to roughly one
+                        grid element per obstruction. Field can be
+                        null. Expected type: Float64. (type:
+                        FieldParser{Float64})
   --dwell_time DWELL_TIME
                         Average time a particle stays stuck to the
                         surface (ms). Surface property. Field can be
@@ -180,9 +183,16 @@ optional arguments:
                         hits the obstruction. Surface property. Field
                         can be null. Expected type: Float64. (type:
                         FieldParser{Float64})
+  --size_scale SIZE_SCALE
+                        Size of the smallest obstructions. If not set
+                        explicitly, this will be determined by the
+                        minimum radius or distance between objects
+                        (see `size_scale`). Field can be null.
+                        Expected type: Float64. (type:
+                        FieldParser{Float64})
   -h, --help            show this help message and exit
 
-</code></pre><p>How these various properties affect the simulation is described <a href="../properties/#properties">here</a>.</p><p>The procedure to create <a href="../api/#MCMRSimulator.Geometries.User.Obstructions.Walls"><code>Walls</code></a>, <a href="../api/#MCMRSimulator.Geometries.User.Obstructions.Spheres"><code>Spheres</code></a>, or <a href="../api/#MCMRSimulator.Geometries.User.Obstructions.Annuli"><code>Annuli</code></a> is very similar as for the <a href="../api/#MCMRSimulator.Geometries.User.Obstructions.Cylinders"><code>Cylinders</code></a> illustrated above. Randomly distributed cylinders, annuli, and spheres can be created using <code>mcmr geometry create-random</code>.</p><h2 id="Defining-the-sequence"><a class="docs-heading-anchor" href="#Defining-the-sequence">Defining the sequence</a><a id="Defining-the-sequence-1"></a><a class="docs-heading-anchor-permalink" href="#Defining-the-sequence" title="Permalink"></a></h2><p>In this case we will use an idealised DWI sequence produced by <a href="https://open.win.ox.ac.uk/pages/ndcn0236/mribuilder.jl/dev/"><code>MRIBuilder.jl</code></a>. Note that any <a href="http://pulseq.github.io/">pulseq</a> file can be used instead.</p><pre><code class="language-julia hljs">using MRIBuilder
+</code></pre><p>How these various properties affect the simulation is described <a href="../properties/#properties">here</a>.</p><p>The procedure to create <a href="@ref"><code>Walls</code></a>, <a href="@ref"><code>Spheres</code></a>, or <a href="@ref"><code>Annuli</code></a> is very similar as for the <a href="@ref"><code>Cylinders</code></a> illustrated above. Randomly distributed cylinders, annuli, and spheres can be created using <code>mcmr geometry create-random</code>.</p><h2 id="Defining-the-sequence"><a class="docs-heading-anchor" href="#Defining-the-sequence">Defining the sequence</a><a id="Defining-the-sequence-1"></a><a class="docs-heading-anchor-permalink" href="#Defining-the-sequence" title="Permalink"></a></h2><p>In this case we will use an idealised DWI sequence produced by <a href="https://open.win.ox.ac.uk/pages/ndcn0236/mribuilder.jl/dev/"><code>MRIBuilder.jl</code></a>. Note that any <a href="http://pulseq.github.io/">pulseq</a> file can be used instead.</p><pre><code class="language-julia hljs">using MRIBuilder
 seq = DWI(TE=80, bval=2., Δ=40, δ=:min, TR=2000)
 write_sequence(&quot;dwi.seq&quot;, seq)
 
@@ -310,6 +320,11 @@ Initialisation flags. These control the spins initial state:
      │ SubStrin…  Int64           Int64  Int64  Int64    Int64   Int64   Float64       Float64     Float64  Float64  Float64
 ─────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
    1 │ dwi.seq                 1      0      1        1       0   10000  -4.44089e-12     10000.0     90.0      0.0  10000.0
+</code></pre><pre><code class="language-stderr hljs">┌ Info: # Timestep determination
+│ Maximum timestep set by turtoisity constraint based on size of geometry to 0.01 ms.
+│ Size scale of smallest object in the simulation was automatically determined to be 1.0 um.
+│ If this value is too small, you can set the size scale explicitly by passing on `size_scale=&lt;new_value&gt;` to the `Simulator` constructor.
+└ The actual timestep might be further reduced based on the MR sequence(s).
 </code></pre><p>This produces the CSV file, which looks like</p><pre><code class="nohighlight hljs">sequence,sequence_index,bvec,TR,readout,subset,nspins,longitudinal,transverse,phase,Sx,Sy
 dwi.seq,1,0,1,1,0,10000,-4.440892098500626e-12,10000.0,90.0,0.0,10000.0
 </code></pre><p>The columns in this file store the following information:</p><ul><li>&quot;sequence&quot;: integer; index of the sequence (always 1 if only single sequence used)</li><li>&quot;bvec&quot;: integer; index of the gradient orientation (if a <code>--bvec</code> flag is provided)</li><li>&quot;TR&quot;: integer; index of the repetition time that this data was acquired (between 1 and the value of <code>--nTR</code>)</li><li>&quot;readout&quot;: integer; index of the readout within a TR.</li><li>&quot;subset&quot;: integer; index of the subset of the total signal (e.g., intra-axonal) that has been output (see the <code>--subset</code> flag). The total signal will always be included with &quot;subset&quot; of 0.</li><li>&quot;nspins&quot;: total number of spins contributing to the signal (might change for certain subsets of spins)</li><li>&quot;longitudinal&quot;: average longitudinal signal</li><li>&quot;transverse&quot;: average transverse signal</li><li>&quot;phase&quot;: average phase of the signal (in degrees)</li><li>&quot;Sx&quot;: signal strength in the x-direction</li><li>&quot;Sy&quot;: signal strength in the y-direction</li></ul><p>We can also output the signal of specific subsets of spins. For example, in the following we request to separately the output for just the spins inside the cylinders and just the spins outside of the cylinders.</p><pre><code class="language-bash hljs">mcmr run geometry.json dwi.seq -o signal.csv --subset inside --subset outside</code></pre><pre><code class="language-stdout hljs">df = 3×12 DataFrame
@@ -319,13 +334,23 @@ dwi.seq,1,0,1,1,0,10000,-4.440892098500626e-12,10000.0,90.0,0.0,10000.0
    1 │ dwi.seq                 1      0      1        1       0   10000  -4.44089e-12     10000.0     90.0      0.0  10000.0
    2 │ dwi.seq                 1      0      1        1       1    5049  -2.24221e-12      5049.0     90.0      0.0   5049.0
    3 │ dwi.seq                 1      0      1        1       2    4951  -2.19869e-12      4951.0     90.0      0.0   4951.0
+</code></pre><pre><code class="language-stderr hljs">┌ Info: # Timestep determination
+│ Maximum timestep set by turtoisity constraint based on size of geometry to 0.01 ms.
+│ Size scale of smallest object in the simulation was automatically determined to be 1.0 um.
+│ If this value is too small, you can set the size scale explicitly by passing on `size_scale=&lt;new_value&gt;` to the `Simulator` constructor.
+└ The actual timestep might be further reduced based on the MR sequence(s).
 </code></pre><p>We can see two additional rows in the output.  These new rows are the in same order as the <code>--subset</code> flags provided to <code>mcmr run</code> and can be distinguished based on the &quot;subset&quot; column.</p><pre><code class="nohighlight hljs">sequence,sequence_index,bvec,TR,readout,subset,nspins,longitudinal,transverse,phase,Sx,Sy
 dwi.seq,1,0,1,1,0,10000,-4.440892098500626e-12,10000.0,90.0,0.0,10000.0
 dwi.seq,1,0,1,1,1,5049,-2.242206420532966e-12,5049.0,90.0,0.0,5049.0
 dwi.seq,1,0,1,1,2,4951,-2.19868567796766e-12,4951.0,90.0,0.0,4951.0
-</code></pre><p>We can see in the second row that inside the cylinders the transverse signal is very close to the number of spins,  indicating that there has been very little dephasing due to the diffusion weighting inside the cylinders. On the other hand, we did lose most of the signal outside of the cylinders (i.e., the transverse signal is much lower than the number of spins in the third row). All the spins are either inside or outside the cylinders, so in this case the first row is simply the sum of the next two.</p><p>A more complete state of all the spins can be produced using the <code>--output-snapshot</code> flag. For example, the command</p><pre><code class="language-bash hljs">mcmr run geometry.json dwi.seq --output-snapshot snapshot.csv</code></pre><p>will produce a file named &quot;snapshot.csv&quot; with:</p><pre><code class="language-csv hljs">sequence,sequence_index,bvec,TR,readout,spin,x,y,z,longitudinal,transverse,phase,Sx,Sy
+</code></pre><p>We can see in the second row that inside the cylinders the transverse signal is very close to the number of spins,  indicating that there has been very little dephasing due to the diffusion weighting inside the cylinders. On the other hand, we did lose most of the signal outside of the cylinders (i.e., the transverse signal is much lower than the number of spins in the third row). All the spins are either inside or outside the cylinders, so in this case the first row is simply the sum of the next two.</p><p>A more complete state of all the spins can be produced using the <code>--output-snapshot</code> flag. For example, the command</p><pre><code class="language-bash hljs">mcmr run geometry.json dwi.seq --output-snapshot snapshot.csv</code></pre><pre><code class="language-stderr hljs">┌ Info: # Timestep determination
+│ Maximum timestep set by turtoisity constraint based on size of geometry to 0.01 ms.
+│ Size scale of smallest object in the simulation was automatically determined to be 1.0 um.
+│ If this value is too small, you can set the size scale explicitly by passing on `size_scale=&lt;new_value&gt;` to the `Simulator` constructor.
+└ The actual timestep might be further reduced based on the MR sequence(s).
+</code></pre><p>will produce a file named &quot;snapshot.csv&quot; with:</p><pre><code class="language-csv hljs">sequence,sequence_index,bvec,TR,readout,spin,x,y,z,longitudinal,transverse,phase,Sx,Sy
 dwi.seq,1,0,1,1,1,-159.30759147130956,460.61549542607213,480.40083389620605,-4.440892098500626e-16,1.0,90.0,0.0,1.0
 dwi.seq,1,0,1,1,2,196.48839567047446,-16.517296864369428,418.856863603605,-4.440892098500626e-16,1.0,90.0,0.0,1.0
 dwi.seq,1,0,1,1,3,307.09996115557215,-6.563023443780575,-228.9350558572705,-4.440892098500626e-16,1.0,90.0,0.0,1.0
 dwi.seq,1,0,1,1,4,-177.91494373662476,-251.12587562126714,403.0339822990667,-4.440892098500626e-16,1.0,90.0,0.0,1.0
-...</code></pre><p>Each row corresponds to the state of a single spin. In addition to all the columns listed above, we now have 4 more columns:</p><ul><li>&quot;spin&quot;: integer; index of the spin</li><li>&quot;x&quot;/&quot;y&quot;/&quot;z&quot;: floats; position of the spin at the time of the readout</li></ul><p>The readout times can be adjusted using the <code>--nTR</code>, <code>--time</code>, and <code>--skip-TR</code> flags.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../tutorial_julia/">« Tutorial (Julia)</a><a class="docs-footer-nextpage" href="../geometry/">Geometry »</a><div class="flexbox-break"></div></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.5.0 on <span class="colophon-date" title="Tuesday 6 August 2024 11:03">Tuesday 6 August 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+...</code></pre><p>Each row corresponds to the state of a single spin. In addition to all the columns listed above, we now have 4 more columns:</p><ul><li>&quot;spin&quot;: integer; index of the spin</li><li>&quot;x&quot;/&quot;y&quot;/&quot;z&quot;: floats; position of the spin at the time of the readout</li></ul><p>The readout times can be adjusted using the <code>--nTR</code>, <code>--time</code>, and <code>--skip-TR</code> flags.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../tutorial_julia/">« Tutorial (Julia)</a><a class="docs-footer-nextpage" href="../geometry/">Geometry »</a><div class="flexbox-break"></div></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.5.0 on <span class="colophon-date" title="Friday 9 August 2024 13:53">Friday 9 August 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

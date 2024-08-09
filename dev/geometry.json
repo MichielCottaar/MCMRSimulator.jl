@@ -5,8 +5,6 @@
     "radius": 1.0,
     "#rotation_description": "Rotation applied to all obstructions in group. Can be set to a matrix or one of :x, :y, or, :z (see [`get_rotation`](@ref)). Field is required. Expected type: StaticArraysCore.SMatrix{3, 2, Float64, 6}.",
     "rotation": [[1.0,0.0,0.0],[0.0,1.0,0.0]],
-    "#grid_resolution_description": "Resolution of the grid that the volume is split up into (um). Field is required. Expected type: Float64.",
-    "grid_resolution": 1.0,
     "#R1_surface_description": "Additional longitudinal relaxation rate (kHz). Surface property. Field is required. Expected type: Float64.",
     "R1_surface": 0.0,
     "#R1_inside_description": "Additional longitudinal relaxation rate (kHz). Inside property. Field is required. Expected type: Float64.",
@@ -33,6 +31,8 @@
     "repeats": [2.5,2.5],
     "#use_boundingbox_description": "Use bounding boxes for an initial filtering of possible intersections. Field can be null. Expected type: Bool.",
     "use_boundingbox": true,
+    "#grid_resolution_description": "Resolution of the grid that the volume is split up into (um). Defaults to roughly one grid element per obstruction. Field can be null. Expected type: Float64.",
+    "grid_resolution": null,
     "#dwell_time_description": "Average time a particle stays stuck to the surface (ms). Surface property. Field can be null. Expected type: Float64.",
     "dwell_time": null,
     "#density_description": "Surface density of stuck particles relative to the volume density (um). Surface property. Field can be null. Expected type: Float64.",
@@ -40,5 +40,7 @@
     "#permeability_description": "Probability of particle passing through the obstruction. Surface property. Field can be null. Expected type: Float64.",
     "permeability": null,
     "#relaxivity_description": "Fraction of transverse spin lost each time it hits the obstruction. Surface property. Field can be null. Expected type: Float64.",
-    "relaxivity": null
+    "relaxivity": null,
+    "#size_scale_description": "Size of the smallest obstructions. If not set explicitly, this will be determined by the minimum radius or distance between objects (see `size_scale`). Field can be null. Expected type: Float64.",
+    "size_scale": null
   }
