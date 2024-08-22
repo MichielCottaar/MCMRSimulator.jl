@@ -29,7 +29,7 @@ These parameters determine the evolution and relaxation of the spin magnetisatio
 - `R1`/`T1`: sets the longitudinal relaxation rate (R1 in kHz) or relaxation time (T1=1/R1 in ms). This determines how fast the longitudinal magnetisation returns to its equilibrium value of 1.
 - `R2`/`T2`: sets the transverse relaxation rate (R2 in kHz) or relaxation time (T2=1/R2 in ms). This determines how fast the transverse magnetisation is lost.
 - `off_resonance`: Size of the off-resonance field in this voxel in kHz.
-These MRI properties can be overriden for spins inside the [`ObstructionGroup`](@ref) objects of the `geoemtry`.
+These MRI properties can be overriden for spins inside the [`ObstructionGroup`](@ref) objects of the `geometry`.
 
 ## Collision parameters
 These parameters determine how parameters behave when hitting the [`ObstructionGroup`](@ref) objects of the `geoemtry`.

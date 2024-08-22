@@ -33,11 +33,6 @@ struct ParentSusceptibility{N, O<:BaseSusceptibility{N}, R<:Union{Nothing, SVect
 end
 
 """
-Tuple containing all susceptibility sources
-"""
-const FixedSusceptibility{N} = NTuple{N, ParentSusceptibility}
-
-"""
     susceptibility_off_resonance(susceptibility, position[, inside])
 
 Computes the susceptibility off-resonance caused by a single [`BaseSusceptibility`](@ref) 

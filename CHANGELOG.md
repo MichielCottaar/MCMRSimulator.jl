@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Optimisations
 - A refactoring of the grid overlaying the obstructions has led to a large speedup in the code (due to more efficient memory access).
 - Grid resolution is set to a better default.
+- Off-resonance field from distant sources is precomputed onto the grid. Only the contribution from local sources is explicitly summed.
 ## [v0.10.0]
 ### Changed
 - **Major**: the sequence generation, I/O, and plotting has now been moved to its own package: [`MRIBuilder.jl`](https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl).

@@ -100,8 +100,38 @@ function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_res
     else
         dims = Int.(div.(sz, grid_resolution, RoundUp))
     end
-    actual_grid_resolution = sz ./ dims
 
+    (shifts, grid) = find_hits(bb, dims, repeats, bounding_boxes)
+
+    if length(shifts) == 0
+        return HitGridNoRepeat(
+            bb,
+            dims ./ sz,
+            map(grid) do index_arr
+                map(i -> (i[1], obstructions[i[1]]), index_arr)
+            end,
+        )
+    else
+        return HitGridRepeat(
+            bb,
+            dims ./ sz,
+            map(grid) do index_arr
+                map(i -> (i[1], i[2], obstructions[i[1]]), index_arr)
+            end,
+            shifts,
+        )
+    end
+
+end
+
+
+"""
+    find_hits(bb, dims, repeats, bounding_boxes)
+
+Find the intersections between the `bounding_boxes` and a grid with extent of bounding box `bb` and size of `dims`.
+"""
+function find_hits(bb::BoundingBox{N}, dims, repeats, bounding_boxes) where {N}
+    actual_grid_resolution = (upper(bb) .- lower(bb)) ./ dims
     shifts = SVector{N, Float64}[]
     grid = [Tuple{Int32, Int32}[] for _ in Iterators.product(UnitRange.(1, dims)...)]
     for (index, this_bb) in enumerate(bounding_boxes)
@@ -136,25 +166,7 @@ function (::Type{HitGrid})(obstructions::Vector{<:FixedObstruction{N}}, grid_res
             end
         end
     end
-    if length(shifts) == 0
-        return HitGridNoRepeat(
-            bb,
-            dims ./ sz,
-            map(grid) do index_arr
-                map(i -> (i[1], obstructions[i[1]]), index_arr)
-            end,
-        )
-    else
-        return HitGridRepeat(
-            bb,
-            dims ./ sz,
-            map(grid) do index_arr
-                map(i -> (i[1], i[2], obstructions[i[1]]), index_arr)
-            end,
-            shifts,
-        )
-    end
-
+    return shifts, grid
 end
 
 

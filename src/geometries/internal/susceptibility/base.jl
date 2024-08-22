@@ -22,7 +22,7 @@ abstract type BaseSusceptibility{N} end
 Computes the off-resonance field contribution from a [`BaseSusceptibility`](@ref) source given:
 - `offset` vector from spin position to the centre of the `source`
 - `distance` of the spin from the source (which is the norm of `offset`)
-- `stuck_to` tuple with the pair of indices that the particle is stuck to as well as a boolean indicating whether it is stuck to the inside.
+- `stuck_to` `nothing` for free particle. Otherwise, boolean indicating whether the particle is stuck to the inside or outside of the obstructions it is stuck to.
 - `b0_field` N-length vector with the magnetic field within the coordinate system of the susceptibility source
 """
 function single_susceptibility end

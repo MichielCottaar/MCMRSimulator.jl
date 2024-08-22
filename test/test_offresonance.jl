@@ -23,19 +23,30 @@
             @test iszero(grad(cylinders))
         end
         @testset "Myelinated cylinder perpendicular to field with only isotropic susceptibility" begin
-            cylinders = mr.Cylinders(radius=1., rotation=:x, susceptibility_aniso=0., susceptibility_iso=1., g_ratio=0.8)
+            cylinders = mr.Cylinders(radius=1., rotation=:x, susceptibility_aniso=0., susceptibility_iso=1., g_ratio=0.8, grid_resolution=Inf)
             @test field(cylinders, zero(SVector{3, Float64})) ≈ 0.
+            @test field(cylinders, [0., 0.1, 0.]) ≈ 0.
             outer_field = 1//2 * (1 - 0.8^2) / (1 + 0.8)^2
             @test field(cylinders, SVector{3, Float64}([0, 0, 2])) ≈ outer_field
             @test field(cylinders, SVector{3, Float64}([0, 2, 0])) ≈ -outer_field
             @test grad(cylinders) ≈ outer_field * 4
         end
         @testset "Myelinated cylinder perpendicular to field with only anisotropic susceptibility" begin
-            cylinders = mr.Cylinders(radius=1., rotation=:x, susceptibility_aniso=1., susceptibility_iso=0., g_ratio=0.8)
+            cylinders = mr.Cylinders(radius=1., rotation=:x, susceptibility_aniso=1., susceptibility_iso=0., g_ratio=0.8, grid_resolution=Inf)
             @test field(cylinders, zero(SVector{3, Float64})) ≈ -0.75 * log(0.8)
             outer_field = 1//8 * (1 - 0.8^2) / (1 + 0.8)^2
             @test field(cylinders, SVector{3, Float64}([0, 0, 2])) ≈ outer_field
             @test field(cylinders, SVector{3, Float64}([0, 2, 0])) ≈ -outer_field
+            @test grad(cylinders) ≈ outer_field * 4
+        end
+        @testset "Repeating myelinated cylinder perpendicular to field with only isotropic susceptibility" begin
+            cylinders = mr.Cylinders(radius=1., rotation=:x, susceptibility_aniso=0., susceptibility_iso=1., g_ratio=0.8, repeats=(4, 4), grid_resolution=Inf)
+            @test field(cylinders, zero(SVector{3, Float64})) ≈ 0. atol=1e-12
+            @test field(cylinders, [0., 0., 0.2]) > 1e-6
+            @test field(cylinders, [0., 0.2, 0.]) < -1e-6
+            outer_field = 1//2 * (1 - 0.8^2) / (1 + 0.8)^2
+            @test field(cylinders, [0, 0, 2]) ≈ outer_field * 2 rtol=0.2
+            @test field(cylinders, [0, 2, 0]) ≈ -outer_field * 2 rtol=0.2
             @test grad(cylinders) ≈ outer_field * 4
         end
     end
@@ -62,7 +73,7 @@
             @test field(annuli, SVector{3, Float64}([1.2, 0, 0])) ≈ -1//6
         end
         @testset "Myelinated annulus perpendicular to field with only isotropic susceptibility" begin
-            annuli = mr.Annuli(inner=0.7, outer=1., rotation=:x, susceptibility_aniso=0., susceptibility_iso=1., myelin=true)
+            annuli = mr.Annuli(inner=0.7, outer=1., rotation=:x, susceptibility_aniso=0., susceptibility_iso=1., myelin=true, grid_resolution=Inf)
             @test field(annuli, zero(SVector{3, Float64})) ≈ 0.
             outer_field = 1//2 * (1 - 0.7^2) / 4
             @test field(annuli, SVector{3, Float64}([0, 0, 2])) ≈ outer_field
@@ -70,7 +81,7 @@
             @test grad(annuli) ≈ outer_field * 4
         end
         @testset "Myelinated annulus perpendicular to field with only anisotropic susceptibility" begin
-            annuli = mr.Annuli(inner=0.7, outer=1., rotation=:x, susceptibility_aniso=1., susceptibility_iso=0., myelin=true)
+            annuli = mr.Annuli(inner=0.7, outer=1., rotation=:x, susceptibility_aniso=1., susceptibility_iso=0., myelin=true, grid_resolution=Inf)
             @test field(annuli, zero(SVector{3, Float64})) ≈ -0.75 * log(0.7)
             outer_field = 1//8 * (1 - 0.7^2) / 4
             @test field(annuli, SVector{3, Float64}([0, 0, 2])) ≈ outer_field
