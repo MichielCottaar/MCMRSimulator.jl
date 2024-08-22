@@ -63,10 +63,13 @@ has_inside(::Type{<:Triangle}) = true
 isinside(::Triangle, ::SVector{3, Float64}) = false
 
 """
+    triangle_size(full_triangle)
     triangle_size(p1, p2, p3)
 
-Computes the size of a triangle formed by three points
+Computes the size of a [`FullTriangle`](@ref) formed by three points
 """
+triangle_size(ft::FullTriangle) = triangle_size(ft.a, ft.b, ft.c)
+
 function triangle_size(p1, p2, p3)
     e1 = p2 - p1
     e2 = p3 - p1
