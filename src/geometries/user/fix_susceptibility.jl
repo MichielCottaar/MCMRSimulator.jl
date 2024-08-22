@@ -149,7 +149,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     end
 
     has_hit_bbs = map(positions, radii) do p, r
-        half_size = max.(resolution, r)
+        half_size = max.(resolution .* 1.5, r)
         BoundingBox(p .- half_size, p .+ half_size)
     end
 
