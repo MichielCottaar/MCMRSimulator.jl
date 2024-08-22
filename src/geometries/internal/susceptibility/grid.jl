@@ -188,7 +188,17 @@ For any closer `position` [`single_susceptibility`](@ref) will be called on the 
 function element_susceptibility(element::SusceptibilityGridElement, grid::SusceptibilityGrid, position::AbstractVector, stuck_inside::Union{Nothing, Bool})
     offset = position - element.position
     dist = norm(offset)
-    if dist > element.radius * 2
+    @show dist element.radius
+    @show dipole_approximation(element.susceptibility, offset, dist, grid.B0_field)
+    @show single_susceptibility(
+            grid.sources[element.index],
+            offset,
+            dist,
+            stuck_inside,
+            grid.B0_field
+        )
+
+    if dist > element.radius
         return dipole_approximation(element.susceptibility, offset, dist, grid.B0_field)
     else
         return single_susceptibility(

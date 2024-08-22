@@ -66,7 +66,9 @@ function total_susceptibility(group::Annuli, B0_field::SVector{2, Float64})
     return @. ts * (group.outer.value^2 - group.inner.value^2) * π
 end
 
-fix_susceptibility_type(group::BendyCylinder) = fix_susceptibility_type(Mesh(group))
+for func in (:fix_susceptibility_type, :total_susceptibility)
+    @eval $(func)(group::BendyCylinder, args...; kwargs...) = $(func)(Mesh(group), args...; kwargs...)
+end
 
 function fix_susceptibility_type(group::Mesh)
     if ~any(group.myelin.value)
@@ -78,7 +80,7 @@ function fix_susceptibility_type(group::Mesh)
     positions = SVector{3, Float64}[]
     for (index, (i1, i2, i3)) in enumerate(group.triangles.value)
         ft = FullTriangle(group.vertices.value[i1], group.vertices.value[i2], group.vertices.value[i3])
-        push!(radii, radius(ft))
+        push!(radii, radius(ft) * 4)
         push!(positions, (ft.a + ft.b + ft.c) / 3)
         push!(res, TriangleSusceptibility(ft, group[index].susceptibility_iso, group[index].susceptibility_aniso, b0_field))
     end
@@ -114,7 +116,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     end
 
     individual_bbs = map(positions, radii) do p, r
-        BoundingBox(p .- 2 * r, p .+ 2 * r)
+        BoundingBox(p .- r, p .+ r)
     end
     if isnothing(user.repeats.value)
         half_repeats = nothing
@@ -147,7 +149,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     end
 
     has_hit_bbs = map(positions, radii) do p, r
-        half_size = max.(resolution, 2 * r)
+        half_size = max.(resolution, r)
         BoundingBox(p .- half_size, p .+ half_size)
     end
 
