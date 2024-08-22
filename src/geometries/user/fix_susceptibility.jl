@@ -58,7 +58,7 @@ function fix_susceptibility_type(group::Annuli)
     if ~(base isa Vector)
         base = fill(base, length(group))
     end
-    add_parent(group, base; radius_symbol=:inner)
+    add_parent(group, base; radius_symbol=:outer)
 end
 
 function total_susceptibility(group::Annuli, B0_field::SVector{2, Float64})
