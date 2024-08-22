@@ -209,7 +209,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     else
         grid = zeros(size_grid_indices...)
         for coordinate in Tuple.(eachindex(IndexCartesian(), grid))
-            centre = @. ((coordinate - 0.5) / inv_resolution) + half_repeats
+            centre = @. ((coordinate - 0.5) / inv_resolution) - half_repeats
             result = 0.
             for index in 1:length(internal)
                 offset = centre - positions[index]
