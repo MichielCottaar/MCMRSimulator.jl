@@ -13,12 +13,13 @@ import ...Obstructions.Triangles: FullTriangle, normal
     TriangleSusceptibility(full_triangle, chi_I, chi_A, b0_field)
 
 Computes the field produced by a triangular susceptibility source
-One triangle vertex is assumed to be at the origin.
+One triangle vertex is assumed to be at `vertex1`.
 Within the coordinate system defined by `rotation` the other two points are at:
 - (0, `e2_shift`, 0)
 - (`e3_shift[1]`, `e3_shift[2]`, 0)
 """
 struct TriangleSusceptibility <: BaseSusceptibility{3}
+    vertex1 :: SVector{3, Float64}
     rotation :: MRP{Float64}
     e2_shift :: Float64
     e3_shift :: SVector{2, Float64}
@@ -27,6 +28,7 @@ end
 
 
 function TriangleSusceptibility(ft::FullTriangle, chi_I::Number, chi_A::Number, b0_field::AbstractVector)
+    vertex1 = @. (2 * ft.a - ft.b - ft.c) / 3
     n = normal(ft)
     e1 = ft.b .- ft.a
     a = norm(e1)
@@ -40,7 +42,7 @@ function TriangleSusceptibility(ft::FullTriangle, chi_I::Number, chi_A::Number, 
         susceptibility = (chi_I + chi_A * (3 * cos_thetasq - 1)) / 4π
     end
     (b, c, _) = rot * (ft.c .- ft.a)
-    return TriangleSusceptibility(rot, a, SVector{2}((b, c)), susceptibility)
+    return TriangleSusceptibility(vertex1, rot, a, SVector{2}((b, c)), susceptibility)
 end
 
 
@@ -79,8 +81,8 @@ function single_susceptibility(triangle::TriangleSusceptibility, position::Abstr
     shift_size = distance / 10
     shift = b0_field .* shift_size
     return (
-        single_susceptibility_helper(triangle, position - shift, stuck_inside, b0_field) - 
-        single_susceptibility_helper(triangle, position + shift, stuck_inside, b0_field)
+        single_susceptibility_helper(triangle, position - shift - triangle.vertex1, stuck_inside, b0_field) - 
+        single_susceptibility_helper(triangle, position + shift - triangle.vertex1, stuck_inside, b0_field)
     ) / (shift_size * 2)
 end
 
