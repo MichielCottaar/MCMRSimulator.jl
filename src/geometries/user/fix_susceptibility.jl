@@ -1,8 +1,9 @@
 module FixSusceptibility
 import StaticArrays: SVector
-import LinearAlgebra: transpose, norm
+import LinearAlgebra: transpose, norm, ⋅
 import ...Internal.Susceptibility: FixedSusceptibility, SusceptibilityGrid, SusceptibilityGridNoRepeat, SusceptibilityGridRepeat, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, TriangleSusceptibility, SusceptibilityGridElement, dipole_approximation_repeat, dipole_approximation
-import ...Internal: BoundingBox, FullTriangle, radius, lower, upper
+import ...Internal.Obstructions.Triangles: FullTriangle, normal, triangle_size
+import ...Internal: BoundingBox, radius, lower, upper
 import ...Internal.HitGrids: find_hits
 import ..Obstructions: ObstructionType, ObstructionGroup, Walls, Cylinders, Spheres, Annuli, Mesh, fields, isglobal, BendyCylinder
 import ..SizeScales: grid_resolution
@@ -78,10 +79,21 @@ function fix_susceptibility_type(group::Mesh)
     for (index, (i1, i2, i3)) in enumerate(group.triangles.value)
         ft = FullTriangle(group.vertices.value[i1], group.vertices.value[i2], group.vertices.value[i3])
         push!(radii, radius(ft))
-        push!(positions, ft.a)
+        push!(positions, (ft.a + ft.b + ft.c) / 3)
         push!(res, TriangleSusceptibility(ft, group[index].susceptibility_iso, group[index].susceptibility_aniso, b0_field))
     end
     return add_parent(group, res; positions=positions, radii=radii)
+end
+
+function total_susceptibility(mesh::Mesh, B0_field::SVector{3, Float64})
+    res = 0.
+    for index in mesh.triangles.value
+        triangle = FullTriangle(mesh.vertices.value[index]...)
+        n = normal(triangle)
+        cos_thetasq = (n ⋅ B0_field)^2
+        res += (mesh.susceptibility_iso.value + mesh.susceptibility_aniso.value * (3 * cos_thetasq - 1)) * triangle_size(triangle)
+    end
+    return res
 end
 
 function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusceptibility{N}}; positions=nothing, radii=nothing, radius_symbol=:radius) where {N}
