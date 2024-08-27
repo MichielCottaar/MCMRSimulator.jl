@@ -78,7 +78,8 @@ end
 Computed using the algorithm described in [rubeckAnalyticalCalculationMagnet2013](@cite).
 """
 function single_susceptibility(triangle::TriangleSusceptibility, position::AbstractVector, distance::Number, stuck_inside::Union{Nothing, Bool}, b0_field::SVector{3, Float64})
-    shift_size = distance / 10
+    (_, _, height) = triangle.rotation * position
+    shift_size = abs(height) / 10
     shift = b0_field .* shift_size
     return (
         single_susceptibility_helper(triangle, position - shift - triangle.vertex1, stuck_inside, b0_field) - 
