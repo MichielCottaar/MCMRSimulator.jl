@@ -58,21 +58,21 @@ Returns the (3, `ndim`) rotation matrix mapping the `vector` to the `reference_d
 By default, the `reference_dimension is the x-direction (if `ndim` is 1 or 3) or the z-direction (if `ndim` is 2).
 `vector` and `reference_dimension` can be a length 3 array or one of the symbols :x, :y, or :z (representing vectors in those cardinal directions).
 """
-get_rotation(rotation::Rotations.Rotation, ndim::Int) = get_rotation(Rotations.RotMatrix(rotation), ndim)
-get_rotation(rotation::Rotations.RotMatrix, ndim::Int) = get_rotation(rotation.mat, ndim)
-function get_rotation(rotation::AbstractMatrix, ndim::Int)
+get_rotation(rotation::Rotations.Rotation, ndim::Int; reference_dimension=nothing) = get_rotation(Rotations.RotMatrix(rotation), ndim)
+get_rotation(rotation::Rotations.RotMatrix, ndim::Int; reference_dimension=nothing) = get_rotation(rotation.mat, ndim)
+function get_rotation(rotation::AbstractMatrix, ndim::Int; reference_dimension=nothing)
     if size(rotation) == (3, 3) && ndim < 3
         rotation = rotation[:, 1:ndim]
     end
     SMatrix{3, ndim, Float64}(rotation)
 end
 
-function get_rotation(rotation::AbstractVector, ndim::Int)
+function get_rotation(rotation::AbstractVector, ndim::Int; reference_dimension=nothing)
     T = typeof(rotation[1])
     return get_rotation(T.(rotation), ndim)
 end
 
-function get_rotation(rotation::AbstractVector{<:AbstractVector}, ndim::Int)
+function get_rotation(rotation::AbstractVector{<:AbstractVector}, ndim::Int; reference_dimension=nothing)
     return get_rotation(hcat(rotation...), ndim)
 end
 
