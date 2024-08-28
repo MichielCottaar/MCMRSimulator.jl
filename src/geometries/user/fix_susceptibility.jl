@@ -92,7 +92,7 @@ function total_susceptibility(mesh::Mesh, B0_field::SVector{3, Float64})
         triangle = FullTriangle(mesh.vertices.value[triangle_index]...)
         n = normal(triangle)
         cos_thetasq = (n ⋅ B0_field)^2
-        return (mesh.susceptibility_iso.value + mesh.susceptibility_aniso.value * (3 * cos_thetasq - 1)) * triangle_size(triangle)
+        return (mesh.susceptibility_iso.value + mesh.susceptibility_aniso.value * (3 * cos_thetasq - 1) / 2) * triangle_size(triangle)
     end
     return compute.(mesh.triangles.value)
 end

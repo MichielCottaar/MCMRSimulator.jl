@@ -39,7 +39,7 @@ function TriangleSusceptibility(ft::FullTriangle, chi_I::Number, chi_A::Number, 
         susceptibility = chi_I / 4π
     else
         cos_thetasq = (n ⋅ b0_field)^2
-        susceptibility = (chi_I + chi_A * (3 * cos_thetasq - 1)) / 4π
+        susceptibility = (chi_I + chi_A * (3 * cos_thetasq - 1) / 2) / 4π
     end
     (b, c, _) = rot * (ft.c .- ft.a)
     return TriangleSusceptibility(vertex1, rot, a, SVector{2}((b, c)), susceptibility)
