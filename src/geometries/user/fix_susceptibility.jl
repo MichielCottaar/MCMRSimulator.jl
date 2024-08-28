@@ -120,11 +120,6 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     if isnothing(user.repeats.value)
         half_repeats = nothing
         bb_indices = BoundingBox(individual_bbs)
-        size_bb = upper(bb_indices) .- lower(bb_indices)
-        bb_off_resonance = BoundingBox(
-            lower(bb_indices) .- size_bb,
-            upper(bb_indices) .+ size_bb,
-        )
     else
         half_repeats = SVector{N}(user.repeats.value) ./ 2
         bb_indices = BoundingBox(-half_repeats, half_repeats)
@@ -142,6 +137,13 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
         bb_indices = BoundingBox(
             lower(bb_indices) .- resolution,
             upper(bb_indices) .+ resolution,
+        )
+        size_bb = upper(bb_indices) .- lower(bb_indices)
+        size_off_resonance = maximum(size_bb) * 2
+        nvoxels_add = @. Int(div((size_off_resonance - size_bb), 2 * resolution, RoundUp))
+        bb_off_resonance = BoundingBox(
+            lower(bb_indices) .- nvoxels_add .* resolution,
+            upper(bb_indices) .+ nvoxels_add .* resolution,
         )
     else
         size_grid_indices = orig_size_grid
@@ -169,13 +171,13 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     inv_resolution = 1 ./ resolution
 
     if isnothing(user.repeats.value)
-        size_grid_off_resonance = orig_size_grid .* 3
+        size_grid_off_resonance = @. orig_size_grid + nvoxels_add * 2
         grid = zeros(size_grid_off_resonance...)
         for coordinate in Tuple.(eachindex(IndexCartesian(), grid))
             lower_edge = lower(bb_off_resonance)
             centre = @. ((coordinate - 0.5) / inv_resolution) + lower_edge
 
-            coord_elements = coordinate .- orig_size_grid .+ 1
+            coord_elements = coordinate .- nvoxels_add
             has_elements = all(coord_elements .>= 1) && all(coord_elements .<= size_grid_indices)
             result = 0.
             for index in 1:length(internal)
