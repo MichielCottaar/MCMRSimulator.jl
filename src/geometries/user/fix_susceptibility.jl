@@ -88,14 +88,13 @@ function fix_susceptibility_type(group::Mesh)
 end
 
 function total_susceptibility(mesh::Mesh, B0_field::SVector{3, Float64})
-    res = 0.
-    for index in mesh.triangles.value
-        triangle = FullTriangle(mesh.vertices.value[index]...)
+    function compute(triangle_index)
+        triangle = FullTriangle(mesh.vertices.value[triangle_index]...)
         n = normal(triangle)
         cos_thetasq = (n ⋅ B0_field)^2
-        res += (mesh.susceptibility_iso.value + mesh.susceptibility_aniso.value * (3 * cos_thetasq - 1)) * triangle_size(triangle)
+        return (mesh.susceptibility_iso.value + mesh.susceptibility_aniso.value * (3 * cos_thetasq - 1)) * triangle_size(triangle)
     end
-    return res
+    return compute.(mesh.triangles.value)
 end
 
 function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusceptibility{N}}; positions=nothing, radii=nothing, radius_symbol=:radius) where {N}
