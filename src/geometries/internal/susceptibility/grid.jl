@@ -7,10 +7,40 @@ import ...BoundingBoxes: BoundingBox, lower
 import ..Base: BaseSusceptibility, single_susceptibility, single_susceptibility_gradient
 
 
-struct SusceptibilityGridElement{N}
+"""
+A simplified representation of a magnetic susceptibility obstruction, which has been simplified as a point source in N-dimensional space.
+
+There are two versions:
+- [`IsotropicSusceptibilityGridElement`](@ref): for objects with isotropic susceptibilities (and symmetric objects with anisotropic susceptibilities), where the magnetisation is consistently in the direction of the B0 field.
+- [`AnisotropicSusceptibilityGridElement`](@ref): for objects with anisotropic susceptibilities, where the magnetisation can be in any arbitrary orientation.
+"""
+abstract type SusceptibilityGridElement{N} end
+
+
+function (::Type{SusceptibilityGridElement{N}})(position::AbstractVector{<:Number}, radius::Number, susceptibility) where {N}
+    if susceptibility isa Number
+        return IsotropicSusceptibilityGridElement{N}(position, radius, susceptibility)
+    else
+        return AnisotropicSusceptibilityGridElement{N}(position, radius, susceptibility)
+    end
+end
+
+"""
+[`SusceptibilityGridElement`](@ref) with a magnetisation in the direction of the B0 field.
+"""
+struct IsotropicSusceptibilityGridElement{N} <: SusceptibilityGridElement{N}
     position :: SVector{N, Float64}
     radius :: Float64
     susceptibility :: Float64
+end
+
+"""
+[`SusceptibilityGridElement`](@ref) with an arbitrarily oriented magnetisation.
+"""
+struct AnisotropicSusceptibilityGridElement{N} <: SusceptibilityGridElement{N}
+    position :: SVector{N, Float64}
+    radius :: Float64
+    susceptibility :: SVector{N, Float64}
 end
 
 
@@ -27,21 +57,21 @@ The sources for which the field contribution should still be added are stored in
 These are stored of vectors of [`SuscetibilityGridElement`](@ref), where each element
 contains all the information to compute the dipole field approximation.
 """
-abstract type SusceptibilityGrid{N, O, K} end
+abstract type SusceptibilityGrid end
 
 const IndexRepeat = @NamedTuple{index::Int32, shift::Int32}
 
 """
 Specialised version of [`SusceptibilityGrid`](@ref) for repeating geometries.
 """
-struct SusceptibilityGridRepeat{N, O, K} <: SusceptibilityGrid{N, O, K}
+struct SusceptibilityGridRepeat{N, O, E, K} <: SusceptibilityGrid
     inv_resolution :: SVector{N, Float64}
     rotation :: SMatrix{N, 3, Float64, K}
 
     off_resonance :: Array{Float64, N}
     half_repeats :: SVector{N, Float64}
 
-    indices :: Array{Vector{Tuple{SusceptibilityGridElement{N}, IndexRepeat}}, N}
+    indices :: Array{Vector{Tuple{E, IndexRepeat}}, N}
     sources :: Vector{O}
     shifts :: Vector{SVector{N, Float64}}
     B0_field :: SVector{N, Float64}
@@ -53,7 +83,7 @@ const IndexNoRepeat = @NamedTuple{index::Int32}
 """
 Specialised version of [`SusceptibilityGrid`](@ref) for non-repeating geometries.
 """
-struct SusceptibilityGridNoRepeat{N, O, K} <: SusceptibilityGrid{N, O, K}
+struct SusceptibilityGridNoRepeat{N, O, E, K} <: SusceptibilityGrid
     inv_resolution :: SVector{N, Float64}
     rotation :: SMatrix{N, 3, Float64, K}
 
@@ -61,11 +91,11 @@ struct SusceptibilityGridNoRepeat{N, O, K} <: SusceptibilityGrid{N, O, K}
     off_resonance :: Array{Float64, N}
 
     bounding_box_indices :: BoundingBox{N}
-    indices :: Array{Vector{Tuple{SusceptibilityGridElement{N}, IndexNoRepeat}}, N}
+    indices :: Array{Vector{Tuple{E, IndexNoRepeat}}, N}
     sources :: Vector{O}
     shifts :: Vector{SVector{N, Float64}}
     B0_field :: SVector{N, Float64}
-    total_susceptibility :: Float64
+    total_susceptibility :: SVector{N, Float64}
     center_susceptibility :: SVector{N, Float64}
 end
 

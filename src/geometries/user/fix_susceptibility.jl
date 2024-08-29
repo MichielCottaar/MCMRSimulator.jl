@@ -1,7 +1,7 @@
 module FixSusceptibility
 import StaticArrays: SVector
-import LinearAlgebra: transpose, norm, ⋅
-import ...Internal.Susceptibility: FixedSusceptibility, SusceptibilityGrid, SusceptibilityGridNoRepeat, SusceptibilityGridRepeat, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, TriangleSusceptibility, SusceptibilityGridElement, dipole_approximation_repeat, dipole_approximation
+import LinearAlgebra: transpose, norm, ⋅, I
+import ...Internal.Susceptibility: FixedSusceptibility, SusceptibilityGrid, SusceptibilityGridNoRepeat, SusceptibilityGridRepeat, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, TriangleSusceptibility, SusceptibilityGridElement, dipole_approximation_repeat, dipole_approximation, IsotropicSusceptibilityGridElement, AnisotropicSusceptibilityGridElement
 import ...Internal.Obstructions.Triangles: FullTriangle, normal, triangle_size
 import ...Internal: BoundingBox, radius, lower, upper
 import ...Internal.HitGrids: find_hits
@@ -88,13 +88,24 @@ function fix_susceptibility_type(group::Mesh)
 end
 
 function total_susceptibility(mesh::Mesh, B0_field::SVector{3, Float64})
-    function compute(triangle_index)
-        triangle = FullTriangle(mesh.vertices.value[triangle_index]...)
-        n = normal(triangle)
-        cos_thetasq = (n ⋅ B0_field)^2
-        return (mesh.susceptibility_iso.value + mesh.susceptibility_aniso.value * (3 * cos_thetasq - 1) / 2) * triangle_size(triangle)
+    if all(iszero.(mesh.susceptibility_aniso.value))
+        function compute_iso(triangle_index, iso)
+            triangle = FullTriangle(mesh.vertices.value[triangle_index]...)
+            return iso * triangle_size(triangle)
+        end
+        return compute_iso.(mesh.triangles.value, mesh.susceptibility_iso.value)
+    else
+        function compute_aniso(triangle_index, iso, aniso)
+            triangle = FullTriangle(mesh.vertices.value[triangle_index]...)
+            n = normal(triangle)
+            full_mat = (
+                1.5 .* aniso .* (n * n') .+
+                (iso - 0.5 * aniso) .* I(3)
+            )
+            return full_mat * B0_field
+        end
+        return compute_aniso.(mesh.triangles.value, mesh.susceptibility_iso.value, mesh.susceptibility_aniso.value)
     end
-    return compute.(mesh.triangles.value)
 end
 
 function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusceptibility{N}}; positions=nothing, radii=nothing, radius_symbol=:radius) where {N}
@@ -110,7 +121,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     B0_field = user.rotation.value[3, :]
 
     susceptibilities = total_susceptibility(user, B0_field)
-    if susceptibilities isa Number
+    if susceptibilities isa Number || susceptibilities isa SVector
         susceptibilities = fill(susceptibilities, length(internal))
     end
 
@@ -174,6 +185,8 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
 
     inv_resolution = 1 ./ resolution
 
+    element_type = eltype(susceptibilities) <: Number ? IsotropicSusceptibilityGridElement{N} : AnisotropicSusceptibilityGridElement{N}
+
     if isnothing(user.repeats.value)
         size_grid_off_resonance = @. orig_size_grid + nvoxels_add * 2
         grid = zeros(size_grid_off_resonance...)
@@ -198,7 +211,8 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
             end
             grid[coordinate...] = result
         end
-        return SusceptibilityGridNoRepeat{N, eltype(internal), N*3}(
+        vec_susceptibilities = eltype(susceptibilities) <: Number ? [((N == 2) ? SVector{2}(0., s) : SVector{3}(0., 0., s)) for s in susceptibilities] : susceptibilities
+        return SusceptibilityGridNoRepeat{N, eltype(internal), element_type, N*3}(
             inv_resolution,
             transpose(user.rotation.value),
             bb_off_resonance,
@@ -208,8 +222,8 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
             internal,
             shifts,
             B0_field,
-            sum(susceptibilities),
-            sum([s .* p for (s, p) in zip(susceptibilities, positions)]) ./ sum(susceptibilities),
+            sum(vec_susceptibilities),
+            sum([norm(s) .* p for (s, p) in zip(susceptibilities, positions)]) ./ sum(norm, susceptibilities),
         )
     else
         grid = zeros(size_grid_indices...)
@@ -239,7 +253,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
             end
             grid[coordinate...] = result
         end
-        return SusceptibilityGridRepeat{N, eltype(internal), N*3}(
+        return SusceptibilityGridRepeat{N, eltype(internal), element_type, N*3}(
             inv_resolution,
             transpose(user.rotation.value),
             grid,
