@@ -8,8 +8,6 @@ import ..Base: BaseSusceptibility, single_susceptibility, single_susceptibility_
 
 
 struct SusceptibilityGridElement{N}
-    index :: Int32
-    shift :: Int32
     position :: SVector{N, Float64}
     radius :: Float64
     susceptibility :: Float64
@@ -31,6 +29,8 @@ contains all the information to compute the dipole field approximation.
 """
 abstract type SusceptibilityGrid{N, O, K} end
 
+const IndexRepeat = @NamedTuple{index::Int32, shift::Int32}
+
 """
 Specialised version of [`SusceptibilityGrid`](@ref) for repeating geometries.
 """
@@ -41,11 +41,14 @@ struct SusceptibilityGridRepeat{N, O, K} <: SusceptibilityGrid{N, O, K}
     off_resonance :: Array{Float64, N}
     half_repeats :: SVector{N, Float64}
 
-    indices :: Array{Vector{SusceptibilityGridElement{N}}, N}
+    indices :: Array{Vector{Tuple{SusceptibilityGridElement{N}, IndexRepeat}}, N}
     sources :: Vector{O}
     shifts :: Vector{SVector{N, Float64}}
     B0_field :: SVector{N, Float64}
 end
+
+
+const IndexNoRepeat = @NamedTuple{index::Int32}
 
 """
 Specialised version of [`SusceptibilityGrid`](@ref) for non-repeating geometries.
@@ -58,7 +61,7 @@ struct SusceptibilityGridNoRepeat{N, O, K} <: SusceptibilityGrid{N, O, K}
     off_resonance :: Array{Float64, N}
 
     bounding_box_indices :: BoundingBox{N}
-    indices :: Array{Vector{SusceptibilityGridElement{N}}, N}
+    indices :: Array{Vector{Tuple{SusceptibilityGridElement{N}, IndexNoRepeat}}, N}
     sources :: Vector{O}
     shifts :: Vector{SVector{N, Float64}}
     B0_field :: SVector{N, Float64}
@@ -108,13 +111,13 @@ function susceptibility_off_resonance(grid::SusceptibilityGrid, position::SVecto
         return field
     end
 
-    for element in grid.indices[coord_indices...]
-        if grid isa SusceptibilityGridNoRepeat || iszero(element.shift)
+    for (element, index) in grid.indices[coord_indices...]
+        if grid isa SusceptibilityGridNoRepeat || iszero(index.shift)
             shifted = normed
         else
-            shifted = normed .- grid.shifts[element.shift]
+            shifted = normed .- grid.shifts[index.shift]
         end
-        field += element_susceptibility(element, grid, shifted, inside)
+        field += element_susceptibility(element, index.index, grid, shifted, inside)
     end
     return field
 end
@@ -223,7 +226,7 @@ Computes the off-resonance field contribution from a [`SuscetibilityGridElement`
 For a `position` within twice the `source.radius` of `source.position`, this will call [`dipole_approximation`](@ref).
 For any closer `position` [`single_susceptibility`](@ref) will be called on the appropriate element in `grid.sources`.
 """
-function element_susceptibility(element::SusceptibilityGridElement, grid::SusceptibilityGrid, position::AbstractVector, stuck_inside::Union{Nothing, Bool})
+function element_susceptibility(element::SusceptibilityGridElement, index::Int32, grid::SusceptibilityGrid, position::AbstractVector, stuck_inside::Union{Nothing, Bool})
     offset = position - element.position
     dist = norm(offset)
 
@@ -231,7 +234,7 @@ function element_susceptibility(element::SusceptibilityGridElement, grid::Suscep
         return dipole_approximation(element.susceptibility, offset, dist, grid.B0_field)
     else
         return single_susceptibility(
-            grid.sources[element.index],
+            grid.sources[index],
             offset,
             dist,
             stuck_inside,

@@ -158,12 +158,16 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
 
     element_grid = map(grid) do index_arr
         map(index_arr) do (index_obstruction, index_shift)
-            SusceptibilityGridElement{N}(
-                index_obstruction,
-                index_shift,
-                positions[index_obstruction],
-                radii[index_obstruction],
-                susceptibilities[index_obstruction]
+            (
+                SusceptibilityGridElement{N}(
+                    positions[index_obstruction],
+                    radii[index_obstruction],
+                    susceptibilities[index_obstruction]
+                ),
+                isnothing(user.repeats.value) ? (index=index_obstruction, ) : (
+                    index = index_obstruction,
+                    shift = index_shift
+                ) 
             )
         end
     end
@@ -181,7 +185,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
             has_elements = all(coord_elements .>= 1) && all(coord_elements .<= size_grid_indices)
             result = 0.
             for index in 1:length(internal)
-                if has_elements && any(e.index == index for e in element_grid[coord_elements...])
+                if has_elements && any(e[2].index == index for e in element_grid[coord_elements...])
                     continue
                 end
                 offset = centre - positions[index]
@@ -221,7 +225,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
                     half_repeats .* 2
                 )
             end
-            for source in element_grid[coordinate...]
+            for (_, source) in element_grid[coordinate...]
                 offset = centre - positions[source.index]
                 if ~iszero(source.shift)
                     offset = offset .- shifts[source.shift]
