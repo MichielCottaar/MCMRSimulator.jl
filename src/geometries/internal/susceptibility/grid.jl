@@ -128,8 +128,12 @@ susceptibility_off_resonance(fixed::FixedSusceptibility{0}, position::SVector{3,
 
 """
     dipole_approximation(susceptibility, offset, distance, B0_field)
+    dipole_approximation(magnetisation, offset, distance, B0_field)
 
 Computes the shift in magnetic field due to a shift of susceptibility which is at the given offset (with given pre-computed distance) along the B0 field.
+
+The `susceptibility` is given as a scalar value and is assumed to generate a field in the z-direction.
+The `magnetisation` is a vector representing a magnetisation in an arbitrary direction (as required for anisotropic susceptibilities).
 
 Equations from [schenck96_role_magnet_suscep_magnet_reson_imagin](@cite).
 """
@@ -145,6 +149,24 @@ function dipole_approximation(susceptiblity::Float64, offset::SVector{3, Float64
     return susceptiblity / (4π * dist^5) * (3 * offset_B0^2 - dist^2)
 end
 
+function dipole_approximation(magnetisation::SVector{3, Float64}, offset::SVector{3, Float64}, dist::Float64, B0_field::SVector{3, Float64})
+    offset_mag = (
+        magnetisation[1] * offset[1] +
+        magnetisation[2] * offset[2] +
+        magnetisation[3] * offset[3]
+    )
+    offset_b0 = (
+        B0_field[1] * offset[1] +
+        B0_field[2] * offset[2] +
+        B0_field[3] * offset[3]
+    )
+    mag_b0 = (
+        B0_field[1] * magnetisation[1] +
+        B0_field[2] * magnetisation[2] +
+        B0_field[3] * magnetisation[3]
+    )
+    return 1 / (4π * dist^5) * (3 * offset_b0 * offset_mag - mag_b0 * dist^2)
+end
 
 average_field(x, y, nsteps) = mean([1/sqrt((d+x)^2 + y^2)^3 for d in range(-0.5, 0.5, nsteps * 2 + 1)[2:2:end-1]])
 
@@ -164,6 +186,22 @@ function dipole_approximation(susceptiblity::Float64, offset::SVector{2, Float64
         return 0.
     end
     return susceptiblity / (2π * dist^4) * (2 * offset_B0^2 - dist^2 * inplane_B0_sqr)
+end
+
+function dipole_approximation(magnetisation::SVector{2, Float64}, offset::SVector{2, Float64}, dist::Float64, B0_field::SVector{2, Float64})
+    offset_mag = (
+        magnetisation[1] * offset[1] +
+        magnetisation[2] * offset[2]
+    )
+    offset_b0 = (
+        B0_field[1] * offset[1] +
+        B0_field[2] * offset[2]
+    )
+    mag_b0 = (
+        B0_field[1] * magnetisation[1] +
+        B0_field[2] * magnetisation[2]
+    )
+    return 1 / (2π * dist^4) * (2 * offset_b0 * offset_mag - mag_b0 * dist^2)
 end
 
 function dipole_approximation_repeat(susceptiblity::Float64, offset::SVector{N, Float64}, B0_field::SVector{N, Float64}, repeats::SVector{N, Float64}) where{N}
