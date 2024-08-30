@@ -1,7 +1,7 @@
 module FixSusceptibility
 import StaticArrays: SVector
 import LinearAlgebra: transpose, norm, ⋅, I
-import ...Internal.Susceptibility: FixedSusceptibility, SusceptibilityGrid, SusceptibilityGridNoRepeat, SusceptibilityGridRepeat, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, TriangleSusceptibility, SusceptibilityGridElement, dipole_approximation_repeat, dipole_approximation, IsotropicSusceptibilityGridElement, AnisotropicSusceptibilityGridElement
+import ...Internal.Susceptibility: FixedSusceptibility, SusceptibilityGrid, SusceptibilityGridNoRepeat, SusceptibilityGridRepeat, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, TriangleSusceptibility, SusceptibilityGridElement, dipole_approximation_repeat, dipole_approximation, IsotropicSusceptibilityGridElement, AnisotropicSusceptibilityGridElement, IsotropicTriangleSusceptibility, AnisotropicTriangleSusceptibility, triangle_magnetisation
 import ...Internal.Obstructions.Triangles: FullTriangle, normal, triangle_size
 import ...Internal: BoundingBox, radius, lower, upper
 import ...Internal.HitGrids: find_hits
@@ -74,15 +74,22 @@ function fix_susceptibility_type(group::Mesh)
     if ~any(group.myelin.value)
         return nothing
     end
+    isotropic = all(iszero.(group.susceptibility_aniso.value))
+    triangle_type = isotropic ? IsotropicTriangleSusceptibility : AnisotropicTriangleSusceptibility
+
     b0_field = group.rotation.value[3, :]
-    res = TriangleSusceptibility[]
+    res = triangle_type[]
     radii = Float64[]
     positions = SVector{3, Float64}[]
     for (index, (i1, i2, i3)) in enumerate(group.triangles.value)
         ft = FullTriangle(group.vertices.value[i1], group.vertices.value[i2], group.vertices.value[i3])
         push!(radii, radius(ft) * 4)
         push!(positions, (ft.a + ft.b + ft.c) / 3)
-        push!(res, TriangleSusceptibility(ft, group[index].susceptibility_iso, group[index].susceptibility_aniso, b0_field))
+        if isotropic
+            push!(res, IsotropicTriangleSusceptibility(ft, group[index].susceptibility_iso))
+        else
+            push!(res, AnisotropicTriangleSusceptibility(ft, group[index].susceptibility_iso, group[index].susceptibility_aniso, b0_field))
+        end
     end
     return add_parent(group, res; positions=positions, radii=radii)
 end
@@ -97,12 +104,7 @@ function total_susceptibility(mesh::Mesh, B0_field::SVector{3, Float64})
     else
         function compute_aniso(triangle_index, iso, aniso)
             triangle = FullTriangle(mesh.vertices.value[triangle_index]...)
-            n = normal(triangle)
-            full_mat = (
-                1.5 .* aniso .* (n * n') .+
-                (iso - 0.5 * aniso) .* I(3)
-            )
-            return full_mat * B0_field
+            return triangle_magnetisation(triangle, iso, aniso, B0_field) * triangle_size(triangle)
         end
         return compute_aniso.(mesh.triangles.value, mesh.susceptibility_iso.value, mesh.susceptibility_aniso.value)
     end

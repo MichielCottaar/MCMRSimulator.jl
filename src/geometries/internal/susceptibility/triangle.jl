@@ -4,21 +4,34 @@ Computes the off-resonance field produced by a triangular mesh:
 module Triangle
 
 import StaticArrays: SVector
-import LinearAlgebra: norm, cross, ⋅, inv
+import LinearAlgebra: norm, cross, ⋅, inv, I
 import Rotations: MRP, Angle2d, RotMatrix2
 import ..Base: BaseSusceptibility, single_susceptibility, single_susceptibility_gradient
 import ...Obstructions.Triangles: FullTriangle, normal
 
 """
-    TriangleSusceptibility(full_triangle, chi_I, chi_A, b0_field)
+Parent type for each triangle in a mesh with susceptibility.
 
 Computes the field produced by a triangular susceptibility source
 One triangle vertex is assumed to be at `vertex1`.
 Within the coordinate system defined by `rotation` the other two points are at:
 - (0, `e2_shift`, 0)
 - (`e3_shift[1]`, `e3_shift[2]`, 0)
+
+There are two versions:
+- [`IsotropicTriangleSusceptibility`](@ref)
+- [`AnisotropicTriangleSusceptibility`](@ref)
 """
-struct TriangleSusceptibility <: BaseSusceptibility{3}
+abstract type TriangleSusceptibility <: BaseSusceptibility{3} end
+
+"""
+    IsotropicTriangleSusceptibility(full_triangle, chi_I)
+
+Represents a triangle with isotropic magnetic susceptibility.
+
+For more details on the internal representation, see [`TriangleSusceptibility`](@ref)
+"""
+struct IsotropicTriangleSusceptibility <: TriangleSusceptibility
     vertex1 :: SVector{3, Float64}
     rotation :: MRP{Float64}
     e2_shift :: Float64
@@ -26,8 +39,7 @@ struct TriangleSusceptibility <: BaseSusceptibility{3}
     susceptibility :: Float64
 end
 
-
-function TriangleSusceptibility(ft::FullTriangle, chi_I::Number, chi_A::Number, b0_field::AbstractVector)
+function get_base_properties(ft::FullTriangle)
     vertex1 = @. (2 * ft.a - ft.b - ft.c) / 3
     n = normal(ft)
     e1 = ft.b .- ft.a
@@ -35,16 +47,45 @@ function TriangleSusceptibility(ft::FullTriangle, chi_I::Number, chi_A::Number, 
     e1 = e1 ./ norm(e1)
     e2 = cross(e1, n)
     rot = inv(MRP(hcat(e2, e1, n)))
-    if iszero(chi_A)
-        susceptibility = chi_I / 4π
-    else
-        cos_thetasq = (n ⋅ b0_field)^2
-        susceptibility = (chi_I + chi_A * (3 * cos_thetasq - 1) / 2) / 4π
-    end
     (b, c, _) = rot * (ft.c .- ft.a)
-    return TriangleSusceptibility(vertex1, rot, a, SVector{2}((b, c)), susceptibility)
+    return vertex1, rot, a, SVector{2}((b, c))
 end
 
+function IsotropicTriangleSusceptibility(ft::FullTriangle, chi_I::Number)
+    return IsotropicTriangleSusceptibility(get_base_properties(ft)..., chi_I / 4π)
+end
+
+
+"""
+    AnisotropicTriangleSusceptibility(full_triangle, chi_I, chi_A, b0_field)
+
+Represents a triangle with anisotropic magnetic susceptibility.
+
+For more details on the internal representation, see [`TriangleSusceptibility`](@ref)
+"""
+struct AnisotropicTriangleSusceptibility <: TriangleSusceptibility
+    vertex1 :: SVector{3, Float64}
+    rotation :: MRP{Float64}
+    e2_shift :: Float64
+    e3_shift :: SVector{2, Float64}
+    shift_direction :: SVector{3, Float64}
+    susceptibility :: Float64
+end
+
+function AnisotropicTriangleSusceptibility(ft::FullTriangle, chi_I::Number, chi_A::Number, b0_field::SVector{3, Float64})
+    mag = triangle_magnetisation(ft, chi_I, chi_A, b0_field)
+    size_mag = norm(mag)
+    return AnisotropicTriangleSusceptibility(get_base_properties(ft)..., mag ./ size_mag, size_mag / 4π)
+end
+
+function triangle_magnetisation(ft::FullTriangle, chi_I::Number, chi_A::Number, b0_field::SVector{3, Float64})
+    n = normal(ft)
+    full_mat = (
+        1.5 .* chi_A .* (n * n') .+
+        (chi_I - 0.5 * chi_A) .* I(3)
+    )
+    return full_mat * b0_field
+end
 
 """
     right_angle_triangle_field(a, b, z)
@@ -72,6 +113,9 @@ function right_angle_triangle_field(a::Number, b::Number, z::Number)
     ))
 end
 
+shift_direction(triangle::IsotropicTriangleSusceptibility, b0_field::SVector{3, Float64}) = b0_field
+shift_direction(triangle::AnisotropicTriangleSusceptibility, b0_field::SVector{3, Float64}) = triangle.shift_direction
+
 """
     single_susceptibility(triangle, position, distance[, stuck_inside])
 
@@ -80,7 +124,7 @@ Computed using the algorithm described in [rubeckAnalyticalCalculationMagnet2013
 function single_susceptibility(triangle::TriangleSusceptibility, position::AbstractVector, distance::Number, stuck_inside::Union{Nothing, Bool}, b0_field::SVector{3, Float64})
     (_, _, height) = triangle.rotation * position
     shift_size = abs(height) / 10
-    shift = b0_field .* shift_size
+    shift = shift_direction(triangle, b0_field) .* shift_size
     return (
         single_susceptibility_helper(triangle, position - shift - triangle.vertex1, stuck_inside, b0_field) - 
         single_susceptibility_helper(triangle, position + shift - triangle.vertex1, stuck_inside, b0_field)

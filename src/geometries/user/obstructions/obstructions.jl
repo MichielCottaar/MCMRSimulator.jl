@@ -29,7 +29,7 @@ for obstruction_type in (
             Field{Float64}(:radius, "Radius of the cylinder.", required=true), 
             Field{Float64}(:g_ratio, "Inner/outer radius used for susceptibility calculation", 1.),
             Field{Float64}(:susceptibility_iso, "Isotropic component of the susceptibility (in ppm).", -0.1),
-            Field{Float64}(:susceptibility_aniso, "Ansotropic component of the susceptibility (in ppm).", -0.1),
+            Field{Float64}(:susceptibility_aniso, "Anisotropic component of the susceptibility (in ppm).", -0.1),
             Field{Float64}(:lorentz_radius, "Only compute field explicitly for cylinders with this Lorentz radius.", 5.),
         ]),
     ObstructionType(
@@ -38,7 +38,7 @@ for obstruction_type in (
             Field{Float64}(:outer, "Radius of the outer cylinder.", required=true), 
             Field{Bool}(:myelin, "Whether the annulus is myelinated.", false, required=true), 
             Field{Float64}(:susceptibility_iso, "Isotropic component of the myelin susceptibility (in ppm).", -0.1),
-            Field{Float64}(:susceptibility_aniso, "Ansotropic component of the myelin susceptibility (in ppm).", -0.1),
+            Field{Float64}(:susceptibility_aniso, "Anisotropic component of the myelin susceptibility (in ppm).", -0.1),
             Field{Float64}(:lorentz_radius, "Only compute field explicitly for a annuli with this Lorentz radius.", 5.),
         ]),
     ObstructionType(
@@ -51,7 +51,7 @@ for obstruction_type in (
             Field{Vector{MVector{3, Float64}}}(:vertices, "Positions of the corners of the triangular mesh.", required=true, only_group=true),
             Field{Bool}(:myelin, "Whether the mesh is myelinated.", false, required=true), 
             Field{Float64}(:susceptibility_iso, "Isotropic component of the myelin susceptibility (in ppm).", -0.1),
-            Field{Float64}(:susceptibility_aniso, "Ansotropic component of the myelin susceptibility (in ppm).", -0.1),
+            Field{Float64}(:susceptibility_aniso, "Anisotropic component of the myelin susceptibility (in ppm).", -0.1),
             Field{Float64}(:lorentz_radius, "Only compute field explicitly for triangles with this Lorentz radius.", 5.),
             Field{Int}(:components, "Which component this triangle belongs to. If not provided explicitly, this will be determined based on connectivity.", required=false),
         ]),
@@ -64,7 +64,7 @@ for obstruction_type in (
             Field{Int}(:spline_order, "Sets the order of the b-spine interpolating between control points.", 3, required=true, only_group=true), 
             Field{Bool}(:myelin, "Whether the cylinder is myelinated.", false, required=true, only_group=true), 
             Field{Float64}(:susceptibility_iso, "Isotropic component of the myelin susceptibility (in ppm).", -0.1),
-            Field{Float64}(:susceptibility_aniso, "Ansotropic component of the myelin susceptibility (in ppm).", -0.1),
+            Field{Float64}(:susceptibility_aniso, "Anisotropic component of the myelin susceptibility (in ppm).", -0.1),
             Field{Float64}(:lorentz_radius, "Only compute field explicitly for triangles with this Lorentz radius.", 5.),
         ]),
 )
