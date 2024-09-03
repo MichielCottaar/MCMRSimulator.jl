@@ -137,7 +137,6 @@ function susceptibility_off_resonance(grid::SusceptibilityGrid, position::SVecto
 
     field = grid.off_resonance[coord_off_resonance...]
     if any(coord_indices .< 1) || any(coord_indices .> size(grid.indices))
-        @assert grid isa SusceptibilityGridNoRepeat
         return field
     end
 
@@ -240,8 +239,10 @@ end
 function dipole_approximation_repeat(susceptiblity, offset::SVector{N, Float64}, B0_field::SVector{N, Float64}, repeats::SVector{N, Float64}) where{N}
     half_repeats = repeats ./ 2
     normed = @. mod(offset + half_repeats, repeats) - half_repeats
+
+    nshift = Int.(div.(norm(normed), half_repeats, RoundUp))
     result = 0.
-    for shift in Iterators.product(Iterators.repeated(-1:1, N)...)
+    for shift in Iterators.product([-n:n for n in nshift]...)
         shifted_offset = @. normed + shift * repeats
         result += dipole_approximation(susceptiblity, shifted_offset, norm(shifted_offset), B0_field)
     end
