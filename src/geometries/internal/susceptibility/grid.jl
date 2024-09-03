@@ -237,7 +237,7 @@ function dipole_approximation(magnetisation::SVector{2, Float64}, offset::SVecto
     return 1 / (2π * dist^4) * (2 * offset_b0 * offset_mag - mag_b0 * dist^2)
 end
 
-function dipole_approximation_repeat(susceptiblity::Float64, offset::SVector{N, Float64}, B0_field::SVector{N, Float64}, repeats::SVector{N, Float64}) where{N}
+function dipole_approximation_repeat(susceptiblity, offset::SVector{N, Float64}, B0_field::SVector{N, Float64}, repeats::SVector{N, Float64}) where{N}
     half_repeats = repeats ./ 2
     normed = @. mod(offset + half_repeats, repeats) - half_repeats
     result = 0.
