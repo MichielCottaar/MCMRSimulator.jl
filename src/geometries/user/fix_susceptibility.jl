@@ -192,7 +192,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     if isnothing(user.repeats.value)
         size_grid_off_resonance = @. orig_size_grid + nvoxels_add * 2
         grid = zeros(size_grid_off_resonance...)
-        for coordinate in Tuple.(eachindex(IndexCartesian(), grid))
+        @Threads.threads for coordinate in Tuple.(eachindex(IndexCartesian(), grid))
             lower_edge = lower(bb_off_resonance)
             centre = @. ((coordinate - 0.5) / inv_resolution) + lower_edge
 
@@ -229,7 +229,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
         )
     else
         grid = zeros(size_grid_indices...)
-        for coordinate in Tuple.(eachindex(IndexCartesian(), grid))
+        @Threads.threads for coordinate in Tuple.(eachindex(IndexCartesian(), grid))
             centre = @. ((coordinate - 0.5) / inv_resolution) - half_repeats
             result = 0.
             for index in 1:length(internal)
