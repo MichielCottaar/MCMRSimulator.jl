@@ -241,13 +241,13 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
                     half_repeats .* 2
                 )
             end
-            for (_, source) in element_grid[coordinate...]
-                offset = centre - positions[source.index]
+            for (element, source) in element_grid[coordinate...]
+                offset = centre - element.position
                 if ~iszero(source.shift)
                     offset = offset .- shifts[source.shift]
                 end
                 result -= dipole_approximation(
-                    susceptibilities[source.index],
+                    element.susceptibility,
                     offset,
                     norm(offset),
                     B0_field,
