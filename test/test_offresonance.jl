@@ -100,6 +100,27 @@
                     @test field(mesh, [0, 0, -1]) ≈ ref_field rtol=0.1
                 end
             end
+            @testset "Split triangle" begin
+                Random.seed!(1)
+                for xsplit in [0., 0.7, -0.2, 0.9]
+                    vertices = [[-1, -0.5, 0.], [1, -0.5, 0.], [0., 1., 0.], [0.8, -0.5, 0.]]
+                    mesh_single = mr.Mesh(vertices=vertices, triangles=[[1, 2, 3]], myelin=true)
+                    mesh_double = mr.Mesh(vertices=vertices, triangles=[[1, 4, 3], [2, 4, 3]], myelin=true)
+                    for pos in [
+                        [0., 0., 0.001],
+                        [1., 1., 0.001],
+                        [10., 0., 0.],
+                        [0., 0., 10.],
+                        randn(3),
+                        randn(3),
+                        randn(3),
+                    ]
+                        f_single = field(mesh_single, pos)
+                        f_double = field(mesh_double, pos)
+                        @test f_single ≈ f_double rtol=1e-2
+                    end
+                end
+            end
             @testset "Points very close to mesh" begin
                 for t in ([1, 2, 3], [2, 1, 3])
                     mesh = mr.Mesh(vertices=[[0, 0, 0], [1, 0, 0], [1, 1, 0]], triangles=[t], myelin=true, susceptibility_iso=1., susceptibility_aniso=aniso)
