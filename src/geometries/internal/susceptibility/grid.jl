@@ -69,6 +69,7 @@ struct SusceptibilityGridRepeat{N, O, E, K} <: SusceptibilityGrid
     rotation :: SMatrix{N, 3, Float64, K}
 
     off_resonance :: Array{Float64, N}
+    off_resonance_super_resolution :: Int64
     half_repeats :: SVector{N, Float64}
 
     indices :: Array{Vector{Tuple{E, IndexRepeat}}, N}
@@ -89,6 +90,7 @@ struct SusceptibilityGridNoRepeat{N, O, E, K} <: SusceptibilityGrid
 
     bounding_box_off_resonance :: BoundingBox{N}
     off_resonance :: Array{Float64, N}
+    off_resonance_super_resolution :: Int64
 
     bounding_box_indices :: BoundingBox{N}
     indices :: Array{Vector{Tuple{E, IndexNoRepeat}}, N}
@@ -108,14 +110,14 @@ const FixedSusceptibility{N} = NTuple{N, SusceptibilityGrid}
 norm_position(::SusceptibilityGridNoRepeat, position) = position
 norm_position(grid::SusceptibilityGridRepeat, position) = @. mod(position + grid.half_repeats, 2 * grid.half_repeats) - grid.half_repeats
 
-get_coordinates(grid::SusceptibilityGrid, position, lower) = @. Int(floor((position - lower) * grid.inv_resolution)) + 1
+get_coordinates_helper(position, lower, inv_resolution) = @. Int(floor((position - lower) * inv_resolution)) + 1
 get_coordinates(grid::SusceptibilityGridNoRepeat, position) = (
-    get_coordinates(grid, position, lower(grid.bounding_box_off_resonance)),
-    get_coordinates(grid, position, lower(grid.bounding_box_indices)),
+    get_coordinates_helper(position, lower(grid.bounding_box_off_resonance), grid.inv_resolution .* grid.off_resonance_super_resolution),
+    get_coordinates_helper(position, lower(grid.bounding_box_indices), grid.inv_resolution),
 )
 function get_coordinates(grid::SusceptibilityGridRepeat, position)
-    c = get_coordinates(grid, position, -grid.half_repeats)
-    return (c, c)
+    c_off = get_coordinates_helper(position, -grid.half_repeats, grid.inv_resolution .* grid.off_resonance_super_resolution)
+    return (c_off, @. Int(div(c_off - 1, grid.off_resonance_super_resolution, RoundDown)) + 1)
 end
 
 """

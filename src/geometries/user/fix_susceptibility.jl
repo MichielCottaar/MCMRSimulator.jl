@@ -163,7 +163,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     end
 
     has_hit_bbs = map(positions, radii) do p, r
-        half_size = max.(resolution .* 2.5, r)
+        half_size = max.(resolution .* 3.5, r)
         BoundingBox(p .- half_size, p .+ half_size)
     end
 
@@ -189,14 +189,15 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
 
     element_type = eltype(susceptibilities) <: Number ? IsotropicSusceptibilityGridElement{N} : AnisotropicSusceptibilityGridElement{N}
 
+    super_resolution = 3
     if isnothing(user.repeats.value)
-        size_grid_off_resonance = @. orig_size_grid + nvoxels_add * 2
+        size_grid_off_resonance = @. super_resolution * (orig_size_grid + nvoxels_add * 2)
         grid = zeros(size_grid_off_resonance...)
         @Threads.threads for coordinate in Tuple.(eachindex(IndexCartesian(), grid))
             lower_edge = lower(bb_off_resonance)
-            centre = @. ((coordinate - 0.5) / inv_resolution) + lower_edge
+            centre = @. ((coordinate - 0.5) * resolution / super_resolution) + lower_edge
 
-            coord_elements = coordinate .- nvoxels_add
+            coord_elements = @. div(coordinate - nvoxels_add - 1, super_resolution, RoundDown) + 1
             has_elements = all(coord_elements .>= 1) && all(coord_elements .<= size_grid_indices)
             result = 0.
             for index in 1:length(internal)
@@ -219,6 +220,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
             transpose(user.rotation.value),
             bb_off_resonance,
             grid,
+            super_resolution,
             bb_indices,
             element_grid,
             internal,
@@ -228,9 +230,9 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
             sum([norm(s) .* p for (s, p) in zip(susceptibilities, positions)]) ./ sum(norm, susceptibilities),
         )
     else
-        grid = zeros(size_grid_indices...)
+        grid = zeros((super_resolution .* size_grid_indices)...)
         @Threads.threads for coordinate in Tuple.(eachindex(IndexCartesian(), grid))
-            centre = @. ((coordinate - 0.5) / inv_resolution) - half_repeats
+            centre = @. ((coordinate - 0.5) * resolution / super_resolution) - half_repeats
             result = 0.
             for index in 1:length(internal)
                 offset = centre - positions[index]
@@ -241,7 +243,8 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
                     half_repeats .* 2
                 )
             end
-            for (element, source) in element_grid[coordinate...]
+            coord_elements = @. div(coordinate - 1, super_resolution, RoundDown) + 1
+            for (element, source) in element_grid[coord_elements...]
                 offset = centre - element.position
                 if ~iszero(source.shift)
                     offset = offset .- shifts[source.shift]
@@ -259,6 +262,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
             inv_resolution,
             transpose(user.rotation.value),
             grid,
+            super_resolution,
             half_repeats,
             element_grid,
             internal,
