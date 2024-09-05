@@ -23,7 +23,7 @@
     "g_ratio": 1.0,
     "#susceptibility_iso_description": "Isotropic component of the susceptibility (in ppm). Field can be null. Expected type: Float64.",
     "susceptibility_iso": -0.1,
-    "#susceptibility_aniso_description": "Ansotropic component of the susceptibility (in ppm). Field can be null. Expected type: Float64.",
+    "#susceptibility_aniso_description": "Anisotropic component of the susceptibility (in ppm). Field can be null. Expected type: Float64.",
     "susceptibility_aniso": -0.1,
     "#lorentz_radius_description": "Only compute field explicitly for cylinders with this Lorentz radius. Field can be null. Expected type: Float64.",
     "lorentz_radius": 5.0,
