@@ -197,7 +197,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
             lower_edge = lower(bb_off_resonance)
             centre = @. ((coordinate - 0.5) * resolution / super_resolution) + lower_edge
 
-            coord_elements = @. div(coordinate - nvoxels_add - 1, super_resolution, RoundDown) + 1
+            coord_elements = @. div(coordinate - nvoxels_add * super_resolution - 1, super_resolution, RoundDown) + 1
             has_elements = all(coord_elements .>= 1) && all(coord_elements .<= size_grid_indices)
             result = 0.
             for index in 1:length(internal)
