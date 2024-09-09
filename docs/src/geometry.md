@@ -9,7 +9,7 @@ MCMRSimulator.jl comes with a variety of basic components that can be used to re
 | Hinder diffusion       | ✅ | ✅ |                    | ✅ | ✅ | ✅ |
 | Surface relaxation     | ✅| ✅ |                    | ✅ | ✅ | ✅ |
 | Magnetisation transfer | ✅  | ✅ |                    | ✅ | ✅ | ✅ |
-| Generate off-resonance field    |                    | ✅ | ✅ |                    | 🚧     | 🚧     |
+| Generate off-resonance field    |                    | ✅ | ✅ |                    | ✅     | ✅     |
 | Different relaxation inside    |                    | ✅ | ✅ |  ✅                  | ✅     | ✅     |
 | Intrinsic dimensionality| 1                   | 2 | 2 |  3                  | 3     | 3     |
 
