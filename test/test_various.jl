@@ -262,8 +262,8 @@ end
     props = mr.Geometries.Internal.MRIProperties(0., 0., 0.)
     cp = mr.SequenceParts.ConstantPulse(1., 0., 2.)
 
-    orient_single = SpinOrientation([0., 0., 1.])
-    orient_dual = SpinOrientation([0., 0., 1.])
+    orient_single = mr.SpinOrientation([0., 0., 1.])
+    orient_dual = mr.SpinOrientation([0., 0., 1.])
     mr.Relax.apply_pulse!(orient_single, cp, props, 0.1, 0., 1., 0., Val(1))
 
     mr.Relax.apply_pulse!(orient_dual, cp, props, 0.1, 0., 0.3, 0., Val(1))
@@ -272,7 +272,7 @@ end
     @test orient_single.transverse ≈ orient_dual.transverse
     @test orient_single.phase ≈ orient_dual.phase
 
-    orient_many = SpinOrientation([0., 0., 1.])
+    orient_many = mr.SpinOrientation([0., 0., 1.])
     mr.Relax.apply_pulse!(orient_many, cp, props, 0.1, 0., 1., 0., Val(10))
     @test orient_single.longitudinal ≈ orient_many.longitudinal
     @test orient_single.transverse ≈ orient_many.transverse
