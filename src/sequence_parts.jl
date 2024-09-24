@@ -36,6 +36,16 @@ struct LinearPart <: NoPulsePart
 end
 
 
+"""
+    ConstantPulse(amplitude, phase, frequency)
+
+Stores the RF pulse state during a single timestep.
+
+It contains:
+- `amplitude` of RF pulse in kHz (assumed to be constant over the timestep).
+- `phase` of the RF pulse at the beginning of the timestep in degrees.
+- off-resonance `frequency` of the RF pulse in kHz.
+"""
 struct ConstantPulse
     amplitude :: Float64
     phase :: Float64
@@ -185,7 +195,6 @@ function split_into_parts(sequence::BaseSequence{N}, times::AbstractVector{<:Num
                 ConstantPulse(variables.amplitude(pulse, t), variables.phase(pulse, t) - variables.frequency(pulse, t) * 180 * ts, variables.frequency(pulse, t))
                 for t in time_parts
             ]
-
             push!(res, PulsePart{typeof(grad_part)}(parts, grad_part))
         end
     end
