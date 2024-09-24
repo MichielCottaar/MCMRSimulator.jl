@@ -99,7 +99,12 @@ end
 function apply_pulse!(orient::SpinOrientation, pulse::ConstantPulse, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, full_off_resonance::Float64, ::Val{1})
     flip_angle = pulse.amplitude * 2π * duration * (t2 - t1)
 
-    start_phase = pulse.phase + pulse.frequency * duration * 360 * (0.5 - t1)
+    if iszero(t1)
+        start_phase = pulse.phase
+    else
+        start_phase = pulse.phase + pulse.frequency * duration * 360 * t1
+    end
+
     rotation = Rotations.RotationVec(
         flip_angle * cosd(start_phase),
         flip_angle * sind(start_phase),
