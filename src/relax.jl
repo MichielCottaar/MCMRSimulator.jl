@@ -67,8 +67,9 @@ end
 function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::PulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, split_rotation::Val)
     started = iszero(t1)
     internal_timestep = 1/length(pulse.pulse)
+    single_pulse_duration = duration * internal_timestep
     call_apply_pulse!(part, index, t1_use, t2_use) = apply_pulse!(
-        orient, part, props, duration, t1_use / internal_timestep - index + 1, t2_use / internal_timestep - index + 1,
+        orient, part, props, single_pulse_duration, t1_use / internal_timestep - index + 1, t2_use / internal_timestep - index + 1,
         off_resonance + props.off_resonance + grad_off_resonance(pulse.gradient, old_pos, new_pos, t1_use, t2_use), split_rotation
     )
 
