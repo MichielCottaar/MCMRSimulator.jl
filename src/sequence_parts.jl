@@ -57,51 +57,6 @@ struct PulsePart{T<:NoPulsePart} <: SequencePart
     gradient :: T
 end
 
-"""
-    split_times(sequence(s), timestep)
-    split_times(sequence(s), t1, t2, timestep)
-
-Suggests at what times to split one or more sequence into individual timestep for simulation.
-
-The split times will include any time when (for any of the provided sequences):
-- the starting/end points of building blocks, gradients, RF pulses, or ADC readouts.
-- a gradient or RF pulse is discontinuous in the first derivative
-- the time of any instantaneous gradients, RF pulses, or readouts.
-
-Continuous gradient waveforms or RF pulses might be split up further to ensure that the maximum timestep is obeyed.
-"""
-split_times(sequence::BaseSequence, args...; kwargs...) = split_times([sequence], args...; kwargs...)
-split_times(sequences::AbstractVector{<:BaseSequence}, timestep::TimeStep; kwargs...) = split_times(sequences, 0., maximum(variables.duration.(sequences)), timestep; kwargs...)
-
-function split_times(sequences::AbstractVector{<:BaseSequence}, tstart::Number, tfinal::Number, timestep::TimeStep)
-    edges = Float64.([tstart, tfinal])
-    for sequence in sequences
-        raw_edges = edge_times(sequence)
-        nTR_start = Int(div(tstart, variables.duration(sequence), RoundDown))
-        nTR_final = Int(div(tfinal, variables.duration(sequence), RoundUp))
-        for nTR in nTR_start:nTR_final
-            for time in raw_edges .+ (nTR * variables.duration(sequence))
-                if tstart < time < tfinal
-                    push!(edges, time)
-                end
-            end
-        end
-    end
-    edges = sort(unique(edges))
-    splits = Float64[]
-
-    for (t1, t2) in zip(edges[1:end-1], edges[2:end])
-        tmean = (t1 + t2) / 2
-
-        max_grad = maximum(map(seq -> norm(variables.gradient_strength(get_gradient(seq, tmean)[1])), sequences))
-
-        use_timestep = timestep(max_grad)
-        nsteps = isinf(use_timestep) ? 1 : Int(div(t2 - t1, use_timestep, RoundUp))
-        append!(splits, range(t1, t2, length=nsteps+1))
-    end
-    return unique(splits)
-end
-
 
 """
     MultSequencePart(duration, parts)
@@ -129,101 +84,185 @@ struct MultSequencePart{N, T<:SequencePart}
     end
 end
 
-"""
-    SplitSequence(simulation, t1, t2)
-    SplitSequence(sequences, t1, t2, timestep)
-
-Splits each sequence between times `t1` and `t2`.
-"""
-struct SplitSequence{N}
-    parts :: Vector{MultSequencePart{N}}
-    instants :: Vector{SVector{N, Union{Nothing, InstantGradient, InstantPulse}}}
+struct InstantSequencePart{N, T}
+    instants :: SVector{N, T}
+    function InstantSequencePart(instants::AbstractVector)
+        T = Union{typeof.(instants)...}
+        N = length(instants)
+        return new{N, T}(SVector{N, T}(instants))
+    end
 end
 
-function SplitSequence(sequences::AbstractVector{<:BaseSequence}, tstart::Number, tfinal::Number, timestep::TimeStep)
-    N = length(sequences)
-    if iszero(N)
-        ts = timestep.max_timestep
-        Nsteps = isinf(ts) ? 1 : Int(div(tfinal - tstart, ts, RoundUp))
-        duration = (tfinal - tstart) / Nsteps
-        msp = MultSequencePart(duration, SequencePart[])
-        no_instants = SVector{0, Nothing}()
-        return SplitSequence{0}([msp for _ in 1:Nsteps], [no_instants for _ in 1:Nsteps])
+
+function iter_building_blocks_raw(seq::BaseSequence; repeat=false) 
+    iter = Iterators.flatten(iter_building_blocks_raw.(seq))
+    if repeat
+        return Iterators.cycle(iter)
+    else
+        return iter
     end
-    times = split_times(sequences, tstart, tfinal, timestep)
-    flipped_parts = [split_into_parts(seq, times) for seq in sequences]
-    return SplitSequence{N}(
-        [MultSequencePart(times[j+1] - times[j], [flipped_parts[i][j] for i in 1:N]) for j in eachindex(flipped_parts[1])],
-        get_instants_array(sequences, times),
+end
+iter_building_blocks_raw(bb::BaseBuildingBlock) = [bb]
+iter_building_blocks(seq::BaseSequence; kwargs...) = Iterators.accumulate(iter_building_blocks_raw(seq; kwargs...); init=(0., nothing)) do (prev_time, prev_bb), bb
+    if isnothing(prev_bb)
+        return (prev_time, bb)
+    else
+        return (prev_time + prev_bb.duration, bb)
+    end
+end
+function iter_building_blocks(seq::BaseSequence, tstart, tend)
+    after_tstart = Iterators.dropwhile(iter_building_blocks(seq; repeat=true)) do (time, bb)
+        time + bb.duration < tstart
+    end
+    return Iterators.takewhile(after_tstart) do (time, _)
+        time < tend
+    end
+end
+
+function iter_part_times(seq::BaseSequence; kwargs...)
+    Iterators.flatten(
+        Iterators.map(iter_building_blocks(seq; kwargs...)) do (time, bb)
+            et = edge_times(bb)
+            et_with_instant = Tuple{Float64, Any}[(time, nothing) for time in et]
+            for (t_instant, instant) in [iter_instant_gradients(bb)..., iter_instant_pulses(bb)...]
+                index = findlast(et_with_instant) do (t, _)
+                    t == t_instant
+                end
+                insert!(et_with_instant, index + 1, (t_instant, instant))
+            end
+            return ((time, t, t2, bb, instant) for ((t, _), (t2, instant)) in zip(et_with_instant[1:end-1], et_with_instant[2:end]))
+        end
     )
 end
 
-"""
-    split_into_parts(sequence, times)
+struct _IterEdges{T}
+    individual_iterators::Vector{T}
+    tstart::Float64
+    tfinal::Float64
+end
 
-Splits a sequence into a series of [`SequencePart`](@ref) objects.
-"""
-function split_into_parts(sequence::BaseSequence{N}, times::AbstractVector{<:Number}) where {N}
-    res = SequencePart[]
-    for (t1, t2) in zip(times[1:end-1], times[2:end])
-        tmean = (t1 + t2) / 2.
-        gp = get_pulse(sequence, tmean)
-        (gradient, _) = get_gradient(sequence, tmean)
-        if gradient isa NoGradient
-            grad_part = EmptyPart()
-        elseif gradient isa ConstantGradient
-            grad_part = ConstantPart(variables.gradient_strength(gradient))
-        elseif gradient isa ChangingGradient
-            grad_part = LinearPart(variables.gradient_strength(sequence, t1), variables.gradient_strength(sequence, t2))
-        else
-            error("Gradient waveform $gradient is not implemented in the MCMR simulator yet.")
+Base.iterate(ie::_IterEdges) = Base.iterate(ie, (ie.tstart, iterate.(ie.individual_iterators)))
+
+function Base.iterate(ie::_IterEdges, my_state)
+    current_time, states = my_state
+
+    new_states = map(ie.individual_iterators, states) do iter, state
+        (time, _, t2, _, instant), _ = state
+        while isnothing(instant) && (time + t2 <= current_time || isapprox(time + t2, current_time, atol=1e-8))
+            state = Base.iterate(iter, state[2])
+            (time, _, t2, _, instant), _ = state
         end
-        if isnothing(gp)
-            push!(res, grad_part)
-        else
-            (pulse, pulse_tmean) = gp
-            pulse_t1 = pulse_tmean - tmean + t1
-            pulse_t2 = pulse_tmean - tmean + t2
-
-            max_ts = split_timestep(pulse, 1e-3)
-
-            nparts = isinf(max_ts) ? 1 : Int(div(pulse_t2 - pulse_t1, max_ts, RoundUp))
-            ts = (pulse_t2 - pulse_t1) / nparts
-
-            time_parts = ((1:nparts) .- 0.5) .* ts .+ pulse_t1
-            parts = [
-                ConstantPulse(variables.amplitude(pulse, t), variables.phase(pulse, t) - variables.frequency(pulse, t) * 180 * ts, variables.frequency(pulse, t))
-                for t in time_parts
-            ]
-            push!(res, PulsePart{typeof(grad_part)}(parts, grad_part))
-        end
+        return state
     end
-    return res
-end
-
-function get_instants_array(sequences::AbstractVector{<:BaseSequence}, times::AbstractVector{<:Number})
-    N = length(sequences)
-    orig_instants = [get_instants_array(seq, times) for seq in sequences]
-    flipped_instants = [[orig_instants[i][j] for i in eachindex(sequences)] for j in eachindex(times)]
-    return SVector{N, Union{Nothing, InstantGradient, InstantPulse}}[SVector{N, Union{typeof.(instants)...}}(instants...) for instants in flipped_instants]
-end
-
-function get_instants_array(sequence::BaseSequence, times::AbstractVector{<:Number})
-    res = Any[nothing for _ in times]
-
-    TR1 = div(times[1], variables.duration(sequence), RoundDown)
-    TR2 = div(times[end], variables.duration(sequence), RoundUp)
-    for (t_instant, instant) in [iter_instant_gradients(sequence)..., iter_instant_pulses(sequence)...]
-        for current_TR in TR1:TR2
-            t_total = t_instant + current_TR * variables.duration(sequence)
-            if (t_total < times[1]) || (t_total > times[end])
-                continue
+    if any(!isnothing(state[1][5]) for state in new_states)
+        result = (map(new_states) do state
+            (_, _, _, _, instant), _ = state
+            return instant
+        end)
+        new_states = map(ie.individual_iterators, new_states) do iter, state
+            if isnothing(state[1][5])
+                return state
+            else
+                return Base.iterate(iter, state[2])
             end
-            (_, index) = findmin(t -> abs(t - t_total), times)
-            res[index] = instant
+        end
+        return (result, (current_time, new_states))
+    end
+
+    next_time = min(ie.tfinal, 
+        minimum(new_states) do ((time, _, t2, _), _)
+            time + t2
+        end,
+    )
+    if (next_time ≈ current_time) && (current_time ≈ ie.tfinal)
+        return nothing
+    else
+        return ((current_time, next_time, map(new_states) do state
+            (time, _, _, bb), _ = state
+            return (time, bb)
+        end), (next_time, new_states))
+    end
+end
+
+function iter_part_times(sequences::Vector{<:BaseSequence}, tstart, tfinal)
+    iters = iter_part_times.(sequences; repeat=true)
+    dropped = [Iterators.dropwhile(i) do (time, _, t2, _, _)
+        time + t2 < tstart
+    end for i in iters]
+    return _IterEdges(
+        dropped,
+        Float64(tstart),
+        Float64(tfinal),
+    )
+end
+
+function iter_part_times(sequences::Vector{<:BaseSequence}, tstart, tfinal, timestep::TimeStep)
+    Iterators.Flatten(
+        Iterators.map(iter_part_times(sequences, tstart, tfinal)) do var
+            if !(var isa Tuple)
+                return (var, )
+            end
+            
+            (t1, t2, bbs) = var
+            tmean = (t1 + t2) / 2
+
+            max_grad = maximum(bbs) do (t_bb, bb)
+                norm(variables.gradient_strength(get_gradient(bb, tmean - t_bb)[1]))
+            end
+            use_timestep = timestep(max_grad)
+            nsteps = isinf(use_timestep) ? 1 : Int(div(t2 - t1, use_timestep, RoundUp))
+            splits = range(t1, t2, length=nsteps+1)
+            return (
+                (t1p, t2p, bbs)
+                for (t1p, t2p) in zip(splits[1:end-1], splits[2:end])
+            )
+        end
+    )
+end
+
+
+function iter_parts(sequences::Vector{<:BaseSequence}, tstart, tfinal, timestep::TimeStep)
+    Iterators.map(iter_part_times(sequences, tstart, tfinal, timestep)) do var
+        if !(var isa Tuple)
+            return InstantSequencePart(var)
+        else
+            (t1, t2, bbs) = var
+            tmean = (t1 + t2) / 2.
+            return MultSequencePart(t2 - t1, map(bbs) do (t_bb, bb)
+                time_in_bb = tmean - t_bb
+                gp = get_pulse(bb, time_in_bb)
+                (gradient, _) = get_gradient(bb, time_in_bb)
+                if gradient isa NoGradient
+                    grad_part = EmptyPart()
+                elseif gradient isa ConstantGradient
+                    grad_part = ConstantPart(variables.gradient_strength(gradient))
+                elseif gradient isa ChangingGradient
+                    grad_part = LinearPart(variables.gradient_strength(bb, max(t1 - t_bb, 0.)), variables.gradient_strength(bb, min(t2 - t_bb, bb.duration)))
+                else
+                    error("Gradient waveform $gradient is not implemented in the MCMR simulator yet.")
+                end
+                if isnothing(gp)
+                    return grad_part
+                else
+                    (pulse, pulse_tmean) = gp
+                    pulse_t1 = pulse_tmean - tmean + t1
+                    pulse_t2 = pulse_tmean - tmean + t2
+        
+                    max_ts = split_timestep(pulse, 1e-3)
+        
+                    nparts = isinf(max_ts) ? 1 : Int(div(pulse_t2 - pulse_t1, max_ts, RoundUp))
+                    ts = (pulse_t2 - pulse_t1) / nparts
+        
+                    time_parts = ((1:nparts) .- 0.5) .* ts .+ pulse_t1
+                    parts = [
+                        ConstantPulse(variables.amplitude(pulse, t), variables.phase(pulse, t) - variables.frequency(pulse, t) * 180 * ts, variables.frequency(pulse, t))
+                        for t in time_parts
+                    ]
+                    return PulsePart{typeof(grad_part)}(parts, grad_part)
+                end
+            end)
         end
     end
-    return res
 end
 
 
