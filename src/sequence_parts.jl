@@ -180,7 +180,7 @@ function Base.iterate(ie::_IterEdges, my_state)
     end
 
     next_time = min(ie.tfinal, 
-        minimum(new_states) do ((time, _, t2, _), _)
+        minimum(new_states; init=Inf) do ((time, _, t2, _), _)
             time + t2
         end,
     )
@@ -220,7 +220,7 @@ function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, tfin
             (t1, t2, bbs) = var
             tmean = (t1 + t2) / 2
 
-            max_grad = maximum(bbs) do (t_bb, bb)
+            max_grad = iszero(length(sequences)) ? 0. : maximum(bbs) do (t_bb, bb)
                 norm(variables.gradient_strength(get_gradient(bb, tmean - t_bb)[1]))
             end
             use_timestep = timestep(max_grad)
@@ -242,6 +242,9 @@ function iter_parts(sequences::AbstractVector{<:BaseSequence}, tstart, tfinal, t
         else
             (t1, t2, bbs) = var
             tmean = (t1 + t2) / 2.
+            if iszero(length(sequences))
+                return MultSequencePart(t2 - t1, EmptyPart[])
+            end
             return MultSequencePart(t2 - t1, map(bbs) do (t_bb, bb)
                 time_in_bb = tmean - t_bb
                 gp = get_pulse(bb, time_in_bb)
