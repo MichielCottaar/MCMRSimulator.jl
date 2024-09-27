@@ -114,21 +114,21 @@ iter_building_blocks(seq::BaseSequence; kwargs...) = Iterators.accumulate(iter_b
     if isnothing(prev_bb)
         return (prev_time, bb)
     else
-        return (prev_time + prev_bb.duration, bb)
+        return (prev_time + variables.duration.f(prev_bb), bb)
     end
 end
 function iter_building_blocks(seq::BaseSequence, tstart, tend)
     after_tstart = Iterators.dropwhile(iter_building_blocks(seq; repeat=true)) do (time, bb)
-        time + bb.duration < tstart
+        time + variables.duration.f(bb) < tstart
     end
     return Iterators.takewhile(after_tstart) do (time, _)
         time < tend
     end
 end
 
-function iter_part_times(seq::BaseSequence; kwargs...)
+function iter_part_times(seq::BaseSequence, tstart, tfinal)
     Iterators.flatten(
-        Iterators.map(iter_building_blocks(seq; kwargs...)) do (time, bb)
+        Iterators.map(iter_building_blocks(seq, tstart, tfinal)) do (time, bb)
             et = edge_times(bb)
             et_with_instant = Tuple{Float64, Any}[(time, nothing) for time in et]
             for (t_instant, instant) in [iter_instant_gradients(bb)..., iter_instant_pulses(bb)...]
@@ -199,7 +199,7 @@ function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, tfin
 end
 
 function iter_part_times(sequences::Vector{<:BaseSequence}, tstart, tfinal)
-    iters = iter_part_times.(sequences; repeat=true)
+    iters = iter_part_times.(sequences, tstart, tfinal)
     dropped = [Iterators.dropwhile(i) do (time, _, t2, _, _)
         time + t2 < tstart
     end for i in iters]
@@ -254,7 +254,7 @@ function iter_parts(sequences::AbstractVector{<:BaseSequence}, tstart, tfinal, t
                 elseif gradient isa ConstantGradient
                     grad_part = ConstantPart(variables.gradient_strength(gradient))
                 elseif gradient isa ChangingGradient
-                    grad_part = LinearPart(variables.gradient_strength(bb, max(t1 - t_bb, 0.)), variables.gradient_strength(bb, min(t2 - t_bb, bb.duration)))
+                    grad_part = LinearPart(variables.gradient_strength(bb, max(t1 - t_bb, 0.)), variables.gradient_strength(bb, min(t2 - t_bb, variables.duration.f(bb))))
                 else
                     error("Gradient waveform $gradient is not implemented in the MCMR simulator yet.")
                 end
