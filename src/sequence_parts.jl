@@ -191,6 +191,10 @@ function Base.iterate(ie::_IterEdges, my_state)
     end
 end
 
+function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, tfinal)
+    iter_part_times(collect(sequences), tstart, tfinal)
+end
+
 function iter_part_times(sequences::Vector{<:BaseSequence}, tstart, tfinal)
     iters = iter_part_times.(sequences; repeat=true)
     dropped = [Iterators.dropwhile(i) do (time, _, t2, _, _)
@@ -203,7 +207,7 @@ function iter_part_times(sequences::Vector{<:BaseSequence}, tstart, tfinal)
     )
 end
 
-function iter_part_times(sequences::Vector{<:BaseSequence}, tstart, tfinal, timestep::TimeStep)
+function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, tfinal, timestep::TimeStep)
     Iterators.Flatten(
         Iterators.map(iter_part_times(sequences, tstart, tfinal)) do var
             if !(var isa Tuple)
