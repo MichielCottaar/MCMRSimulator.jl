@@ -163,7 +163,7 @@ end
 function Snapshot(nspins::Integer, simulation::Simulation{N}, bounding_box=500; kwargs...) where {N}
     Snapshot(nspins, bounding_box, simulation.geometry; nsequences=N, kwargs...)
 end
-_to_snapshot(spins::Int, simulation::Simulation, bounding_box) = _to_snapshot(Snapshot(spins, simulation, bounding_box), simulation, bounding_box)
+_to_snapshot(spins::Int, simulation::Simulation, bounding_box) = Snapshot(spins, simulation, bounding_box)
 _to_snapshot(spins::AbstractVector{<:Real}, simulation::Simulation, bounding_box) = _to_snapshot(Spin(position=spins), simulation, bounding_box)
 _to_snapshot(spins::AbstractVector{<:AbstractVector{<:Real}}, simulation::Simulation, bounding_box) = _to_snapshot([Spin(position=pos) for pos in spins], simulation, bounding_box)
 function _to_snapshot(spins::AbstractMatrix{<:Real}, simulation::Simulation, bounding_box) 
