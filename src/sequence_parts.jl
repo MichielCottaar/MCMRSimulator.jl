@@ -84,6 +84,13 @@ struct MultSequencePart{N, T<:SequencePart}
     end
 end
 
+"""
+    InstantSequencePart(instants)
+
+A set of `N` instant pulses/gradients that should be applied to the spins.
+
+Some of the instants might be `nothing`.
+"""
 struct InstantSequencePart{N, T}
     instants :: SVector{N, T}
     function InstantSequencePart(instants::AbstractVector)
@@ -221,7 +228,7 @@ function iter_part_times(sequences::Vector{<:BaseSequence}, tstart, tfinal, time
 end
 
 
-function iter_parts(sequences::Vector{<:BaseSequence}, tstart, tfinal, timestep::TimeStep)
+function iter_parts(sequences::AbstractVector{<:BaseSequence}, tstart, tfinal, timestep::TimeStep)
     Iterators.map(iter_part_times(sequences, tstart, tfinal, timestep)) do var
         if !(var isa Tuple)
             return InstantSequencePart(var)
