@@ -1,5 +1,5 @@
 module Simulations
-import StaticArrays: SVector
+import StaticArrays: SVector, SizedVector
 import MRIBuilder: Sequence
 import ..Geometries: ObstructionGroup, fix, fix_susceptibility
 import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility, susceptibility_off_resonance, prepare_isinside!
@@ -51,7 +51,7 @@ To run a [`Snapshot`](@ref) of spins through the simulations you can use one of 
 """
 struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, O<:FixedSusceptibility}
     # N sequences, datatype T
-    sequences :: SVector{N, Sequence}
+    sequences :: SizedVector{N, Sequence}
     diffusivity :: Float64
     properties :: GlobalProperties
     geometry :: G
@@ -72,7 +72,7 @@ struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, O<:FixedSuscep
         nseq = length(sequences)
 
         new{nseq, length(geometry), typeof(geometry), typeof(inside_geometry), typeof(susceptibility)}(
-            SVector{nseq, Sequence}(sequences),
+            SizedVector{nseq, Sequence}(sequences),
             diffusivity,
             properties,
             geometry,

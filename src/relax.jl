@@ -1,6 +1,6 @@
 module Relax
 
-import StaticArrays: SVector
+import StaticArrays: SVector, SizedVector
 import Rotations
 import LinearAlgebra: ⋅
 import ..Constants: gyromagnetic_ratio
@@ -25,7 +25,7 @@ The spin will precess around an effective RF pulse and relax with a given `R1` a
 The R1 and R2 are determined based on the [`Simulation`](@ref) parameters, potentially influenced by the geometry.
 The effective RF pulse is determined by the sequence and any changes in the off-resonance field due to the geometry or set in the [`Simulation`](@ref).
 """
-function relax!(spin::Spin{N}, new_pos::NewPosType, simulation::Simulation{N}, parts::MultSequencePart{N}, t1::Float64, t2::Float64, B0s::SVector{N, Float64}) where {N}
+function relax!(spin::Spin{N}, new_pos::NewPosType, simulation::Simulation{N}, parts::MultSequencePart{N}, t1::Float64, t2::Float64, B0s::SizedVector{N, Float64}) where {N}
 
     mean_pos = (spin.position .+ new_pos) ./ 2
     props = MRIProperties(simulation.geometry, simulation.inside_geometry, simulation.properties, mean_pos, spin.reflection)

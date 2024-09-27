@@ -1,5 +1,5 @@
 module SequenceParts
-import StaticArrays: SVector
+import StaticArrays: SVector, SizedVector
 import LinearAlgebra: norm
 import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, edge_times, get_pulse, iter_instant_gradients, iter_instant_pulses, make_generic, variables
 import MRIBuilder.Components: NoGradient, ConstantGradient, ChangingGradient, InstantGradient, InstantPulse, split_timestep
@@ -65,7 +65,7 @@ A set of N [`SequencePart`](@ref) objects representing overlapping parts of `N` 
 """
 struct MultSequencePart{N, T<:SequencePart}
     duration :: Float64
-    parts :: SVector{N, T}
+    parts :: SizedVector{N, T}
     function MultSequencePart(duration::Number, parts::AbstractVector{<:SequencePart})
         N = length(parts)
         if iszero(N)
@@ -79,7 +79,7 @@ struct MultSequencePart{N, T<:SequencePart}
         end
         return new{N, T}(
             Float64(duration),
-            SVector{N, T}(parts)
+            SizedVector{N, T}(parts)
         )
     end
 end
@@ -92,11 +92,11 @@ A set of `N` instant pulses/gradients that should be applied to the spins.
 Some of the instants might be `nothing`.
 """
 struct InstantSequencePart{N, T}
-    instants :: SVector{N, T}
+    instants :: SizedVector{N, T}
     function InstantSequencePart(instants::AbstractVector)
         T = Union{typeof.(instants)...}
         N = length(instants)
-        return new{N, T}(SVector{N, T}(instants))
+        return new{N, T}(SizedVector{N, T}(instants))
     end
 end
 

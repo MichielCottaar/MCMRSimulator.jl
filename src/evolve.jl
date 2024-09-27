@@ -6,7 +6,7 @@ Defines the functions that run the actual simulation:
 All of these functions call [`evolve_to_time`](@ref) under the hood to actually run the simulation.
 """
 module Evolve
-import StaticArrays: SVector, MVector
+import StaticArrays: SVector, MVector, SizedVector
 import LinearAlgebra: norm, ⋅
 import MRIBuilder: Sequence, variables, B0
 import MRIBuilder.Components: InstantGradient, InstantPulse
@@ -190,14 +190,14 @@ Updates the spin based on a random movement through the given geometry for a giv
   This displacement will take into account the obstructions in `simulation.geometry`.
 - The spin orientation will be affected by relaxation (see [`relax!`](@ref)) and potentially by magnetisation transfer during collisions.
 """
-function draw_step!(spins::Vector{Spin{N}}, simulation::Simulation{N}, sequence_part::MultSequencePart{N}, B0s::SVector{N, Float64}) where {N}
+function draw_step!(spins::Vector{Spin{N}}, simulation::Simulation{N}, sequence_part::MultSequencePart{N}, B0s::SizedVector{N, Float64}) where {N}
     Threads.@threads for spin in spins
         draw_step!(spin, simulation, sequence_part, B0s)
     end
 end
 
 
-function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequencePart{N}, B0s::SVector{N, Float64}, test_new_pos=nothing) where {N}
+function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequencePart{N}, B0s::SizedVector{N, Float64}, test_new_pos=nothing) where {N}
     if ~isnothing(test_new_pos)
         all_positions = [spin.position]
     end
@@ -221,7 +221,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 displacement = rand_base_vec .* sqrt(2 * simulation.diffusivity * timestep)
                 new_pos = current_pos + displacement
             else
-                new_pos = SVector{3}(test_new_pos)
+                new_pos = SVector{3, Float64}(test_new_pos)
             end
             reflection = Reflection(norm(new_pos - current_pos) / sqrt(2 * simulation.diffusivity * timestep))
             phit = (0, 0, false)
@@ -318,13 +318,13 @@ Each instant can be:
 - `MRIBuilder.Components.InstantGradient`: add phase corresponding to gradient
 """
 apply_instants!(spins::Vector{Spin{N}}, instants::InstantSequencePart{N}) where {N} = apply_instants!(spins, instants.instants)
-function apply_instants!(spins::Vector{Spin{N}}, instants::SVector{N}) where {N}
+function apply_instants!(spins::Vector{Spin{N}}, instants::SizedVector{N}) where {N}
     for i in 1:N
         apply_instants!(spins, i, instants[i])
     end
 end
 
-apply_instants!(spins::Vector{Spin{N}}, instants::SVector{N, Nothing}) where {N} = nothing
+apply_instants!(spins::Vector{Spin{N}}, instants::SizedVector{N, Nothing}) where {N} = nothing
 apply_instants!(spins::Vector{<:Spin}, index::Int, ::Nothing) = nothing
 
 function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::InstantGradient)

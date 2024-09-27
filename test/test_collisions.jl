@@ -173,7 +173,7 @@
             end
             seq_part = mr.SequenceParts.MultSequencePart(0.5, [mr.SequenceParts.EmptyPart()])
             for _ in 1:100
-                mr.draw_step!(spin, mr.Simulation(empty_sequence, diffusivity=3., geometry=geometry), seq_part, SVector{1, Float64}(3.))
+                mr.draw_step!(spin, mr.Simulation(empty_sequence, diffusivity=3., geometry=geometry), seq_part, SizedVector{1, Float64}(3.))
                 inside &= mr.isinside(geometry, spin) == 2
             end
             @test inside
