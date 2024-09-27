@@ -162,6 +162,9 @@ function Base.iterate(ie::_IterEdges, my_state)
         return state
     end
     if any(!isnothing(state[1][5]) for state in new_states)
+        if current_time ≈ ie.tfinal
+            return nothing
+        end
         result = (map(new_states) do state
             (_, _, _, _, instant), _ = state
             return instant
