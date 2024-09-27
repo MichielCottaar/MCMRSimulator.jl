@@ -126,9 +126,9 @@ function iter_building_blocks(seq::BaseSequence, tstart, tend)
     end
 end
 
-function iter_part_times(seq::BaseSequence, tstart, tfinal)
+function iter_part_times(seq::BaseSequence, tstart)
     Iterators.flatten(
-        Iterators.map(iter_building_blocks(seq, tstart, tfinal)) do (time, bb)
+        Iterators.map(iter_building_blocks(seq, tstart, Inf)) do (time, bb)
             et = edge_times(bb)
             et_with_instant = Tuple{Float64, Any}[(time, nothing) for time in et]
             for (t_instant, instant) in [iter_instant_gradients(bb)..., iter_instant_pulses(bb)...]
@@ -199,7 +199,7 @@ function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, tfin
 end
 
 function iter_part_times(sequences::Vector{<:BaseSequence}, tstart, tfinal)
-    iters = iter_part_times.(sequences, tstart, tfinal)
+    iters = iter_part_times.(sequences, tstart)
     dropped = [Iterators.dropwhile(i) do (time, _, t2, _, _)
         time + t2 < tstart
     end for i in iters]
