@@ -108,7 +108,7 @@ function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bo
             single_snapshot = get_sequence(snapshot, index[1])
             for (index_selected, select) in enumerate(subsets_vector)
                 selected = get_subset(single_snapshot, simulation, select)
-                value = return_snapshot ? selected : SpinOrientationSum(selected)
+                value = deepcopy(return_snapshot) ? selected : SpinOrientationSum(selected)
                 result[index, index_selected] = value
             end
         end
@@ -171,13 +171,12 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     if new_time == current_time
         return snapshot
     end
-    spins::Vector{Spin{N}} = deepcopy.(snapshot.spins)
     B0s = map(B0, simulation.sequences)
 
     for part in iter_parts(simulation.sequences, current_time, new_time, simulation.timestep)
-        process_sequence_step!(spins, simulation, part, B0s)
+        process_sequence_step!(snapshot.spins, simulation, part, B0s)
     end
-    return Snapshot(spins, new_time)
+    return Snapshot(snapshot.spins, new_time)
 end
 
 process_sequence_step!(spins, simulation, sequence_part::MultSequencePart, B0s) = draw_step!(spins, simulation, sequence_part, B0s)

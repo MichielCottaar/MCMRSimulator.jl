@@ -175,8 +175,8 @@ function _to_snapshot(spins::AbstractMatrix{<:Real}, simulation::Simulation, bou
 end
 _to_snapshot(spins::Spin, simulation::Simulation, bounding_box) = _to_snapshot([spins], simulation, bounding_box)
 _to_snapshot(spins::AbstractVector{<:Spin}, simulation::Simulation, bounding_box) = _to_snapshot(Snapshot(spins), simulation, bounding_box)
-_to_snapshot(spins::Snapshot{1}, simulation::Simulation{nseq}, bounding_box) where {nseq} = nseq == 1 ? spins : Snapshot(spins, nseq)
-_to_snapshot(spins::Snapshot{N}, simulation::Simulation{N}, bounding_box) where {N} = spins
+_to_snapshot(spins::Snapshot{1}, simulation::Simulation{nseq}, bounding_box) where {nseq} = nseq == 1 ? deepcopy(spins) : Snapshot(spins, nseq)
+_to_snapshot(spins::Snapshot{N}, simulation::Simulation{N}, bounding_box) where {N} = deepcopy(spins)
 
 produces_off_resonance(sim::Simulation) = produces_off_resonance(sim.geometry)
 propose_times(sim::Simulation, t_start, t_end) = propose_times(sim.time_controller, t_start, t_end, sim.sequences, sim.diffusivity)
