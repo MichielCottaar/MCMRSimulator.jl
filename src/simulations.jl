@@ -7,7 +7,6 @@ import ..Spins: Spin, Snapshot, SpinOrientation, stuck
 import ..Methods: get_time, B0
 import ..Properties: GlobalProperties, R1, R2, off_resonance, correct_for_timestep
 import ..TimeSteps: TimeStep
-import ..SequenceParts: SplitSequence
 
 """
     Simulation(
@@ -201,7 +200,5 @@ susceptibility_off_resonance(simulation::Simulation, spin::Spin) = susceptibilit
 susceptibility_off_resonance(simulation::Simulation, position::AbstractVector, inside::Union{Nothing, Bool}=nothing) = susceptibility_off_resonance(simulation.susceptibility, SVector{3, Float64}(position), inside)
 susceptibility_off_resonance(simulation::Simulation, old_pos::AbstractVector, new_pos::AbstractVector) = susceptibility_off_resonance(simulation.susceptibility, (old_pos .+ new_pos) ./2, nothing)
 
-
-SplitSequence(simulation::Simulation, tstart::Number, tfinal::Number) = SplitSequence(simulation.sequences, tstart, tfinal, simulation.timestep)
 
 end
