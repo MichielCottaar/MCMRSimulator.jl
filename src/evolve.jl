@@ -11,7 +11,7 @@ import LinearAlgebra: norm, ⋅
 import MRIBuilder: Sequence, variables, B0
 import MRIBuilder.Components: InstantGradient, InstantPulse
 import Rotations
-import ..SequenceParts: SequencePart, MultSequencePart, SplitSequence
+import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, iter_parts
 import ..Methods: get_time
 import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation
 import ..Simulations: Simulation, _to_snapshot
@@ -172,16 +172,16 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
         return snapshot
     end
     spins::Vector{Spin{N}} = deepcopy.(snapshot.spins)
-
-    split_sequence = SplitSequence(simulation, current_time, new_time)
     B0s = map(B0, simulation.sequences)
 
-    for index_part in eachindex(split_sequence.parts)
-        apply_instants!(spins, split_sequence.instants[index_part])
-        draw_step!(spins, simulation, split_sequence.parts[index_part], B0s)
+    for part in iter_parts(simulation.sequences, current_time, new_time, simulation.timestep)
+        process_sequence_step!(spins, simulation, part, B0s)
     end
     return Snapshot(spins, new_time)
 end
+
+process_sequence_step!(spins, simulation, sequence_part::MultSequencePart, B0s) = draw_step!(spins, simulation, sequence_part, B0s)
+process_sequence_step!(spins, simulation, sequence_part::InstantSequencePart, B0s) = apply_instants!(spins, sequence_part)
 
 """
     draw_step!(spin(s), simulation, mult_sequence_part, B0s)
@@ -318,6 +318,7 @@ Each instant can be:
 - `MRIBuilder.Components.InstantPulse`: apply RF pulse rotation
 - `MRIBuilder.Components.InstantGradient`: add phase corresponding to gradient
 """
+apply_instants!(spins::Vector{Spin{N}}, instants::InstantSequencePart{N}) where {N} = apply_instants!(spins, instants.instants)
 function apply_instants!(spins::Vector{Spin{N}}, instants::SVector{N}) where {N}
     for i in 1:N
         apply_instants!(spins, i, instants[i])
