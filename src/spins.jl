@@ -23,11 +23,11 @@ import LinearAlgebra: ⋅, norm
 import ..Geometries.Internal: 
     Reflection, empty_reflection, has_intersection,
     BoundingBox, lower, upper, random_surface_positions,
-    FixedGeometry, FixedObstruction, FixedObstructionGroup,
-    isinside, R1, R2, off_resonance, has_hit, previous_hit
+    FixedGeometry, FixedObstruction, FixedObstructionGroup, FixedSusceptibility,
+    isinside, R1, R2, off_resonance, has_hit, previous_hit, susceptibility_off_resonance
 import ..Methods: get_time, norm_angle, phase, project
 import ..Properties: GlobalProperties
-import ..Geometries: fix
+import ..Geometries: fix, fix_susceptibility
 
 """Immutable version of the Xoshiro random number generator state
 
@@ -266,23 +266,25 @@ isinside(geometry, spin::Spin) = length(isinside(fix(geometry), spin))
 isinside(geometry::FixedGeometry, spin::Spin) = isinside(geometry, spin.position, spin.reflection)
 
 
-for symbol in (:R1, :R2, :off_resonance)
+for symbol in (:R1, :R2)
     @eval begin
         """
-            $($symbol)(spin, geometry, global_properties)
-            $($symbol)(position, geometry, global_properties[, stuck_to])
+            $($symbol)(spins, geometry, global_properties)
+            $($symbol)(positions, geometry, global_properties[, stuck_to])
         
-        Returns the $($symbol) experienced by the [`Spin`](@ref) given the surface and volume properties of the [`FixedGeometry`](@ref).
-        Alternatively, the `position` of the spin can be provided. In this case the [`Reflection`](@ref) should also be returned for a bound spin.
+        Returns the $($symbol) experienced by the [`Spin`](@ref) objects given the surface and volume properties of the [`FixedGeometry`](@ref).
+        Alternatively, the `position` of the spins can be provided. In this case the [`Reflection`](@ref) should also be returned for a bound spin.
         """
-        function $symbol(spin::Spin, geometry::FixedGeometry, global_properties::GlobalProperties=GlobalProperties())
+        function $symbol(spin::AbstractVector{<:Spin}, geometry::FixedGeometry, global_properties::GlobalProperties=GlobalProperties())
             $symbol(spin, geometry, global_properties, spin.reflection)
         end
         function $symbol(spin_or_pos, geometry, global_properties::GlobalProperties=GlobalProperties())
-            $symbol(spin_or_pos, fix(geometry), global_properties)
+            fg = fix(geometry)
+            [$symbol(sp, fg, global_properties) for sp in spin_or_pos]
         end
     end
 end
+
 
 """
 Represents the positions and orientations of multiple [`Spin`](@ref) objects at a specific `time`.
@@ -376,6 +378,28 @@ get_time(s :: Snapshot) = s.time
 function orientation(s :: Snapshot)
     sum(orientation, s.spins, init=zero(SVector{3, Float64}))
 end
+
+"""
+    off_resonance(snapshot, geometry)
+
+Computes the off-resonance field experienced by each spin in the [`Snapshot`](@ref).
+
+Only the contribution from the susceptibility sources is considered.
+"""
+function off_resonance(snap::Snapshot, geometry)
+    sfg = fix_susceptibility(geometry)
+
+    function get_susc_off(spin::Spin)
+        if stuck(spin)
+            isinside = spin.reflection.inside
+        else
+            isinside = nothing
+        end
+        return susceptibility_off_resonance(sfg, spin.position, isinside)
+    end
+    return get_susc_off.(snap.spins)
+end
+
 
 """
     SpinOrientationSum(snapshot)
