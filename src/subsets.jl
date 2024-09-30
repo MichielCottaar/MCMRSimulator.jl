@@ -15,7 +15,7 @@ import ..Geometries.Internal: FixedGeometry, isinside
 
 _arguments = """
 - `bound`: set to true to return only bound spins, to false to return only free spins (default: whether spins are bound is not relevant).
-- `inside`: set to true to return only spins inside the geometry, to false to return only spins outside of the geometry (default: whether spins are inside or outside is not relevant).
+- `inside`: set to true to return only spins inside the geometry, to false to return only spins outside of the geometry (default: whether spins are inside or outside is not relevant). It can also be set to a positive integer number. Only spins that are inside that exact number of obstructions will be returned.
 - `geometry_index`: set to an index to only consider that obstruction group within the total geometry (default: consider the full geometry).
 - `obstruction_index`: set to an index to only consider that obstruction group within the total geometry (default: consider the full geometry).
 """
@@ -30,7 +30,7 @@ $(_arguments)
 """
 @kwdef struct Subset
     bound :: Union{Nothing, Bool} = nothing
-    inside :: Union{Nothing, Bool} = nothing
+    inside :: Union{Nothing, Bool, Int} = nothing
     geometry_index :: Union{Nothing, Int} = nothing
     obstruction_index :: Union{Nothing, Int} = nothing
 end
@@ -61,10 +61,10 @@ function get_subset(snapshot::Snapshot{N}, geometry::FixedGeometry, subset::Subs
         geometry = filter(og -> og.original_index == subset.geometry_index, geometry)
     end
     if iszero(length(geometry))
-        if subset.bound == true || subset.inside == true
-            return Snapshot(0, time=snapshot.time, nsequences=N)
-        else
+        if subset.inside in (false, 0) && subset.bound == false
             return snapshot
+        else
+            return Snapshot(0, time=snapshot.time, nsequences=N)
         end
     end
     include = ones(Bool, length(snapshot))
@@ -77,16 +77,26 @@ function get_subset(snapshot::Snapshot{N}, geometry::FixedGeometry, subset::Subs
         include .&= (_isbound.(snapshot) .== subset.bound)
     end
     if ~isnothing(subset.inside)
-        function _isinside(spin::Spin)
+        function _number_isinside(spin::Spin)
+            nmatch = 0
             for g in geometry
-                o_indices = isinside(g, spin.position, spin.reflection)
-                if length(o_indices) > 0 && (isnothing(subset.obstruction_index) || subset.obstruction_index in o_indices)
-                    return true
+                if !isnothing(subset.geometry_index) && subset.geometry_index != g.original_index
+                    continue
                 end
+                o_indices = isinside(g, spin.position, spin.reflection)
+                valid_indices = filter(o_indices) do index
+                    isnothing(subset.obstruction_index) || subset.obstruction_index == index
+                end
+                nmatch += length(valid_indices)
             end
-            return false
+            return nmatch
         end
-        include .&= (_isinside.(snapshot) .== subset.inside)
+        _isinside(spin::Spin) = _number_isinside(spin) > 0
+        if subset.inside isa Bool
+            include .&= (_isinside.(snapshot) .== subset.inside)
+        else
+            include .&= (_number_isinside.(snapshot) .== subset.inside)
+        end
     end
     return snapshot[include]
 end
