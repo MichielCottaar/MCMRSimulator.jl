@@ -120,7 +120,7 @@ function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bo
             single_snapshot = iszero(N) ? snapshot : get_sequence(snapshot, index[1])
             for (index_selected, select) in enumerate(subsets_vector)
                 selected = get_subset(single_snapshot, simulation, select)
-                value = deepcopy(return_snapshot) ? selected : SpinOrientationSum(selected)
+                value = return_snapshot ? deepcopy(selected) : SpinOrientationSum(selected)
                 result[index, index_selected] = value
             end
         end
