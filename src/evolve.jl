@@ -96,7 +96,19 @@ function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bo
         end
     end
 
-    return_type = return_snapshot ? Snapshot{1} : SpinOrientationSum
+    if iszero(N)
+        if isnothing(new_readout_times)
+            error("Readout times need to be set explicitly when running a simulation with no sequences.")
+        end
+        if !return_snapshot
+            error("Either provide a sequence to simulate or set `return_snapshot=true` to return the spin positions.")
+        end
+        store_times = reshape(Float64.(new_readout_times), (1, length(new_readout_times), 1))
+        actual_readout_times = new_readout_times
+    end
+
+
+    return_type = return_snapshot ? Snapshot{iszero(N) ? 0 : 1} : SpinOrientationSum
     result = convert(Array{Union{Nothing, return_type}}, fill(nothing, (size(store_times)..., length(subsets_vector))))
 
     for time in sort!([actual_readout_times...])
@@ -105,7 +117,7 @@ function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bo
             if time != store_times[index]
                 continue
             end
-            single_snapshot = get_sequence(snapshot, index[1])
+            single_snapshot = iszero(N) ? snapshot : get_sequence(snapshot, index[1])
             for (index_selected, select) in enumerate(subsets_vector)
                 selected = get_subset(single_snapshot, simulation, select)
                 value = deepcopy(return_snapshot) ? selected : SpinOrientationSum(selected)
@@ -124,7 +136,7 @@ function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bo
     end
     return result[
         # remove first dimension if simulation was initalised with scalar sequence
-        simulation.flatten ? 1 : :,
+        simulation.flatten || iszero(N) ? 1 : :,
         # remove second dimension if there are no sequences with multiple Readouts or new_readout_times is set to a scalar number
         (isnothing(new_readout_times) && isone(nreadout_per_TR)) || new_readout_times isa Number ? 1 : :,
         # remove third dimension if nTR is not explicitly set by the user
