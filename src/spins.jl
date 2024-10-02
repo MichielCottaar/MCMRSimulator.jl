@@ -426,6 +426,13 @@ for param in (:longitudinal, :transverse, :phase)
     @eval $param(s :: Snapshot) = $param(SpinOrientationSum(s))
 end
 
+function Base.:+(sp1::SpinOrientationSum, sp2::SpinOrientationSum)
+    return SpinOrientationSum(
+        SpinOrientation(orientation(sp1) .+ orientation(sp2)),
+        sp1.nspins + sp2.nspins
+    )
+end
+
 # Abstract Vector interface (following https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-array)
 Base.size(s::Snapshot) = size(s.spins)
 Base.getindex(s::Snapshot, index::Int) = s.spins[index]
