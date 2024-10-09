@@ -34,10 +34,10 @@ These MRI properties can be overriden for spins inside the [`ObstructionGroup`](
 These parameters determine how parameters behave when hitting the [`ObstructionGroup`](@ref) objects of the `geoemtry`.
 They can be overriden for individual objects for each [`ObstructionGroup`].
 - `MT_fraction`: the fraction of magnetisation transfered between the obstruction and the water spin at each collision.
-- `permeability`: the probability that the spin will pass through the obstruction.
+- `permeability`: the rate of spins passing through the surface in arbitrary units (set to infinity for fully permeable surface).
 - `surface_density`: Density of spins stuck on the surface relative to the volume density of hte free water.
 - `dwell_time`: Typical time that spins will stay at the surface after getting stuck.
-Note that `MT_fraction` and `permeability` are internally adjusted to make their effect independent of the timestep (see [`correct_for_timestep`](@ref)).
+Note that `MT_fraction` and `permeability` are internally adjusted to make their effect independent of the timestep.
 
 ## Timestep parameters
 These parameters (`timestep`, `precision`, `gradient_precision`, and `turtoisity_precision`) control the timepoints at which the simulation is evaluated.

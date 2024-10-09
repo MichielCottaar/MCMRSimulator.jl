@@ -289,8 +289,8 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 transfer!.(spin.orientations, correct_for_timestep(relaxation, timestep))
             end
 
-            permeability_prob = correct_for_timestep(permeability(simulation.geometry, collision), timestep)
-            passes_through = isone(permeability_prob) || !(iszero(permeability_prob) || rand() > permeability_prob)
+            permeability_prob = permeability(simulation.geometry, collision) * sqrt(timestep)
+            passes_through = isinf(permeability_prob) || !(iszero(permeability_prob) || rand() > permeability_prob)
             reflection = Reflection(collision, new_pos - current_pos, reflection.ratio_displaced, 
                 reflection.time_moved + (1 - fraction_timestep) * use_distance * timestep, 
                 reflection.distance_moved + norm(new_pos - current_pos) * use_distance, 

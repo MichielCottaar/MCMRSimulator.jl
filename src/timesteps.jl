@@ -11,7 +11,8 @@ At any time the timestep is guaranteed to be shorter than:
 1. user-provided value of `timestep` (in ms).
 2. `FullTimeStep.turtoisity_precision` * `size_scale(geometry)`^2 / D, where [`size_scale`](@ref) is the average size of the obstructions and `D` is the [`diffusivity`](@ref).
 3. timestep that would allow permeability or magnetisation transfer probability to be close to 1.
-4. (`FullTimeStep.gradient_precision` /( D * \\gamma^2 * G^2))^(1//3), where \\gamma is the [`gyromagnetic_ratio`](@ref) and `G` is the current `gradient_strength`.
+4. the minimum dwell time of the bound pool.
+5. (`FullTimeStep.gradient_precision` /( D * \\gamma^2 * G^2))^(1//3), where \\gamma is the [`gyromagnetic_ratio`](@ref) and `G` is the current `gradient_strength`.
 """
 mutable struct TimeStep
     max_timestep :: Float64
