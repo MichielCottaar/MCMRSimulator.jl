@@ -17,14 +17,14 @@
             pos = new_pos(0)
             @test maximum(norm.(pos)) < 1.
 
-            pos = new_pos(1)
+            pos = new_pos(Inf)
             @test maximum(norm.(pos)) > 1.
             for dim in 1:3
                 @test std([a[dim] for a in pos]) ≈ sqrt(20.) rtol=0.1
             end
 
-            for permeability in [0.1, 0.5, 0.8]
-                pos = new_pos(permeability, timestep=0.01)
+            for permeability in [0.01, 0.1, 1.]
+                pos = new_pos(permeability, timestep=0.1)
                 @test maximum(norm.(pos)) > 1.
                 for dim in 1:3
                     @test std([a[dim] for a in pos]) < sqrt(20.)
@@ -53,7 +53,7 @@
             pos = new_pos(0)
             @test maximum(abs.(pos)) < 0.5
 
-            pos = new_pos(1)
+            pos = new_pos(Inf)
             @test maximum(abs.(pos)) > 0.5
             @test std(pos) ≈ sqrt(200.) rtol=0.1
 
