@@ -4,13 +4,13 @@
             Random.seed!(1234)
             snapshot = mr.Snapshot(zeros(10000, 3))
 
-            function new_pos(permeability; timestep=0.1)
+            function new_pos(permeability; kwargs...)
                 if set_global
                     sphere = mr.Spheres(radius=1.)
-                    simulation = mr.Simulation([], geometry=sphere, diffusivity=1., timestep=timestep, permeability=permeability)
+                    simulation = mr.Simulation([], geometry=sphere, diffusivity=1., permeability=permeability, size_scale=1e5; kwargs...)
                 else
                     sphere = mr.Spheres(radius=1., permeability=permeability)
-                    simulation = mr.Simulation([], geometry=sphere, diffusivity=1., timestep=timestep)
+                    simulation = mr.Simulation([], geometry=sphere, diffusivity=1., size_scale=1e5; kwargs...)
                 end
                 mr.position.(mr.evolve(snapshot, simulation, 10.))
             end
@@ -24,13 +24,13 @@
             end
 
             for permeability in [0.01, 0.1, 1.]
-                pos = new_pos(permeability, timestep=0.1)
+                pos = new_pos(permeability)
                 @test maximum(norm.(pos)) > 1.
                 for dim in 1:3
                     @test std([a[dim] for a in pos]) < sqrt(20.)
                 end
 
-                pos2 = new_pos(permeability, timestep=0.1)
+                pos2 = new_pos(permeability, timestep=0.01)
                 for dim in 1:3
                     @test std([a[dim] for a in pos]) ≈ std([a[dim] for a in pos2]) rtol=0.1
                 end
