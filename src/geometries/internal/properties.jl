@@ -124,4 +124,23 @@ function max_timestep_sticking(group::FixedObstructionGroup, diffusivity::Number
     )
 end
 
+"""
+    max_permeability_non_inf(geometry)
+
+Returns the largest permeability within the geometry that is not infinite.
+"""
+function max_permeability_non_inf(geometry::FixedGeometry)
+    maximum(max_permeability_non_inf.(geometry))
+end
+
+max_permeability_non_inf(geometry::FixedGeometry{0}) = 0.
+
+function max_permeability_non_inf(group::FixedObstructionGroup)
+    if group.surface.permeability isa AbstractVector
+        return filter(a -> ~isinf(a), group.surface.permeability)
+    else
+        return isinf(group.surface.permeability) ? 0. : group.surface.permeability
+    end
+end
+
 end

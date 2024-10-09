@@ -24,7 +24,7 @@ import .Obstructions:
     has_inside, radius, obstruction_type, size_scale, get_quadrant, random_surface_positions
 import .BoundingBoxes: BoundingBox, could_intersect, lower, upper
 import .RayGridIntersection: ray_grid_intersections
-import .Properties: R1, R2, off_resonance, permeability, surface_relaxivity, surface_density, dwell_time, max_timestep_sticking, MRIProperties
+import .Properties: R1, R2, off_resonance, permeability, surface_relaxivity, surface_density, dwell_time, max_timestep_sticking, MRIProperties, max_permeability_non_inf
 import .Susceptibility: FixedSusceptibility, susceptibility_off_resonance, off_resonance_gradient
 
 end

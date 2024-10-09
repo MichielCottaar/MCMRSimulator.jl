@@ -28,7 +28,8 @@ function TimeStep(; diffusivity, geometry, timestep=Inf, size_scale=nothing, tur
     options = (
             timestep,
             (isnothing(turtoisity_precision) ? (3e-2 * precision) : turtoisity_precision) * use_size_scale^2 / diffusivity,
-            Internal.max_timestep_sticking(geometry, diffusivity)
+            Internal.max_timestep_sticking(geometry, diffusivity),
+            max_timestep_permeability(geometry)
         )
     idx = argmin(options)
     if verbose
@@ -45,6 +46,8 @@ function TimeStep(; diffusivity, geometry, timestep=Inf, size_scale=nothing, tur
             end
         elseif idx == 3
             push!(lines, "Maximum timestep set by requirement to get sufficient transitions from free to bound spins to $(options[3]) ms.")
+        elseif idx == 4
+            push!(lines, "Maximum timestep set by requirement to get sufficient rate of spins through the permeable surfaces to $(options[4]) ms.")
         end
         push!(lines, "The actual timestep might be further reduced based on the MR sequence(s).")
         @info join(lines, '\n')
@@ -56,6 +59,13 @@ end
     ts.max_timestep,
     (ts.scaled_gradient_precision / gradient_strength^2)^(1//3)
 )
+
+"""
+    max_timestep_permeability(geometry)
+
+Compute the maximum timestep necessary to keep the probability of a spin passing through any not fully permeable surface below 25%.
+"""
+max_timestep_permeability(geometry) = (0.25 / Internal.max_permeability_non_inf(geometry))^2
 
 
 end
