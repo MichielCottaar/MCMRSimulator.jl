@@ -62,7 +62,6 @@ correct_for_timestep(probability, timestep) = 1 - (1 - probability)^sqrt(timeste
 
 """
     stick_probability(surface_density, dwell_time, diffusivity, timestep)
-    stick_probability(properties, diffusivity, timestep)
 
 Computes the probability of a spin getting stuck at the surface given
 a [`surface_density`](@ref) and [`dwell_time`](@ref)
@@ -76,9 +75,5 @@ function stick_probability(surface_density::Number, dwell_time::Number, diffusiv
     else
         return sqrt(π * timestep / diffusivity) * surface_density/ dwell_time / 2
     end
-end
-
-function stick_probability(properties::GlobalProperties, diffusivity::Number, timestep::Number)
-    return stick_probability(surface_density(properties), dwell_time(properties), diffusivity, timestep)
 end
 end
