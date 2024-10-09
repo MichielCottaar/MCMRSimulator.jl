@@ -12,7 +12,7 @@ Methods:
 module Properties
 
 """
-    GlobalProperties(; R1=0, R2=0, off_resonance=0, permeability=0, dwell_time=0, surface_density=0, surface_relaxivity=0)
+    GlobalProperties(; R1=0, R2=0, off_resonance=0)
 
 Stores global MRI and collision properties.
 """
@@ -48,14 +48,14 @@ function Base.show(io::IO, prop::GlobalProperties)
 end
 
 """
-    correct_for_timestep(surface_relaxivity/permeability, timestep)
+    correct_for_timestep(surface_relaxation, timestep)
 
-Corrects the surface relaxivity or permeability for the variability in the timestep during the simulation.
+Corrects the surface relaxation for the variability in the timestep during the simulation.
 
 In Monte Carlo simulations the rate of collisions depends on the size of the timestep.
-This means that as the timestep changes, the effect of surface relaxivity and permeability will depend on the timestep.
-This function corrects the surface relaxivity and permeability values, so that their effect does not depend on timestep.
-The user-provided surface relaxivity and permeability will be used unaltered if the timestep is 1 milliseconds.
+This means that as the timestep changes, the effect of surface relaxation will depend on the timestep.
+This function corrects the surface relaxation values, so that their effect does not depend on timestep.
+The user-provided surface relaxation will be used unaltered if the timestep is 1 milliseconds.
 """
 correct_for_timestep(probability, timestep) = 1 - (1 - probability)^sqrt(timestep)
 
