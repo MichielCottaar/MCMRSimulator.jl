@@ -3,14 +3,15 @@ import ..Constants: gyromagnetic_ratio
 import ..Geometries: Internal
 
 """
-    TimeStep(simulation; timestep=Inf, turtoisity_precision=3e-2 * <precision>, gradient_precision=1e-4 * <precision>, precision=1.)
+    TimeStep(simulation; timestep=Inf, turtoisity_precision=3e-2 * <precision>, gradient_precision=1e-4 * <precision>, precision=1., max_permeability_probability=0.01)
 
 Creates an object controlling the timestep of the MCMR simulation.
 
 At any time the timestep is guaranteed to be shorter than:
 1. user-provided value of `timestep` (in ms).
 2. `FullTimeStep.turtoisity_precision` * `size_scale(geometry)`^2 / D, where [`size_scale`](@ref) is the average size of the obstructions and `D` is the [`diffusivity`](@ref).
-3. timestep that would allow permeability or magnetisation transfer probability to be close to 1.
+3. timestep that would allow permeability probability greater than `max_permeability_probability` (default: 1%).
+4. teimstep that would allow magnetisation transfer probability to be greater than 25%.
 4. the minimum dwell time of the bound pool.
 5. (`FullTimeStep.gradient_precision` /( D * \\gamma^2 * G^2))^(1//3), where \\gamma is the [`gyromagnetic_ratio`](@ref) and `G` is the current `gradient_strength`.
 """
@@ -20,7 +21,11 @@ mutable struct TimeStep
 end
 
 
-function TimeStep(; diffusivity, geometry, timestep=Inf, size_scale=nothing, turtoisity_precision=nothing, gradient_precision=nothing, precision=1., verbose=true)
+function TimeStep(; 
+    diffusivity, geometry, timestep=Inf, size_scale=nothing, 
+    turtoisity_precision=nothing, gradient_precision=nothing, precision=1., verbose=true,
+    max_permeability_probability=0.01,
+    )
     if iszero(diffusivity)
         return TimeStep(timestep, Inf)
     end
@@ -29,7 +34,7 @@ function TimeStep(; diffusivity, geometry, timestep=Inf, size_scale=nothing, tur
             timestep,
             (isnothing(turtoisity_precision) ? (3e-2 * precision) : turtoisity_precision) * use_size_scale^2 / diffusivity,
             Internal.max_timestep_sticking(geometry, diffusivity),
-            max_timestep_permeability(geometry)
+            max_timestep_permeability(geometry, max_permeability_probability),
         )
     idx = argmin(options)
     if verbose
@@ -61,11 +66,11 @@ end
 )
 
 """
-    max_timestep_permeability(geometry)
+    max_timestep_permeability(geometry, max_permeability_probability)
 
 Compute the maximum timestep necessary to keep the probability of a spin passing through any not fully permeable surface below 25%.
 """
-max_timestep_permeability(geometry) = (0.25 / Internal.max_permeability_non_inf(geometry))^2
+max_timestep_permeability(geometry, max_permeability_probability) = (max_permeability_probability / Internal.max_permeability_non_inf(geometry))^2
 
 
 end

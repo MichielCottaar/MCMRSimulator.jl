@@ -23,7 +23,7 @@
                 @test std([a[dim] for a in pos]) ≈ sqrt(20.) rtol=0.1
             end
 
-            for permeability in [0.01, 0.1, 1.]
+            for permeability in [0.001, 0.01, 0.1]
                 pos = new_pos(permeability)
                 @test maximum(norm.(pos)) > 1.
                 for dim in 1:3
