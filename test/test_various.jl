@@ -152,7 +152,7 @@ end
         t1 = mr.readout(spin, env, 1:5, return_snapshot=true)
         t2 = mr.readout(spin, env, 1:5, return_snapshot=true)
         @test all(@. mr.position(t1) == mr.position(t2))
-        get_rng(spin) = spin.rng
+        get_rng(snapshot) = snapshot.spins[1].rng
         @test all(@. get_rng(t1) == get_rng(t2))
     end
 end
@@ -180,9 +180,14 @@ end
             @test size(mr.readout(10, sim, times, return_snapshot=true, nTR=2)) == (shape..., Nt, 2)
             nreadouts = shape == (0,) ? 0 : 2
             @test size(mr.readout(10, sim, return_snapshot=true)) == (shape..., nreadouts)
-            @test size(mr.readout(10, sim, return_snapshot=true, nTR=1)) == (shape..., nreadouts, 1)
-            @test size(mr.readout(10, sim, return_snapshot=true, nTR=2)) == (shape..., nreadouts, 2)
-            @test all(mr.longitudinal.(mr.readout(10, sim, times, return_snapshot=true)) .≈ 10.)
+            if shape == (0, )
+                @test_throws ErrorException mr.readout(10, sim, return_snapshot=true, nTR=1)
+                @test_throws ErrorException mr.readout(10, sim, return_snapshot=true, nTR=2)
+            else
+                @test size(mr.readout(10, sim, nTR=1)) == (shape..., nreadouts, 1)
+                @test size(mr.readout(10, sim, nTR=2)) == (shape..., nreadouts, 2)
+                @test all(mr.longitudinal.(mr.readout(10, sim, times)) .≈ 10.)
+            end
         end
 
         @test_throws ErrorException mr.readout(100, sim_empty)
