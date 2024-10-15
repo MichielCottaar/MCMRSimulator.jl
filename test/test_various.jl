@@ -170,7 +170,6 @@ end
         times = 1:0.1:10
         Nt = length(times)
         for (sim, shape) in [
-            (sim_empty, (0, )),
             (sim_flat, ()),
             (sim_single, (1, )),
             (sim_double, (2, )),
@@ -178,19 +177,17 @@ end
             @test size(mr.readout(10, sim, times, return_snapshot=true)) == (shape..., Nt)
             @test size(mr.readout(10, sim, times, return_snapshot=true, nTR=1)) == (shape..., Nt, 1)
             @test size(mr.readout(10, sim, times, return_snapshot=true, nTR=2)) == (shape..., Nt, 2)
-            nreadouts = shape == (0,) ? 0 : 2
-            @test size(mr.readout(10, sim, return_snapshot=true)) == (shape..., nreadouts)
-            if shape == (0, )
-                @test_throws ErrorException mr.readout(10, sim, return_snapshot=true, nTR=1)
-                @test_throws ErrorException mr.readout(10, sim, return_snapshot=true, nTR=2)
-            else
-                @test size(mr.readout(10, sim, nTR=1)) == (shape..., nreadouts, 1)
-                @test size(mr.readout(10, sim, nTR=2)) == (shape..., nreadouts, 2)
-                @test all(mr.longitudinal.(mr.readout(10, sim, times)) .≈ 10.)
-            end
+            @test size(mr.readout(10, sim, return_snapshot=true)) == (shape..., 2)
+            @test size(mr.readout(10, sim, nTR=1)) == (shape..., 2, 1)
+            @test size(mr.readout(10, sim, nTR=2)) == (shape..., 2, 2)
+            @test all(mr.longitudinal.(mr.readout(10, sim, times)) .≈ 10.)
         end
 
         @test_throws ErrorException mr.readout(100, sim_empty)
+        @test_throws ErrorException mr.readout(100, sim_empty, return_snapshot=true)
+        @test size(mr.readout(100, sim_empty, times, return_snapshot=true)) == (Nt, 1)
+        @test_throws mr.readout(100, sim_empty, times, return_snapshot=true, nTR=2)
+
         @test size(mr.readout(100, sim_flat)) == (2, )
         for (time, snapshot) in zip((10., 30.), mr.readout(100, sim_flat, return_snapshot=true))
             @test length(snapshot) == 100
