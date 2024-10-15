@@ -2,7 +2,7 @@ variables:
   CI: "true"
 
 default:
-  image: julia:1.10.4
+  image: julia:latest
   tags:
     - docker
 
