@@ -1,19 +1,19 @@
 @testset "test_hierarchical_mri.jl" begin
-    defaults = mr.GlobalProperties(R2=1.)
+    defaults = mr.GlobalProperties(R2=1., off_resonance=1.)
     for (obstruction, pos_in, pos_out) in [
-        (mr.Spheres(radius=1., R1_inside=0.1, R2_inside=0.5), [0., 0, 0], [1, 2, 1.]),
-        (mr.Spheres(radius=1., R1_inside=0.1, R2_inside=0.5, repeats=(5, 5, 5)), [5., 5, 0], [1, 2, 1.]),
-        (mr.Cylinders(radius=1., R1_inside=0.1, R2_inside=0.5), [0., 0, 0], [1, 2, 1.]),
+        (mr.Spheres(radius=1., R1_inside=0.1, R2_inside=0.5, off_resonance_inside=0.1), [0., 0, 0], [1, 2, 1.]),
+        (mr.Spheres(radius=1., R1_inside=0.1, R2_inside=0.5, repeats=(5, 5, 5), off_resonance_inside=0.1), [5., 5, 0], [1, 2, 1.]),
+        (mr.Cylinders(radius=1., R1_inside=0.1, R2_inside=0.5, off_resonance_inside=0.1), [0., 0, 0], [1, 2, 1.]),
     ]
         @testset "Test correct values in $(typeof(obstruction))" begin
             @test mr.isinside(obstruction, pos_in) > 0
             @test mr.isinside(obstruction, pos_out) == 0
             @test mr.R1(pos_in, obstruction, defaults) == 0.1
             @test mr.R2(pos_in, obstruction, defaults) == 1.5
-            @test iszero(mr.off_resonance(pos_in, obstruction, defaults))
+            @test mr.off_resonance(pos_in, obstruction, defaults) == (0., 1.1)
             @test iszero(mr.R1(pos_out, obstruction, defaults))
             @test mr.R2(pos_out, obstruction, defaults) == 1.
-            @test iszero(mr.off_resonance(pos_out, obstruction, defaults))
+            @test mr.off_resonance(pos_out, obstruction, defaults) == (0., 1.)
         end
         @testset "Test simulation in $(typeof(obstruction))" begin
             sequence = GradientEcho(TE=100.)

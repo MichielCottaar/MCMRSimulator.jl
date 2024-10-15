@@ -266,35 +266,6 @@ isinside(geometry, spin::Spin) = length(isinside(fix(geometry), spin))
 isinside(geometry::FixedGeometry, spin::Spin) = isinside(geometry, spin.position, spin.reflection)
 
 
-for symbol in (:R1, :R2)
-    @eval begin
-        """
-            $($symbol)(spins, geometry, global_properties)
-            $($symbol)(positions, geometry, global_properties)
-        
-        Returns the $($symbol) experienced by the [`Spin`](@ref) objects given the surface and volume properties of the [`FixedGeometry`](@ref).
-        Alternatively, the `position` of the spins can be provided. In that case the spins will be presumed to be free.
-        """
-        function $symbol(spin::AbstractVector{<:Spin}, geometry::FixedGeometry, global_properties::GlobalProperties=GlobalProperties())
-            $symbol(spin, geometry, global_properties, spin.reflection)
-        end
-        function $symbol(position::AbstractVector{<:Number}, geometry::FixedGeometry, global_properties::GlobalProperties=GlobalProperties())
-            $symbol(Spin(position), geometry, global_properties, spin.reflection)
-        end
-        function $symbol(spin::Spin, geometry::FixedGeometry, global_properties::GlobalProperties=GlobalProperties())
-            $symbol([spin], geometry, global_properties, spin.reflection)
-        end
-        function $symbol(positions::AbstractVector{<:AbstractVector{<:Number}}, geometry::FixedGeometry, global_properties::GlobalProperties=GlobalProperties())
-            $symbol(Spin.(positions), geometry, global_properties, spin.reflection)
-        end
-        function $symbol(spin_or_pos, geometry, global_properties::GlobalProperties=GlobalProperties())
-            fg = fix(geometry)
-            [$symbol(sp, fg, global_properties) for sp in spin_or_pos]
-        end
-    end
-end
-
-
 """
 Represents the positions and orientations of multiple [`Spin`](@ref) objects at a specific `time`.
 
@@ -388,26 +359,72 @@ function orientation(s :: Snapshot)
     sum(orientation, s.spins, init=zero(SVector{3, Float64}))
 end
 
+for symbol in (:R1, :R2)
+    @eval begin
+        """
+            $($symbol)(snapshot, geometry, global_properties)
+            $($symbol)(spins, geometry, global_properties)
+            $($symbol)(positions, geometry, global_properties)
+        
+        Returns the $($symbol) experienced by the [`Spin`](@ref) objects given the surface and volume properties of the [`FixedGeometry`](@ref).
+        Alternatively, the `position` of the spins can be provided. In that case the spins will be presumed to be free.
+        """
+        function $symbol(position::AbstractVector{<:Number}, geometry, global_properties::GlobalProperties=GlobalProperties())
+            $symbol(Spin(; position=position, nsequences=0), geometry, global_properties)
+        end
+        function $symbol(snap::Snapshot, geometry, global_properties::GlobalProperties=GlobalProperties())
+            $symbol(snap.spins, geometry, global_properties)
+        end
+        function $symbol(spin::Spin, geometry, global_properties::GlobalProperties=GlobalProperties())
+            $symbol([spin], geometry, global_properties)[1]
+        end
+        function $symbol(positions::AbstractVector{<:AbstractVector{<:Number}}, geometry, global_properties::GlobalProperties=GlobalProperties())
+            $symbol(Spin.(positions), geometry, global_properties)
+        end
+        function $symbol(spins::AbstractVector{<:Spin}, geometry, global_properties::GlobalProperties=GlobalProperties())
+            fg = fix(geometry)
+            return $symbol(spins, fg, global_properties)
+        end
+        function $symbol(spins::AbstractVector{<:Spin}, geometry::FixedGeometry, global_properties::GlobalProperties=GlobalProperties())
+            [$symbol(sp.position, geometry, global_properties, sp.reflection) for sp in spins]
+        end
+    end
+end
+
+
 """
-    off_resonance(snapshot, geometry)
+    off_resonance(snapshot, geometry, global_properties)
+    off_resonance(spin(s), geometry, global_properties)
+    off_resonance(position(s), geometry, global_properties)
 
 Computes the off-resonance field experienced by each spin in the [`Snapshot`](@ref).
 
-Only the contribution from the susceptibility sources is considered.
+A tuple is returned with:
+1. the off-resonance field due to susceptibility sources in ppm (e.g., myelin/iron).
+2. the off-resonance field due to other sources in kHz (i.e., `off_resonance=...` set by the user).
 """
-function off_resonance(snap::Snapshot, geometry)
-    sfg = fix_susceptibility(geometry)
+off_resonance(snap::Snapshot, geometry, global_properties::GlobalProperties=GlobalProperties()) = off_resonance(snap.spins, geometry, global_properties)
 
-    function get_susc_off(spin::Spin)
+function off_resonance(spins::AbstractVector{<:Spin}, geometry, global_properties::GlobalProperties=GlobalProperties())
+    sfg = fix_susceptibility(geometry)
+    fg = fix(geometry)
+
+    function get_both_offresonance(spin::Spin)
         if stuck(spin)
             isinside = spin.reflection.inside
         else
             isinside = nothing
         end
-        return susceptibility_off_resonance(sfg, spin.position, isinside)
+        susc = susceptibility_off_resonance(sfg, spin.position, isinside)
+        other = off_resonance(spin.position, fg, global_properties, spin.reflection)
+        return (susc, other)
     end
-    return get_susc_off.(snap.spins)
+    return get_both_offresonance.(spins)
 end
+
+off_resonance(spin::Spin, geometry, global_properties::GlobalProperties=GlobalProperties()) = off_resonance([spin], geometry, global_properties)[1]
+off_resonance(position::AbstractVector{<:Number}, geometry, global_properties::GlobalProperties=GlobalProperties()) = off_resonance(Spin(position=position, nsequences=0), geometry, global_properties)
+off_resonance(positions::AbstractVector{<:AbstractVector{<:Number}}, geometry, global_properties::GlobalProperties=GlobalProperties()) = off_resonance(Spin.(position), geometry, global_properties)
 
 
 """
