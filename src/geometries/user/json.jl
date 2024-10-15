@@ -31,8 +31,8 @@ end
 
 function write_geometry(io::IO, group::ObstructionGroup)
     print(io, "  {\n")
-    print(io, "     \"type\": \"$(group.type.plural)\",\n")
-    print(io, "     \"number\": $(group.n_obstructions),\n")
+    print(io, "    \"type\": \"$(group.type.plural)\",\n")
+    print(io, "    \"number\": $(group.n_obstructions),\n")
     for unique_key in group.unique_keys
         fv = group.field_values[unique_key]
         print(io, "    \"#$(unique_key)_description\": \"$(description(fv))\",\n")
