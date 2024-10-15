@@ -237,7 +237,7 @@ end
     )
         io = IOBuffer()
         mr.write_geometry(io, geometry)
-        s = String(io.data)
+        s = String(take!(io))
         group = mr.read_geometry(s)
         @test group.n_obstructions == geometry.n_obstructions
         for (key, field_value) in group.field_values
@@ -246,7 +246,7 @@ end
 
         io = IOBuffer()
         mr.write_geometry(io, [geometry])
-        s = String(io.data)
+        s = String(take!(io))
         groups = mr.read_geometry(s)
         @test length(groups) == 1
         group = groups[1]
