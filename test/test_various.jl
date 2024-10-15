@@ -185,8 +185,10 @@ end
 
         @test_throws ErrorException mr.readout(100, sim_empty)
         @test_throws ErrorException mr.readout(100, sim_empty, return_snapshot=true)
-        @test size(mr.readout(100, sim_empty, times, return_snapshot=true)) == (Nt, 1)
-        @test_throws mr.readout(100, sim_empty, times, return_snapshot=true, nTR=2)
+        @test_throws ErrorException mr.readout(100, sim_empty, times)
+        @test size(mr.readout(100, sim_empty, times, return_snapshot=true)) == (Nt, )
+        @test_throws ErrorException mr.readout(100, sim_empty, times, return_snapshot=true, nTR=1)
+        @test_throws ErrorException mr.readout(100, sim_empty, times, return_snapshot=true, nTR=2)
 
         @test size(mr.readout(100, sim_flat)) == (2, )
         for (time, snapshot) in zip((10., 30.), mr.readout(100, sim_flat, return_snapshot=true))
