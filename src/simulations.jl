@@ -1,5 +1,5 @@
 module Simulations
-import StaticArrays: SVector, SizedVector
+import StaticArrays: SVector, StaticVector, SizedVector
 import MRIBuilder: Sequence
 import ..Geometries: ObstructionGroup, fix, fix_susceptibility
 import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility, susceptibility_off_resonance, prepare_isinside!

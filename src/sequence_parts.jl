@@ -1,5 +1,5 @@
 module SequenceParts
-import StaticArrays: SVector, SizedVector
+import StaticArrays: SVector, StaticVector, SizedVector
 import LinearAlgebra: norm
 import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, edge_times, get_pulse, iter_instant_gradients, iter_instant_pulses, make_generic, variables
 import MRIBuilder.Components: NoGradient, ConstantGradient, ChangingGradient, InstantGradient, InstantPulse, split_timestep
@@ -35,6 +35,8 @@ struct LinearPart <: NoPulsePart
     final :: SVector{3, Float64}
 end
 
+static_vector_type(N) = (N < 50 ? SVector : SizedVector){N}
+
 
 """
     ConstantPulse(amplitude, phase, frequency)
@@ -63,23 +65,24 @@ end
 
 A set of N [`SequencePart`](@ref) objects representing overlapping parts of `N` sequences.
 """
-struct MultSequencePart{N, T<:SequencePart}
+struct MultSequencePart{N, T<:SequencePart, ST<:StaticVector{N, T}}
     duration :: Float64
-    parts :: SizedVector{N, T}
-    function MultSequencePart(duration::Number, parts::AbstractVector{<:SequencePart})
+    parts :: ST
+    function MultSequencePart(duration::Number, parts::AbstractVector)
         N = length(parts)
         if iszero(N)
-            return new{0, EmptyPart}(Float64(duration), EmptyPart[])
+            return new{0, EmptyPart, SVector{0, EmptyPart}}(Float64(duration), SVector{0, EmptyPart}())
         end
+
         base_type = typeof(parts[1])
         if all(p -> p isa base_type, parts)
             T = base_type
         else
             T = SequencePart
         end
-        return new{N, T}(
+        return new{N, T, static_vector_type(N){T}}(
             Float64(duration),
-            SizedVector{N, T}(parts)
+            static_vector_type(N){T}(parts)
         )
     end
 end
@@ -91,12 +94,12 @@ A set of `N` instant pulses/gradients that should be applied to the spins.
 
 Some of the instants might be `nothing`.
 """
-struct InstantSequencePart{N, T}
-    instants :: SizedVector{N, T}
+struct InstantSequencePart{N, T, ST<:StaticVector{N, T}}
+    instants :: ST
     function InstantSequencePart(instants::AbstractVector)
         T = Union{typeof.(instants)...}
         N = length(instants)
-        return new{N, T}(SizedVector{N, T}(instants))
+        return new{N, T, static_vector_type(N){T}}(static_vector_type(N){T}(instants))
     end
 end
 
@@ -243,7 +246,7 @@ function iter_parts(sequences::AbstractVector{<:BaseSequence}, tstart, tfinal, t
             (t1, t2, bbs) = var
             tmean = (t1 + t2) / 2.
             if iszero(length(sequences))
-                return MultSequencePart(t2 - t1, EmptyPart[])
+                return MultSequencePart(t2 - t1, SVector{0, EmptyPart}())
             end
             return MultSequencePart(t2 - t1, map(bbs) do (t_bb, bb)
                 time_in_bb = tmean - t_bb
