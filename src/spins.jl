@@ -270,13 +270,22 @@ for symbol in (:R1, :R2)
     @eval begin
         """
             $($symbol)(spins, geometry, global_properties)
-            $($symbol)(positions, geometry, global_properties[, stuck_to])
+            $($symbol)(positions, geometry, global_properties)
         
         Returns the $($symbol) experienced by the [`Spin`](@ref) objects given the surface and volume properties of the [`FixedGeometry`](@ref).
-        Alternatively, the `position` of the spins can be provided. In this case the [`Reflection`](@ref) should also be returned for a bound spin.
+        Alternatively, the `position` of the spins can be provided. In that case the spins will be presumed to be free.
         """
         function $symbol(spin::AbstractVector{<:Spin}, geometry::FixedGeometry, global_properties::GlobalProperties=GlobalProperties())
             $symbol(spin, geometry, global_properties, spin.reflection)
+        end
+        function $symbol(position::AbstractVector{<:Number}, geometry::FixedGeometry, global_properties::GlobalProperties=GlobalProperties())
+            $symbol(Spin(position), geometry, global_properties, spin.reflection)
+        end
+        function $symbol(spin::Spin, geometry::FixedGeometry, global_properties::GlobalProperties=GlobalProperties())
+            $symbol([spin], geometry, global_properties, spin.reflection)
+        end
+        function $symbol(positions::AbstractVector{<:AbstractVector{<:Number}}, geometry::FixedGeometry, global_properties::GlobalProperties=GlobalProperties())
+            $symbol(Spin.(positions), geometry, global_properties, spin.reflection)
         end
         function $symbol(spin_or_pos, geometry, global_properties::GlobalProperties=GlobalProperties())
             fg = fix(geometry)
