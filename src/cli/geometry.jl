@@ -4,7 +4,7 @@ Defines command line interface for `mcmr geometry`
 module Geometry
 
 import ArgParse: ArgParse, ArgParseSettings, @add_arg_table!, add_arg_table!, parse_args, ArgParseError, usage_string
-import StaticArrays: StaticVector, MMatrix, MVector
+import StaticArrays: MMatrix, MVector
 import Random
 import CSV
 import Tables
