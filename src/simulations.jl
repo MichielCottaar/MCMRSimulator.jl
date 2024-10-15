@@ -199,6 +199,9 @@ The field is computed in ppm. Knowledge of the scanner [`B0`](@ref) is needed to
 susceptibility_off_resonance(simulation::Simulation, spin::Spin) = susceptibility_off_resonance(simulation, spin.position, stuck(spin) ? spin.reflection.inside : nothing)
 susceptibility_off_resonance(simulation::Simulation, position::AbstractVector, inside::Union{Nothing, Bool}=nothing) = susceptibility_off_resonance(simulation.susceptibility, SVector{3, Float64}(position), inside)
 function susceptibility_off_resonance(simulation::Simulation, old_pos::AbstractVector, new_pos::AbstractVector) 
+    if iszero(length(simulation.susceptibility))
+        return 0.
+    end
     along_tract = rand()
     susceptibility_off_resonance(simulation.susceptibility, along_tract * old_pos .+ (1 - along_tract) .* new_pos, nothing)
 end
