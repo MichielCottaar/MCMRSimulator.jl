@@ -114,7 +114,7 @@ iter_building_blocks(seq::BaseSequence; kwargs...) = Iterators.accumulate(iter_b
     if isnothing(prev_bb)
         return (prev_time, bb)
     else
-        return (prev_time + variables.duration.f(prev_bb), bb)
+        return (prev_time + variables.duration(prev_bb), bb)
     end
 end
 function iter_building_blocks(seq::BaseSequence, tstart, tend)
@@ -254,7 +254,7 @@ function iter_parts(sequences::AbstractVector{<:BaseSequence}, tstart, tfinal, t
                 elseif gradient isa ConstantGradient
                     grad_part = ConstantPart(variables.gradient_strength(gradient))
                 elseif gradient isa ChangingGradient
-                    grad_part = LinearPart(variables.gradient_strength(bb, max(t1 - t_bb, 0.)), variables.gradient_strength(bb, min(t2 - t_bb, variables.duration.f(bb))))
+                    grad_part = LinearPart(variables.gradient_strength(bb, max(t1 - t_bb, 0.)), variables.gradient_strength(bb, min(t2 - t_bb, variables.duration(bb))))
                 else
                     error("Gradient waveform $gradient is not implemented in the MCMR simulator yet.")
                 end
