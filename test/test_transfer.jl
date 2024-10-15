@@ -144,11 +144,11 @@ end
 end
 @testset "Test realistic magnetisation transfer" begin
     @testset "Particles getting stuck reduces diffusivity" begin
-        Random.seed!(123)
         geometry = mr.Walls(repeats=1)
         nspins = Int(1e4)
         for density in (0, 0.5, 1, 2)
             @testset "Density = $density" begin
+                Random.seed!(123)
                 simulation = mr.Simulation([], geometry=geometry, diffusivity=1, surface_density=density, dwell_time=0.5, timestep=0.01)
                 snap1 = mr.evolve(nspins, simulation, 0)
                 snap2 = mr.evolve(snap1, simulation, 10)
