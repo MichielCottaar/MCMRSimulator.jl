@@ -61,7 +61,7 @@ function get_subset(snapshot::Snapshot{N}, geometry::FixedGeometry, subset::Subs
         geometry = filter(og -> og.original_index == subset.geometry_index, geometry)
     end
     if iszero(length(geometry))
-        if subset.inside in (false, 0) && subset.bound == false
+        if subset.inside in (nothing, false, 0) && subset.bound in (nothing, false)
             return snapshot
         else
             return Snapshot(0, time=snapshot.time, nsequences=N)
