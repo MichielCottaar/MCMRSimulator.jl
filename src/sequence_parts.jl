@@ -119,7 +119,7 @@ iter_building_blocks(seq::BaseSequence; kwargs...) = Iterators.accumulate(iter_b
 end
 function iter_building_blocks(seq::BaseSequence, tstart, tend)
     after_tstart = Iterators.dropwhile(iter_building_blocks(seq; repeat=true)) do (time, bb)
-        time + variables.duration.f(bb) < tstart
+        time + variables.duration(bb) < tstart
     end
     return Iterators.takewhile(after_tstart) do (time, _)
         time < tend
@@ -211,7 +211,7 @@ function iter_part_times(sequences::Vector{<:BaseSequence}, tstart, tfinal)
 end
 
 function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, tfinal, timestep::TimeStep)
-    Iterators.Flatten(
+    Iterators.flatten(
         Iterators.map(iter_part_times(sequences, tstart, tfinal)) do var
             if !(var isa Tuple)
                 return (var, )
