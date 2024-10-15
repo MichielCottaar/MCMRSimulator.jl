@@ -36,9 +36,9 @@ This function will only work if a [`Makie`](https://makie.org) backend is import
 - `linewidth`: Set the linewidth in 2D plots.
 - `linestyle`: Set the linestyle in 2D plots.
 
-$(Base.Docs.doc(shading_attributes!))
+$(string(Base.Docs.@doc(shading_attributes!)))
 
-$(Base.Docs.doc(generic_plot_attributes!))
+$(string(Base.Docs.@doc(generic_plot_attributes!)))
 """
 @recipe(Plot_Geometry, plot_plane, geometry) do scene
     attr = Attributes(
@@ -67,9 +67,9 @@ This function will only work if a [`Makie`](https://makie.org) backend is import
 ## Attributes
 - `ngrid=400` sets the number of points where the off-resonance field is evaluated before producing the image. Setting this to a higher number will produce a more accurate image of the off-resonance field at the cost of more computing power.
 
-$(Base.Docs.doc(colormap_attributes!))
+$(string(Base.Docs.@doc(colormap_attributes!)))
 
-$(Base.Docs.doc(generic_plot_attributes!))
+$(string(Base.Docs.@doc(generic_plot_attributes!)))
 """
 @recipe(Plot_Off_Resonance, plot_plane, geometry) do scene
     attr = Attributes(
@@ -113,7 +113,7 @@ This plot will not work in 3D (i.e., a [`PlotPlane`](@ref) is required).
 
 This function will only work if [`Makie`](https://makie.org) is installed and imported.
 
-$(Base.Docs.doc(generic_plot_attributes!))
+$(string(Base.Docs.@doc(generic_plot_attributes!)))
 """
 @recipe(Plot_Snapshot, snapshot) do scene
     attr = Attributes(
@@ -204,7 +204,7 @@ This function will only work if [`Makie`](https://makie.org) is installed and im
 - `font` sets whether the rendered text is :regular, :bold, or :italic.
 - `fontsize`: set the size of each character.
 
-$(Base.Docs.doc(generic_plot_attributes!))
+$(string(Base.Docs.@doc(generic_plot_attributes!)))
 """
 @recipe(Plot_Sequence, sequence) do scene
     attr = Attributes(
