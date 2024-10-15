@@ -2,7 +2,7 @@ module SequenceParts
 import StaticArrays: SVector, StaticVector, SizedVector
 import LinearAlgebra: norm
 import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, edge_times, get_pulse, iter_instant_gradients, iter_instant_pulses, make_generic, variables
-import MRIBuilder.Components: NoGradient, ConstantGradient, ChangingGradient, InstantGradient, InstantPulse, split_timestep
+import MRIBuilder.Components: GradientWaveform, RFPulseComponent, NoGradient, ConstantGradient, ChangingGradient, InstantGradient, InstantPulse, split_timestep, EventComponent
 import ..TimeSteps: TimeStep
 
 
@@ -132,15 +132,67 @@ end
 function iter_part_times(seq::BaseSequence, tstart)
     Iterators.flatten(
         Iterators.map(iter_building_blocks(seq, tstart, Inf)) do (time, bb)
-            et = edge_times(bb)
-            et_with_instant = Tuple{Float64, Any}[(time, nothing) for time in et]
-            for (t_instant, instant) in [iter_instant_gradients(bb)..., iter_instant_pulses(bb)...]
-                index = findlast(et_with_instant) do (t, _)
-                    t == t_instant
+            gradients = Tuple{Float64, Float64, GradientWaveform}[]
+            pulses = Tuple{Float64, Float64, RFPulseComponent}[]
+            instants = Tuple{Float64, Union{InstantGradient, InstantPulse}}[]
+
+            current_grad = NoGradient(0.)
+            current_time = time
+            next_time = time
+            for key in keys(bb)
+                component = bb[key]
+                if component isa GradientWaveform
+                    duration = component.duration
+                    current_time = next_time
+                    next_time += duration
+                    if duration > 0.
+                        push!(gradients, (current_time, next_time, component))
+                    end
+                elseif component isa Tuple{<:Number, <:EventComponent}
+                    delay, event = component
+                    if event isa Union{InstantGradient, InstantPulse}
+                        push!(instants, (current_time + delay, event))
+                    elseif event isa RFPulseComponent
+                        duration = variables.duration(event)
+                        push!(pulses, (current_time + delay, current_time + delay + duration, event))
+                    end
                 end
-                insert!(et_with_instant, index + 1, (t_instant, instant))
             end
-            return ((time, t, t2, bb, instant) for ((t, _), (t2, instant)) in zip(et_with_instant[1:end-1], et_with_instant[2:end]))
+            et = sort!(unique!([
+                time,
+                [t for (_, t, _) in gradients]...,
+                [t for (t, _, _) in pulses]...,
+                [t for (_, t, _) in pulses]...,
+                [t for (t, _) in instants]...,
+            ]))
+
+            current_grad(time) = findfirst(gradients) do (t1, t2, _)
+                t2 > time
+            end
+            current_pulse(time) = findfirst(pulses) do (t1, t2, _)
+                t1 <= time < t2
+            end
+
+            result = Tuple{Float64, Float64, Tuple{Float64, GradientWaveform}, Union{Nothing, Tuple{Float64, RFPulseComponent}}, Union{Nothing, InstantGradient, InstantPulse}}[]
+            for (t1, t2) in zip(et[1:end-1], et[2:end])
+                index_grad = current_grad(t1)
+                t_grad, _, grad = gradients[index_grad]
+                index_pulse = current_pulse(t1)
+                pulse = isnothing(index_pulse) ? nothing : (t1 - pulses[index_pulse][1], pulses[index_pulse][end])
+                for (t, instant) in instants
+                    if t == t1
+                        push!(result, (t1, t1, (t1 - t_grad, grad), pulse, instant))
+                    end
+                end
+                push!(result, (t1, t2, (t1 - t_grad, grad), pulse, nothing))
+            end
+            for (t, instant) in instants
+                if t == et[end]
+                    t_grad, _, grad = iszero(length(gradients)) ? (t, t, NoGradient(0.)) : gradients[end]
+                    push!(result, (t, t, (t - t_grad, grad), nothing, instant))
+                end
+            end
+            return result
         end
     )
 end
@@ -157,10 +209,10 @@ function Base.iterate(ie::_IterEdges, my_state)
     current_time, states = my_state
 
     new_states = map(ie.individual_iterators, states) do iter, state
-        (time, _, t2, _, instant), _ = state
-        while isnothing(instant) && (time + t2 <= current_time || isapprox(time + t2, current_time, atol=1e-8))
+        (_, t2, _, _, instant), _ = state
+        while isnothing(instant) && (t2 <= current_time || isapprox(t2, current_time, atol=1e-8))
             state = Base.iterate(iter, state[2])
-            (time, _, t2, _, instant), _ = state
+            (_, t2, _, _, instant), _ = state
         end
         return state
     end
@@ -183,16 +235,17 @@ function Base.iterate(ie::_IterEdges, my_state)
     end
 
     next_time = min(ie.tfinal, 
-        minimum(new_states; init=Inf) do ((time, _, t2, _), _)
-            time + t2
+        minimum(new_states; init=Inf) do ((_, t2, _, _, _), _)
+            t2
         end,
     )
     if (next_time ≈ current_time) && (current_time ≈ ie.tfinal)
         return nothing
     else
         return ((current_time, next_time, map(new_states) do state
-            (time, _, _, bb), _ = state
-            return (time, bb)
+            (t1, _, (t_grad, grad), pulse, _), _ = state
+            correct_pulse = isnothing(pulse) ? pulse : (current_time - t1 + pulse[1], pulse[2])
+            return ((current_time - t1 + t_grad, grad), correct_pulse)
         end), (next_time, new_states))
     end
 end
@@ -203,8 +256,8 @@ end
 
 function iter_part_times(sequences::Vector{<:BaseSequence}, tstart, tfinal)
     iters = iter_part_times.(sequences, tstart)
-    dropped = [Iterators.dropwhile(i) do (time, _, t2, _, _)
-        time + t2 < tstart
+    dropped = [Iterators.dropwhile(i) do (_, t2, _, _, _)
+        t2 < tstart
     end for i in iters]
     return _IterEdges(
         dropped,
@@ -217,20 +270,28 @@ function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, tfin
     Iterators.flatten(
         Iterators.map(iter_part_times(sequences, tstart, tfinal)) do var
             if !(var isa Tuple)
+                # instants
                 return (var, )
             end
             
             (t1, t2, bbs) = var
-            tmean = (t1 + t2) / 2
 
-            max_grad = iszero(length(sequences)) ? 0. : maximum(bbs) do (t_bb, bb)
-                norm(variables.gradient_strength(get_gradient(bb, tmean - t_bb)[1]))
+            max_grad = iszero(length(sequences)) ? 0. : maximum(bbs) do ((t_grad, grad), _)
+                max(
+                    norm(variables.gradient_strength(grad, t_grad)),
+                    norm(variables.gradient_strength(grad, t_grad + t2 - t1))
+                )
             end
             use_timestep = timestep(max_grad)
             nsteps = isinf(use_timestep) ? 1 : Int(div(t2 - t1, use_timestep, RoundUp))
             splits = range(t1, t2, length=nsteps+1)
             return (
-                (t1p, t2p, bbs)
+                (
+                    t1p, t2p, map(bbs) do ((t_grad, grad), pulse)
+                        correct_pulse = isnothing(pulse) ? nothing : (pulse[1] + t1p - t1, pulse[2])
+                        return ((t_grad + t1p - t1, grad), correct_pulse)
+                    end
+                )
                 for (t1p, t2p) in zip(splits[1:end-1], splits[2:end])
             )
         end
@@ -244,29 +305,24 @@ function iter_parts(sequences::AbstractVector{<:BaseSequence}, tstart, tfinal, t
             return InstantSequencePart(var)
         else
             (t1, t2, bbs) = var
-            tmean = (t1 + t2) / 2.
             if iszero(length(sequences))
                 return MultSequencePart(t2 - t1, SVector{0, EmptyPart}())
             end
-            return MultSequencePart(t2 - t1, map(bbs) do (t_bb, bb)
-                time_in_bb = tmean - t_bb
-                gp = get_pulse(bb, time_in_bb)
-                (gradient, _) = get_gradient(bb, time_in_bb)
+            return MultSequencePart(t2 - t1, map(bbs) do ((t_grad, gradient), gp)
                 if gradient isa NoGradient
                     grad_part = EmptyPart()
                 elseif gradient isa ConstantGradient
                     grad_part = ConstantPart(variables.gradient_strength(gradient))
                 elseif gradient isa ChangingGradient
-                    grad_part = LinearPart(variables.gradient_strength(bb, max(t1 - t_bb, 0.)), variables.gradient_strength(bb, min(t2 - t_bb, variables.duration(bb))))
+                    grad_part = LinearPart(variables.gradient_strength(gradient, t_grad), variables.gradient_strength(gradient, t_grad + t2 - t1))
                 else
                     error("Gradient waveform $gradient is not implemented in the MCMR simulator yet.")
                 end
                 if isnothing(gp)
                     return grad_part
                 else
-                    (pulse, pulse_tmean) = gp
-                    pulse_t1 = pulse_tmean - tmean + t1
-                    pulse_t2 = pulse_tmean - tmean + t2
+                    (pulse_t1, pulse) = gp
+                    pulse_t2 = (t2 - t1) + pulse_t1
         
                     max_ts = split_timestep(pulse, 1e-3)
         
