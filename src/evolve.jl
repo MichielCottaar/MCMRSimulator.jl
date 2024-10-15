@@ -104,7 +104,7 @@ function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bo
             error("Either provide a sequence to simulate or set `return_snapshot=true` to return the spin positions.")
         end
         store_times = reshape(Float64.(new_readout_times), (1, length(new_readout_times), 1))
-        actual_readout_times = new_readout_times
+        actual_readout_times = Float64.(new_readout_times)
     end
 
 
