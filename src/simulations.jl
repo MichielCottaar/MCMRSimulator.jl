@@ -22,6 +22,7 @@ Defines the setup of the simulation and stores the output of the run.
 - `sequences`: Vector of [`Sequence`](@ref) objects. During the spin random walk the simulation will keep track of the spin magnetisations for all of the provided sequences.
 - `geometry`: Set of obstructions, which can be used to restrict the diffusion, produce off-resonance fields, alter the local T1/T2 relaxation, and as sources of magnetisation transfer.
 - `diffusivity`: Rate of the random motion of the spins in um^2/ms.
+- `verbose`: set to false to silence descriptions of the simulation parameters (default: true).
 
 ## MRI properties
 These parameters determine the evolution and relaxation of the spin magnetisation.
@@ -95,6 +96,7 @@ function Simulation(
     R1=0.,
     R2=0.,
     off_resonance=0.,
+    verbose=true,
     kwargs...
 )
     flatten = false
@@ -123,7 +125,7 @@ function Simulation(
         geometry,
         inside_geometry,
         susceptibility,
-        TimeStep(; diffusivity=diffusivity, geometry=geometry, kwargs...),
+        TimeStep(; diffusivity=diffusivity, geometry=geometry, verbose=verbose, kwargs...),
         flatten,
     )
 end
