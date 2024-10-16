@@ -86,7 +86,7 @@ end
 
 function Simulation(
     sequences;
-    diffusivity=3,
+    diffusivity=3.,
     geometry=[],
     permeability=0.,
     surface_density=0.,
@@ -95,11 +95,7 @@ function Simulation(
     R1=0.,
     R2=0.,
     off_resonance=0.,
-    timestep=Inf,
-    size_scale=nothing,
-    gradient_precision=nothing,
-    turtoisity_precision=nothing,
-    precision=1.
+    kwargs...
 )
     flatten = false
     if isa(sequences, Sequence)
@@ -127,7 +123,7 @@ function Simulation(
         geometry,
         inside_geometry,
         susceptibility,
-        TimeStep(; diffusivity=diffusivity, geometry=geometry, timestep=timestep, gradient_precision=gradient_precision, turtoisity_precision=turtoisity_precision, precision=precision, size_scale=size_scale),
+        TimeStep(; diffusivity=diffusivity, geometry=geometry, kwargs...),
         flatten,
     )
 end
