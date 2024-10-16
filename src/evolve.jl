@@ -106,8 +106,13 @@ function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bo
         if !isnothing(nTR)
             error("Cannot set `nTR` in `readout` when no sequences are being simulated.")
         end
-        store_times = reshape(Float64.(new_readout_times), (1, length(new_readout_times), 1))
-        actual_readout_times = Float64.(new_readout_times)
+        if new_readout_times isa Number
+            store_times = fill(Float64(new_readout_times), (1, 1, 1))
+            actual_readout_times = [Float64(new_readout_times)]
+        else
+            store_times = reshape(Float64.(new_readout_times), (1, length(new_readout_times), 1))
+            actual_readout_times = Float64.(new_readout_times)
+        end
     end
 
 
