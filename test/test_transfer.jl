@@ -111,7 +111,7 @@ end
         function test_MT_walls(wall_dist, diffusivity, timestep; nspins=100000, transfer=0.5)
             Random.seed!(1234)
             actual_transfer = 1 - (1 - transfer) ^ (1/sqrt(timestep))
-            geometry = mr.Walls(surface_relaxivity=actual_transfer)
+            geometry = mr.Walls(surface_relaxation=actual_transfer)
             spins = [mr.Spin(position=Random.rand(3) .* wall_dist) for _ in 1:nspins]
             sequence = GradientEcho(TE=1e5)
             simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=diffusivity, timestep=timestep)
@@ -125,9 +125,9 @@ end
         test_MT_walls(10., 3., 0.1; transfer=0.5)
         test_MT_walls(10., 1., 0.1; transfer=0.5)
     end
-    @testset "Test that surface relaxivity does not depend on timestep" begin
+    @testset "Test that surface relaxation does not depend on timestep" begin
         Random.seed!(1234)
-        geometry = mr.Walls(repeats=1, surface_relaxivity=0.1)
+        geometry = mr.Walls(repeats=1, surface_relaxation=0.1)
         sequence = GradientEcho(TE=1e5)
 
         reference = nothing

@@ -8,7 +8,7 @@ MRI properties (using [`MRIProperties`](@ref)):
 
 Collision properties:
 - [`permeability`](@ref)
-- [`surface_relaxivity`](@ref)
+- [`surface_relaxation`](@ref)
 - [`surface_density`](@ref)
 - [`dwell_time`](@ref)
 
@@ -76,7 +76,7 @@ for symbol in (:R1, :R2, :off_resonance)
 end
 
 
-for symbol in (:permeability, :surface_relaxivity, :dwell_time, :surface_density)
+for symbol in (:permeability, :surface_relaxation, :dwell_time, :surface_density)
     @eval begin
         """
             $($symbol)(geometry, reflection)

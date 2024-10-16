@@ -18,7 +18,7 @@ import ..Simulations: Simulation, _to_snapshot
 import ..Relax: relax!, transfer!
 import ..Properties: GlobalProperties, correct_for_timestep, stick_probability
 import ..Subsets: Subset, get_subset
-import ..Geometries.Internal: Reflection, detect_intersection, empty_intersection, has_intersection, surface_relaxivity, permeability, surface_density, direction, previous_hit, dwell_time, empty_reflection
+import ..Geometries.Internal: Reflection, detect_intersection, empty_intersection, has_intersection, surface_relaxation, permeability, surface_density, direction, previous_hit, dwell_time, empty_reflection
 
 """
     readout(spins, simulation[, readout_times]; bounding_box=<1x1x1 mm box>, skip_TR=0, nTR=1, return_snapshot=false, subset=<all>)
@@ -289,7 +289,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 found_solution = true
                 break
             end
-            relaxation = surface_relaxivity(simulation.geometry, collision)
+            relaxation = surface_relaxation(simulation.geometry, collision)
             if ~iszero(relaxation)
                 transfer!.(spin.orientations, correct_for_timestep(relaxation, timestep))
             end

@@ -213,7 +213,7 @@ end
 end
 
 @testset "Test simulation pretty printing" begin
-    sim = mr.Simulation([DWI(TE=80., bval=1), DWI(TE=80., bval=2)], geometry=mr.Spheres(radius=[1, 2.], repeats=[5, 5, 5]), R1=0.1, surface_relaxivity=0.3)
+    sim = mr.Simulation([DWI(TE=80., bval=1), DWI(TE=80., bval=2)], geometry=mr.Spheres(radius=[1, 2.], repeats=[5, 5, 5]), R1=0.1, surface_relaxation=0.3)
     @test repr(sim, context=:compact => true) == "Simulation(2 sequences, Geometry(2 repeating Round objects, ), D=3.0um^2/ms, GlobalProperties(R1=0.1kHz, ))" 
 end
 

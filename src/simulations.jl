@@ -91,7 +91,7 @@ function Simulation(
     permeability=0.,
     surface_density=0.,
     dwell_time=0.,
-    surface_relaxivity=0.,
+    surface_relaxation=0.,
     R1=0.,
     R2=0.,
     off_resonance=0.,
@@ -105,7 +105,7 @@ function Simulation(
         sequences = Sequence[]
     end
     susceptibility = fix_susceptibility(geometry)
-    geometry = fix(geometry; permeability=permeability, density=surface_density, dwell_time=dwell_time, relaxivity=surface_relaxivity)
+    geometry = fix(geometry; permeability=permeability, density=surface_density, dwell_time=dwell_time, relaxation=surface_relaxation)
 
     inside_geometry = filter(geometry) do obstruction
         ~all(all(iszero.(getproperty(obstruction.volume, s))) for s in (:R1, :R2, :off_resonance))

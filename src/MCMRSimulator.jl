@@ -61,7 +61,7 @@ import .Geometries:
     random_positions_radii, write_geometry, read_geometry
 export Annuli, Cylinders, Walls, Spheres, Mesh, load_mesh, fix, random_positions_radii, BendyCylinder
 
-import .Geometries.Internal: BoundingBox, FixedGeometry, surface_relaxivity, surface_density, dwell_time, permeability
+import .Geometries.Internal: BoundingBox, FixedGeometry, surface_relaxation, surface_density, dwell_time, permeability
 export BoundingBox
 
 import .Properties: GlobalProperties, R1, R2, off_resonance, correct_for_timestep

@@ -164,7 +164,7 @@ property_fields = (
     Field{Float64}(:dwell_time, "Average time a particle stays stuck to the surface (ms).", per_surface=true),
     Field{Float64}(:density, "Surface density of stuck particles relative to the volume density (um).", per_surface=true),
     Field{Float64}(:permeability, "Rate of particle passing through the obstruction in arbitrary units.", per_surface=true),
-    Field{Float64}(:relaxivity, "Fraction of transverse spin lost each time it hits the obstruction.", per_surface=true),
+    Field{Float64}(:relaxation, "Fraction of transverse spin lost each time it hits the obstruction.", per_surface=true),
     Field{Float64}(:size_scale, "Size of the smallest obstructions. If not set explicitly, this will be determined by the minimum radius or distance between objects (see `size_scale`).", only_group=true),
 )
 

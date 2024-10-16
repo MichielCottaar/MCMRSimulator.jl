@@ -38,7 +38,7 @@ Properties:
 - `grid`: [`Grid`](@ref) object on which the obstruction intersections have been precomputed. This speeds up the detection of intersections.
 - `bounding_boxes`: vector of [`BoundingBox`](@ref) objects for each obstruction. These are used to predect whether a spin could intersect with the obstruction.
 - `volume`: R1, R2, and off-resonance properties of the spins inside the obstructions.
-- `surface`: R1, R2, off-resonance, surface_density and dwell_time properties of particles stuck to the surface. Also, contains the permeability and surface relaxivity to process collsions.
+- `surface`: R1, R2, off-resonance, surface_density and dwell_time properties of particles stuck to the surface. Also, contains the permeability and surface relaxation to process collsions.
 - `vertices`: vector of vertices (only used for a mesh).
 """
 struct FixedObstructionGroup{
@@ -47,7 +47,7 @@ struct FixedObstructionGroup{
     O <: FixedObstruction{N},
     G <: HitGrid{N, O},
     V <: NamedTuple{(:R1, :R2, :off_resonance)},
-    S <: NamedTuple{(:R1, :R2, :off_resonance, :permeability, :surface_density, :dwell_time, :surface_relaxivity)},
+    S <: NamedTuple{(:R1, :R2, :off_resonance, :permeability, :surface_density, :dwell_time, :surface_relaxation)},
     A <: NamedTuple,
     K
     }

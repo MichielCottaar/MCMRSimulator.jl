@@ -7,7 +7,7 @@ import ..SplitMesh: fix_mesh, components
 import ..SizeScales: size_scale, grid_resolution
 
 """
-    fix(user_geometry; permeability=0., density=0., dwell_time=0., relaxivity=0.)
+    fix(user_geometry; permeability=0., density=0., dwell_time=0., relaxation=0.)
 
 Creates a fixed version of the user-created geometry that will be used internally by the simulator.
 """
@@ -19,14 +19,14 @@ function fix(geometry::AbstractVector; kwargs...)
     return Tuple(result)
 end
 
-function fix(geometry::ObstructionGroup, index::Int=1, original_index::Int=1; permeability=0., density=0., dwell_time=0., relaxivity=0.)
+function fix(geometry::ObstructionGroup, index::Int=1, original_index::Int=1; permeability=0., density=0., dwell_time=0., relaxation=0.)
     for key in propertynames(geometry)
         field_value = getproperty(geometry, key)
         if field_value.field.required && any(isnothing.(field_value.value))
             error("Missing value for required field $field_value")
         end
     end
-    result = fix_type(geometry, index, original_index; permeability=permeability, density=density, dwell_time=dwell_time, relaxivity=relaxivity)
+    result = fix_type(geometry, index, original_index; permeability=permeability, density=density, dwell_time=dwell_time, relaxation=relaxation)
     return result isa FixedObstructionGroup ? (result, ) : Tuple(result)
 end
 
@@ -142,8 +142,8 @@ function apply_properties(user_obstructions::ObstructionGroup, internal_obstruct
     end
 
     # get surface properties (bound MRI & collision)
-    symbols = (:R1, :R2, :off_resonance, :permeability, :density, :dwell_time, :relaxivity)
-    updated_symbols = replace(symbols, :density=>:surface_density, :relaxivity=>:surface_relaxivity)
+    symbols = (:R1, :R2, :off_resonance, :permeability, :density, :dwell_time, :relaxation)
+    updated_symbols = replace(symbols, :density=>:surface_density, :relaxation=>:surface_relaxation)
     if ~isnothing(surface)
         get_surface(s) = fix_array(s, getproperty(user_obstructions, Symbol(String(s) * "_" * String(surface))).value)
         values = [get_surface(s) for s in symbols]
