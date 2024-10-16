@@ -24,7 +24,7 @@ end
 function TimeStep(; 
     diffusivity, geometry, timestep=Inf, size_scale=nothing, 
     turtoisity_precision=nothing, gradient_precision=nothing, precision=1., verbose=true,
-    max_permeability_probability=0.01,
+    max_permeability_probability=0.05,
     )
     if iszero(diffusivity)
         return TimeStep(timestep, Inf)
