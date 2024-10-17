@@ -18,8 +18,8 @@ if isfile(mesh_fn)
 end
 
 simulations = Dict{String, Simulation}(
-    key => Simulation(main_seq; geometry=geometry, diffusivity=2., timestep=1e-2, precision=Inf)
+    key => Simulation(main_seq; geometry=geometry, diffusivity=2., timestep=1e-2)
     for (key, geometry) in pairs(geometries)
 )
-simulations["no_diff"] = Simulation(main_seq; diffusivity=0., timestep=1e-2, precision=Inf);
-simulations["free_diff"] = Simulation(main_seq; diffusivity=0., timestep=1e-2, precision=Inf);
+simulations["no_diff"] = Simulation(main_seq; diffusivity=0., timestep=1e-2);
+simulations["free_diff"] = Simulation(main_seq; diffusivity=0., timestep=1e-2);
