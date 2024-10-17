@@ -7,10 +7,10 @@
             function new_pos(permeability; kwargs...)
                 if set_global
                     sphere = mr.Spheres(radius=1.)
-                    simulation = mr.Simulation([], geometry=sphere, diffusivity=1., permeability=permeability, size_scale=1e5; kwargs...)
+                    simulation = mr.Simulation([], geometry=sphere, diffusivity=1., permeability=permeability; timestep=(size_scale=1e5, kwargs...))
                 else
-                    sphere = mr.Spheres(radius=1., permeability=permeability, size_scale=1e5)
-                    simulation = mr.Simulation([], geometry=sphere, diffusivity=1.; kwargs...)
+                    sphere = mr.Spheres(radius=1., permeability=permeability)
+                    simulation = mr.Simulation([], geometry=sphere, diffusivity=1.; timestep=(size_scale=1e5, kwargs...))
                 end
                 mr.position.(mr.evolve(snapshot, simulation, 10.))
             end
@@ -31,7 +31,7 @@
                     @test std([a[dim] for a in (pos .- init_pos)]) < sqrt(20.)
                 end
 
-                pos2 = new_pos(permeability, max_permeability_probability=0.05)
+                pos2 = new_pos(permeability, permeability=0.05)
                 for dim in 1:3
                     @test std([a[dim] for a in (pos .- init_pos)]) ≈ std([a[dim] for a in (pos2 .- init_pos)]) rtol=0.1
                 end
