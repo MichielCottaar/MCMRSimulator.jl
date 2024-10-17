@@ -30,7 +30,6 @@ function TimeStep(;
     end
     use_size_scale = isnothing(size_scale) ? Internal.size_scale(geometry) : size_scale
     options = (
-            timestep,
             turtoisity * use_size_scale^2 / diffusivity,
             Internal.max_timestep_sticking(geometry, diffusivity),
             max_timestep_permeability(geometry, max_permeability_probability),
@@ -39,8 +38,6 @@ function TimeStep(;
     if verbose
         lines = ["# Timestep determination"]
         if idx == 1
-            push!(lines, "Maximum timestep set by user to $(options[1]) ms.")
-        elseif idx == 2
             push!(lines, "Maximum timestep set by turtoisity constraint based on size of geometry to $(options[2]) ms.")
             if isnothing(size_scale)
                 push!(lines, "Size scale of smallest object in the simulation was automatically determined to be $(use_size_scale) um.")
@@ -48,9 +45,9 @@ function TimeStep(;
             else
                 push!(lines, "Size scale was set to $(use_size_scale) um by the user.")
             end
-        elseif idx == 3
+        elseif idx == 2
             push!(lines, "Maximum timestep set by requirement to get sufficient transitions from free to bound spins to $(options[3]) ms.")
-        elseif idx == 4
+        elseif idx == 3
             push!(lines, "Maximum timestep set by requirement to get sufficient rate of spins through the permeable surfaces to $(options[4]) ms.")
         end
         push!(lines, "The actual timestep might be further reduced based on the MR sequence(s).")
