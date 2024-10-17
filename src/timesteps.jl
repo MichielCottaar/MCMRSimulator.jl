@@ -38,7 +38,7 @@ function TimeStep(;
     if verbose
         lines = ["# Timestep determination"]
         if idx == 1
-            push!(lines, "Maximum timestep set by turtoisity constraint based on size of geometry to $(options[2]) ms.")
+            push!(lines, "Maximum timestep set by turtoisity constraint based on size of geometry to $(options[1]) ms.")
             if isnothing(size_scale)
                 push!(lines, "Size scale of smallest object in the simulation was automatically determined to be $(use_size_scale) um.")
                 push!(lines, "If this value is too small, you can set the size scale explicitly by passing on `size_scale=<new_value>` to the `Simulator` constructor.")
@@ -46,9 +46,10 @@ function TimeStep(;
                 push!(lines, "Size scale was set to $(use_size_scale) um by the user.")
             end
         elseif idx == 2
-            push!(lines, "Maximum timestep set by requirement to get sufficient transitions from free to bound spins to $(options[3]) ms.")
+            push!(lines, "Maximum timestep set by requirement to get sufficient transitions from free to bound spins to $(options[2]) ms.")
         elseif idx == 3
-            push!(lines, "Maximum timestep set by requirement to get sufficient rate of spins through the permeable surfaces to $(options[4]) ms.")
+            push!(lines, "Maximum timestep set by requirement to get sufficient rate of spins through the permeable surfaces to $(options[3]) ms.")
+            push!(lines, "You can alter the sensitivity to permeability by changing the value of `timestep=(permeability=...)` from its current value of$permeability.")
         end
         push!(lines, "The actual timestep might be further reduced based on the MR sequence(s).")
         @info join(lines, '\n')
