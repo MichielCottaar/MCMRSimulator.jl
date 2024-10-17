@@ -297,7 +297,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
 
             normed_rate = sqrt(timestep) * permeability(simulation.geometry, collision)
             permeability_prob = isinf(normed_rate) ? 1. : (1. - exp(-normed_rate) * besseli0(normed_rate))
-            passes_through = isinf(permeability_prob) || !(iszero(permeability_prob) || rand() > permeability_prob)
+            passes_through = isone(permeability_prob) || !(iszero(permeability_prob) || rand() > permeability_prob)
             reflection = Reflection(collision, new_pos - current_pos, reflection.ratio_displaced, 
                 reflection.time_moved + (1 - fraction_timestep) * use_distance * timestep, 
                 reflection.distance_moved + norm(new_pos - current_pos) * use_distance, 
