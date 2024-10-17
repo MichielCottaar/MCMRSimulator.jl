@@ -2,37 +2,38 @@
     for set_global in (false, true)
         @testset "Test single sphere for set_global=$set_global" begin
             Random.seed!(1234)
-            snapshot = mr.Snapshot(zeros(10000, 3))
+            snapshot = mr.Snapshot(zeros(100000, 3))
 
             function new_pos(permeability; kwargs...)
                 if set_global
                     sphere = mr.Spheres(radius=1.)
                     simulation = mr.Simulation([], geometry=sphere, diffusivity=1., permeability=permeability, size_scale=1e5; kwargs...)
                 else
-                    sphere = mr.Spheres(radius=1., permeability=permeability)
-                    simulation = mr.Simulation([], geometry=sphere, diffusivity=1., size_scale=1e5; kwargs...)
+                    sphere = mr.Spheres(radius=1., permeability=permeability, size_scale=1e5)
+                    simulation = mr.Simulation([], geometry=sphere, diffusivity=1.; kwargs...)
                 end
                 mr.position.(mr.evolve(snapshot, simulation, 10.))
             end
-            pos = new_pos(0)
-            @test maximum(norm.(pos)) < 1.
+            init_pos = new_pos(0)
+            @test maximum(norm.(init_pos)) < 1.
+            snapshot = mr.Snapshot(init_pos)
 
             pos = new_pos(Inf)
             @test maximum(norm.(pos)) > 1.
             for dim in 1:3
-                @test std([a[dim] for a in pos]) ≈ sqrt(20.) rtol=0.1
+                @test std([a[dim] for a in (pos .- init_pos)]) ≈ sqrt(20.) rtol=0.1
             end
 
-            for permeability in [0.001, 0.01, 0.1]
+            for permeability in [0.1, 1.]
                 pos = new_pos(permeability)
                 @test maximum(norm.(pos)) > 1.
                 for dim in 1:3
-                    @test std([a[dim] for a in pos]) < sqrt(20.)
+                    @test std([a[dim] for a in (pos .- init_pos)]) < sqrt(20.)
                 end
 
-                pos2 = new_pos(permeability, timestep=0.01)
+                pos2 = new_pos(permeability, max_permeability_probability=0.05)
                 for dim in 1:3
-                    @test std([a[dim] for a in pos]) ≈ std([a[dim] for a in pos2]) rtol=0.1
+                    @test std([a[dim] for a in (pos .- init_pos)]) ≈ std([a[dim] for a in (pos2 .- init_pos)]) rtol=0.1
                 end
             end
         end
