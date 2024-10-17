@@ -11,6 +11,7 @@ import LinearAlgebra: norm, ⋅
 import MRIBuilder: Sequence, variables, B0
 import MRIBuilder.Components: InstantGradient, InstantPulse
 import Rotations
+import Bessels: besseli0
 import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, iter_parts
 import ..Methods: get_time
 import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation
@@ -294,7 +295,8 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 transfer!.(spin.orientations, correct_for_timestep(relaxation, timestep))
             end
 
-            permeability_prob = permeability(simulation.geometry, collision) * sqrt(timestep)
+            normed_rate = sqrt(timestep) * permeability(simulation.geometry, collision)
+            permeability_prob = isinf(normed_rate) ? 1. : (1. - exp(-normed_rate) * besseli0(normed_rate))
             passes_through = isinf(permeability_prob) || !(iszero(permeability_prob) || rand() > permeability_prob)
             reflection = Reflection(collision, new_pos - current_pos, reflection.ratio_displaced, 
                 reflection.time_moved + (1 - fraction_timestep) * use_distance * timestep, 
