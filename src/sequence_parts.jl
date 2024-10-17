@@ -217,7 +217,7 @@ function Base.iterate(ie::_IterEdges, my_state)
         return state
     end
     if any(!isnothing(state[1][5]) for state in new_states)
-        if current_time ≈ ie.tfinal
+        if current_time == ie.tfinal
             return nothing
         end
         result = (map(new_states) do state
@@ -239,7 +239,7 @@ function Base.iterate(ie::_IterEdges, my_state)
             t2
         end,
     )
-    if (next_time ≈ current_time) && (current_time ≈ ie.tfinal)
+    if (next_time == current_time) && (current_time == ie.tfinal)
         return nothing
     else
         return ((current_time, next_time, map(new_states) do state
