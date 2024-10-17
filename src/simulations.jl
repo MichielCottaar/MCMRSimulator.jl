@@ -126,7 +126,7 @@ function Simulation(
         geometry,
         inside_geometry,
         susceptibility,
-        timestep isa Number ? TimeStep(timestep, Inf) : TimeStep(; timestep...),
+        timestep isa Number ? TimeStep(timestep, Inf) : TimeStep(; verbose=verbose, diffusivity=diffusivity, geometry=geometry, timestep...),
         flatten,
     )
 end
