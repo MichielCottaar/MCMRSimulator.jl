@@ -12,7 +12,7 @@ import ..TimeSteps: TimeStep
     Simulation(
         sequences; geometry=[], diffusivity=0.,
         R1=0, T1=Inf, R2=0, T2=Inf, off_resonance=0, MT_fraction=0, permeability=0,, 
-        max_timestep=<geometry-based default>, gradient_precision=1, rf_rotation=1.,
+        timestep=<default parameters>,
     )
 
 Defines the setup of the simulation and stores the output of the run.
@@ -41,9 +41,10 @@ They can be overriden for individual objects for each [`ObstructionGroup`].
 Note that `MT_fraction` and `permeability` are internally adjusted to make their effect independent of the timestep.
 
 ## Timestep parameters
-These parameters (`timestep`, `precision`, `gradient_precision`, and `turtoisity_precision`) control the timepoints at which the simulation is evaluated.
-The default values should work well.
-For more details on how to adjust them, see [`TimeController`](@ref).
+- `timestep` controls the timepoints at which the simulation is evaluated. 
+It can be set directly to a number or one can control the parameters as described in the documentation for [`TimeStep`](@ref) (default).
+To override any of these parameters run: `timestep=(turtoisity=Inf, )`. 
+This example will ignore the turtoisity constraint (by setting the parameter to Inf).
 
 # Running the simulation
 To run a [`Snapshot`](@ref) of spins through the simulations you can use one of the following functions:
@@ -97,7 +98,7 @@ function Simulation(
     R2=0.,
     off_resonance=0.,
     verbose=true,
-    kwargs...
+    timestep=(),
 )
     flatten = false
     if isa(sequences, Sequence)
@@ -125,7 +126,7 @@ function Simulation(
         geometry,
         inside_geometry,
         susceptibility,
-        TimeStep(; diffusivity=diffusivity, geometry=geometry, verbose=verbose, kwargs...),
+        timestep isa Number ? TimeStep(timestep, Inf) : TimeStep(; timestep...),
         flatten,
     )
 end

@@ -3,15 +3,14 @@ import ..Constants: gyromagnetic_ratio
 import ..Geometries: Internal
 
 """
-    TimeStep(simulation; timestep=Inf, turtoisity=3e-2, gradient=1e-4, permeability=0.5,)
+    TimeStep(simulation; turtoisity=3e-2, gradient=1e-4, permeability=0.5,)
 
 Creates an object controlling the timestep of the MCMR simulation.
 
 At any time the timestep is guaranteed to be shorter than:
-1. user-provided value of `timestep` (in ms).
-2. `FullTimeStep.turtoisity_precision` * `size_scale(geometry)`^2 / D, where [`size_scale`](@ref) is the average size of the obstructions and `D` is the [`diffusivity`](@ref).
-3. timestep greater than `permeability` times 1 / (maximum permeability parameter)^2
-4. timestep that would allow magnetisation transfer probability to be greater than 25%.
+1. `FullTimeStep.turtoisity_precision` * `size_scale(geometry)`^2 / D, where [`size_scale`](@ref) is the average size of the obstructions and `D` is the [`diffusivity`](@ref).
+2. timestep greater than `permeability` times 1 / (maximum permeability parameter)^2
+3. timestep that would allow magnetisation transfer probability to be greater than 25%.
 4. the minimum dwell time of the bound pool.
 5. (`FullTimeStep.gradient_precision` /( D * \\gamma^2 * G^2))^(1//3), where \\gamma is the [`gyromagnetic_ratio`](@ref) and `G` is the current `gradient_strength`.
 """
@@ -23,7 +22,7 @@ end
 
 function TimeStep(; 
     diffusivity, geometry, size_scale=nothing, 
-    turtoisity=3e-2, gradient=nothing, verbose=true,
+    turtoisity=3e-2, gradient=1e-4, verbose=true,
     max_permeability_probability=0.5,
     )
     if iszero(diffusivity)
