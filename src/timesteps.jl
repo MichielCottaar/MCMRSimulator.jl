@@ -23,7 +23,7 @@ end
 function TimeStep(; 
     diffusivity, geometry, size_scale=nothing, 
     turtoisity=3e-2, gradient=1e-4, verbose=true,
-    max_permeability_probability=0.5,
+    permeability=0.5,
     )
     if iszero(diffusivity)
         return TimeStep(Inf, Inf)
@@ -32,7 +32,7 @@ function TimeStep(;
     options = (
             turtoisity * use_size_scale^2 / diffusivity,
             Internal.max_timestep_sticking(geometry, diffusivity),
-            max_timestep_permeability(geometry, max_permeability_probability),
+            max_timestep_permeability(geometry, permeability),
         )
     idx = argmin(options)
     if verbose
@@ -49,7 +49,7 @@ function TimeStep(;
             push!(lines, "Maximum timestep set by requirement to get sufficient transitions from free to bound spins to $(options[2]) ms.")
         elseif idx == 3
             push!(lines, "Maximum timestep set by requirement to get sufficient rate of spins through the permeable surfaces to $(options[3]) ms.")
-            push!(lines, "You can alter the sensitivity to permeability by changing the value of `timestep=(permeability=...)` from its current value of$permeability.")
+            push!(lines, "You can alter the sensitivity to permeability by changing the value of `timestep=(permeability=...)` from its current value of $(permeability).")
         end
         push!(lines, "The actual timestep might be further reduced based on the MR sequence(s).")
         @info join(lines, '\n')
