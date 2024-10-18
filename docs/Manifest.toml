@@ -181,6 +181,11 @@ git-tree-sha1 = "f1dff6729bc61f4d49e140da1af55dcd1ac97b2f"
 uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 version = "1.5.0"
 
+[[deps.Bessels]]
+git-tree-sha1 = "4435559dc39793d53a9e3d278e185e920b4619ef"
+uuid = "0e736298-9ec6-45e8-9647-e4fc86a2fe38"
+version = "0.2.8"
+
 [[deps.BibInternal]]
 git-tree-sha1 = "78aa378482bf6f338eef8f2440fb62a75ab1aaa3"
 uuid = "2027ae74-3657-4b95-ae00-e2f7d55c3e64"
@@ -1083,7 +1088,7 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 version = "1.11.0"
 
 [[deps.MCMRSimulator]]
-deps = ["Accessors", "ArgParse", "BSplineKit", "CSV", "Colors", "CoordinateTransformations", "DataFrames", "DataStructures", "Distributions", "Documenter", "FFTW", "GeometryBasics", "JSON", "LinearAlgebra", "Logging", "MRIBuilder", "MakieCore", "Markdown", "NearestNeighbors", "Optim", "PackageCompiler", "Pkg", "PlyIO", "Random", "Roots", "Rotations", "SparseArrays", "SpecialFunctions", "StaticArrays", "Statistics", "Tables", "UUIDs"]
+deps = ["Accessors", "ArgParse", "BSplineKit", "Bessels", "CSV", "Colors", "CoordinateTransformations", "DataFrames", "DataStructures", "Distributions", "Documenter", "FFTW", "GeometryBasics", "JSON", "LinearAlgebra", "Logging", "MRIBuilder", "MakieCore", "Markdown", "NearestNeighbors", "Optim", "PackageCompiler", "Pkg", "PlyIO", "Random", "Roots", "Rotations", "SparseArrays", "SpecialFunctions", "StaticArrays", "Statistics", "Tables", "UUIDs"]
 path = ".."
 uuid = "eac06e4d-a854-4bf6-b44f-54c98b0401d1"
 version = "0.10.0"
