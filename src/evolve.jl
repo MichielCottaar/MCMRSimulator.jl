@@ -293,7 +293,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
 
             relaxation = surface_relaxation(simulation.geometry, collision)
             if ~iszero(relaxation)
-                collision_attenuation = relaxation * exp(-sqrt(timestep))
+                collision_attenuation = exp(sqrt(timestep) * log(1 - relaxation))
                 for orientation in spin.orientations
                     orientation.transverse *= collision_attenuation
                 end
