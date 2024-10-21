@@ -52,7 +52,7 @@ function TimeStep(;
             push!(lines, "Maximum timestep set by requirement to get accurate rate of spins through the permeable surfaces to $(options[3]) ms.")
             push!(lines, "You can alter the sensitivity to permeability by changing the value of `timestep=(permeability=...)` from its current value of $(permeability).")
         elseif idx == 4
-            push!(lines, "Maximum timestep set by requirement to get accurate transverse signal loss due to surface relaxation fo $(options[4]) ms.")
+            push!(lines, "Maximum timestep set by requirement to get accurate transverse signal loss due to surface relaxation to $(options[4]) ms.")
             push!(lines, "You can alter the sensitivity to surface relaxation by changing the value of `timestep=(surface_relaxation=...)` from its current value of $(surface_relaxation).")
         end
         push!(lines, "The actual timestep will be further reduced based on the MR sequence(s).")
@@ -78,6 +78,6 @@ max_timestep_permeability(geometry, scaling) = scaling * Internal.max_permeabili
 
 Compute the maximum timestep necessary to maintain accuracy in estimating the transverse signal loss due to surface relaxation.
 """
-max_timestep_surface_relaxation(geometry, scaling) = scaling * log(1 - Internal.max_surface_relaxation(geometry))^(-2)
+max_timestep_surface_relaxation(geometry, scaling) = scaling * Internal.max_surface_relaxation(geometry)^(-2)
 
 end
