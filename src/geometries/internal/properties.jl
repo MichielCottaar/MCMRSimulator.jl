@@ -137,10 +137,25 @@ max_permeability_non_inf(geometry::FixedGeometry{0}) = 0.
 
 function max_permeability_non_inf(group::FixedObstructionGroup)
     if group.surface.permeability isa AbstractVector
-        return filter(a -> ~isinf(a), group.surface.permeability)
+        return maximum(filter(a -> ~isinf(a), group.surface.permeability))
     else
         return isinf(group.surface.permeability) ? 0. : group.surface.permeability
     end
+end
+
+"""
+    max_surface_relaxation(geometry)
+
+Returns the largest surface relaxation parameter within the geometry.
+"""
+function max_surface_relaxation(geometry::FixedGeometry)
+    maximum(max_surface_relaxation.(geometry))
+end
+
+max_surface_relaxation(geometry::FixedGeometry{0}) = 0.
+
+function max_surface_relaxation(group::FixedObstructionGroup)
+    maximum(group.surface.surface_relaxation)
 end
 
 end
