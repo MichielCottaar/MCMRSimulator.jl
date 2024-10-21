@@ -64,7 +64,7 @@ export Annuli, Cylinders, Walls, Spheres, Mesh, load_mesh, fix, random_positions
 import .Geometries.Internal: BoundingBox, FixedGeometry, surface_relaxation, surface_density, dwell_time, permeability
 export BoundingBox
 
-import .Properties: GlobalProperties, R1, R2, off_resonance, correct_for_timestep
+import .Properties: GlobalProperties, R1, R2, off_resonance
 export GlobalProperties, R1, R2, off_resonance
 
 import .Plot: PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance

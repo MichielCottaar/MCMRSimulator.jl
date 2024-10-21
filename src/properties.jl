@@ -6,7 +6,6 @@ Methods:
 - [`R1`](@ref)
 - [`R2`](@ref)
 - [`off_resonance`](@ref)
-- [`correct_for_timestep`](@ref)
 - [`stick_probability`](@ref)
 """
 module Properties
@@ -46,19 +45,6 @@ function Base.show(io::IO, prop::GlobalProperties)
     end
     print(io, ")")
 end
-
-"""
-    correct_for_timestep(surface_relaxation, timestep)
-
-Corrects the surface relaxation for the variability in the timestep during the simulation.
-
-In Monte Carlo simulations the rate of collisions depends on the size of the timestep.
-This means that as the timestep changes, the effect of surface relaxation will depend on the timestep.
-This function corrects the surface relaxation values, so that their effect does not depend on timestep.
-The user-provided surface relaxation will be used unaltered if the timestep is 1 milliseconds.
-"""
-correct_for_timestep(probability, timestep) = 1 - (1 - probability)^sqrt(timestep)
-
 
 """
     stick_probability(surface_density, dwell_time, diffusivity, timestep)

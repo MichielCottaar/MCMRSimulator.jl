@@ -110,7 +110,7 @@ end
 
         function test_MT_walls(wall_dist, diffusivity, timestep; nspins=100000, transfer=0.5)
             Random.seed!(1234)
-            actual_transfer = 1 - (1 - transfer) ^ (1/sqrt(timestep))
+            actual_transfer = 1 - transfer * exp(-sqrt(timestep))
             geometry = mr.Walls(surface_relaxation=actual_transfer)
             spins = [mr.Spin(position=Random.rand(3) .* wall_dist) for _ in 1:nspins]
             sequence = GradientEcho(TE=1e5)

@@ -150,16 +150,4 @@ function grad_off_resonance(grad::LinearPart, old_pos::SVector{3, Float64}, ::Un
     return mean_grad ⋅ old_pos
 end
 
-
-"""
-    transfer!(orientation, MT_fraction)
-
-Loses `MT_fraction` spin from `orientation`.
-"""
-function transfer!(orientation :: SpinOrientation, fraction::Float64)
-    inv_fraction = 1 - fraction
-    orientation.longitudinal = 1 - (1 - orientation.longitudinal) * inv_fraction
-    orientation.transverse *= inv_fraction
-end
-
 end

@@ -16,8 +16,8 @@ import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, ite
 import ..Methods: get_time
 import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation
 import ..Simulations: Simulation, _to_snapshot
-import ..Relax: relax!, transfer!
-import ..Properties: GlobalProperties, correct_for_timestep, stick_probability
+import ..Relax: relax!
+import ..Properties: GlobalProperties, stick_probability
 import ..Subsets: Subset, get_subset
 import ..Geometries.Internal: Reflection, detect_intersection, empty_intersection, has_intersection, surface_relaxation, permeability, surface_density, direction, previous_hit, dwell_time, empty_reflection
 
@@ -290,9 +290,13 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 found_solution = true
                 break
             end
+
             relaxation = surface_relaxation(simulation.geometry, collision)
             if ~iszero(relaxation)
-                transfer!.(spin.orientations, correct_for_timestep(relaxation, timestep))
+                collision_attenuation = relaxation * exp(-sqrt(timestep))
+                for orientation in spin.orientations
+                    orientation.transverse *= collision_attenuation
+                end
             end
 
             normed_rate = sqrt(timestep) * permeability(simulation.geometry, collision)
