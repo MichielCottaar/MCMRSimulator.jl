@@ -129,10 +129,10 @@ end
         sequence = GradientEcho(TE=1e5)
 
         reference = nothing
-        for ts_weight in (1e-5, 1e-4, 3e-3, 1e-2)
+        for ts_weight in (1e-4, 3e-3, 1e-2)
             simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=1., timestep=(surface_relaxation=ts_weight, size_scale=Inf))
             timestep = simulation.timestep.max_timestep
-            signal = mean([mr.transverse(mr.evolve(1000, simulation, 10.)) for _ in 1:Int(div(timestep, 0.01, RoundUp))]) / 1000
+            signal = mean([mr.transverse(mr.evolve(10000, simulation, 3.)) for _ in 1:Int(div(timestep, 0.01, RoundUp))]) / 10000
             if isnothing(reference)
                 reference = signal
             else
