@@ -108,22 +108,20 @@ end
         frachit(x) = ((1 - erf(x)) + (1 - exp(-x*x)) / (sqrt(π) * x)) / 2
         frachit(wall_dist, diffusivity, timestep) = frachit(wall_dist / (2 * sqrt(diffusivity * timestep)))
 
-        function test_MT_walls(wall_dist, diffusivity, timestep; nspins=100000, transfer=0.5)
+        function test_MT_walls(wall_dist, diffusivity; nspins=100000, transfer=0.5)
             Random.seed!(1234)
-            actual_transfer = 1 - transfer * exp(-sqrt(timestep))
-            geometry = mr.Walls(surface_relaxation=actual_transfer)
+            geometry = mr.Walls(surface_relaxation=transfer)
             spins = [mr.Spin(position=Random.rand(3) .* wall_dist) for _ in 1:nspins]
             sequence = GradientEcho(TE=1e5)
-            simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=diffusivity, timestep=timestep)
-            signal = mr.readout(spins, simulation, [timestep])
-            @test length(signal) == 1
-            fhit = frachit(wall_dist, diffusivity, timestep)
-            @test transfer * fhit ≈ (1 - mr.transverse(signal[end]) / nspins) rtol=0.1
+            simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=diffusivity, timestep=1.)
+            signal = mr.readout(spins, simulation, 1.)
+            fhit = frachit(wall_dist, diffusivity, 1.)
+            @test transfer * fhit ≈ (1 - mr.transverse(signal) / nspins) rtol=0.1
         end
-        test_MT_walls(2., 3., 0.1; transfer=0.5)
-        test_MT_walls(2., 3., 0.1; transfer=0.1)
-        test_MT_walls(10., 3., 0.1; transfer=0.5)
-        test_MT_walls(10., 1., 0.1; transfer=0.5)
+        test_MT_walls(2., 3.; transfer=0.5)
+        test_MT_walls(2., 3.; transfer=0.1)
+        test_MT_walls(10., 3.; transfer=0.5)
+        test_MT_walls(10., 1.; transfer=0.5)
     end
     @testset "Test that surface relaxation does not depend on timestep" begin
         Random.seed!(1234)
@@ -131,9 +129,10 @@ end
         sequence = GradientEcho(TE=1e5)
 
         reference = nothing
-        for timestep in (0.01, 0.1)
-            simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=1., timestep=timestep)
-            signal = mean([mr.transverse(mr.evolve(1000, simulation, 10.)) for _ in 1:Int(timestep/0.01)]) / 1000
+        for ts_weight in (1e-5, 1e-4, 3e-3, 1e-2)
+            simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=1., timestep=(surface_relaxation=ts_weight, size_scale=Inf))
+            timestep = simulation.timestep.max_timestep
+            signal = mean([mr.transverse(mr.evolve(1000, simulation, 10.)) for _ in 1:Int(div(timestep, 0.01, RoundUp))]) / 1000
             if isnothing(reference)
                 reference = signal
             else
