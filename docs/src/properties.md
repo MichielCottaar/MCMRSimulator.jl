@@ -20,7 +20,7 @@ Local parameters will already have been set at an earlier stage during the creat
 
 ## Collision properties
 Collision properties determine the behaviour of spins at the time of a collision. Like MRI properties they can be set at the global level (while creating [`Simulation`](@ref)) or overwritten at the local level ([geometry](@ref geometry)). There are four such properties:
-- [`MCMRSimulator.surface_relaxation`](@ref): the fraction of transverse signal lost at every collision. This fraction is adjusted to take into account the timestep. Note that this is not the recommended way to model magnetisation transfer. Instead, we recommend using the `surface_density` as discussed below.
+- [`MCMRSimulator.surface_relaxation`](@ref): the rate with which transverse signal is lost at every collision. This rate is multiplied by the square root of the timestep to ensure the actual attenuation is timestep-indeptendent.
 - [`MCMRSimulator.permeability`](@ref): the rate of spins passing through the surface (arbitrary units). Set to infinity for a purely permeable surface and to zero for an impermeable surface (default). If the spins do not pass through, they will undergo regular reflection (or get stuck, see below). Like `MT_fraction` it will be adjusted to take into account the timestep.
 - [`MCMRSimulator.surface_density`](@ref) and [`MCMRSimulator.dwell_time`](@ref): These control the density and dwell time of spins on the surface. Depending on the MRI properties assigned to these stuck particles (see above), these stuck particles can be used to represent water stuck at the membranes due to surface tension or spins in the membrane itself (which is in exchange with the free water through magnetisation transfer).
 
