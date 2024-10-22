@@ -115,7 +115,7 @@ end
 max_timestep_sticking(geometry::FixedGeometry{0}, diffusivity::Number, scaling) = Inf
 
 function max_timestep_sticking(group::FixedObstructionGroup, diffusivity::Number, scaling)
-    return scaling * maximum(log(1 - stick_probability.(group.surface.surface_density, group.surface.dwell_time, diffusivity, 1)))^-2
+    return scaling * maximum(@. log(1 - stick_probability(group.surface.surface_density, group.surface.dwell_time, diffusivity, 1)))^-2
 end
 
 """
