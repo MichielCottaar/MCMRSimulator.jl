@@ -12,7 +12,7 @@ import MRIBuilder: Sequence, variables, B0
 import MRIBuilder.Components: InstantGradient, InstantPulse
 import Rotations
 import Bessels: besseli0
-import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, iter_parts
+import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, iter_parts, nreadouts_per_TR
 import ..Methods: get_time
 import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation
 import ..Simulations: Simulation, _to_snapshot
@@ -20,6 +20,78 @@ import ..Relax: relax!
 import ..Properties: GlobalProperties, stick_probability
 import ..Subsets: Subset, get_subset
 import ..Geometries.Internal: Reflection, detect_intersection, empty_intersection, has_intersection, surface_relaxation, permeability, surface_density, direction, previous_hit, dwell_time, empty_reflection
+
+"""
+Supertype for any Readout accumulator.
+"""
+abstract type ReadoutAccumulator end
+abstract type SingleAccumulator <: ReadoutAccumulator end
+
+struct TotalSignalAccumulator <: SingleAccumulator
+    nspins :: Ref{Int}
+    as_vector :: MVector{3, Float64}
+    nwrite :: Ref{Int}
+end
+
+struct SnapshotAccumulator <: SingleAccumulator
+    spins :: Vector{Spin{1}}
+    as_vector :: MVector{3, Float64}
+    time :: Float64
+    nwrite :: Ref{Int}
+end
+
+struct FillerAccumulator <: SingleAccumulator
+    nwrite :: Ref{Int}
+end
+
+struct MultipleAccumulator{S, T<:ReadoutAccumulator} <: ReadoutAccumulator
+    accumulators :: Dict{Int, T}
+end
+
+function readout!(acc::TotalSignalAccumulator, spins::Vector{Spin{1}}, index)
+    acc.nspins[] += length(spins)
+    acc.as_vector .+= orientation(spins)
+    acc.nwrite[] += 1
+end
+
+function readout!(acc::SnapshotAccumulator, spins::Vector{Spin{1}}, index)
+    append!(acc.spins, deepcopy(spins))
+    acc.nwrite[] += 1
+end
+
+function readout!(::FillerAccumulator, spins::Vector{Spin{1}}, index)
+    error("Should not write to a FillerAccumulator!")
+end
+
+function readout!(acc::MultipleAccumulator{S}, spins::Vector{Spin{1}}, index::NamedTuple) where {S}
+    use_index = getproperty(index, S)
+    if use_index in keys(acc.accumulators)
+        readout!(acc.accumulators[use_index], spins, index)
+    end
+end
+
+"""
+    has_nwrite(accumulator, target)
+
+Returns true if the number of times that each of the accumulators has been written matches `target`.
+"""
+has_nwrite(acc::SingleAccumulator, nwrite::Int) = acc.nwrite[] == nwrite
+has_nwrite(acc::MultipleAccumulator, nwrite::Int) = all(nspins.(acc.accumulators, nwrite))
+has_nwrite(::FillerAccumulator, nwrite::Int) = true
+
+"""
+    fix_accumulator(accumulator, spins)
+
+Return the accumulated readout results as an array.
+"""
+fix_accumulator(acc::TotalSignalAccumulator) = SpinOrientationSum(
+    SpinOrientation(acc.as_vector),
+    acc.nspins
+)
+fix_accumulator(acc::TotalSignalAccumulator) = Snapshot(acc.spins, acc.as_vector, acc.time)
+fix_accumulator(::FillerAccumulator) = nothing
+fix_accumulator(acc::MultipleAccumulator) = stack(fix_accumulator.(acc.accumulators))
+
 
 """
     readout(spins, simulation[, readout_times]; bounding_box=<1x1x1 mm box>, skip_TR=0, nTR=1, return_snapshot=false, subset=<all>)
@@ -50,8 +122,11 @@ The function returns an up to 3-dimensional (KxLxMxN) array, with the following 
 By default each element of this matrix is either a [`SpinOrientationSum`](@ref) with the total signal.
 If `return_snapshot=true` is set, each element is the full [`Snapshot`](@ref) instead.
 """
-function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bounding_box=500, skip_TR=0, nTR=nothing, return_snapshot=false, noflatten=false, subset=Subset()) where {N}
-    snapshot = _to_snapshot(spins, simulation, bounding_box)
+readout(spins, simulation::Simulation, new_readout_times=nothing; bounding_box=500, kwargs...) = readout(_to_snapshot(spins, simulation, bounding_box), simulation, new_readout_times; kwargs...)
+
+function readout(snapshot::Snapshot{N}, simulation::Simulation{N}, new_readout_times=nothing; skip_TR=nothing, nTR=nothing, return_snapshot=false, noflatten=false, subset=Subset()) where {N}
+
+    repeat = !isnothing(skip_TR) || !isnothing(nTR)
 
     if isnothing(new_readout_times)
         if iszero(N)
@@ -154,6 +229,20 @@ function readout(spins, simulation::Simulation{N}, new_readout_times=nothing; bo
     ]
 end
 
+"""
+    run_readout!(snapshot, simulation, accumulators)
+
+Runs the simulation starting from `snapshot` and filling the `accumulators`.
+"""
+function run_readout!(snapshot::Snapshot{N}, simulation::Simulation{N}, accumulator::ReadoutAccumulator, target_nwrite=1)
+    for part in iter_parts(simulation.sequences, current_time, new_time, simulation.timestep)
+        process_sequence_step!(snapshot.spins, simulation, part, B0s, accumulator)
+        if has_nwrite(accumulator, target_nwrite)
+            return
+        end
+    end
+    error("Simulation ended before all readout accumulators were filled.")
+end
 
 """
     evolve(snapshot, simulation[, new_time]; bounding_box=<1x1x1 mm box>)
@@ -200,7 +289,7 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     return Snapshot(snapshot.spins, new_time)
 end
 
-process_sequence_step!(spins, simulation, sequence_part::MultSequencePart, B0s) = draw_step!(spins, simulation, sequence_part, B0s)
+process_sequence_step!(spins, simulation, sequence_part::MultSequencePart, B0s, next_readout_index) = draw_step!(spins, simulation, sequence_part, B0s)
 process_sequence_step!(spins, simulation, sequence_part::InstantSequencePart, B0s) = apply_instants!(spins, sequence_part)
 
 """
