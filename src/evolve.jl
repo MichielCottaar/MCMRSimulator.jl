@@ -12,7 +12,7 @@ import MRIBuilder: Sequence, variables, B0
 import MRIBuilder.Components: InstantGradient, InstantPulse
 import Rotations
 import Bessels: besseli0
-import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, iter_parts, nreadouts_per_TR
+import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, iter_parts, nreadouts_per_TR, first_TR_with_all_readouts, IndexedReadout
 import ..Methods: get_time
 import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation
 import ..Simulations: Simulation, _to_snapshot
@@ -31,13 +31,23 @@ struct TotalSignalAccumulator <: SingleAccumulator
     nspins :: Ref{Int}
     as_vector :: MVector{3, Float64}
     nwrite :: Ref{Int}
+    TotalSignalAccumulator() = new(
+        Ref(0),
+        zero(MVector{3, Float64}),
+        Ref(0.),
+        Ref(0)
+    )
 end
 
 struct SnapshotAccumulator <: SingleAccumulator
     spins :: Vector{Spin{1}}
-    as_vector :: MVector{3, Float64}
-    time :: Float64
+    time :: Ref{Float64}
     nwrite :: Ref{Int}
+    SnapshotAccumulator() = new(
+        Spin{1}[],
+        Ref(0.),
+        Ref(0)
+    )
 end
 
 struct FillerAccumulator <: SingleAccumulator
@@ -46,29 +56,49 @@ end
 
 struct MultipleAccumulator{S, T<:ReadoutAccumulator} <: ReadoutAccumulator
     accumulators :: Dict{Int, T}
+    flatten :: bool
 end
 
-function readout!(acc::TotalSignalAccumulator, spins::Vector{Spin{1}}, index)
+struct SubsetAccumulator{T<:ReadoutAccumulator}
+    geometry :: FixedGeometry
+    subsets :: Vector{<:Subset}
+    accumulators :: Vector{T}
+    flatten :: bool
+end
+
+function readout!(acc::TotalSignalAccumulator, spins::Vector{Spin{1}}, ::IndexedReadout)
     acc.nspins[] += length(spins)
     acc.as_vector .+= orientation(spins)
     acc.nwrite[] += 1
 end
 
-function readout!(acc::SnapshotAccumulator, spins::Vector{Spin{1}}, index)
+function readout!(acc::SnapshotAccumulator, spins::Vector{Spin{1}}, index::IndexedReadout)
     append!(acc.spins, deepcopy(spins))
+    if iszero(acc.time[])
+        acc.time[] = index.time
+    else
+        @assert acc.time[] == index.time
+    end
     acc.nwrite[] += 1
 end
 
-function readout!(::FillerAccumulator, spins::Vector{Spin{1}}, index)
+function readout!(::FillerAccumulator, spins::Vector{Spin{1}}, ::IndexedReadout)
     error("Should not write to a FillerAccumulator!")
 end
 
-function readout!(acc::MultipleAccumulator{S}, spins::Vector{Spin{1}}, index::NamedTuple) where {S}
+function readout!(acc::MultipleAccumulator{S}, spins::Vector{Spin{1}}, index::IndexedReadout) where {S}
     use_index = getproperty(index, S)
     if use_index in keys(acc.accumulators)
-        readout!(acc.accumulators[use_index], spins, index)
+        readout!(acc.accumulators[use_index], spins, simulation, index)
     end
 end
+
+function readout!(acc::SubsetAccumulator, spins::Vector{Spin{1}}, index::IndexedReadout)
+    for (subset, accumulator) in zip(acc.subsets, acc.accumulators)
+        readout!(accumulator, get_subset(spins, simulation, subset), acc.geometry, index)
+    end
+end
+
 
 """
     has_nwrite(accumulator, target)
@@ -76,7 +106,7 @@ end
 Returns true if the number of times that each of the accumulators has been written matches `target`.
 """
 has_nwrite(acc::SingleAccumulator, nwrite::Int) = acc.nwrite[] == nwrite
-has_nwrite(acc::MultipleAccumulator, nwrite::Int) = all(nspins.(acc.accumulators, nwrite))
+has_nwrite(acc::Union{SubsetAccumulator, MultipleAccumulator}, nwrite::Int) = all(nspins.(acc.accumulators, nwrite))
 has_nwrite(::FillerAccumulator, nwrite::Int) = true
 
 """
@@ -90,7 +120,81 @@ fix_accumulator(acc::TotalSignalAccumulator) = SpinOrientationSum(
 )
 fix_accumulator(acc::TotalSignalAccumulator) = Snapshot(acc.spins, acc.as_vector, acc.time)
 fix_accumulator(::FillerAccumulator) = nothing
-fix_accumulator(acc::MultipleAccumulator) = stack(fix_accumulator.(acc.accumulators))
+fix_accumulator(acc::Union{SubsetAccumulator, MultipleAccumulator}) = acc.flatten ? fix_accumulator(acc.accumulators[1]) : stack(fix_accumulator.(acc.accumulators))
+
+
+function base_accumulator(; return_snapshot=false)
+    return return_snapshot ? SnapshotAccumulator() : TotalSignalAccumulator()
+end
+
+function subset_accumulator(; subset=Subset(), kwargs...)
+    if subset isa Subset
+        return SubsetAccumulator([subset], [base_accumulator(; kwargs...)], true)
+    else
+        return SubsetAccumulator(subset, [base_accumulator(; kwargs...) for _ in 1:length(subset)], false)
+    end
+end
+
+function TR_accumulator(sequence, current_time, start_TR; skip_TR=nothing, nTR=nothing, kwargs...)
+    if isnothing(nTR) && isnothing(skip_TR)
+        # sequence will not be repeated
+        return subset_accumulator(; kwargs...)
+    else
+        flatten = isnothing(nTR)
+        if flatten
+            nTR = 1
+        end
+        use_start_TR = isnothing(skip_TR) ? start_TR : (start_TR + skip_TR)
+        return MultipleAccumulator{:TR}(
+            Dict(TR => subset_accumulator(; kwargs...) for TR in use_start_TR:(use_start_TR+nTR-1)),
+            flatten
+        )
+    end
+end
+
+function readout_accumulator(sequence, current_time; readout_times=nothing, kwargs...)
+    if isnothing(readout_times)
+        nreadout = nreadouts_per_TR(sequence)
+        flatten = isone(nreadout)
+        if iszero(nreadout)
+            error("Readout times need to be explicitly set when simulating a sequence without readouts.")
+        end
+    elseif readout_times isa Number
+        flatten = true
+        nreadout = 1
+    else
+        flatten = false
+        nreadout = length(readout_times)
+        if iszero(nreadout)
+            error("Readout times cannot be set to an empty vector.")
+        end
+    end
+
+    start_TR = first_TR_with_all_readouts(sequence, current_time; readout_times=readout_times)
+
+    if flatten
+        return TR_accumulator(sequence, current_time, start_TR; kwargs...)
+    else
+        return MultipleAccumulator{:readout}(
+            Dict(readout => TR_accumulator(sequence, current_time, start_TR; kwargs...) for readout in 1:length(readout_times)),
+            false
+        )
+    end
+end
+
+function sequence_accumulator(simulation, current_time; kwargs...)
+    flatten = simulation.flatten
+    return MultipleAccumulator{:sequence}(
+        Dict(index => readout_accumulator(sequence, current_time; kwargs...) for (index, sequence) in enumerate(simulation.sequences)),
+        flatten
+    )
+end
+
+
+
+
+
+
 
 
 """
@@ -124,109 +228,11 @@ If `return_snapshot=true` is set, each element is the full [`Snapshot`](@ref) in
 """
 readout(spins, simulation::Simulation, new_readout_times=nothing; bounding_box=500, kwargs...) = readout(_to_snapshot(spins, simulation, bounding_box), simulation, new_readout_times; kwargs...)
 
-function readout(snapshot::Snapshot{N}, simulation::Simulation{N}, new_readout_times=nothing; skip_TR=nothing, nTR=nothing, return_snapshot=false, noflatten=false, subset=Subset()) where {N}
-
-    repeat = !isnothing(skip_TR) || !isnothing(nTR)
-
-    if isnothing(new_readout_times)
-        if iszero(N)
-            nreadout_per_TR = 0
-        else
-            nreadout_per_TR = maximum((length(variables.readout_times(seq)) for seq in simulation.sequences))
-        end
-    else
-        nreadout_per_TR = length(new_readout_times)
-    end
-    actual_readout_times = Set{Float64}()
-    use_nTR = isnothing(nTR) ? 1 : nTR
-    single_subset = ~(subset isa AbstractVector)
-    subsets_vector = single_subset ? [subset] : subset
-    store_times = fill(-1., (N, nreadout_per_TR, use_nTR))
-
-    for (i, seq) in enumerate(simulation.sequences)
-        current_TR = Int(div(get_time(snapshot), variables.duration(seq), RoundDown))
-        time_in_TR = get_time(snapshot) - current_TR * variables.duration(seq)
-
-        rt = isnothing(new_readout_times) ? variables.readout_times(seq) : new_readout_times
-        if rt isa Number
-            rt = [rt]
-        end
-        if iszero(length(rt))
-            continue
-        end
-
-        if iszero(skip_TR) && minimum(rt) < time_in_TR
-            skip_TR = 1
-        end
-
-        for (j, relative_time) in enumerate(rt)
-            for k in 1:use_nTR
-                new_readout_time = ((skip_TR + k - 1) * variables.duration(seq)) + relative_time
-                if new_readout_time < snapshot.time
-                    warn("Skipping readouts scheduled before the current snapshot. Did you provide negative `new_readout_times`?")
-                    continue
-                end
-                push!(actual_readout_times, new_readout_time)
-                store_times[i, j, k] = new_readout_time
-            end
-        end
-    end
-
-    if iszero(N)
-        if isnothing(new_readout_times)
-            error("Readout times need to be set explicitly when running a simulation with no sequences.")
-        end
-        if !return_snapshot
-            error("Either provide a sequence to simulate or set `return_snapshot=true` to return the spin positions.")
-        end
-        if !isnothing(nTR)
-            error("Cannot set `nTR` in `readout` when no sequences are being simulated.")
-        end
-        if new_readout_times isa Number
-            store_times = fill(Float64(new_readout_times), (1, 1, 1))
-            actual_readout_times = [Float64(new_readout_times)]
-        else
-            store_times = reshape(Float64.(new_readout_times), (1, length(new_readout_times), 1))
-            actual_readout_times = Float64.(new_readout_times)
-        end
-    end
-
-
-    return_type = return_snapshot ? Snapshot{iszero(N) ? 0 : 1} : SpinOrientationSum
-    result = convert(Array{Union{Nothing, return_type}}, fill(nothing, (size(store_times)..., length(subsets_vector))))
-
-    for time in sort!([actual_readout_times...])
-        snapshot = evolve_to_time(snapshot, simulation, time)
-        for index in eachindex(IndexCartesian(), store_times)
-            if time != store_times[index]
-                continue
-            end
-            single_snapshot = iszero(N) ? snapshot : get_sequence(snapshot, index[1])
-            for (index_selected, select) in enumerate(subsets_vector)
-                selected = get_subset(single_snapshot, simulation, select)
-                value = return_snapshot ? deepcopy(selected) : SpinOrientationSum(selected)
-                result[index, index_selected] = value
-            end
-        end
-    end
-
-    # Only include Nothing in the return type if there are any nothings in the data.
-    if ~any(isnothing.(result))
-        result = convert(Array{return_type}, result)
-    end
-
-    if noflatten
-        return result
-    end
-    return result[
-        # remove first dimension if simulation was initalised with scalar sequence
-        simulation.flatten || iszero(N) ? 1 : :,
-        # remove second dimension if there are no sequences with multiple Readouts or new_readout_times is set to a scalar number
-        (isnothing(new_readout_times) && isone(nreadout_per_TR)) || new_readout_times isa Number ? 1 : :,
-        # remove third dimension if nTR is not explicitly set by the user
-        isnothing(nTR) ? 1 : :,
-        single_subset ? 1 : :,
-    ]
+function readout(snapshot::Snapshot{N}, simulation::Simulation{N}, new_readout_times=nothing; noflatten=false, skip_TR=nothing, nTR=nothing, kwargs...) where {N}
+    accumulator = sequence_accumulator(simulation, snapshot.time; skip_TR=skip_TR, nTR=nTR, kwargs...)
+    repeat = Val(!isnothing(skip_TR) || !isnothing(nTR))
+    run_readout!(snapshot, simulation, accumulator, repeat)
+    return fix_accumulator(accumulator)
 end
 
 """
@@ -234,8 +240,8 @@ end
 
 Runs the simulation starting from `snapshot` and filling the `accumulators`.
 """
-function run_readout!(snapshot::Snapshot{N}, simulation::Simulation{N}, accumulator::ReadoutAccumulator, target_nwrite=1)
-    for part in iter_parts(simulation.sequences, current_time, new_time, simulation.timestep)
+function run_readout!(snapshot::Snapshot{N}, simulation::Simulation{N}, accumulator::ReadoutAccumulator, repeat::Val, target_nwrite=1)
+    for part in iter_parts(simulation.sequences, current_time, repeat, simulation.timestep)
         process_sequence_step!(snapshot.spins, simulation, part, B0s, accumulator)
         if has_nwrite(accumulator, target_nwrite)
             return
@@ -289,8 +295,8 @@ function evolve_to_time(snapshot::Snapshot{N}, simulation::Simulation{N}, new_ti
     return Snapshot(snapshot.spins, new_time)
 end
 
-process_sequence_step!(spins, simulation, sequence_part::MultSequencePart, B0s, next_readout_index) = draw_step!(spins, simulation, sequence_part, B0s)
-process_sequence_step!(spins, simulation, sequence_part::InstantSequencePart, B0s) = apply_instants!(spins, sequence_part)
+process_sequence_step!(spins, simulation, sequence_part::MultSequencePart, B0s, accumulator) = draw_step!(spins, simulation, sequence_part, B0s)
+process_sequence_step!(spins, simulation, sequence_part::InstantSequencePart, B0s, accumulator) = apply_instants!(spins, sequence_part, accumulator)
 
 """
     draw_step!(spin(s), simulation, mult_sequence_part, B0s)
@@ -423,7 +429,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
 end
 
 """
-    apply_instants!(spins, instants)
+    apply_instants!(spins, instants, accumulator)
 
 Apply a set of `N` instants to a vector of spins for each of the `N` sequences being simulated.
 
@@ -431,25 +437,30 @@ Each instant can be:
 - `nothing`: do nothing
 - `MRIBuilder.Components.InstantPulse`: apply RF pulse rotation
 - `MRIBuilder.Components.InstantGradient`: add phase corresponding to gradient
+- `IndexedReadout`: add the current snapshot to `accumulator`
 """
-apply_instants!(spins::Vector{Spin{N}}, instants::InstantSequencePart{N}) where {N} = apply_instants!(spins, instants.instants)
-function apply_instants!(spins::Vector{Spin{N}}, instants::StaticVector{N}) where {N}
+apply_instants!(spins::Vector{Spin{N}}, instants::InstantSequencePart{N}, accumulator) where {N} = apply_instants!(spins, instants.instants, accumulator)
+function apply_instants!(spins::Vector{Spin{N}}, instants::StaticVector{N}, accumulator) where {N}
     for i in 1:N
-        apply_instants!(spins, i, instants[i])
+        apply_instants!(spins, i, instants[i], accumulator)
     end
 end
 
-apply_instants!(spins::Vector{Spin{N}}, instants::StaticVector{N, Nothing}) where {N} = nothing
-apply_instants!(spins::Vector{<:Spin}, index::Int, ::Nothing) = nothing
+apply_instants!(spins::Vector{Spin{N}}, instants::StaticVector{N, Nothing}, _) where {N} = nothing
+apply_instants!(spins::Vector{<:Spin}, index::Int, ::Nothing, _) = nothing
 
-function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::InstantGradient)
+function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::InstantGradient, _)
     Threads.@threads for spin in spins
         new_phase = rad2deg(spin.position ⋅ variables.qvec(grad))
         spin.orientations[index].phase += new_phase
     end
 end
 
-function apply_instants!(spins::Vector{<:Spin}, index::Int, pulse::InstantPulse)
+function apply_instants!(spins::Vector{<:Spin{1}}, index::Int, readout::IndexedReadout, accumulator::ReadoutAccumulator)
+    readout!(accumulator, spins, readout)
+end
+
+function apply_instants!(spins::Vector{<:Spin}, index::Int, pulse::InstantPulse, _)
     rotation = Rotations.RotationVec(
         deg2rad(pulse.flip_angle) * cosd(pulse.phase),
         deg2rad(pulse.flip_angle) * sind(pulse.phase),
