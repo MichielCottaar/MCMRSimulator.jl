@@ -103,6 +103,22 @@ struct InstantSequencePart{N, T, ST<:StaticVector{N, T}}
     end
 end
 
+"""
+    IndexedReadout(sequence, TR, readout)
+
+Represents a readout in an MR sequence.
+
+All indices are integers. They refer to:
+- `sequence`: the sequence index if multiple sequences get simulated.
+- `TR`: which TR the simulation is in (defaults to 0 if not set).
+- `readout`: which readout within the TR (or total sequence) this is.
+"""
+struct IndexedReadout
+    sequence::Int
+    TR::Int
+    readout::Int
+end
+
 
 iter_building_blocks_raw(seq::BaseSequence) = Iterators.flatten(iter_building_blocks_raw.(seq))
 iter_building_blocks_raw(bb::BaseBuildingBlock) = [bb]
@@ -120,13 +136,16 @@ iter_building_blocks(seq::BaseSequence, repeat) = Iterators.accumulate(iter_buil
     end
 end
 
-struct IndexedReadout
-    index :: Int
-end
 
-function iter_part_times(seq::BaseSequence, repeat::Val; readouts=nothing)
+function iter_part_times(seq::BaseSequence, repeat::Val; readouts=nothing, sequence_index=0)
+    readout_index = Ref{Int}(1)
+    TR_index = Ref{Int}(0)
     Iterators.flatten(
         Iterators.map(iter_building_blocks(seq, repeat)) do (TR, time, bb)
+            if TR > TR_index[]
+                readout_index[] = 1
+            end
+
             gradients = Tuple{Float64, Float64, GradientWaveform}[]
             pulses = Tuple{Float64, Float64, RFPulseComponent}[]
             instants = Tuple{Float64, Union{InstantGradient, InstantPulse, SingleReadout, IndexedReadout}}[]
@@ -151,7 +170,8 @@ function iter_part_times(seq::BaseSequence, repeat::Val; readouts=nothing)
                         duration = variables.duration(event)
                         push!(pulses, (current_time + delay, current_time + delay + duration, event))
                     elseif event isa SingleReadout && isnothing(readouts)
-                        push!(instants, (current_time + delay, event))
+                        push!(instants, (current_time + delay, IndexedReadout(sequence_index, TR, readout_index[])))
+                        readout_index[] += 1
                     end
                 end
             end
@@ -161,7 +181,7 @@ function iter_part_times(seq::BaseSequence, repeat::Val; readouts=nothing)
                 end_time = time + variables.duration(bb)
                 for (index, readout) in enumerate(readouts)
                     if time < readout <= end_time
-                        push!(instants, (readout, IndexedReadout(index)))
+                        push!(instants, (readout, IndexedReadout(sequence_index, TR, index)))
                     end
                 end
             end
@@ -346,5 +366,19 @@ function iter_parts(sequences::AbstractVector{<:BaseSequence}, tstart::Number, r
     end
 end
 
+nreadouts_per_TR(seq::BaseSequence) = length(collect(Iterators.filter(iter_part_times(seq, Val(false))) do state
+    state[end] isa SingleReadout
+end))
+
+function get_readouts(seq::BaseSequence, start_time::Number, repeat::Val) 
+    rep_time = variables.TR(seq)
+
+    filtered = Iterators.filter(iter_part_times(seq, repeat)) do (TR, time, _, _, _, instant)
+        return ((TR - 1) * rep_time + time >= start_time) && instant isa IndexedReadout
+    end
+    return Iterators.map(filtered) do res
+        return res[end]
+    end
+end
 
 end
