@@ -59,7 +59,7 @@ function stick_probability(surface_density::Number, dwell_time::Number, diffusiv
     elseif iszero(dwell_time)
         error("Cannot have a dwell time of zero for any surface containing bound spins.")
     else
-        return sqrt(π * timestep / diffusivity) * surface_density/ dwell_time / 2
+        return 1 - exp(-sqrt(π * timestep / diffusivity) * surface_density/ dwell_time / 2)
     end
 end
 end
