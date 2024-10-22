@@ -104,24 +104,18 @@ for symbol in (:permeability, :surface_relaxation, :dwell_time, :surface_density
 end
 
 """
-    max_timestep_sticking(geometry, diffusivity)
+    max_timestep_sticking(geometry, diffusivity, scaling)
 
-Returns the maximum timestep that can be used while:
-1. keeping [`stick_probability`](@ref) lower than 25%
-2. and keeping the timestep below the [`dwell_time`](@ref)
+Returns the maximum timestep that can be used while keeping log(1-[`stick_probability`](@ref)) lower than `scaling`
 """
-function max_timestep_sticking(geometry::FixedGeometry, diffusivity::Number)
-    minimum([max_timestep_sticking(group, diffusivity) for group in geometry])
+function max_timestep_sticking(geometry::FixedGeometry, diffusivity::Number, scaling)
+    minimum([max_timestep_sticking(group, diffusivity, scaling) for group in geometry])
 end
 
-max_timestep_sticking(geometry::FixedGeometry{0}, diffusivity::Number) = Inf
+max_timestep_sticking(geometry::FixedGeometry{0}, diffusivity::Number, scaling) = Inf
 
-function max_timestep_sticking(group::FixedObstructionGroup, diffusivity::Number)
-    get_dwell_time(surface_density, dwell_time) = iszero(surface_density) ? Inf : dwell_time
-    return min(
-        maximum(stick_probability.(group.surface.surface_density, group.surface.dwell_time, diffusivity, 1))^-2 / 4,
-        minimum(get_dwell_time.(group.surface.surface_density, group.surface.dwell_time))
-    )
+function max_timestep_sticking(group::FixedObstructionGroup, diffusivity::Number, scaling)
+    return scaling * maximum(log(1 - stick_probability.(group.surface.surface_density, group.surface.dwell_time, diffusivity, 1)))^-2
 end
 
 """
@@ -156,6 +150,46 @@ max_surface_relaxation(geometry::FixedGeometry{0}) = 0.
 
 function max_surface_relaxation(group::FixedObstructionGroup)
     maximum(group.surface.surface_relaxation)
+end
+
+
+"""
+    min_dwell_time(geometry)
+
+Returns the minimum dwell time ignoring any parts of the geometry where there is no bound pool.
+"""
+function min_dwell_time(geometry::FixedGeometry)
+    minimum(min_dwell_time.(geometry))
+end
+
+min_dwell_time(geometry::FixedGeometry{0}) = Inf
+
+function min_dwell_time(group::FixedObstructionGroup)
+    if group.surface.dwell_time isa Number
+        no_bound_pool = (
+            group.surface.surface_density isa Number ?
+            iszero(group.surface.surface_density) :
+            all(iszero.(group.surface.surface_density))
+        )
+        if no_bound_pool
+            return Inf
+        else
+            return group.surface.dwell_time
+        end
+    else
+        if group.surface.surface_density isa Number
+            if iszero(group.surface.surface_density)
+                return Inf
+            else
+                return minimum(group.surface.dwell_time)
+            end
+        else
+            minimum(
+                group.surface.dwell_time[group.surface.surface_density .> 0];
+                init=Inf
+            )
+        end
+    end
 end
 
 end
