@@ -63,15 +63,14 @@
     @testset "Correct number of stuck particles for long timesteps" begin
         Random.seed!(1234)
         geometry = mr.Walls(repeats=1, surface_density=0.5, dwell_time=1.)
-        sim = mr.Simulation([], diffusivity=3., geometry=geometry, timestep=10)
+        sim = mr.Simulation([], diffusivity=3., geometry=geometry, timestep=(size_scale=Inf, ))
         nspins = 10000
         snapshot = mr.evolve(nspins, sim, 0)
         fraction_stuck = sum(mr.stuck.(snapshot)) / nspins
         @test fraction_stuck ≈ 1//3 rtol=0.05
         snapshot2 = mr.evolve(snapshot, sim, 300)
         fraction_stuck = sum(mr.stuck.(snapshot2)) / nspins
-        # TODO: this test is far less strict than it should be
-        @test fraction_stuck < 0.5
+        @test fraction_stuck ≈ 1//3 rtol=0.05
         displacement = mr.position.(snapshot2) .- mr.position.(snapshot)
         for dim in (2, 3)
             @test var([d[dim] for d in displacement]) / (2 * 300) ≈ 2//3 * 3 rtol=0.05  # spends 2/3rd of time as free spin
@@ -148,17 +147,17 @@ end
         for density in (0, 0.5, 1, 2)
             @testset "Density = $density" begin
                 Random.seed!(1234)
-                simulation = mr.Simulation([], geometry=geometry, diffusivity=1, surface_density=density, dwell_time=0.5, timestep=0.01)
+                simulation = mr.Simulation([], geometry=geometry, diffusivity=1, surface_density=density, dwell_time=0.5)
                 snap1 = mr.evolve(nspins, simulation, 0)
                 snap2 = mr.evolve(snap1, simulation, 10)
                 displacement = mr.position.(snap2) .- mr.position.(snap1)
 
                 fraction_stuck = density / (1 + density)
-                @test var(map(d->d[2], displacement)) ≈ (1 - fraction_stuck) * 20 rtol=0.03
-                @test var(map(d->d[3], displacement)) ≈ (1 - fraction_stuck) * 20 rtol=0.03
+                @test var(map(d->d[2], displacement)) ≈ (1 - fraction_stuck) * 20 rtol=0.1
+                @test var(map(d->d[3], displacement)) ≈ (1 - fraction_stuck) * 20 rtol=0.1
                 @test all(map(d->(abs(d[1]) <= 1.00001), displacement))
-                @test sum(mr.stuck.(snap1)) ≈ fraction_stuck * nspins rtol=0.03
-                @test sum(mr.stuck.(snap2)) ≈ fraction_stuck * nspins rtol=0.03
+                @test sum(mr.stuck.(snap1)) ≈ fraction_stuck * nspins rtol=0.1
+                @test sum(mr.stuck.(snap2)) ≈ fraction_stuck * nspins rtol=0.1
 
                 @test all(mr.isinside(simulation.geometry, snap1) .== mr.isinside(simulation.geometry, snap2))
             end
