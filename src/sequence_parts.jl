@@ -1,8 +1,8 @@
 module SequenceParts
 import StaticArrays: SVector, StaticVector, SizedVector
 import LinearAlgebra: norm
-import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, edge_times, get_pulse, iter_instant_gradients, iter_instant_pulses, make_generic, variables
-import MRIBuilder.Components: GradientWaveform, RFPulseComponent, NoGradient, ConstantGradient, ChangingGradient, InstantGradient, InstantPulse, split_timestep, EventComponent
+import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, edge_times, get_pulse, iter_instant_gradients, iter_instant_pulses, make_generic, variables, Wait
+import MRIBuilder.Components: GradientWaveform, RFPulseComponent, NoGradient, ConstantGradient, ChangingGradient, InstantGradient, InstantPulse, split_timestep, EventComponent, SingleReadout
 import ..TimeSteps: TimeStep
 
 
@@ -104,37 +104,32 @@ struct InstantSequencePart{N, T, ST<:StaticVector{N, T}}
 end
 
 
-function iter_building_blocks_raw(seq::BaseSequence; repeat=false) 
-    iter = Iterators.flatten(iter_building_blocks_raw.(seq))
-    if repeat
-        return Iterators.cycle(iter)
-    else
-        return iter
-    end
-end
+iter_building_blocks_raw(seq::BaseSequence) = Iterators.flatten(iter_building_blocks_raw.(seq))
 iter_building_blocks_raw(bb::BaseBuildingBlock) = [bb]
-iter_building_blocks(seq::BaseSequence; kwargs...) = Iterators.accumulate(iter_building_blocks_raw(seq; kwargs...); init=(0., nothing)) do (prev_time, prev_bb), bb
+
+iter_building_blocks_no_time(seq, repeat::Val{false}) = Iterators.flatten([iter_building_blocks_raw(seq), [Wait(Inf)]])
+iter_building_blocks_no_time(seq, repeat::Val{true}) = Iterators.cycle(Iterators.flatten([iter_building_blocks_raw(seq), [:TR]]))
+
+iter_building_blocks(seq::BaseSequence, repeat) = Iterators.accumulate(iter_building_blocks_no_time(seq, repeat); init=(1, 0., nothing)) do (prev_TR, prev_time, prev_bb), bb
     if isnothing(prev_bb)
-        return (prev_time, bb)
+        return (prev_TR, prev_time, bb)
+    elseif bb == :TR
+        return (prev_TR + 1, 0., Wait(0.))
     else
-        return (prev_time + variables.duration(prev_bb), bb)
-    end
-end
-function iter_building_blocks(seq::BaseSequence, tstart, tend)
-    after_tstart = Iterators.dropwhile(iter_building_blocks(seq; repeat=true)) do (time, bb)
-        time + variables.duration(bb) < tstart
-    end
-    return Iterators.takewhile(after_tstart) do (time, _)
-        time < tend
+        return (prev_TR, prev_time + variables.duration(prev_bb), bb)
     end
 end
 
-function iter_part_times(seq::BaseSequence, tstart)
+struct IndexedReadout
+    index :: Int
+end
+
+function iter_part_times(seq::BaseSequence, repeat::Val; readouts=nothing)
     Iterators.flatten(
-        Iterators.map(iter_building_blocks(seq, tstart, Inf)) do (time, bb)
+        Iterators.map(iter_building_blocks(seq, repeat)) do (TR, time, bb)
             gradients = Tuple{Float64, Float64, GradientWaveform}[]
             pulses = Tuple{Float64, Float64, RFPulseComponent}[]
-            instants = Tuple{Float64, Union{InstantGradient, InstantPulse}}[]
+            instants = Tuple{Float64, Union{InstantGradient, InstantPulse, SingleReadout, IndexedReadout}}[]
 
             current_grad = NoGradient(0.)
             current_time = time
@@ -155,9 +150,22 @@ function iter_part_times(seq::BaseSequence, tstart)
                     elseif event isa RFPulseComponent
                         duration = variables.duration(event)
                         push!(pulses, (current_time + delay, current_time + delay + duration, event))
+                    elseif event isa SingleReadout && isnothing(readouts)
+                        push!(instants, (current_time + delay, event))
                     end
                 end
             end
+
+            if !isnothing(readouts)
+                # add custom readouts
+                end_time = time + variables.duration(bb)
+                for (index, readout) in enumerate(readouts)
+                    if time < readout <= end_time
+                        push!(instants, (readout, IndexedReadout(index)))
+                    end
+                end
+            end
+
             et = sort!(unique!([
                 time,
                 [t for (_, t, _) in gradients]...,
@@ -173,7 +181,7 @@ function iter_part_times(seq::BaseSequence, tstart)
                 t1 <= time < t2
             end
 
-            result = Tuple{Float64, Float64, Tuple{Float64, GradientWaveform}, Union{Nothing, Tuple{Float64, RFPulseComponent}}, Union{Nothing, InstantGradient, InstantPulse}}[]
+            result = Tuple{Int, Float64, Float64, Tuple{Float64, GradientWaveform}, Union{Nothing, Tuple{Float64, RFPulseComponent}}, Union{Nothing, InstantGradient, InstantPulse, SingleReadout, IndexedReadout}}[]
             for (t1, t2) in zip(et[1:end-1], et[2:end])
                 index_grad = current_grad(t1)
                 t_grad, _, grad = gradients[index_grad]
@@ -181,15 +189,15 @@ function iter_part_times(seq::BaseSequence, tstart)
                 pulse = isnothing(index_pulse) ? nothing : (t1 - pulses[index_pulse][1], pulses[index_pulse][end])
                 for (t, instant) in instants
                     if t == t1
-                        push!(result, (t1, t1, (t1 - t_grad, grad), pulse, instant))
+                        push!(result, (TR, t1, t1, (t1 - t_grad, grad), pulse, instant))
                     end
                 end
-                push!(result, (t1, t2, (t1 - t_grad, grad), pulse, nothing))
+                push!(result, (TR, t1, t2, (t1 - t_grad, grad), pulse, nothing))
             end
             for (t, instant) in instants
                 if t == et[end]
                     t_grad, _, grad = iszero(length(gradients)) ? (t, t, NoGradient(0.)) : gradients[end]
-                    push!(result, (t, t, (t - t_grad, grad), nothing, instant))
+                    push!(result, (TR, t, t, (t - t_grad, grad), nothing, instant))
                 end
             end
             return result
@@ -197,35 +205,34 @@ function iter_part_times(seq::BaseSequence, tstart)
     )
 end
 
-struct _IterEdges{T}
+struct _IterEdges{R, T}
     individual_iterators::Vector{T}
+    TRs::Vector{Float64}
     tstart::Float64
-    tfinal::Float64
 end
 
 Base.iterate(ie::_IterEdges) = Base.iterate(ie, (ie.tstart, iterate.(ie.individual_iterators)))
+Base.IteratorSize(::Type{<:_IterEdges{false}}) = Base.SizeUnknown()
+Base.IteratorSize(::Type{<:_IterEdges{true}}) = Base.IsInfinite()
 
 function Base.iterate(ie::_IterEdges, my_state)
     current_time, states = my_state
 
-    new_states = map(ie.individual_iterators, states) do iter, state
-        (_, t2, _, _, instant), _ = state
-        while isnothing(instant) && (t2 <= current_time || isapprox(t2, current_time, atol=1e-8))
+    new_states = map(ie.individual_iterators, ie.TRs, states) do iter, rep_time, state
+        (iTR, _, t2, _, _, instant), _ = state
+        while isnothing(instant) && ((t2 + (iTR - 1) * rep_time) <= current_time || isapprox(t2, current_time, atol=1e-8))
             state = Base.iterate(iter, state[2])
-            (_, t2, _, _, instant), _ = state
+            (iTR, _, t2, _, _, instant), _ = state
         end
         return state
     end
-    if any(!isnothing(state[1][5]) for state in new_states)
-        if current_time == ie.tfinal
-            return nothing
-        end
+    if any(!isnothing(state[1][end]) for state in new_states)
         result = (map(new_states) do state
-            (_, _, _, _, instant), _ = state
+            instant = state[1][end]
             return instant
         end)
         new_states = map(ie.individual_iterators, new_states) do iter, state
-            if isnothing(state[1][5])
+            if isnothing(state[1][end])
                 return state
             else
                 return Base.iterate(iter, state[2])
@@ -234,41 +241,39 @@ function Base.iterate(ie::_IterEdges, my_state)
         return (result, (current_time, new_states))
     end
 
-    next_time = min(ie.tfinal, 
-        minimum(new_states; init=Inf) do ((_, t2, _, _, _), _)
-            t2
-        end,
-    )
-    if (next_time == current_time) && (current_time == ie.tfinal)
-        return nothing
-    else
-        return ((current_time, next_time, map(new_states) do state
-            (t1, _, (t_grad, grad), pulse, _), _ = state
-            correct_pulse = isnothing(pulse) ? pulse : (current_time - t1 + pulse[1], pulse[2])
-            return ((current_time - t1 + t_grad, grad), correct_pulse)
-        end), (next_time, new_states))
+    next_time = minimum(zip(new_states, ie.TRs); init=Inf) do (((iTR, _, t2, _, _, _), _), rep_time)
+        t2 + (iTR - 1) * rep_time
     end
+    if isinf(next_time)
+        return nothing
+    end
+    return ((current_time, next_time, map(new_states, ie.TRs) do state, rep_time
+        (iTR, t1, _, (t_grad, grad), pulse, _), _ = state
+        correct_pulse = isnothing(pulse) ? pulse : (current_time - t1 - (iTR - 1) * rep_time + pulse[1], pulse[2])
+        return ((current_time - t1 - (iTR - 1) * rep_time + t_grad, grad), correct_pulse)
+    end), (next_time, new_states))
 end
 
-function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, tfinal)
-    iter_part_times(collect(sequences), tstart, tfinal)
+function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart::Number, repeat::Val; kwargs...)
+    iter_part_times(collect(sequences), tstart, repeat)
 end
 
-function iter_part_times(sequences::Vector{<:BaseSequence}, tstart, tfinal)
-    iters = iter_part_times.(sequences, tstart)
-    dropped = [Iterators.dropwhile(i) do (_, t2, _, _, _)
-        t2 < tstart
-    end for i in iters]
-    return _IterEdges(
+function iter_part_times(sequences::Vector{<:BaseSequence}, tstart::Number, repeat::Val{R}; kwargs...) where {R}
+    iters = iter_part_times.(sequences, repeat; kwargs...)
+    TRs = Float64.(variables.TR.(sequences))
+    dropped = [Iterators.dropwhile(i) do (iTR, _, t2, _, _, _)
+        ((iTR - 1) * TR + t2) < tstart
+    end for (i, TR) in zip(iters, TRs)]
+    return _IterEdges{R, eltype(dropped)}(
         dropped,
-        Float64(tstart),
-        Float64(tfinal),
+        TRs,
+        Float64(tstart)
     )
 end
 
-function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, tfinal, timestep::TimeStep)
+function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, repeat::Val, timestep::TimeStep)
     Iterators.flatten(
-        Iterators.map(iter_part_times(sequences, tstart, tfinal)) do var
+        Iterators.map(iter_part_times(sequences, tstart, repeat)) do var
             if !(var isa Tuple)
                 # instants
                 return (var, )
@@ -299,8 +304,8 @@ function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, tfin
 end
 
 
-function iter_parts(sequences::AbstractVector{<:BaseSequence}, tstart, tfinal, timestep::TimeStep)
-    Iterators.map(iter_part_times(sequences, tstart, tfinal, timestep)) do var
+function iter_parts(sequences::AbstractVector{<:BaseSequence}, tstart::Number, repeat::Val, timestep::TimeStep)
+    Iterators.map(iter_part_times(sequences, tstart, repeat, timestep)) do var
         if !(var isa Tuple)
             return InstantSequencePart(var)
         else
