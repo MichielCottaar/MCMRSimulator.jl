@@ -40,7 +40,7 @@ end
             pulse = InstantPulse(0., 0., nothing)
             for spin_phase in (-90, -45, 0., 30., 90., 170, 22.123789)
                 spin = mr.Spin(phase=spin_phase, transverse=1.)
-                mr.Evolve.apply_instants!([spin], 1, pulse)
+                mr.Evolve.apply_instants!([spin], 1, pulse, nothing)
                 @test mr.phase(spin) ≈ spin_phase
                 @test mr.longitudinal(spin) ≈ 1.
                 @test mr.transverse(spin) ≈ 1.
@@ -52,7 +52,7 @@ end
             pulse = InstantPulse(180., pulse_phase, nothing)
             spin = mr.Spin()
             @test mr.longitudinal(spin) == 1.
-            mr.Evolve.apply_instants!([spin], 1, pulse)
+            mr.Evolve.apply_instants!([spin], 1, pulse, nothing)
             @test mr.longitudinal(spin) ≈ -1.
         end
     end
@@ -61,7 +61,7 @@ end
             pulse = InstantPulse(90., pulse_phase, nothing)
             spin = mr.Spin()
             @test mr.longitudinal(spin) == 1.
-            mr.Evolve.apply_instants!([spin], 1, pulse)
+            mr.Evolve.apply_instants!([spin], 1, pulse, nothing)
             @test mr.longitudinal(spin) ≈ 0. atol=1e-7
         end
     end
@@ -71,7 +71,7 @@ end
                 pulse = InstantPulse(flip_angle, pulse_phase, nothing)
 
                 spin = mr.Spin(longitudinal=0., transverse=1., phase=pulse_phase)
-                mr.Evolve.apply_instants!([spin], 1, pulse)
+                mr.Evolve.apply_instants!([spin], 1, pulse, nothing)
                 @test mr.longitudinal(spin) ≈ zero(Float64) atol=1e-7
                 @test mr.transverse(spin) ≈ one(Float64)
                 @test mr.phase(spin) ≈ Float64(pulse_phase)
@@ -83,7 +83,7 @@ end
             pulse = InstantPulse(180, 0., nothing)
 
             spin = mr.Spin(longitudinal=0., transverse=1., phase=spin_phase)
-            mr.Evolve.apply_instants!([spin], 1, pulse)
+            mr.Evolve.apply_instants!([spin], 1, pulse, nothing)
             @test mr.longitudinal(spin) ≈ 0. atol=1e-7
             @test mr.transverse(spin) ≈ 1.
             @test mr.phase(spin) ≈ -spin_phase
@@ -92,7 +92,7 @@ end
             pulse = InstantPulse(180, pulse_phase, nothing)
 
             spin = mr.Spin(longitudinal=0., transverse=1., phase=0.)
-            mr.Evolve.apply_instants!([spin], 1, pulse)
+            mr.Evolve.apply_instants!([spin], 1, pulse, nothing)
             @test mr.longitudinal(spin) ≈ 0. atol=1e-7
             @test mr.transverse(spin) ≈ 1.
             @test mr.phase(spin) ≈ 2 * pulse_phase
@@ -102,7 +102,7 @@ end
         for pulse_phase in (0., 22., 30., 80.)
             pulse = InstantPulse(90, pulse_phase, nothing)
             spin = mr.Spin()
-            mr.Evolve.apply_instants!([spin], 1, pulse)
+            mr.Evolve.apply_instants!([spin], 1, pulse, nothing)
             @test mr.longitudinal(spin) ≈ 0. atol=1e-7
             @test mr.transverse(spin) ≈ 1.
             @test mr.phase(spin) ≈ pulse_phase - 90
@@ -113,7 +113,7 @@ end
             pulse = InstantPulse(90, pulse_phase, nothing)
             spin_phase = (pulse_phase - 90)
             spin = mr.Spin(longitudinal=0., transverse=1., phase=spin_phase)
-            mr.Evolve.apply_instants!([spin], 1, pulse)
+            mr.Evolve.apply_instants!([spin], 1, pulse, nothing)
             @test mr.longitudinal(spin) ≈ -1.
             @test mr.transverse(spin) ≈ 0. atol=1e-7
         end
@@ -121,13 +121,13 @@ end
     @testset "Gradient should do nothing at origin" begin
         spin = mr.Spin(position=[0, 2, 2], transverse=1., phase=90.)
         @test mr.phase(spin) ≈ Float64(90.)
-        mr.Evolve.apply_instants!([spin], 1, InstantGradient(qvec=[4, 0, 0]))
+        mr.Evolve.apply_instants!([spin], 1, InstantGradient(qvec=[4, 0, 0]), nothing)
         @test mr.phase(spin) ≈ Float64(90.)
     end
     @testset "Test instant gradient effect away from origin" begin
         spin = mr.Spin(position=[2, 2, 2], transverse=1., phase=90.)
         @test mr.phase(spin) ≈ Float64(90.)
-        mr.Evolve.apply_instants!([spin], 1, InstantGradient(qvec=[0.01, 0, 0]))
+        mr.Evolve.apply_instants!([spin], 1, InstantGradient(qvec=[0.01, 0, 0]), nothing)
         @test mr.phase(spin) ≈ Float64(90. + 0.02 * 360 / 2π)
     end
 end
