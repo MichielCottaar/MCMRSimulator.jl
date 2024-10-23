@@ -352,7 +352,10 @@ function run_readout!(snapshot::Snapshot{N}, simulation::Simulation{N}, accumula
     error("Simulation ended before all readout accumulators were filled.")
 end
 
-function run_readout!(snapshot::Snapshot{0}, simulation::Simulation{0}, accumulator::GridAccumulator, repeat::Val; readouts, kwargs...)
+function run_readout!(snapshot::Snapshot{0}, simulation::Simulation{0}, accumulator::GridAccumulator, repeat::Val{R}; readouts, kwargs...) where {R}
+    if R
+        error("Cannot set `nTR` or `skip_TR` when there are no sequences.")
+    end
     empty_sequence = build_sequence() do 
         Sequence([1.]) 
     end
