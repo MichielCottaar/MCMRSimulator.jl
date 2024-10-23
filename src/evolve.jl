@@ -8,11 +8,11 @@ All of these functions call [`evolve_to_time`](@ref) under the hood to actually 
 module Evolve
 import StaticArrays: SVector, MVector, StaticVector
 import LinearAlgebra: norm, ⋅
-import MRIBuilder: Sequence, variables, B0
+import MRIBuilder: Sequence, variables, B0, build_sequence
 import MRIBuilder.Components: InstantGradient, InstantPulse
 import Rotations
 import Bessels: besseli0
-import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, iter_parts, get_readouts, IndexedReadout, first_TR_with_all_readouts
+import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, iter_parts, get_readouts, IndexedReadout, first_TR_with_all_readouts, NoGradient
 import ..Methods: get_time
 import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation
 import ..Simulations: Simulation, _to_snapshot
@@ -59,12 +59,12 @@ by setting `return_snapshot=false` in [`readout`](@ref).
 
 After the simulation a [`Snapshot`](@ref) will be returned.
 """
-struct SnapshotAccumulator <: SingleAccumulator
-    spins :: Vector{Spin{1}}
+struct SnapshotAccumulator{N} <: SingleAccumulator
+    spins :: Vector{Spin{N}}
     time :: Float64
     nwrite :: Ref{Int}
-    SnapshotAccumulator(time::Number) = new(
-        Spin{1}[],
+    SnapshotAccumulator{N}(time::Number) where {N} = new{N}(
+        Spin{N}[],
         Float64(time),
         Ref(0)
     )
@@ -105,6 +105,46 @@ struct GridAccumulator{T<:SingleAccumulator, S<:Simulation}
 end
 
 function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatten=false, subset=Subset(), return_snapshot=false, readouts=nothing, nTR=nothing, kwargs...) where {N}
+    acc_type = return_snapshot ? SnapshotAccumulator{iszero(N) ? 0 : 1} : TotalSignalAccumulator
+
+    flatten_subset = subset isa Subset
+    if flatten_subset
+        subset = [subset]
+    end
+
+    if iszero(N)
+        if isnothing(readouts)
+            error("Should set `readouts` explicitly when running a simulation with 0 sequences.")
+        end
+        flatten_readouts = readouts isa Number
+        use_readouts = flatten_readouts ? [readouts] : readouts
+
+        grid = Array{acc_type}(undef, 1, length(readouts), 1, length(subset))
+        for i_r in 1:length(use_readouts)
+            for i_s in 1:length(subset)
+                grid[1, i_r, 1, i_s] = acc_type(use_readouts[i_r])
+            end
+        end
+        to_flatten = SVector{4, Bool}(
+            noflatten ? 
+            (false, false, false, false) :
+            (
+                true,
+                flatten_readouts,
+                true,
+                flatten_subset,
+            )
+        )
+        return GridAccumulator(
+            grid,
+            subset,
+            simulation,
+            to_flatten,
+            (1, argmax(use_readouts), 1),
+            0
+        )
+    end
+
     actual_readouts = collect.(get_readouts.(simulation.sequences, start_time; readouts=readouts, nTR=nTR, kwargs...))
 
     flatten_readouts = (
@@ -116,11 +156,6 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
         error("No readouts scheduled for at least some of the sequences.")
     end
     flat_readouts = vcat(actual_readouts...)
-
-    flatten_subset = subset isa Subset
-    if flatten_subset
-        subset = [subset]
-    end
 
     first_TR = minimum(flat_readouts) do ro
         ro.TR
@@ -141,7 +176,6 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
         (sequence, ro.readout, ro.TR) => ro
         for sequence in 1:N for ro in actual_readouts[sequence]
     )
-    acc_type = return_snapshot ? SnapshotAccumulator : TotalSignalAccumulator
 
     grid = Array{SingleAccumulator}(undef, grid_size...)
     for index in eachindex(IndexCartesian(), grid)
@@ -192,7 +226,7 @@ function readout!(acc::TotalSignalAccumulator, spins::Vector{Spin{1}})
     acc.nwrite[] += 1
 end
 
-function readout!(acc::SnapshotAccumulator, spins::Vector{Spin{1}})
+function readout!(acc::SnapshotAccumulator{N}, spins::Vector{Spin{N}}) where {N}
     append!(acc.spins, deepcopy(spins))
     acc.nwrite[] += 1
 end
@@ -206,7 +240,8 @@ Adds the `spins` to the accumulators corresponding to each subset for given sequ
 
 Returns true if this is the last readout that needs to be considered in the simulation.
 """
-function readout!(acc::GridAccumulator, spins::Vector{Spin{1}}, index_sequence::Int, readout::IndexedReadout)
+function readout!(acc::GridAccumulator, spins::Vector{Spin{N}}, index_sequence::Int, readout::IndexedReadout) where {N}
+    @assert N <= 1
     if readout.TR <= acc.first_TR
         return false
     end
@@ -307,15 +342,34 @@ end
 Runs the simulation starting from `snapshot` and filling the `accumulators`.
 """
 function run_readout!(snapshot::Snapshot{N}, simulation::Simulation{N}, accumulator::GridAccumulator, repeat::Val; kwargs...) where {N}
-    current_time = snapshot.time
+    @assert N > 0
     B0s = map(B0, simulation.sequences)
-    for part in iter_parts(simulation.sequences, current_time, repeat, simulation.timestep; kwargs...)
+    for part in iter_parts(simulation.sequences, snapshot.time, repeat, simulation.timestep; kwargs...)
         if process_sequence_step!(snapshot.spins, simulation, part, B0s, accumulator)
-            return Snapshot(snapshot.spins, current_time)
+            return
         end
     end
     error("Simulation ended before all readout accumulators were filled.")
 end
+
+function run_readout!(snapshot::Snapshot{0}, simulation::Simulation{0}, accumulator::GridAccumulator, repeat::Val; readouts, kwargs...)
+    empty_sequence = build_sequence() do 
+        Sequence([1.]) 
+    end
+    B0s = zero(SVector{0, Float64})
+    for part in iter_parts([empty_sequence], snapshot.time, Val(false), simulation.timestep; readouts=readouts)
+        if part isa MultSequencePart
+            draw_step!(snapshot.spins, simulation, MultSequencePart(part.duration, NoGradient[]), B0s)
+        else
+            if readout!(accumulator, snapshot.spins, 1, part.instants[1])
+                return
+            end
+        end
+    end
+    error("Simulation ended before all readout accumulators were filled.")
+end
+
+
 
 """
     evolve(snapshot, simulation[, new_time]; bounding_box=<1x1x1 mm box>)
