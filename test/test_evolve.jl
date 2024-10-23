@@ -45,14 +45,14 @@
         @test mr.get_time(snaps) == 2.3
 
         snaps = mr.evolve(snaps, simulation, 3.4)
-        @test mr.get_time(snaps) == 3.5
+        @test mr.get_time(snaps) == 3.4
 
         @test_throws ErrorException mr.evolve(snaps, simulation, 0.1)
 
-        snaps = mr.evolve(Spin(), simulation, 0.)
+        snaps = mr.evolve(mr.Spin(), simulation, 0.)
         @test mr.get_time(snaps) == 0.
 
-        snaps = mr.evolve(Spin(), simulation, 0., TR=2)
+        snaps = mr.evolve(mr.Spin(), simulation, 0., TR=2)
         @test mr.get_time(snaps) == 2.8
 
         snaps = mr.evolve(snaps, simulation, 0.5, TR=3)
