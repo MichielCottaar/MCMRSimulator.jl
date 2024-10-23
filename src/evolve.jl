@@ -329,7 +329,7 @@ function evolve(spins, simulation::Simulation{N}, new_time; TR=nothing, bounding
         if snapshot.time > new_time
             error("Cannot evolve snapshot back in time.")
         end
-        res = readout(snapshot, simulation, new_time)
+        res = readout(snapshot, simulation, new_time, return_snapshot=true)
     else
         if iszero(N)
             error("Cannot set `TR` in evolve without having a sequence in simulation.")
@@ -346,20 +346,23 @@ function evolve(spins, simulation::Simulation{N}, new_time; TR=nothing, bounding
             end
         end
         current_TR = first_TR_with_all_readouts(simulation.sequences[1], snapshot.time; readouts=new_time)
-        res = readout(snapshot, simulation, new_time; skip_TR=TR - current_TR, readouts=new_time)
+        res = readout(snapshot, simulation, new_time; skip_TR=TR - current_TR, readouts=new_time, return_snapshot=true)
+    end
+    if simulation.flatten || iszero(N)
+        return res
     end
     @assert size(res) == (N, )
     spins = [
-        Spin{N}(
+        Spin(
             res[1].spins[index].position,
-            [
-                r.spins[index].orientation[1]
+            SVector{N, SpinOrientation}([
+                r.spins[index].orientations[1]
                 for r in res
-            ],
+            ]),
             res[1].spins[index].reflection,
             res[1].spins[index].rng,
         )
-        for index in 1:length(snaphot.spins)
+        for index in 1:length(snapshot.spins)
     ]
     return Snapshot(
         spins,
