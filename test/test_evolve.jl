@@ -57,8 +57,8 @@
         sequence = GradientEcho(TE=2.)
         no_diff = mr.Simulation([sequence], diffusivity=0., R2=0.3)
         with_diff = mr.Simulation([sequence], diffusivity=1., R2=0.3)
-        spin_no_diff = mr.evolve(mr.Spin(), no_diff).spins[1]
-        spin_with_diff = mr.evolve(mr.Spin(), with_diff).spins[1]
+        spin_no_diff = mr.evolve(mr.Spin(), no_diff, 2.).spins[1]
+        spin_with_diff = mr.evolve(mr.Spin(), with_diff, 2.).spins[1]
         @test spin_no_diff.position == SA[0, 0, 0]
         @test spin_with_diff.position != SA[0, 0, 0]
         @test mr.orientation.(spin_with_diff.orientations) == mr.orientation.(spin_no_diff.orientations)
