@@ -43,7 +43,10 @@ function TimeStep(;
     idx = argmin(options)
     if verbose
         lines = ["# Timestep determination"]
-        if idx == 1
+        if isinf(minimum(options))
+            push!(lines, "No maximum timestep set.")
+            push!(lines, "To set a maximum timestep set `timestep=<number>` in the `Simulation` constructor.")
+        elseif idx == 1
             push!(lines, "Maximum timestep set by turtoisity constraint based on size of geometry to $(options[1]) ms.")
             if isnothing(size_scale)
                 push!(lines, "Size scale of smallest object in the simulation was automatically determined to be $(use_size_scale) um.")
@@ -64,7 +67,7 @@ function TimeStep(;
             push!(lines, "Maximum timestep set by requirement to limit the transition from bound to free state of spins to $(options[5]) ms.")
             push!(lines, "You can alter the sensitivity to the bound state dwell time by changing the value of `timestep=(dwell_time=...)` from its current value of $(dwell_time).")
         end
-        push!(lines, "The actual timestep will be further reduced based on the MR sequence(s).")
+        push!(lines, "The actual timestep will be reduced based on the MR sequence(s).")
         @info join(lines, '\n')
     end
     return TimeStep(minimum(options), gradient / diffusivity)
