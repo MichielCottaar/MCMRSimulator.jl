@@ -44,14 +44,7 @@
         snaps = mr.evolve(mr.Spin(), simulation, 2.3)
         @test mr.get_time(snaps) == 2.3
 
-        snaps = mr.evolve(snaps, simulation)
-        @test mr.get_time(snaps) == 2.8
-
-        snaps = mr.evolve(snaps, simulation)
-        @test mr.get_time(snaps) == 5.6
-
-        snaps = mr.evolve(mr.Spin(), simulation)
-        @test mr.get_time(snaps) == 2.8
+        @test_throws MethodError mr.evolve(snaps, simulation)
     end
     @testset "Basic diffusion has no effect in constant fields" begin
         sequence = GradientEcho(TE=2.)
@@ -122,10 +115,12 @@
             mr.IndexedReadout(3., 1, 2)
         ]
         @test collect(mr.get_readouts(seq, 2.)) == [
+            mr.IndexedReadout(2., 1, 1),
             mr.IndexedReadout(3., 1, 2)
         ]
         @test collect(mr.get_readouts(seq, 2., readouts=[20., 1., 3., 2.])) == [
-            mr.IndexedReadout(3., 1, 3)
+            mr.IndexedReadout(2., 1, 4),
+            mr.IndexedReadout(3., 1, 3),
             mr.IndexedReadout(20., 1, 1)
         ]
         @test collect(mr.get_readouts(seq, 0., nTR=2)) == [
