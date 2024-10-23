@@ -348,7 +348,7 @@ function evolve(spins, simulation::Simulation{N}, new_time; TR=nothing, bounding
         current_TR = first_TR_with_all_readouts(simulation.sequences[1], snapshot.time; readouts=new_time)
         res = readout(snapshot, simulation, new_time; skip_TR=TR - current_TR, readouts=new_time)
     end
-    @assert size(res) = (N, )
+    @assert size(res) == (N, )
     spins = [
         Spin{N}(
             res[1].spins[index].position,
