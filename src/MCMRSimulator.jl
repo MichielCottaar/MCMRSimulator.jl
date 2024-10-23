@@ -26,6 +26,8 @@ include("evolve.jl")
 include("plot.jl")
 include("cli/cli.jl")
 
+import Compat: @compat
+
 import .Constants: gyromagnetic_ratio
 export gyromagnetic_ratio
 
@@ -37,6 +39,9 @@ export position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientatio
 
 import .TimeSteps: TimeStep
 export TimeStep
+
+import .SequenceParts: get_readouts, IndexedReadout
+@compat public get_readouts, IndexedReadout
 
 import .Simulations: Simulation, susceptibility_off_resonance
 export Simulation, susceptibility_off_resonance

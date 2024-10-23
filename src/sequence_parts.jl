@@ -104,19 +104,19 @@ struct InstantSequencePart{N, T, ST<:StaticVector{N, T}}
 end
 
 """
-    IndexedReadout(time, sequence, TR, readout)
+    IndexedReadout(time, TR, readout)
 
 Represents a readout in an MR sequence.
 
+Generate these for a sequence of interest using [`MCMRSimulator.get_readouts`](@ref).
+
 All indices are integers. They refer to:
 - `time`: time since beginning of sequence in ms
-- `sequence`: the sequence index if multiple sequences get simulated.
 - `TR`: which TR the simulation is in (defaults to 0 if not set).
 - `readout`: which readout within the TR (or total sequence) this is.
 """
 struct IndexedReadout
     time::Float64
-    sequence::Int
     TR::Int
     readout::Int
 end
@@ -128,27 +128,21 @@ iter_building_blocks_raw(bb::BaseBuildingBlock) = [bb]
 iter_building_blocks_no_time(seq, repeat::Val{false}) = Iterators.flatten([iter_building_blocks_raw(seq), [Wait(Inf)]])
 iter_building_blocks_no_time(seq, repeat::Val{true}) = Iterators.cycle(Iterators.flatten([iter_building_blocks_raw(seq), [:TR]]))
 
-iter_building_blocks(seq::BaseSequence, repeat) = Iterators.accumulate(iter_building_blocks_no_time(seq, repeat); init=(1, 0., nothing)) do (prev_TR, prev_time, prev_bb), bb
+iter_building_blocks(seq::BaseSequence, repeat) = Iterators.accumulate(iter_building_blocks_no_time(seq, repeat); init=(1, 0., nothing, Ref{Int}(0))) do (prev_TR, prev_time, prev_bb, readout_index), bb
     if isnothing(prev_bb)
-        return (prev_TR, prev_time, bb)
+        return (prev_TR, prev_time, bb, Ref{Int}(0))
     elseif bb == :TR
-        return (prev_TR + 1, 0., Wait(0.))
+        return (prev_TR + 1, 0., Wait(0.), Ref{Int}(0))
     else
-        return (prev_TR, prev_time + variables.duration(prev_bb), bb)
+        return (prev_TR, prev_time + variables.duration(prev_bb), bb, readout_index)
     end
 end
 
 
-function iter_part_times(seq::BaseSequence, repeat::Val; readouts=nothing, sequence_index=0)
-    readout_index = Ref{Int}(1)
-    TR_index = Ref{Int}(0)
+function iter_part_times(seq::BaseSequence, repeat::Val; readouts=nothing)
     rep_time = variables.TR(seq)
     Iterators.flatten(
-        Iterators.map(iter_building_blocks(seq, repeat)) do (TR, time, bb)
-            if TR > TR_index[]
-                readout_index[] = 1
-            end
-
+        Iterators.map(iter_building_blocks(seq, repeat)) do (TR, time, bb, readout_index)
             gradients = Tuple{Float64, Float64, GradientWaveform}[]
             pulses = Tuple{Float64, Float64, RFPulseComponent}[]
             instants = Tuple{Float64, Union{InstantGradient, InstantPulse, SingleReadout, IndexedReadout}}[]
@@ -175,8 +169,8 @@ function iter_part_times(seq::BaseSequence, repeat::Val; readouts=nothing, seque
                         duration = variables.duration(event)
                         push!(pulses, (current_time + delay, current_time + delay + duration, event))
                     elseif event isa SingleReadout && isnothing(readouts)
-                        push!(instants, (current_time + delay, IndexedReadout((TR - 1) * rep_time + current_time + delay, sequence_index, TR, readout_index[])))
                         readout_index[] += 1
+                        push!(instants, (current_time + delay, IndexedReadout((TR - 1) * rep_time + current_time + delay, TR, readout_index[])))
                     end
                 end
             end
@@ -186,7 +180,7 @@ function iter_part_times(seq::BaseSequence, repeat::Val; readouts=nothing, seque
                 end_time = time + variables.duration(bb)
                 for (index, readout) in enumerate(readouts)
                     if time < readout <= end_time
-                        push!(instants, (readout, IndexedReadout((TR - 1) * rep_time + readout, sequence_index, TR, index)))
+                        push!(instants, (readout, IndexedReadout((TR - 1) * rep_time + readout, TR, index)))
                     end
                 end
             end
@@ -375,30 +369,87 @@ nreadouts_per_TR(seq::BaseSequence) = length(collect(Iterators.filter(iter_part_
     state[end] isa SingleReadout
 end))
 
-function get_readouts(seq::BaseSequence, start_time::Number, repeat::Val, kwargs...) 
-    rep_time = variables.TR(seq)
+function first_TR_with_all_readouts(seq::BaseSequence, start_time::Number; readouts=nothing)
+    if iszero(start_time)
+        return 1
+    else
+        current_TR = 1
+        for ro in get_readouts(seq, 0.; nTR=typemax(Int), readouts=readouts)
+            if ro.time <= start_time
+                current_TR = ro.TR + 1
+            else
+                return current_TR
+            end
+        end
+    end
+    error()
+end
 
-    filtered = Iterators.filter(iter_part_times(seq, repeat, kwargs...)) do (TR, time, _, _, _, instant)
-        return ((TR - 1) * rep_time + time >= start_time) && instant isa IndexedReadout
+"""
+    get_readouts(sequence, start_time; readouts=nothing, nTR=1, skip_TR=0)
+
+Returns a iterator of the readouts ([`MCMRSimulator.IndexedReadout`](@ref) objects) that will be used for the given sequence in the simulator.
+
+This can be used to identify which readouts will be (or have been) used in the simulation by running:
+`collect(get_readouts(sequence, snapshot.current_time; kwargs...))`
+where `snapshot` is the starting snapshot (which has a `current_time` of 0 by default) and `kwargs` are the keyword arguments used in
+[`readout`](@ref) (i.e., `readouts, `nTR`, and `skip_TR`).
+
+By default the readout/ADC objects with the actual sequence definition are used.
+These can be overriden by `readouts`, which can be set to a vector of the timings of the readouts within each TR.
+
+# Non-repeating sequences
+This is the behaviour if both `nTR` and `skip_TR` are not set by the user.
+Any readouts before the `start_time` are ignored.
+Any readouts after the `start_time` (whether from the `readouts` keyword or within the sequence definition) are returned.
+
+# Repeating sequences
+This is the behaviour if either `nTR` or `skip_TR` or both are not set by the user.
+If at `start_time` any of the readouts in the current TR have already passed, then the readout will only start in the next TR (unless `skip_TR` is set to -1).
+We will skip an additional number of TRs given by `skip_TR` (default: 0).
+Then readouts will continue for the number of TRs given by `nTR` (default: 1).
+"""
+function get_readouts(seq::BaseSequence, start_time::Number; readouts=nothing, nTR=nothing, skip_TR=nothing) 
+    repeat = !(isnothing(nTR) && isnothing(skip_TR))
+    if isnothing(nTR)
+        nTR = 1
+    end
+    if isnothing(skip_TR)
+        skip_TR = 0
+    end
+
+    if !isnothing(readouts)
+        readouts = collect(readouts)
+        if repeat
+            rep_time = variables.TR(seq)
+            max_ro = maximum(readouts)
+            if max_ro > rep_time
+                if isapprox(max_ro, rep_time, rtol=1e-3)
+                    @warn "Adjusting maximum readout time ($max_ro) to match the TR of $rep_time."
+                else
+                    error("Readouts have been scheduled at $max_ro ms beyond the sequence repetitition time of $rep_time ms.")
+                end
+            end
+            readouts = min.(readouts, rep_time)
+        end
+    end
+    base_iterator = iter_part_times(seq, Val(repeat); readouts=readouts)
+    if repeat
+        first_TR = first_TR_with_all_readouts(seq, start_time, readouts=readouts) + skip_TR
+        last_TR = first_TR + nTR - 1
+        drop_first = Iterators.dropwhile(res -> res[1] < first_TR, base_iterator)
+        drop_last = Iterators.takewhile(res -> res[1] <= last_TR, drop_first)
+    else
+        drop_last = Iterators.dropwhile(res -> res[2] <= start_time, base_iterator)
+    end
+
+    filtered = Iterators.filter(drop_last) do res
+        return res[end] isa IndexedReadout
     end
     return Iterators.map(filtered) do res
         return res[end]
     end
 end
 
-function first_TR_with_all_readouts(seq::BaseSequence, start_time::Number, kwargs...)
-    if iszero(start_time)
-        return 1
-    else
-        current_TR = 1
-        for ro in get_readouts(seq, kwargs...)
-            if ro.time < start_time
-                current_TR = ro.TR
-            else
-                return current_TR
-            end
-        end
-    end
-end
 
 end

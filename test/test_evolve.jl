@@ -106,4 +106,60 @@
         @test mr.longitudinal(readouts[2]) ≈ 0. atol=1e-12
         @test mr.longitudinal(readouts[3]) ≈ 0. atol=1e-12
     end
+
+    @testset "Test readout identification" begin
+        seq = build_sequence() do 
+            Sequence([
+                InstantPulse(flip_angle=0, phase=0.), 
+                2., 
+                SingleReadout(), 
+                1.,
+                SingleReadout(), 
+                1.
+            ]) 
+        end
+        @test collect(mr.get_readouts(seq, 0.)) == [
+            mr.IndexedReadout(2., 1, 1),
+            mr.IndexedReadout(3., 1, 2)
+        ]
+        @test collect(mr.get_readouts(seq, 2.)) == [
+            mr.IndexedReadout(3., 1, 2)
+        ]
+        @test collect(mr.get_readouts(seq, 2., readouts=[20., 1., 3., 2.])) == [
+            mr.IndexedReadout(3., 1, 3)
+            mr.IndexedReadout(20., 1, 1)
+        ]
+        @test collect(mr.get_readouts(seq, 0., nTR=2)) == [
+            mr.IndexedReadout(2., 1, 1),
+            mr.IndexedReadout(3., 1, 2),
+            mr.IndexedReadout(6., 2, 1),
+            mr.IndexedReadout(7., 2, 2),
+        ]
+        @test collect(mr.get_readouts(seq, 1., nTR=2)) == [
+            mr.IndexedReadout(2., 1, 1),
+            mr.IndexedReadout(3., 1, 2),
+            mr.IndexedReadout(6., 2, 1),
+            mr.IndexedReadout(7., 2, 2),
+        ]
+        @test collect(mr.get_readouts(seq, 0., skip_TR=1)) == [
+            mr.IndexedReadout(6., 2, 1),
+            mr.IndexedReadout(7., 2, 2),
+        ]
+        @test collect(mr.get_readouts(seq, 2.5, skip_TR=0)) == [
+            mr.IndexedReadout(6., 2, 1),
+            mr.IndexedReadout(7., 2, 2),
+        ]
+        @test collect(mr.get_readouts(seq, 2., skip_TR=0)) == [
+            mr.IndexedReadout(6., 2, 1),
+            mr.IndexedReadout(7., 2, 2),
+        ]
+
+        @test_throws ErrorException mr.get_readouts(seq, 2., skip_TR=0, readouts=[2., 30])
+        
+        @test collect(mr.get_readouts(seq, 2., skip_TR=0, readouts=[2., 4.00001])) == [
+            mr.IndexedReadout(6., 2, 1),
+            mr.IndexedReadout(8., 2, 2),
+        ]
+    end
+
 end
