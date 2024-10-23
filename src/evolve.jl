@@ -536,6 +536,10 @@ function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::InstantGradien
     return false
 end
 
+function apply_instants!(spins::Vector{<:Spin}, index::Int, readout::IndexedReadout, accumulator::GridAccumulator)
+    readout!(accumulator, get_sequence.(spins, index), index, readout)
+end
+
 function apply_instants!(spins::Vector{<:Spin{1}}, index::Int, readout::IndexedReadout, accumulator::GridAccumulator)
     readout!(accumulator, spins, index, readout)
 end
