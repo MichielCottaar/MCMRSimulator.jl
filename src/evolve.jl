@@ -324,9 +324,9 @@ The function returns an up to 3-dimensional (KxLxMxN) array, with the following 
 By default each element of this matrix is either a [`SpinOrientationSum`](@ref) with the total signal.
 If `return_snapshot=true` is set, each element is the full [`Snapshot`](@ref) instead.
 """
-readout(spins, simulation::Simulation, new_readout_times=nothing; bounding_box=500, kwargs...) = readout(_to_snapshot(spins, simulation, bounding_box), simulation, new_readout_times; kwargs...)
+readout(spins, simulation::Simulation, new_readout_times=nothing; bounding_box=500, kwargs...) = readout_internal(_to_snapshot(spins, simulation, bounding_box), simulation, new_readout_times; kwargs...)
 
-function readout(snapshot::Snapshot{N}, simulation::Simulation{N}, new_readout_times=nothing; kwargs...) where {N}
+function readout_internal(snapshot::Snapshot{N}, simulation::Simulation{N}, new_readout_times=nothing; kwargs...) where {N}
     if :readouts in keys(kwargs)
         error("readout timings should be set as the 3rd positional argument, not a keyword argument.")
     end
