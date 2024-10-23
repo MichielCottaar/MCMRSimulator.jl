@@ -46,6 +46,8 @@ These properties can be either defined by a [`Subset`](@ref) object or a set of 
 These keyword arguments are:
 $(_arguments)
 """
+get_subset(spins::AbstractVector{<:Spin}, args...; kwargs...) = get_subset(Snapshot(spins), args...; kwargs...).spins
+
 get_subset(snapshot::Snapshot, simulation::Union{Simulation, FixedGeometry}; kwargs...) = get_subset(snapshot, simulation, Subset(; kwargs...))
 
 get_subset(snapshot::Snapshot, simulation::Simulation, subset::Subset) = get_subset(snapshot, simulation.geometry, subset)

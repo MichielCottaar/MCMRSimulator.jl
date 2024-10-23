@@ -179,7 +179,10 @@ function iter_part_times(seq::BaseSequence, repeat::Val; readouts=nothing)
                 # add custom readouts
                 end_time = time + variables.duration(bb)
                 for (index, readout) in enumerate(readouts)
-                    if time < readout <= end_time
+                    if (
+                        (time < readout <= end_time) ||  # readout is during this block
+                        (iszero(time) && iszero(readout) && time != end_time) # or readout is at beginning of TR (and this block is not instant)
+                    )
                         push!(instants, (readout, IndexedReadout((TR - 1) * rep_time + readout, TR, index)))
                     end
                 end
@@ -274,7 +277,7 @@ function Base.iterate(ie::_IterEdges, my_state)
 end
 
 function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart::Number, repeat::Val; kwargs...)
-    iter_part_times(collect(sequences), tstart, repeat)
+    iter_part_times(collect(sequences), tstart, repeat; kwargs...)
 end
 
 function iter_part_times(sequences::Vector{<:BaseSequence}, tstart::Number, repeat::Val{R}; kwargs...) where {R}
@@ -290,9 +293,9 @@ function iter_part_times(sequences::Vector{<:BaseSequence}, tstart::Number, repe
     )
 end
 
-function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, repeat::Val, timestep::TimeStep)
+function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, repeat::Val, timestep::TimeStep; kwargs...)
     Iterators.flatten(
-        Iterators.map(iter_part_times(sequences, tstart, repeat)) do var
+        Iterators.map(iter_part_times(sequences, tstart, repeat; kwargs...)) do var
             if !(var isa Tuple)
                 # instants
                 return (var, )
@@ -323,8 +326,8 @@ function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, repe
 end
 
 
-function iter_parts(sequences::AbstractVector{<:BaseSequence}, tstart::Number, repeat::Val, timestep::TimeStep)
-    Iterators.map(iter_part_times(sequences, tstart, repeat, timestep)) do var
+function iter_parts(sequences::AbstractVector{<:BaseSequence}, tstart::Number, repeat::Val, timestep::TimeStep; kwargs...)
+    Iterators.map(iter_part_times(sequences, tstart, repeat, timestep; kwargs...)) do var
         if !(var isa Tuple)
             return InstantSequencePart(var)
         else
@@ -440,7 +443,7 @@ function get_readouts(seq::BaseSequence, start_time::Number; readouts=nothing, n
         drop_first = Iterators.dropwhile(res -> res[1] < first_TR, base_iterator)
         drop_last = Iterators.takewhile(res -> res[1] <= last_TR, drop_first)
     else
-        drop_last = Iterators.dropwhile(res -> res[2] <= start_time, base_iterator)
+        drop_last = Iterators.dropwhile(res -> res[2] < start_time, base_iterator)
     end
 
     filtered = Iterators.filter(drop_last) do res
