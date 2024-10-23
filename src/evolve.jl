@@ -105,8 +105,6 @@ struct GridAccumulator{T<:SingleAccumulator, S<:Simulation}
 end
 
 function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatten=false, subset=Subset(), return_snapshot=false, readouts=nothing, nTR=nothing, kwargs...) where {N}
-    acc_type = return_snapshot ? SnapshotAccumulator{iszero(N) ? 0 : 1} : TotalSignalAccumulator
-
     flatten_subset = subset isa Subset
     if flatten_subset
         subset = [subset]
@@ -116,13 +114,16 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
         if isnothing(readouts)
             error("Should set `readouts` explicitly when running a simulation with 0 sequences.")
         end
+        if !return_snapshot
+            error("`return_snapshot` should be set to true when running a simulation with 0 sequences")
+        end
         flatten_readouts = readouts isa Number
         use_readouts = flatten_readouts ? [readouts] : readouts
 
-        grid = Array{acc_type}(undef, 1, length(readouts), 1, length(subset))
+        grid = Array{SnapshotAccumulator{0}}(undef, 1, length(readouts), 1, length(subset))
         for i_r in 1:length(use_readouts)
             for i_s in 1:length(subset)
-                grid[1, i_r, 1, i_s] = acc_type(use_readouts[i_r])
+                grid[1, i_r, 1, i_s] = SnapshotAccumulator{0}(use_readouts[i_r])
             end
         end
         to_flatten = SVector{4, Bool}(
@@ -176,6 +177,7 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
         (sequence, ro.readout, ro.TR) => ro
         for sequence in 1:N for ro in actual_readouts[sequence]
     )
+    acc_type = return_snapshot ? SnapshotAccumulator{1} : TotalSignalAccumulator
 
     grid = Array{SingleAccumulator}(undef, grid_size...)
     for index in eachindex(IndexCartesian(), grid)
