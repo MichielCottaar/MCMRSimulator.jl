@@ -386,13 +386,13 @@ function evolve(spins, simulation::Simulation{N}, new_time; TR=nothing, bounding
         if snapshot.time > new_time
             error("Cannot evolve snapshot back in time.")
         end
-        res = readout(snapshot, simulation, new_time, return_snapshot=true)
+        res = readout_internal(snapshot, simulation, new_time, return_snapshot=true)
     else
         if iszero(N)
             error("Cannot set `TR` in evolve without having a sequence in simulation.")
         end
         rep_time = variables.TR(simulation.sequences[1])
-        if !all(variables.duration(s) ≈ first_TR for s in simulation.sequences)
+        if !all(variables.duration(s) ≈ rep_time for s in simulation.sequences)
             error("Cannot evolve snapshot for multiple repetition times, because the simulation contains sequences with different TRs. Please set a `new_time` explicitly.")
         end
         if new_time > rep_time
@@ -403,7 +403,7 @@ function evolve(spins, simulation::Simulation{N}, new_time; TR=nothing, bounding
             end
         end
         current_TR = first_TR_with_all_readouts(simulation.sequences[1], snapshot.time; readouts=new_time)
-        res = readout(snapshot, simulation, new_time; skip_TR=TR - current_TR, readouts=new_time, return_snapshot=true)
+        res = readout_internal(snapshot, simulation, new_time; skip_TR=TR - current_TR, return_snapshot=true)
     end
     if simulation.flatten || iszero(N)
         return res
