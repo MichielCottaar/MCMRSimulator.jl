@@ -44,6 +44,22 @@
         snaps = mr.evolve(mr.Spin(), simulation, 2.3)
         @test mr.get_time(snaps) == 2.3
 
+        snaps = mr.evolve(snaps, simulation, 3.4)
+        @test mr.get_time(snaps) == 3.5
+
+        @test_throws ErrorException mr.evolve(snaps, simulation, 0.1)
+
+        snaps = mr.evolve(Spin(), simulation, 0.)
+        @test mr.get_time(snaps) == 0.
+
+        snaps = mr.evolve(Spin(), simulation, 0., TR=2)
+        @test mr.get_time(snaps) == 2.8
+
+        snaps = mr.evolve(snaps, simulation, 0.5, TR=3)
+        @test mr.get_time(snaps) == 6.1
+
+        @test_throws ErrorException mr.evolve(snaps, simulation, 0.1)
+
         @test_throws MethodError mr.evolve(snaps, simulation)
     end
     @testset "Basic diffusion has no effect in constant fields" begin
