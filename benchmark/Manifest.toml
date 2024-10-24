@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.0"
+julia_version = "1.11.1"
 manifest_format = "2.0"
 project_hash = "173324c2846dd1a00490e079a26cde6a854a960f"
 
@@ -58,9 +58,9 @@ version = "0.1.38"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra", "Requires"]
-git-tree-sha1 = "6a55b747d1812e699320963ffde36f1ebdda4099"
+git-tree-sha1 = "d80af0733c99ea80575f612813fa6aa71022d33a"
 uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
-version = "4.0.4"
+version = "4.1.0"
 weakdeps = ["StaticArrays"]
 
     [deps.Adapt.extensions]
@@ -165,15 +165,15 @@ version = "0.2.8"
 
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "9e2a6b69137e6969bab0152632dcb3bc108c8bdd"
+git-tree-sha1 = "8873e196c2eb87962a2048b3b8e08946535864a1"
 uuid = "6e34b625-4abd-537c-b88f-471c36dfa7a0"
-version = "1.0.8+1"
+version = "1.0.8+2"
 
 [[deps.CSV]]
 deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "PrecompileTools", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings", "WorkerUtilities"]
-git-tree-sha1 = "6c834533dc1fabd820c1db03c839bf97e45a3fab"
+git-tree-sha1 = "deddd8725e5e1cc49ee205a1964256043720a6c3"
 uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-version = "0.10.14"
+version = "0.10.15"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra"]
@@ -205,9 +205,9 @@ version = "0.11.5"
 
 [[deps.Colors]]
 deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
-git-tree-sha1 = "362a287c3aa50601b0bc359053d5c2468f0e7ce0"
+git-tree-sha1 = "64e15186f0aa277e174aa81798f7eb8598e0157e"
 uuid = "5ae59095-9a9b-59fe-a467-6f913c188581"
-version = "0.12.11"
+version = "0.13.0"
 
 [[deps.CommonSolve]]
 git-tree-sha1 = "0eee5eb66b1cf62cd6ad1b460238e60e4b09400c"
@@ -312,9 +312,9 @@ version = "1.15.1"
 
 [[deps.Distances]]
 deps = ["LinearAlgebra", "Statistics", "StatsAPI"]
-git-tree-sha1 = "66c4c81f259586e8f002eacebc177e1fb06363b0"
+git-tree-sha1 = "c7e3a542b999843086e2f29dac96a618c105be1d"
 uuid = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
-version = "0.10.11"
+version = "0.10.12"
 weakdeps = ["ChainRulesCore", "SparseArrays"]
 
     [deps.Distances.extensions]
@@ -620,9 +620,9 @@ version = "0.21.4"
 
 [[deps.JuMP]]
 deps = ["LinearAlgebra", "MacroTools", "MathOptInterface", "MutableArithmetics", "OrderedCollections", "PrecompileTools", "Printf", "SparseArrays"]
-git-tree-sha1 = "c95f443d4641b128d626a429b51d5185050135b5"
+git-tree-sha1 = "c91f872c6150cf1471f9cb279f5e0dc09423bdcf"
 uuid = "4076af6c-e467-56ae-b986-b466b2749572"
-version = "1.23.2"
+version = "1.23.3"
 
     [deps.JuMP.extensions]
     JuMPDimensionalDataExt = "DimensionalData"
@@ -724,7 +724,7 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 version = "1.11.0"
 
 [[deps.MCMRSimulator]]
-deps = ["Accessors", "ArgParse", "BSplineKit", "Bessels", "CSV", "Colors", "CoordinateTransformations", "DataFrames", "DataStructures", "Distributions", "Documenter", "FFTW", "GeometryBasics", "JSON", "LinearAlgebra", "Logging", "MRIBuilder", "MakieCore", "Markdown", "NearestNeighbors", "Optim", "PackageCompiler", "Pkg", "PlyIO", "Random", "Roots", "Rotations", "SparseArrays", "SpecialFunctions", "StaticArrays", "Statistics", "Tables", "UUIDs"]
+deps = ["Accessors", "ArgParse", "BSplineKit", "Bessels", "CSV", "Colors", "Compat", "CoordinateTransformations", "DataFrames", "DataStructures", "Distributions", "Documenter", "FFTW", "GeometryBasics", "JSON", "LinearAlgebra", "Logging", "MRIBuilder", "MakieCore", "Markdown", "NearestNeighbors", "Optim", "PackageCompiler", "Pkg", "PlyIO", "Random", "Roots", "Rotations", "SparseArrays", "SpecialFunctions", "StaticArrays", "Statistics", "Tables", "UUIDs"]
 path = ".."
 uuid = "eac06e4d-a854-4bf6-b44f-54c98b0401d1"
 version = "0.10.0"
@@ -749,11 +749,11 @@ version = "2024.2.0+0"
 
 [[deps.MRIBuilder]]
 deps = ["Interpolations", "Ipopt", "JuMP", "Juniper", "LinearAlgebra", "MacroTools", "MakieCore", "Polynomials", "Printf", "QuadGK", "Rotations", "Serialization", "StaticArrays"]
-git-tree-sha1 = "0c17ff14e6fb4cc697385fe97cee4b660ba3fc8b"
+git-tree-sha1 = "dbcd10157d5bb69c1ca4c7c73b58fe81ca8838ca"
 repo-rev = "main"
 repo-url = "../../MRIBuilder"
 uuid = "691e6122-0b62-4932-92e7-e4ff0ddaf3a0"
-version = "0.2.0"
+version = "0.3.0"
 
     [deps.MRIBuilder.extensions]
     MakieMRIBuilder = "Makie"
@@ -792,9 +792,9 @@ version = "0.1.2"
 
 [[deps.MathOptInterface]]
 deps = ["BenchmarkTools", "CodecBzip2", "CodecZlib", "DataStructures", "ForwardDiff", "JSON", "LinearAlgebra", "MutableArithmetics", "NaNMath", "OrderedCollections", "PrecompileTools", "Printf", "SparseArrays", "SpecialFunctions", "Test", "Unicode"]
-git-tree-sha1 = "5b246fca5420ae176d65ed43a2d0ee5897775216"
+git-tree-sha1 = "c7fff4fbc415a6833988efbda7621039af2a5f36"
 uuid = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
-version = "1.31.2"
+version = "1.32.0"
 
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -817,9 +817,9 @@ version = "2023.12.12"
 
 [[deps.MutableArithmetics]]
 deps = ["LinearAlgebra", "SparseArrays", "Test"]
-git-tree-sha1 = "7768a4e5f2b372777a90c1758809333081a096a8"
+git-tree-sha1 = "90077f1e79de8c9c7c8a90644494411111f4e07b"
 uuid = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
-version = "1.5.1"
+version = "1.5.2"
 
 [[deps.NLSolversBase]]
 deps = ["DiffResults", "Distributed", "FiniteDiff", "ForwardDiff"]
@@ -913,9 +913,9 @@ version = "0.11.31"
 
 [[deps.PackageCompiler]]
 deps = ["Artifacts", "Glob", "LazyArtifacts", "Libdl", "Pkg", "Printf", "RelocatableFolders", "TOML", "UUIDs", "p7zip_jll"]
-git-tree-sha1 = "b3eefba312721f9238550f162fd1e2a7e845b3d1"
+git-tree-sha1 = "ec56e6fa288d89d3fb574d4cef4d1d537f099ad2"
 uuid = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
-version = "2.1.18"
+version = "2.1.21"
 
 [[deps.Parameters]]
 deps = ["OrderedCollections", "UnPack"]
@@ -1197,9 +1197,9 @@ version = "1.1.1"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "PrecompileTools", "Random", "StaticArraysCore"]
-git-tree-sha1 = "eeafab08ae20c62c44c8399ccb9354a04b80db50"
+git-tree-sha1 = "777657803913ffc7e8cc20f0fd04b634f871af8f"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.9.7"
+version = "1.9.8"
 weakdeps = ["ChainRulesCore", "Statistics"]
 
     [deps.StaticArrays.extensions]
