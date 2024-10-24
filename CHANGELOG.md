@@ -4,6 +4,7 @@ All notable changes to MCMRSimulator.jl will be documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+## [v0.11.0]
 ### Added
 - Meshes are automatically split into individual components (based on connectivity). The R1/R2/off-resonance can be set individually within each of these components. The component index of each element can be overwritten using `mesh.component = [...]`.
 - The `Subset(inside=...)` can now be set to an integer value in addition to `true` or `false`. If set to an integer value the result will only include spins inside exactly that number of obstructions, rather than within any number of obstructions (which is used when `inside=true`).
@@ -152,7 +153,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added citation instructions
 
 
-[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.10.0...main
+[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.11.0...main
+[v0.11.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.10.0...v0.11.0
 [v0.10.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.9.0...v0.10.0
 [v0.9.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.8.0...v0.9.0
 [v0.8.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.7.1...v0.8.0
