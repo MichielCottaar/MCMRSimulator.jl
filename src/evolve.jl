@@ -148,15 +148,19 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
 
     actual_readouts = collect.(get_readouts.(simulation.sequences, start_time; readouts=readouts, nTR=nTR, kwargs...))
 
-    flatten_readouts = (
-        isnothing(readouts) ?
-        maximum(length.(actual_readouts)) == 1 :
-        readouts isa Number
-    )
     if any(iszero.(length.(actual_readouts)))
         error("No readouts scheduled for at least some of the sequences.")
     end
     flat_readouts = vcat(actual_readouts...)
+
+    nreadouts = maximum(flat_readouts) do ro
+        ro.readout
+    end
+    flatten_readouts = (
+        isnothing(readouts) ?
+        nreadouts == 1 :
+        readouts isa Number
+    )
 
     first_TR = minimum(flat_readouts) do ro
         ro.TR
@@ -164,9 +168,7 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
 
     grid_size = (
         N,
-        maximum(flat_readouts) do ro
-            ro.readout
-        end,
+        nreadouts,
         maximum(flat_readouts) do ro
             ro.TR
         end - first_TR,
