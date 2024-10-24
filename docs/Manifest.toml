@@ -1088,7 +1088,7 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 version = "1.11.0"
 
 [[deps.MCMRSimulator]]
-deps = ["Accessors", "ArgParse", "BSplineKit", "Bessels", "CSV", "Colors", "CoordinateTransformations", "DataFrames", "DataStructures", "Distributions", "Documenter", "FFTW", "GeometryBasics", "JSON", "LinearAlgebra", "Logging", "MRIBuilder", "MakieCore", "Markdown", "NearestNeighbors", "Optim", "PackageCompiler", "Pkg", "PlyIO", "Random", "Roots", "Rotations", "SparseArrays", "SpecialFunctions", "StaticArrays", "Statistics", "Tables", "UUIDs"]
+deps = ["Accessors", "ArgParse", "BSplineKit", "Bessels", "CSV", "Colors", "Compat", "CoordinateTransformations", "DataFrames", "DataStructures", "Distributions", "Documenter", "FFTW", "GeometryBasics", "JSON", "LinearAlgebra", "Logging", "MRIBuilder", "MakieCore", "Markdown", "NearestNeighbors", "Optim", "PackageCompiler", "Pkg", "PlyIO", "Random", "Roots", "Rotations", "SparseArrays", "SpecialFunctions", "StaticArrays", "Statistics", "Tables", "UUIDs"]
 path = ".."
 uuid = "eac06e4d-a854-4bf6-b44f-54c98b0401d1"
 version = "0.10.0"
