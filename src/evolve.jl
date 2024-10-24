@@ -149,7 +149,7 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
     actual_readouts = collect.(get_readouts.(simulation.sequences, start_time; readouts=readouts, nTR=nTR, kwargs...))
 
     if any(iszero.(length.(actual_readouts)))
-        error("No readouts scheduled for at least some of the sequences.")
+        error("No readouts scheduled for at least one of the sequences.")
     end
     flat_readouts = vcat(actual_readouts...)
 
