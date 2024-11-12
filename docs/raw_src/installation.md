@@ -12,7 +12,7 @@ In the future, we will also provide docker and singularity images to make it pos
    - First install the required MRIBuilder.jl using `pkg> add https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl.git`.
    - Then install MCMRSimulator.jl using `pkg> add https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl.git{install_version}`.
    - (Optional) Install one of the [Makie backends](https://makie.juliaplots.org/stable/documentation/backends/) for plotting (e.g., `pkg> add CairoMakie`).
-   - (Optional) If you want to use a Jupyter notebook, you will also have to install `IJulia`. You can find instructions to do so at https://github.com/JuliaLang/IJulia.jl.
+   - (Optional) If you want to use a Jupyter notebook, you will also have to install `IJulia`. You can find instructions to do so at https://github.com/JuliaLang/IJulia.jl. In short, run `pkg> add IJulia` and then `pkg> build IJulia`. This should add Julia to the available kernels for any jupyter notebook server. If you want to start a jupyter notebook server from within julia, you need to run `using IJulia; notebook()`.
    - Press "\[backspace\]" to leave the package manager.
 4. (Optional) To install the MCMRSimulator command line interface (CLI) run the following in the main julia REPL:
    `using MCMRSimulator; MCMRSimulator.install_cli(destdir="...")`, where `destdir` is the target directory for the executable (called `mcmr` by default).
