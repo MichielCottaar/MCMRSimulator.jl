@@ -1,4 +1,6 @@
 """
+Defines the fixed versions of [`MCMRSimulator.ObstructionGroup`](@ref) and its methods (including intersection detection).
+
 Types:
 - [`FixedGeometry`](@ref)
 - [`FixedObstructionGroup`](@ref)
