@@ -29,30 +29,35 @@ include("cli/cli.jl")
 import Compat: @compat
 
 import .Constants: gyromagnetic_ratio
-export gyromagnetic_ratio
+@compat public gyromagnetic_ratio
 
-import .Methods: get_time, get_rotation
-export get_time, get_rotation
+import .Methods: get_time, get_rotation, project
+export get_time
+@compat public get_rotation, project
 
-import .Spins: position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, SpinOrientationSum, isinside, stuck, stuck_to, orientation
+import .Spins: position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, SpinOrientationSum, isinside, stuck, stuck_to, orientation, FixedXoshiro
 export position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, isinside, stuck, stuck_to, orientation
+@compat public Spin, SpinOrientation, FixedXoshiro
 
 import .TimeSteps: TimeStep
-export TimeStep
+@compat public TimeStep
 
 import .SequenceParts: get_readouts, IndexedReadout
 @compat public get_readouts, IndexedReadout
 
 import .Simulations: Simulation, susceptibility_off_resonance
-export Simulation, susceptibility_off_resonance
+export Simulation
+@compat public susceptibility_off_resonance
 
 import .Subsets: Subset, get_subset
-export Subset, get_subset
+export Subset
+@compat public get_subset
 
 import .Evolve: evolve, readout
 export evolve, readout
 
 import .CLI: run_main, install_cli
+@compat public run_main, install_cli
 
 import .Geometries: 
     ObstructionGroup, IndexedObstruction,
@@ -64,13 +69,15 @@ import .Geometries:
     Triangle, Mesh, nvolumes,
     load_mesh, fix, fix_susceptibility,
     random_positions_radii, write_geometry, read_geometry
-export Annuli, Cylinders, Walls, Spheres, Mesh, load_mesh, fix, random_positions_radii, BendyCylinder
+export Annuli, Cylinders, Walls, Spheres, Mesh, load_mesh, random_positions_radii, BendyCylinder, write_geometry, read_geometry
+@compat public ObstructionGroup, IndexedObstruction, Annulus, Cylinder, Wall, Sphere, Ring, Triangle, nvolumes, fix_susceptibility, fix
 
 import .Geometries.Internal: BoundingBox, FixedGeometry, surface_relaxation, surface_density, dwell_time, permeability
-export BoundingBox
+export BoundingBox 
+@compat public FixedGeometry, surface_relaxation, surface_density, dwell_time, permeability
 
 import .Properties: GlobalProperties, R1, R2, off_resonance
-export GlobalProperties, R1, R2, off_resonance
+@compat public GlobalProperties, R1, R2, off_resonance
 
 import .Plot: PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance
 export PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance
@@ -78,12 +85,5 @@ export PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie
 import .Plot: plot_snapshot!, plot_geometry!, plot_trajectory!, plot_off_resonance!
 export plot_snapshot!, plot_geometry!, plot_trajectory!, plot_off_resonance!
 
-
-# Additional imports that will not be exported.
-# They will not be of interest to most users.
-import .Spins: FixedXoshiro
-import .Methods: get_time, get_rotation, project
-import .Evolve: draw_step!
-import .Relax: relax!
 end
 
