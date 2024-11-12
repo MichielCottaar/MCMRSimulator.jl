@@ -29,11 +29,11 @@ These parameters determine the evolution and relaxation of the spin magnetisatio
 - `R1`/`T1`: sets the longitudinal relaxation rate (R1 in kHz) or relaxation time (T1=1/R1 in ms). This determines how fast the longitudinal magnetisation returns to its equilibrium value of 1.
 - `R2`/`T2`: sets the transverse relaxation rate (R2 in kHz) or relaxation time (T2=1/R2 in ms). This determines how fast the transverse magnetisation is lost.
 - `off_resonance`: Size of the off-resonance field in this voxel in kHz.
-These MRI properties can be overriden for spins inside the [`ObstructionGroup`](@ref) objects of the `geometry`.
+These MRI properties can be overriden for spins inside the [`MCMRSimulator.ObstructionGroup`](@ref) objects of the `geometry`.
 
 ## Collision parameters
-These parameters determine how parameters behave when hitting the [`ObstructionGroup`](@ref) objects of the `geoemtry`.
-They can be overriden for individual objects for each [`ObstructionGroup`].
+These parameters determine how parameters behave when hitting the [`MCMRSimulator.ObstructionGroup`](@ref) objects of the `geometry`.
+They can be overriden for individual objects for each [`MCMRSimulator.ObstructionGroup`].
 - `MT_fraction`: the fraction of magnetisation transfered between the obstruction and the water spin at each collision.
 - `permeability`: the rate of spins passing through the surface in arbitrary units (set to infinity for fully permeable surface).
 - `surface_density`: Density of spins stuck on the surface relative to the volume density of hte free water.
