@@ -89,6 +89,8 @@ SpinOrientation(vector::SVector{3, Float64}) = SpinOrientation(
 
 Base.show(io::IO, orient::SpinOrientation) = print(io, "SpinOrientation(longitudinal=$(longitudinal(orient)), transverse=$(transverse(orient)), phase=$(phase(orient))°)")
 
+Base.deepcopy_internal(so::SpinOrientation, ::IdDict) = SpinOrientation(so.longitudinal, so.transverse, so.phase)
+
 """
 Spin particle with a position and `nsequences` spin orientations (stored as [`SpinOrientation`](@ref)).
 
@@ -116,9 +118,10 @@ mutable struct Spin{N}
     orientations :: SVector{N, SpinOrientation}
     reflection :: Reflection
     rng :: FixedXoshiro
-    function Spin(position::AbstractArray{<:Real}, orientations::AbstractArray{SpinOrientation}, reflection=empty_reflection, rng::FixedXoshiro=FixedXoshiro()) 
-        new{length(orientations)}(SVector{3, Float64}(position), SVector{length(orientations)}(SpinOrientation.(orientations)), reflection, rng)
-    end
+end
+
+function Spin(position::AbstractArray{<:Real}, orientations::AbstractArray{SpinOrientation}, reflection=empty_reflection, rng::FixedXoshiro=FixedXoshiro()) 
+    Spin{length(orientations)}(SVector{3, Float64}(position), SVector{length(orientations)}(SpinOrientation.(orientations)), reflection, rng)
 end
 
 function Spin(;nsequences=1, position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., reflection=empty_reflection, rng=FixedXoshiro()) 
@@ -136,6 +139,24 @@ function Base.show(io::IO, spin::Spin)
     end
     print(io, "Spin(position=$(spin.position) ")
     show_helper(io, spin)
+end
+
+Base.deepcopy_internal(spin::Spin{N}, stackdict::IdDict) where {N} = Spin{N}(
+    spin.position, map(spin.orientations) do orient 
+        Base.deepcopy_internal(orient, stackdict)
+    end, Base.deepcopy_internal(spin.reflection, stackdict), spin.rng
+)
+
+function Base.deepcopy_internal(spins::Vector{<:Spin}, stackdict::IdDict)
+    if haskey(stackdict, spins)
+        return stackdict[spins]
+    else
+        new_spins = map(spins) do spin
+            Base.deepcopy_internal(spin, stackdict)
+        end
+        stackdict[spins] = new_spins
+        return new_spins
+    end
 end
 
 """
