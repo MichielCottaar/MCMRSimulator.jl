@@ -123,9 +123,9 @@ end
 """
     susceptibility_off_resonance(susceptibility_grid, position[, inside])
 
-Computes the susceptibility off-resonance caused by a [`SusceptibilityGrid`](@ref) at given position.
+Computes the susceptibility off-resonance caused by a `SusceptibilityGrid` at given position.
 
-The field is computed in ppm. Knowledge of the scanner [`B0`](@ref) is needed to convert it into KHz.
+The field is computed in ppm. Knowledge of the scanner `B0` is needed to convert it into KHz.
 """
 function susceptibility_off_resonance(grid::SusceptibilityGrid, position::SVector{3, Float64}, inside::Union{Nothing, Bool}=nothing)
     normed = norm_position(grid, grid.rotation * position)

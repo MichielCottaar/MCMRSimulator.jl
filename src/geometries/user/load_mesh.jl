@@ -1,10 +1,12 @@
 module LoadMesh
 import PlyIO
 import ..Obstructions: Mesh
+
 """
     ply_from_mesh(file)
 
 Loads a [`Mesh`](@ref) from a PLY file.
+
 PLY stands for Polygon File Format (http://paulbourke.net/dataformats/ply/).
 PLY IO is handled by PlyIO.jl (https://github.com/JuliaGeometry/PlyIO.jl).
 """
@@ -25,7 +27,11 @@ end
 
 Loads a [`Mesh`](@ref) from a file.
 
-Currently only PLY files are supported (see [`ply_from_mesh`](@ref))
+Currently only PLY files are supported.
+
+## PLY format
+PLY stands for Polygon File Format (http://paulbourke.net/dataformats/ply/).
+PLY IO is handled by PlyIO.jl (https://github.com/JuliaGeometry/PlyIO.jl).
 """
 function load_mesh(io::IO; kwargs...)
     mark(io)

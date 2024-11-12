@@ -5,7 +5,7 @@ import ..Fields: Field, FieldValue, isglobal
 
 
 """
-Parent type of all geometry objects like [`Cylinders`](@ref) or [`Mesh`](@ref).
+Parent type of all geometry objects like [`Cylinders`](@ref MCMRSimulator.Geometries.User.Obstructions.Cylinders) or [`Mesh`](@ref MCMRSimulator.Geometries.User.Obstructions.Mesh).
 """
 struct ObstructionGroup{N}
     type :: ObstructionType{N}

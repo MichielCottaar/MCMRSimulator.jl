@@ -7,7 +7,7 @@ MRI properties determine the spin evolution for free and stuck particles. They i
 - the longitudinal relaxation rate `R1`
 - the transverse relaxation rate `R2`
 - the global `off_resonance` field (i.e., any off-resonance not caused by the sequence or the geometry)
-At the [`Simulation`](@ref) level these parameters can be set by supplying the `R1`, `R2`, or `off_resonance` flags (see [`GlobalProperties`](@ref)), such as:
+At the [`Simulation`](@ref) level these parameters can be set by supplying the `R1`, `R2`, or `off_resonance` flags (see [`MCMRSimulator.GlobalProperties`](@ref)), such as:
 ```julia
 simulation = Simulation(sequences, R2=1/80)
 ```

@@ -11,7 +11,7 @@ import ..SizeScales: grid_resolution
 """
     fix_susceptibility(geometry)
 
-Create a new [`FixedSusceptibility`](@ref) based on the user-defined geometry settings.
+Create a new `FixedSusceptibility` based on the user-defined geometry settings.
 """
 function fix_susceptibility(geometry::AbstractVector)
     result = SusceptibilityGrid[]

@@ -108,7 +108,7 @@ end
 
 Represents a readout in an MR sequence.
 
-Generate these for a sequence of interest using [`MCMRSimulator.get_readouts`](@ref).
+Generate these for a sequence of interest using [`get_readouts`](@ref).
 
 All indices are integers. They refer to:
 - `time`: time since beginning of sequence in ms
@@ -391,12 +391,12 @@ end
 """
     get_readouts(sequence, start_time; readouts=nothing, nTR=1, skip_TR=0)
 
-Returns a iterator of the readouts ([`MCMRSimulator.IndexedReadout`](@ref) objects) that will be used for the given sequence in the simulator.
+Returns a iterator of the readouts ([`IndexedReadout`](@ref) objects) that will be used for the given sequence in the simulator.
 
 This can be used to identify which readouts will be (or have been) used in the simulation by running:
 `collect(get_readouts(sequence, snapshot.current_time; kwargs...))`
 where `snapshot` is the starting snapshot (which has a `current_time` of 0 by default) and `kwargs` are the keyword arguments used in
-[`readout`](@ref) (i.e., `readouts, `nTR`, and `skip_TR`).
+[`readout`](@ref MCMRSimulator.Evolve.readout) (i.e., `readouts, `nTR`, and `skip_TR`).
 
 By default the readout/ADC objects with the actual sequence definition are used.
 These can be overriden by `readouts`, which can be set to a vector of the timings of the readouts within each TR.

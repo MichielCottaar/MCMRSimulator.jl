@@ -27,7 +27,7 @@ import ..Reflections: Reflection, empty_reflection
     MRIProperties(R1, R2, off_resonance)
     MRIProperties(full_geometry, inside_geometry, global_properties, position, reflection)
 
-Determines the R1, R2, and off-resonance of a particle at given `position` and bound at [`Reflection`](@ref).
+Determines the R1, R2, and off-resonance of a particle at given `position` and bound at `Reflection`.
 """
 mutable struct MRIProperties
     R1 :: Float64
@@ -81,7 +81,7 @@ for symbol in (:permeability, :surface_relaxation, :dwell_time, :surface_density
         """
             $($symbol)(geometry, reflection)
         
-        Returns the $($symbol) experienced by the spin hitting the surface represented by a [`Reflection`](@ref).
+        Returns the $($symbol) experienced by the spin hitting the surface represented by a `Reflection`.
         The `geometry` has to be a [`FixedGeometry`](@ref).
         """
         function $symbol(group::FixedObstructionGroup, has_hit::Int)

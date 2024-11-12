@@ -10,7 +10,7 @@ Creates an object controlling the timestep of the MCMR simulation.
 It can be set by supplying a named tuple to the `timestep` keyword when creating a `Simulation`.
 
 At any time the timestep is guaranteed to be shorter than:
-1. `FullTimeStep.turtoisity_precision` * `size_scale(geometry)`^2 / D, where [`size_scale`](@ref) is the average size of the obstructions and `D` is the [`diffusivity`](@ref).
+1. `FullTimeStep.turtoisity_precision` * `size_scale(geometry)`^2 / D, where `size_scale` is the average size of the obstructions and `D` is the `diffusivity`.
 2. timestep greater than `permeability` times 1 / (maximum permeability parameter)^2
 3. timestep that would allow surface relaxation rate at single collision to be greater than `surface_relaxation`.
 4. timestep that would allow magnetisation transfer rate at single collision to be greater than `transfer_rate`.

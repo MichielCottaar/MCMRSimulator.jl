@@ -17,8 +17,7 @@ Represents a box in N-dimensional space.
 
 Check whether particles are inside using [`isinside`](@ref).
 
-The main usage in the simulator is using [`could_intersect`](@ref), 
-which checks whether a spin trajectory *could* intersect with the obstruction in the bounding box.
+This can be used to define where spins should be generated in a [`Snapshot`](@ref MCMRSimulator.Spins.Snapshot) (see [`readout`](@ref MCMRSimulator.Evolve.readout)).
 """
 struct BoundingBox{N}
     lower :: SVector{N, Float64}

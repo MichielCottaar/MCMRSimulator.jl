@@ -24,7 +24,7 @@ These arguments are identicaly across all constructors (although the expected in
 Components with a lower dimensionality are defined by default along the x-axis (for dimensionality of 1) or the x-y plane (for dimensionality of 2). 
 In other words, the normal of the [`Walls`](@ref) point in the x-axis by default, while the [`Cylinders`](@ref) point in the z-axis.
 Shifts and repeats should only be provided in this lower-dimensional space.
-The `rotation` keyword can be used to define these components along other lines/planes (see [`get_rotation`](@ref)).
+The `rotation` keyword can be used to define these components along other lines/planes (see [`MCMRSimulator.get_rotation`](@ref)).
 
 From the command line all of these keywords are available as flags, which can be seen by running:
 ```bash

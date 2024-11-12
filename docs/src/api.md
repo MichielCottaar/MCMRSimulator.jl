@@ -44,6 +44,7 @@ longitudinal
 transverse
 phase
 orientation
+get_sequence
 isinside
 stuck
 stuck_to
@@ -73,6 +74,7 @@ MCMRSimulator.nvolumes
 MCMRSimulator.fix
 MCMRSimulator.fix_susceptibility
 MCMRSimulator.FixedGeometry
+MCMRSimulator.FixedObstructionGroup
 MCMRSimulator.surface_relaxation
 MCMRSimulator.surface_density
 MCMRSimulator.dwell_time

@@ -19,7 +19,7 @@ Defines the setup of the simulation and stores the output of the run.
 
 # Argument
 ## General parameters:
-- `sequences`: Vector of [`Sequence`](@ref) objects. During the spin random walk the simulation will keep track of the spin magnetisations for all of the provided sequences.
+- `sequences`: Vector of `MRIBuilder.Sequence` objects. During the spin random walk the simulation will keep track of the spin magnetisations for all of the provided sequences.
 - `geometry`: Set of obstructions, which can be used to restrict the diffusion, produce off-resonance fields, alter the local T1/T2 relaxation, and as sources of magnetisation transfer.
 - `diffusivity`: Rate of the random motion of the spins in um^2/ms.
 - `verbose`: set to false to silence descriptions of the simulation parameters (default: true).
@@ -29,11 +29,11 @@ These parameters determine the evolution and relaxation of the spin magnetisatio
 - `R1`/`T1`: sets the longitudinal relaxation rate (R1 in kHz) or relaxation time (T1=1/R1 in ms). This determines how fast the longitudinal magnetisation returns to its equilibrium value of 1.
 - `R2`/`T2`: sets the transverse relaxation rate (R2 in kHz) or relaxation time (T2=1/R2 in ms). This determines how fast the transverse magnetisation is lost.
 - `off_resonance`: Size of the off-resonance field in this voxel in kHz.
-These MRI properties can be overriden for spins inside the [`MCMRSimulator.ObstructionGroup`](@ref) objects of the `geometry`.
+These MRI properties can be overriden for spins inside the [`ObstructionGroup`](@ref) objects of the `geometry`.
 
 ## Collision parameters
-These parameters determine how parameters behave when hitting the [`MCMRSimulator.ObstructionGroup`](@ref) objects of the `geometry`.
-They can be overriden for individual objects for each [`MCMRSimulator.ObstructionGroup`].
+These parameters determine how parameters behave when hitting the [`ObstructionGroup`](@ref) objects of the `geometry`.
+They can be overriden for individual objects for each [`ObstructionGroup`](@ref).
 - `MT_fraction`: the fraction of magnetisation transfered between the obstruction and the water spin at each collision.
 - `permeability`: the rate of spins passing through the surface in arbitrary units (set to infinity for fully permeable surface).
 - `surface_density`: Density of spins stuck on the surface relative to the volume density of hte free water.
@@ -193,7 +193,7 @@ end
 
 Computes the susceptibility off-resonance caused by all susceptibility sources in the [`Simulation`](@ref) affecting the [`Spin`](@ref)
 
-The field is computed in ppm. Knowledge of the scanner [`B0`](@ref) is needed to convert it into KHz.
+The field is computed in ppm. Knowledge of the scanner `B0` is needed to convert it into KHz.
 """
 susceptibility_off_resonance(simulation::Simulation, spin::Spin) = susceptibility_off_resonance(simulation, spin.position, stuck(spin) ? spin.reflection.inside : nothing)
 susceptibility_off_resonance(simulation::Simulation, position::AbstractVector, inside::Union{Nothing, Bool}=nothing) = susceptibility_off_resonance(simulation.susceptibility, SVector{3, Float64}(position), inside)

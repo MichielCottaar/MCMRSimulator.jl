@@ -1,5 +1,5 @@
 """
-Defines the fixed versions of [`MCMRSimulator.ObstructionGroup`](@ref) and its methods (including intersection detection).
+Defines the fixed versions of [`ObstructionGroup`](@ref) and its methods (including intersection detection).
 
 Types:
 - [`FixedGeometry`](@ref)
@@ -27,17 +27,17 @@ import ..RayGridIntersection: ray_grid_intersections
 
 
 """
-Collection of multiple base [`FixedObstruction`](@ref) objects.
+A fixed version of [`ObstructionGroup`](@ref MCMRSimulator.Geometries.User.Obstructions.ObstructionGroups.ObstructionGroup) that is used internally within the simulator.
 
-This is the main internal representation of a group of identical [`FixedObstruction`](@ref) objects.
+This is the main internal representation of a group of identical `FixedObstruction` objects.
 
 Properties:
-- `obstructions`: vector of the actual [`FixedObstruction`](@ref) objects.
+- `obstructions`: vector of the actual `FixedObstruction` objects.
 - `parent_index`: Index of this group within the larger [`FixedGeometry`](@ref).
 - `original_index`: Index of this group within the original user-provided geometry.
 - `rotation`: rotation from global 3-dimensional space to the 1, 2, or 3-dimensional space of the obstructions.
 - `inv_rotation`: inverse of the rotation above
-- `grid`: [`Grid`](@ref) object on which the obstruction intersections have been precomputed. This speeds up the detection of intersections.
+- `grid`: `Grid` object on which the obstruction intersections have been precomputed. This speeds up the detection of intersections.
 - `bounding_boxes`: vector of [`BoundingBox`](@ref) objects for each obstruction. These are used to predect whether a spin could intersect with the obstruction.
 - `volume`: R1, R2, and off-resonance properties of the spins inside the obstructions.
 - `surface`: R1, R2, off-resonance, surface_density and dwell_time properties of particles stuck to the surface. Also, contains the permeability and surface relaxation to process collsions.
@@ -169,7 +169,7 @@ end
 
 Returns a vector of pairs of indices with all the obstructions in [`FixedGeometry`](@ref) containing the `position` (in order).
 The first index indicates the index of the [`FixedObstructionGroup`](@ref) within the `geometry`.
-The second index is the index of the specific [`FixedObstruction`](@ref) within the obstruction group.
+The second index is the index of the specific `FixedObstruction` within the obstruction group.
 """
 function isinside(gs::FixedGeometry, pos::SVector{3}, stuck_to::Reflection=empty_reflection)
     indices = Tuple{Int, Int}[]
@@ -303,7 +303,7 @@ to_global_positions(unrotated_positions, ::FixedObstructionGroup{3}, bb::Boundin
 
 Randomly draws positions on the surface within the [`BoundingBox`](@ref).
 The density of points will be equal to `surface_density` * `volume_density`,
-where `surface_density` is either set by the `group` itself or by `default_surface_density` (which should come from [`GlobalProperties`](@ref)).
+where `surface_density` is either set by the `group` itself.
 
 For each drawn position will return a tuple with:
 - position: 3D in um

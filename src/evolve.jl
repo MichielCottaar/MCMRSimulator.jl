@@ -1,6 +1,6 @@
 """
 Defines the functions that run the actual simulation:
-- [`readout`](@ref): get total signal or [`Snapshot`](@ref) at any [`Readout`](@ref) objects in the sequences.
+- [`readout`](@ref): get total signal or [`Snapshot`](@ref) at any `MRIBuilder.ADC` objects in the sequences.
 - [`evolve`](@ref): Return a single [`Snapshot`](@ref) with the state of the simulation at a given time. This snapshot can be used as initialisation for further runs.
 
 All of these functions call [`evolve_to_time`](@ref) under the hood to actually run the simulation.
@@ -307,22 +307,22 @@ Returns the total signal or a full [`Snapshot`](@ref) at every readout time in t
 # Positional arguments:
 - `spins`: Number of spins to simulate or an already existing [`Snapshot`](@ref).
 - `simulation`: [`Simulation`](@ref) object defining the environment, scanner, and sequence(s).
-- `times` (optional): time of the readouts relative to the start of the TR (in ms). If not provided, the times of any [`Readout`](@ref) objects in the sequence will be used (see [`MCMRSimulator.get_readouts`](@ref) for details).
+- `times` (optional): time of the readouts relative to the start of the TR (in ms). If not provided, the times of any `MRIBuilder.ADC` objects in the sequence will be used (see [`get_readouts`](@ref) for details).
 
 # Keyword arguments:
-- `bounding_box`: size of the voxel in which the spins are initiated in um (default is 1000, corresponding to a 1x1x1 mm box centered on zero). Can be set to a [`BoundingBox`](@ref) object for more control.
+- `bounding_box`: size of the voxel in which the spins are initiated in um (default is 1000, corresponding to a 1x1x1 mm box centered on zero). Can be set to a [`BoundingBox`](@ref MCMRSimulator.Geometries.Internal.BoundingBoxes.BoundingBox) object for more control.
 - `skip_TR`: Number of repetition times to skip before starting the readout. 
     Even if set to zero (the default), the simulator will still skip the current TR before starting the readout 
     if the starting snapshot is from a time past one of the sequence readouts.
-    See [`MCMRSimulator.get_readouts`](@ref) for details.
-- `nTR`: number of TRs for which to store the output. See [`MCMRSimulator.get_readouts`](@ref) for details.
+    See [`get_readouts`](@ref) for details.
+- `nTR`: number of TRs for which to store the output. See [`get_readouts`](@ref) for details.
 - `return_snapshot`: set to true to output the state of all the spins as a [`Snapshot`](@ref) at each readout instead of a [`SpinOrientationSum`](@ref) with the total signal.
 - `subset`: Return the signal/snapshot for a subset of all spins. Can be set to a single or a vector of [`Subset`](@ref) objects. If set to a vector, this will add an attional dimension to the output.
 
 # Returns
 The function returns an up to 3-dimensional (KxLxMxN) array, with the following dimensions:
 - `K`: the number of sequences. This dimension is not included if the simulation only contains a single sequencen (and this single sequence is not passed into the [`Simulation`](@ref) as a vector).
-- `L`: the number of readout times with a single TR. This dimension is skipped if the `readout_times` is set to a scalar number. This dimension might contain `nothing`s for sequences that contain fewer [`Readout`](@ref) objects than the maximum (`M`).
+- `L`: the number of readout times with a single TR. This dimension is skipped if the `readout_times` is set to a scalar number. This dimension might contain `nothing`s for sequences that contain fewer `Readout.ADC` objects than the maximum (`M`).
 - `M`: the number of TRs (controlled by the `nTR` keyword). If `nTR` is not explicitly set by the user, this dimension is skipped.
 - `N`: the number of subsets (controlled by the `subset` keyword). If `subset` is set to a single value (<all> by default), this dimension is skipped.
 By default each element of this matrix is either a [`SpinOrientationSum`](@ref) with the total signal.
