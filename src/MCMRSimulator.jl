@@ -1,11 +1,11 @@
 """
 This package supports the running of MR Monte Carlo simulations.
 
-In these simulations hundreds of thousands or millions of [`Spin`](@ref) particles randomly diffuse through some tissue microstructure.
+In these simulations hundreds of thousands or millions of [`MCMRSimulator.Spin`](@ref) particles randomly diffuse through some tissue microstructure.
 At each timepoint these spins are represented as a [`Snapshot`](@ref) object.
-The spin diffusion is constrained by an [`ObstructionGroup`](@ref) (represented internally as [`FixedGeometry`](@ref))
+The spin diffusion is constrained by an [`MCMRSimulator.ObstructionGroup`](@ref) (represented internally as [`MCMRSimulator.FixedGeometry`](@ref))
 The spins of these particles will be evolved based on the Bloch equations with the field strength and relaxation rates set by the local geometry
-and the effect of one or more [`Sequence`](@ref) objects.
+and the effect of one or more `MRIBuilder.Sequence` objects.
 All these variables are combined into a single [`Simulation`](@ref) object. 
 See [`Simulation`](@ref) for how to run the simulation.
 
@@ -36,8 +36,8 @@ export get_time
 @compat public get_rotation, project
 
 import .Spins: position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, SpinOrientationSum, isinside, stuck, stuck_to, orientation, FixedXoshiro
-export position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, isinside, stuck, stuck_to, orientation
-@compat public Spin, SpinOrientation, FixedXoshiro
+export position, longitudinal, transverse, phase, Spin, Snapshot, isinside, stuck, stuck_to, orientation
+@compat public Spin, SpinOrientation, SpinOrientationSum, FixedXoshiro
 
 import .TimeSteps: TimeStep
 @compat public TimeStep
