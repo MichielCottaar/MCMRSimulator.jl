@@ -4,6 +4,9 @@ import ..ObstructionTypes: ObstructionType, fields, key_value_pairs
 import ..Fields: Field, FieldValue, isglobal
 
 
+"""
+Parent type of all geometry objects like [`Cylinders`](@ref) or [`Mesh`](@ref).
+"""
 struct ObstructionGroup{N}
     type :: ObstructionType{N}
     field_values :: Dict
@@ -19,6 +22,9 @@ end
 Base.iterate(g::ObstructionGroup) = iterate(g, 1)
 Base.iterate(g::ObstructionGroup, state::Int) = state > g.n_obstructions ? nothing : (g[state], state + 1)
 
+"""
+A single instance of an [`ObstructionGroup`](@ref) obtained by indexing.
+"""
 struct IndexedObstruction{N}
     group :: ObstructionGroup{N}
     index :: Int
