@@ -60,11 +60,11 @@ by setting `return_snapshot=false` in [`readout`](@ref).
 After the simulation a [`Snapshot`](@ref) will be returned.
 """
 struct SnapshotAccumulator{N} <: SingleAccumulator
-    spins :: Vector{Spin{N}}
+    spins :: Vector{Vector{Spin{N}}}
     time :: Float64
     nwrite :: Ref{Int}
     SnapshotAccumulator{N}(time::Number) where {N} = new{N}(
-        Spin{N}[],
+        Vector{Spin{N}}[],
         Float64(time),
         Ref(0)
     )
@@ -231,7 +231,7 @@ function readout!(acc::TotalSignalAccumulator, spins::Vector{Spin{1}})
 end
 
 function readout!(acc::SnapshotAccumulator{N}, spins::Vector{Spin{N}}) where {N}
-    append!(acc.spins, deepcopy(spins))
+    push!(acc.spins, deepcopy(spins))
     acc.nwrite[] += 1
 end
 
@@ -281,7 +281,7 @@ fix_accumulator(acc::TotalSignalAccumulator) = SpinOrientationSum(
     SpinOrientation(acc.as_vector),
     acc.nspins[]
 )
-fix_accumulator(acc::SnapshotAccumulator) = Snapshot(acc.spins, acc.time)
+fix_accumulator(acc::SnapshotAccumulator) = Snapshot(vcat(acc.spins...), acc.time)
 fix_accumulator(::FillerAccumulator) = nothing
 
 """
