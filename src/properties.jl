@@ -1,12 +1,16 @@
 """
+Basic interface for setting the simulation properties
+
+For the main interface see [`Simulation`](@ref).
+
 Types:
-- [`GlobalProperties`](@ref)
+- [`MCMRSimulator.GlobalProperties`](@ref)
 
 Methods:
-- [`R1`](@ref)
-- [`R2`](@ref)
-- [`off_resonance`](@ref)
-- [`stick_probability`](@ref)
+- `R1`
+- `R2`
+- `off_resonance`
+- `stick_probability`
 """
 module Properties
 

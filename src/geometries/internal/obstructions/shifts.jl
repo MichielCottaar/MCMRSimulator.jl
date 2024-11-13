@@ -1,3 +1,8 @@
+"""
+All base obstructions are assumed to be centered on the origin (except for triangles in the mesh).
+
+This module defines the `Shift` from this origin to the actual position in space.
+"""
 module Shifts
 
 import StaticArrays: SVector

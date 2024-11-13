@@ -1,19 +1,19 @@
 """
-Methods to extract properties from the [`FixedGeometry`](@ref).
+Methods to extract properties from the `FixedGeometry`.
 
-MRI properties (using [`MRIProperties`](@ref)):
-- [`R1`](@ref)
-- [`R2`](@ref)
-- [`off_resonance`](@ref)
+MRI properties (using `MRIProperties`):
+- `R1`
+- `R2`
+- `off_resonance`
 
 Collision properties:
-- [`permeability`](@ref)
-- [`surface_relaxation`](@ref)
-- [`surface_density`](@ref)
-- [`dwell_time`](@ref)
+- `permeability`
+- `surface_relaxation`
+- `surface_density`
+- `dwell_time`
 
-Others:
-- [`max_timestep_sticking`](@ref)
+Other functions:
+- `max_timestep_sticking`
 """
 module Properties
 

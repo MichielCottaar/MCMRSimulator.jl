@@ -1,3 +1,6 @@
+"""
+Defines a flexible `Field` interface to set the properties of user-defined geometries.
+"""
 module Fields
 
 import StaticArrays: SMatrix

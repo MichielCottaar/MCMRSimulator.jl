@@ -1,3 +1,6 @@
+"""
+Computes a default value for the size scale of different geometries used for timestep calculations.
+"""
 module SizeScales
 import ..Obstructions: ObstructionGroup, Walls, Cylinders, Annuli, Spheres, Mesh, isglobal
 import ...Internal.Obstructions.Triangles: normal, curvature

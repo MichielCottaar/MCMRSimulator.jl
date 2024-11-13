@@ -1,3 +1,6 @@
+"""
+Defines [`load_mesh`](@ref).
+"""
 module LoadMesh
 import PlyIO
 import ..Obstructions: Mesh

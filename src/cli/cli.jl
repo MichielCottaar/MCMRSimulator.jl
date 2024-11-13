@@ -2,7 +2,7 @@
 Defines the command line interface to MCMRSimulator.jl (`mcmr`).
 
 Functions:
-- [`run_main`](@ref)
+- [`MCMRSimulator.run_main`](@ref MCMRSimulator.CLI.run_main)
 """
 module CLI
 include("run.jl")

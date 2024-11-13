@@ -1,6 +1,5 @@
 """
-Mesh-specific operations to normalise and split a mesh.
-- [`split_mesh`](@ref): applies all the normalisations and splitting
+Mesh-specific operations to normalise (i.e., ensure normals point outwards) and split a mesh.
 """
 module SplitMesh
 

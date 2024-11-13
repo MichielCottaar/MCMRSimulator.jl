@@ -1,3 +1,6 @@
+"""
+Defines the types and main methods for user-defined geometries.
+"""
 module Obstructions
 include("fields.jl")
 include("obstruction_types.jl")

@@ -1,3 +1,6 @@
+"""
+Implements the Bloch equations to model the spin magnetisation under influence of a sequence during a single timestep.
+"""
 module Relax
 
 import StaticArrays: SVector, StaticVector

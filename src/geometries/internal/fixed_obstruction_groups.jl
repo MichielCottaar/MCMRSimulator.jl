@@ -1,15 +1,15 @@
 """
-Defines the fixed versions of [`ObstructionGroup`](@ref) and its methods (including intersection detection).
+Defines the fixed versions of [`MCMRSimulator.ObstructionGroup`](@ref MCMRSimulator.Geometries.User.Obstructions.ObstructionGroups.ObstructionGroup) and its methods (including intersection detection).
 
 Types:
-- [`FixedGeometry`](@ref)
-- [`FixedObstructionGroup`](@ref)
+- `MCMRSimulator.FixedGeometry`
+- `MCMRSimulator.FixedObstructionGroup`
 
 Methods:
-- [`has_inside`](@ref)
-- [`isinside`](@ref)
-- [`detect_intersection`](@ref)
-- [`size_scale`](@ref)
+- `has_inside`
+- `isinside`
+- `detect_intersection`
+- `size_scale`
 """
 module FixedObstructionGroups
 

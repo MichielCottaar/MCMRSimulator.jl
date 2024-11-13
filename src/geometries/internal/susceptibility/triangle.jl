@@ -1,5 +1,5 @@
 """
-Computes the off-resonance field produced by a triangular mesh:
+Computes the off-resonance field produced by a triangular mesh.
 """
 module Triangle
 

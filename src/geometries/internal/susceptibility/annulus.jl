@@ -1,3 +1,6 @@
+"""
+Off-resonance field due to magnetic susceptibility of an hollow cylinder.
+"""
 module Annulus
 
 import StaticArrays: SVector

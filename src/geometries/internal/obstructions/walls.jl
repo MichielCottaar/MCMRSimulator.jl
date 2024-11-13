@@ -1,3 +1,6 @@
+"""
+Infinite walls and how to intersect with them.
+"""
 module Walls
 
 import StaticArrays: SVector

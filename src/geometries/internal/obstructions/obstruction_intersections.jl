@@ -1,12 +1,14 @@
 """
+Defines the intersection between a spin path and an obstruction.
+
 Types:
-- [`ObstructionIntersection`](@ref)
+- `ObstructionIntersection`
 
 Attributes:
-- [`empty_obstruction_intersections`](@ref)
+- `empty_obstruction_intersections`
 
 Methods:
-- [`has_intersection`](@ref)
+- `has_intersection`
 """
 module ObstructionIntersections
 import StaticArrays: SVector

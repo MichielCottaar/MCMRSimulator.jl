@@ -5,7 +5,7 @@ Types:
 - [`Subset`](@ref)
 
 Functions:
-- [`get_subset`](@ref)
+- [`MCMRSimulator.get_subset`](@ref)
 """
 module Subsets
 import Base: @kwdef

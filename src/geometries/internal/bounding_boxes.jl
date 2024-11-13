@@ -1,10 +1,12 @@
 """
+Defines the bounding box and its interface.
+
 Types:
 - [`BoundingBox`](@ref): N-dimensional box fully containing an obstruction.
 
-Methods:
-- [`isinside`](@ref): returns whether point/spin is inside of bounding box
-- [`could_intersect`](@ref): returns whether spin trajectory could intersect with obstruction in bounding box
+Functions
+- [`MCMRSimulator.isinside`](@ref MCMRSimulator.Geometries.Internal.BoundingBoxes.isinside): returns whether point/spin is inside a bounding box (or other obstruction)
+- `could_intersect`: returns whether spin trajectory could intersect with obstruction in bounding box
 """
 module BoundingBoxes
 import StaticArrays: SVector

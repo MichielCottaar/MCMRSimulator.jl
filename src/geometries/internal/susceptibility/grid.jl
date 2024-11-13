@@ -1,3 +1,9 @@
+"""
+Defines how to compute the off-resonance field for distant magnetic susceptibility sources.
+
+The contribution from very distant sources are pre-computed on a `SusceptibilityGrid`.
+Intermediate sources are represented as point magnetic susceptibility elements (`SusceptibilityGridElement`).
+"""
 module Grid
 
 import StaticArrays: SVector, SMatrix

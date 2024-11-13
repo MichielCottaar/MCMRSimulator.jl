@@ -1,3 +1,6 @@
+"""
+Defines the `Intersection` between a spin path and the geometry.
+"""
 module Intersections
 import StaticArrays: SVector
 import ..Obstructions: has_intersection

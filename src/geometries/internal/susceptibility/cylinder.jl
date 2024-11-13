@@ -1,3 +1,6 @@
+"""
+Off-resonance field due to magnetic susceptibility of an hollow cylinder, which is approximated as being infinitely thin.
+"""
 module Cylinder
 import StaticArrays: SVector
 import ..Base: BaseSusceptibility, single_susceptibility, single_susceptibility_gradient

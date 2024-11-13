@@ -1,6 +1,5 @@
 """
-Methods:
-- [`ray_grid_intersections`](@ref)
+Defines `ray_grid_intersections`, which computes the intersections between a spin path and some grid.
 """
 module RayGridIntersection
 

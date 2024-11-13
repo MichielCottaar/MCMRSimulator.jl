@@ -1,3 +1,6 @@
+"""
+Defines `ObstructionGroup`, which is the parent type of all user-defined geometries.
+"""
 module ObstructionGroups
 
 import ..ObstructionTypes: ObstructionType, fields, key_value_pairs

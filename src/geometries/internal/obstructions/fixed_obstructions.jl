@@ -1,15 +1,17 @@
 """
+Base types for the API with individually fixed obstructions.
+
 Types:
-- [`FixedObstruction`](@ref)
+- `FixedObstruction`
 
 Methods:
-- [`detect_intersection`](@ref)
-- [`has_inside`](@ref)
-- [`isinside`](@ref)
-- [`radius`](@ref)
-- [`BoundingBox`](@ref)
-- [`obstruction_type`](@ref)
-- [`random_surface_positions`](@ref)
+- `detect_intersection`
+- `has_inside`
+- `isinside`
+- `radius`
+- `BoundingBox`
+- `obstruction_type`
+- `random_surface_positions`
 """
 module FixedObstructions
 import StaticArrays: SVector

@@ -1,3 +1,6 @@
+"""
+Defines cylinders and spheres and how to intersect with them.
+"""
 module Rounds
 
 import StaticArrays: SVector

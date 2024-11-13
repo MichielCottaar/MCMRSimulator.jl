@@ -1,3 +1,6 @@
+"""
+Defines [`random_positions_radii`](@ref).
+"""
 module RandomDistribution
 import StaticArrays: SVector, MVector
 import Distributions

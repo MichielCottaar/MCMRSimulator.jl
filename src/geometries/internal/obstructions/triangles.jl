@@ -1,3 +1,6 @@
+"""
+Triangle within a mesh and how to intersect with them.
+"""
 module Triangles
 
 import StaticArrays: SVector

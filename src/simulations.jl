@@ -1,3 +1,6 @@
+"""
+Defines the main [`Simulation`](@ref) object.
+"""
 module Simulations
 import StaticArrays: SVector, StaticVector, SizedVector
 import MRIBuilder: Sequence

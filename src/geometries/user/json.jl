@@ -2,8 +2,8 @@
 Supports I/O to and from json
 
 Functions:
-- [`write_geometry`](@ref)
-- [`read_geometry`](@ref)
+- `write_geometry`
+- `read_geometry`
 """
 module JSON
 import JSON as JSON_pkg

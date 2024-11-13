@@ -1,5 +1,10 @@
 """
 Defines methods shared across multiple sub-modules.
+
+- [`get_time`](@ref)
+- `norm_angle`
+- [`MCMRSimulator.get_rotation`](@ref)
+- `off_resonance`
 """
 module Methods
 
@@ -16,19 +21,6 @@ Returns the time in milliseconds that a snapshot was taken or that a sequence co
 """
 function get_time end
 
-"""
-    B0(scanner)
-    B0(sequence)
-
-Returns the magnetic field strength of the scanner in Tesla.
-"""
-function B0 end
-
-# Used for spins and RF pulses
-function phase end
-
-# Used for plot_plane, spin, and geometry
-function project end
 
 """
     norm_angle(angle)

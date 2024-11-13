@@ -1,3 +1,6 @@
+"""
+Base module for computing the off-resonance field from magnetic susceptibility sources.
+"""
 module Susceptibility
 include("base.jl")
 include("grid.jl")

@@ -1,11 +1,15 @@
 """
+Computes the reflection of the spin off some geometry.
+
+This is also used internally to represent a bound spin.
+
 Types:
-- [`Reflection`](@ref)
+- `Reflection`
 
 Methods:
-- [`direction`](@ref)
-- [`has_hit`](@ref)
-- [`previous_hit`](@ref)
+- `direction`
+- `has_hit`
+- `previous_hit`
 """
 module Reflections
 
@@ -13,10 +17,13 @@ import StaticArrays: SVector
 import LinearAlgebra: ⋅, norm
 import ..Intersections: Intersection, has_intersection
 import ..Obstructions: detect_intersection
+
 """
     Reflection(intersection, direction, timestep, ratio_displaced, time_moved, distance_moved, permeable=false)
 
 Represents a reflection of a particle after colliding.
+
+Used internally to represent bound spins.
 
 Parameters:
 - intersection: [`Intersection`](@ref) represents the intersection of the trajectory with an obstruction. This will supply:

@@ -3,7 +3,7 @@ Defines the functions that run the actual simulation:
 - [`readout`](@ref): get total signal or [`Snapshot`](@ref) at any `MRIBuilder.ADC` objects in the sequences.
 - [`evolve`](@ref): Return a single [`Snapshot`](@ref) with the state of the simulation at a given time. This snapshot can be used as initialisation for further runs.
 
-All of these functions call [`evolve_to_time`](@ref) under the hood to actually run the simulation.
+All of these functions call `evolve_to_time` under the hood to actually run the simulation.
 """
 module Evolve
 import StaticArrays: SVector, MVector, StaticVector

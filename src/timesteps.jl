@@ -1,3 +1,6 @@
+"""
+Defines the main interface to set the [`TimeStep`](@ref) of the simulator.
+"""
 module TimeSteps
 import ..Constants: gyromagnetic_ratio
 import ..Geometries: Internal

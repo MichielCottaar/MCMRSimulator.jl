@@ -1,7 +1,7 @@
 """
 Defines all the base obstructions supported by MCMRSimulator.
 
-They are all sub-types of [`FixedObstruction`](@ref).
+They are all sub-types of `FixedObstruction`.
 """
 module Obstructions
 include("obstruction_intersections.jl")

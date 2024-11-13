@@ -1,9 +1,13 @@
 """
-Types:
-- [`Susceptibility`](@ref)
+Defines parent type and functions for all magnetic susceptibility sources.
 
-Methods:
-- [`single_susceptibility`](@ref)
+
+Types:
+- `BaseSusceptibility`
+
+Functions:
+- `single_susceptibility`
+- `single_susceptibility_gradient`
 """
 module Base
 

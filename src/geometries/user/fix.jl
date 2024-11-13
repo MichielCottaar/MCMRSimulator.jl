@@ -1,3 +1,6 @@
+"""
+Defines [`MCMRSimulator.fix`](@ref MCMRSimulator.Geometries.User.Fix.fix).
+"""
 module Fix
 import LinearAlgebra: I, transpose
 import StaticArrays: SVector

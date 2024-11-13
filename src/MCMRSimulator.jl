@@ -31,9 +31,9 @@ import Compat: @compat
 import .Constants: gyromagnetic_ratio
 @compat public gyromagnetic_ratio
 
-import .Methods: get_time, get_rotation, project
+import .Methods: get_time, get_rotation
 export get_time
-@compat public get_rotation, project
+@compat public get_rotation
 
 import .Spins: position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, SpinOrientationSum, isinside, stuck, stuck_to, orientation, FixedXoshiro, get_sequence
 export position, longitudinal, transverse, phase, Spin, Snapshot, isinside, stuck, stuck_to, orientation, get_sequence

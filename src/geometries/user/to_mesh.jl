@@ -1,5 +1,5 @@
 """
-Methods that extend the `Mesh` constructor to convert different types into meshes.
+Methods that extend the [`Mesh`](@ref) constructor to convert different types into meshes.
 """
 module ToMesh
 import StaticArrays: SVector, MVector

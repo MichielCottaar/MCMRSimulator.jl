@@ -1,10 +1,12 @@
 """
-Types:
-- [`ObstructionType`](@ref)
+Defines the properties of a certain geometry type.
 
-Methods:
-- [`fields`](@ref)
-- [`key_value_pairs`](@ref)
+Types:
+- `ObstructionType`
+
+Functions:
+- `fields`
+- `key_value_pairs`
 """
 module ObstructionTypes
 

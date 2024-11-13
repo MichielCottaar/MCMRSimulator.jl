@@ -1,3 +1,8 @@
+"""
+Defines a `HitGrid` used to precompute the locations of each obstruction within a grid.
+
+This helps limit the number of intersection calculations required for each spin movement.
+"""
 module HitGrids
 
 import StaticArrays: SVector

@@ -1,3 +1,6 @@
+"""
+Defines [`MCMRSimulator.fix_susceptibility`](@ref MCMRSimulator.Geometries.User.FixSusceptibility.fix_susceptibility).
+"""
 module FixSusceptibility
 import StaticArrays: SVector
 import LinearAlgebra: transpose, norm, ⋅, I
