@@ -38,7 +38,7 @@ makedocs(;
         "API" => "api.md",
         "References" => "references.md",
     ],
-    warnonly=Documenter.except(:example_block),
+    warnonly=[:missing_docs],
     checkdocs=:exports,
     plugins=[bib],
 )
