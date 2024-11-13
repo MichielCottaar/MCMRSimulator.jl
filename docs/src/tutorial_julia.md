@@ -56,7 +56,6 @@ save("tutorial_sequence.png", f); # hide
 nothing # hide
 ```
 ![](tutorial_sequence.png)
-More details on plotting sequences can be found in the [`plot_sequence`](@ref) documentation.
 
 Once we have both a geometry and one or more sequences, we can put them together in a [`Simulation`](@ref) object:
 ```@example tutorial
@@ -142,14 +141,11 @@ times = 0:0.1:100
 # simulate 3000 spins for a single repetition time
 average_signals = readout(3000, simulation, times, skip_TR=5)
 f = lines(times, transverse.(average_signals)/3000.)
-xlims!(0, 100)
-f
 save("tutorial_transverse.png", f) # hide
 nothing # hide
 ```
 ![](tutorial_transverse.png)
 
-Note that by plotting the [`Sequence`](@ref) as well, we make the signal evolution a lot easier to interpret.
 
 ## Reading out the full snapshot
 Instead of returning just the total signal [`readout`](@ref) can also return the full spin state in a [`Snapshot`](@ref) object by setting the `return_snapshot` keyword to `true`.
