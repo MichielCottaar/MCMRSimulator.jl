@@ -1,10 +1,17 @@
 variables:
   CI: "true"
+  JULIA_DEPOT_PATH: "$CI_PROJECT_DIR/.julia"
+
 
 default:
   image: julia:latest
   tags:
     - docker
+  cache:
+    key: "mcmr-cache"
+    paths:
+      - "$JULIA_DEPOT_PATH"
+
 
 Testing:
   script:
