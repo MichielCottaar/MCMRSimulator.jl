@@ -3,7 +3,7 @@
     "number": 1,
     "#radius_description": "Radius of the cylinder. Field is required. Expected type: Float64.",
     "radius": 1.0,
-    "#rotation_description": "Rotation applied to all obstructions in group. Can be set to a matrix or one of :x, :y, or, :z (see [`get_rotation`](@ref)). Field is required. Expected type: StaticArraysCore.SMatrix{3, 2, Float64, 6}.",
+    "#rotation_description": "Rotation applied to all obstructions in group. Can be set to a matrix or one of :x, :y, or, :z (see [`MCMRSimulator.get_rotation`](@ref MCMRSimulator.Methods.get_rotation)). Field is required. Expected type: StaticArraysCore.SMatrix{3, 2, Float64, 6}.",
     "rotation": [[1.0,0.0,0.0],[0.0,1.0,0.0]],
     "#R1_surface_description": "Additional longitudinal relaxation rate (kHz). Surface property. Field is required. Expected type: Float64.",
     "R1_surface": 0.0,
