@@ -130,7 +130,7 @@ save("tutorial_equil.png") # hide
 nothing # hide
 ```
 
-At each timepoint [`readout`](@ref) by default will return the total MR signal (for each sequence) as a [`SpinOrientation`](@ref) object.
+At each timepoint [`readout`](@ref) by default will return the total MR signal (for each sequence) as a [`MCMRSimulator.SpinOrientationSum`](@ref) object.
 From this one can estimate the [`transverse`](@ref) component, the [`longitudinal`](@ref) component, and the [`phase`](@ref).
 The [`longitudinal`](@ref) and [`transverse`](@ref) functions are used above to get those respective components.
 
