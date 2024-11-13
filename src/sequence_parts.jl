@@ -3,7 +3,7 @@ Breaks up one or more `MRIBuilder.Sequence` objects into individual timesteps.
 
 The main interface is by calling `iter_parts`, which will result into a vector of some subtypes of `SequencePart`.
 
-To just get the readouts call [`MCMRSimulator.get_readouts`](@ref).
+To just get the readouts call [`MCMRSimulator.get_readouts`](@ref MCMRSimulator.SequenceParts.get_readouts).
 """
 module SequenceParts
 import StaticArrays: SVector, StaticVector, SizedVector

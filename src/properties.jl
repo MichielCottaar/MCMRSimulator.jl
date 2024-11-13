@@ -1,10 +1,10 @@
 """
 Basic interface for setting the simulation properties
 
-For the main interface see [`Simulation`](@ref).
+For the main interface see [`Simulation`](@ref MCMRSimulator.Simulations.Simulation).
 
 Types:
-- [`MCMRSimulator.GlobalProperties`](@ref)
+- [`MCMRSimulator.GlobalProperties`](@ref MCMRSimulator.Properties.GlobalProperties)
 
 Methods:
 - `R1`
