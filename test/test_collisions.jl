@@ -173,7 +173,7 @@
             end
             seq_part = mr.SequenceParts.MultSequencePart(0.5, [mr.SequenceParts.EmptyPart()])
             for _ in 1:100
-                mr.draw_step!(spin, mr.Simulation(empty_sequence, diffusivity=3., geometry=geometry), seq_part, SizedVector{1, Float64}(3.))
+                mr.Evolve.draw_step!(spin, mr.Simulation(empty_sequence, diffusivity=3., geometry=geometry), seq_part, SizedVector{1, Float64}(3.))
                 inside &= mr.isinside(geometry, spin) == 2
             end
             @test inside
@@ -289,7 +289,7 @@
             theta = mr.spiral_theta(spiral.obstructions[1], SVector{2}(spin.position[1:2]))
             for _ in 1:100000
                 prev_theta = theta
-                mr.draw_step!(spin, 1., 0.01, (spiral, ), ())
+                mr.Evolve.draw_step!(spin, 1., 0.01, (spiral, ), ())
                 theta = mr.spiral_theta(spiral.obstructions[1], SVector{2}(spin.position[1:2]))
                 if abs(theta - prev_theta) > π
                     error("Leaked through spiral!")
