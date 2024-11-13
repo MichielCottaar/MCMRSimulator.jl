@@ -39,6 +39,7 @@ makedocs(;
         "References" => "references.md",
     ],
     warnonly=Documenter.except(:example_block),
+    checkdocs=:exports,
     plugins=[bib],
 )
 for fn in raw_src_files
