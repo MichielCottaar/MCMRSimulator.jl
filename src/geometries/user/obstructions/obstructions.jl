@@ -72,6 +72,7 @@ for obstruction_type in (
         ]),
 )
     name_string = String(obstruction_type.singular)
+    plural_name = String(obstruction_type.plural)
     (unique_keys, field_values) = key_value_pairs(obstruction_type, 0)
     unique_field_values = [field_values[key] for key in unique_keys]
     sort!(unique_field_values, by=fv->~fv.field.required)
@@ -79,15 +80,20 @@ for obstruction_type in (
     @eval const $(obstruction_type.singular) = IndexedObstruction{$(QuoteNode(obstruction_type.plural))}
     @eval const $(obstruction_type.plural) = ObstructionGroup{$(QuoteNode(obstruction_type.plural))}
     constructor = obstruction_type.plural
+    single_type = obstruction_type.singular
     @eval begin
         $(constructor)(; kwargs...) = ObstructionGroup($(obstruction_type); kwargs...)
         @doc """
             $($constructor))(; fields...)
 
-        Creates a set of """ * $(name_string) * """ objects.
+        Creates a set of [`MCMRSimulator.""" * $(name_string) * """`](@ref MCMRSimulator.Geometries.User.Obstructions.""" * $(name_string) * """) objects.
         Fields can be set using keyword arguments.
         The following fields are available:
         """ * $(fields_string) $constructor
+
+        @doc """
+        Singular """ * $(name_string) * """ object that is obtained by indexing a [`""" * $(plural_name) * """`](@ref) object.
+        """ $single_type 
     end
 end
 

@@ -25,11 +25,17 @@ MCMRSimulator.TimeStep
 ### Geometry types
 ```@docs
 Annuli
+MCMRSimulator.Annulus
 Cylinders
+MCMRSimulator.Cylinder
 Walls
+MCMRSimulator.Wall
 Spheres
+MCMRSimulator.Sphere
 Mesh
+MCMRSimulator.Triangle
 BendyCylinder
+MCMRSimulator.Ring
 ```
 ### Geometry helper functions
 ```@docs
