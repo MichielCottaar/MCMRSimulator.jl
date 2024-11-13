@@ -25,7 +25,7 @@ import ..Geometries.Internal:
     BoundingBox, lower, upper, random_surface_positions,
     FixedGeometry, FixedObstruction, FixedObstructionGroup, FixedSusceptibility,
     isinside, R1, R2, off_resonance, has_hit, previous_hit, susceptibility_off_resonance
-import ..Methods: get_time, norm_angle, project
+import ..Methods: get_time, norm_angle
 import ..Properties: GlobalProperties
 import ..Geometries: fix, fix_susceptibility
 

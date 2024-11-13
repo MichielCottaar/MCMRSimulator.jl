@@ -7,7 +7,7 @@ import MRIBuilder: Sequence
 import ..Geometries: ObstructionGroup, fix, fix_susceptibility
 import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility, susceptibility_off_resonance, prepare_isinside!
 import ..Spins: Spin, Snapshot, SpinOrientation, stuck
-import ..Methods: get_time, B0
+import ..Methods: get_time
 import ..Properties: GlobalProperties, R1, R2, off_resonance
 import ..TimeSteps: TimeStep
 
