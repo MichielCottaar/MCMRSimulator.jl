@@ -3,7 +3,7 @@ Defines methods shared across multiple sub-modules.
 
 - [`get_time`](@ref)
 - `norm_angle`
-- [`MCMRSimulator.get_rotation`](@ref)
+- [`MCMRSimulator.get_rotation`](@ref MCMRSimulator.Methods.get_rotation)
 - `off_resonance`
 """
 module Methods

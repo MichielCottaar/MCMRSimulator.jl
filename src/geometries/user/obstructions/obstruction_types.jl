@@ -44,7 +44,7 @@ function fields(ot::ObstructionType)
     default_rotation = SMatrix{3, ot.ndim}(I(3)[:, 1:ot.ndim])
     fields = [
         ot.extra_fields...,
-        Field{SMatrix{3, ot.ndim, Float64, 3 * ot.ndim}}(:rotation, "Rotation applied to all obstructions in group. Can be set to a matrix or one of :x, :y, or, :z (see [`MCMRSimulator.get_rotation`](@ref)).", default_rotation, only_group=true, required=true),
+        Field{SMatrix{3, ot.ndim, Float64, 3 * ot.ndim}}(:rotation, "Rotation applied to all obstructions in group. Can be set to a matrix or one of :x, :y, or, :z (see [`MCMRSimulator.get_rotation`](@ref MCMRSimulator.Methods.get_rotation)).", default_rotation, only_group=true, required=true),
         Field{MVector{ot.ndim, Float64}}(:repeats, "Length scale on which the obstructions are repeated (um).", only_group=true),
         Field{Bool}(:use_boundingbox, "Use bounding boxes for an initial filtering of possible intersections.", true, only_group=true),
         Field{Float64}(:grid_resolution, "Resolution of the grid that the volume is split up into (um). Defaults to roughly one grid element per obstruction.", only_group=true),
