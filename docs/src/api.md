@@ -88,7 +88,10 @@ MCMRSimulator.run_main
 ```
 
 ## Internal modules
+The internals of these sub-modules are considered private and might change at any time.
+
 Each of these modules corresponds to a file in the gitlab repository
+
 ```@docs
 MCMRSimulator
 MCMRSimulator.Constants
