@@ -217,7 +217,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
             end
             grid[coordinate...] = result
         end
-        vec_susceptibilities = eltype(susceptibilities) <: Number ? [((N == 2) ? SVector{2}(0., s) : SVector{3}(0., 0., s)) for s in susceptibilities] : susceptibilities
+        vec_susceptibilities = eltype(susceptibilities) <: Number ? [s .* B0_field for s in susceptibilities] : susceptibilities
         return SusceptibilityGridNoRepeat{N, eltype(internal), element_type, N*3}(
             inv_resolution,
             transpose(user.rotation.value),
