@@ -36,11 +36,12 @@ To share the exact environment used by your installation of MCMRSimulator, simpl
 ### Installing the Julia kernel
 You only have to run the following once:
 ```bash
-julia --project=@ijulia -e "import Pkg; Pkg.add(\"IJulia\"); Pkg.build(\"IJulia\")" 
+julia -e "import Pkg; Pkg.add(\"IJulia\"); Pkg.build(\"IJulia\")" 
 ```
-This line creates a new global, isolated environment called "@ijulia" (which by default will be located at `~/.julia/environments/ijulia`).
-In that environment it installs and builds the `IJulia` package.
-This will create a kernel just for Julia.
+This line installs and builds `IJulia` in the main, global environment.
+This will create a new jupyter kernel just for Julia.
+This global environment is available within any local environments,
+so we only have to do this once across any number of Julia projects.
 
 To test whether this has worked, start a `Jupyter notebook` (or `Jupyter lab`).
 If you have FSL installed, you can do so using `fslpython -m notebook`.
@@ -48,7 +49,7 @@ Within the `Jupyter notebook` interface press "New".
 The Julia kernel should show up here with its version number.
 ![](jupyter_julia_kernel.png)
 
-### Using the simulator using this Julia kernel
+### Using the simulator with this Julia kernel
 If you followed the steps in the previous section, the Julia kernel will be installed in its own environment separate from the simulator.
 To use the simulator using this kernel, we simply start a notebook and then switch to an environment that has the MCMR simulator installed (i.e., created as described [above](@ref installation)).
 You can do this by including a block at the top of the notebook with the following code:
