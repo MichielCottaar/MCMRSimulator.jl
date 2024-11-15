@@ -194,7 +194,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
 
     super_resolution = 3
     if isnothing(user.repeats.value)
-        size_grid_off_resonance = @. super_resolution * (orig_size_grid + nvoxels_add * 2)
+        size_grid_off_resonance = @. super_resolution * (size_grid_indices + nvoxels_add * 2)
         grid = zeros(size_grid_off_resonance...)
         @Threads.threads for coordinate in Tuple.(eachindex(IndexCartesian(), grid))
             lower_edge = lower(bb_off_resonance)
