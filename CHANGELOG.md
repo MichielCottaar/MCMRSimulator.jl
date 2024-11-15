@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 ### Optimisations
-- `readout` is sped up by roughly 5 times when `return_snapshot=true` is set.
+- `readout` is now roughly 5 times faster `return_snapshot=true` is set.
 ## [v0.11.0]
 ### Added
 - Meshes are automatically split into individual components (based on connectivity). The R1/R2/off-resonance can be set individually within each of these components. The component index of each element can be overwritten using `mesh.component = [...]`.
