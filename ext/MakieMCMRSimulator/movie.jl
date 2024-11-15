@@ -5,7 +5,7 @@ import MCMRSimulator.Spins: transverse
 import MCMRSimulator.Simulations: Simulation
 import MCMRSimulator.Evolve: readout
 
-function simulator_movie(filename, simulator::Simulation{N}, times, repeats; resolution=(1600, 800), trajectory_init=30, signal_init=10000, framerate=50, plane_orientation=:z, lengthscale=1., arrowsize=10.) where {N}
+function simulator_movie(filename, simulator::Simulation{N}, times, repeats; figure_size=(1600, 800), trajectory_init=30, signal_init=10000, framerate=50, plane_orientation=:z, lengthscale=1., arrowsize=10.) where {N}
     if isa(trajectory_init, Integer)
         trajectory_init = [rand(3) .* repeats .- repeats ./ 2 for _ in 1:trajectory_init]
     end
@@ -23,7 +23,7 @@ function simulator_movie(filename, simulator::Simulation{N}, times, repeats; res
 
     index = Observable(1)
     time = @lift times[$index]
-    fig = Figure(resolution=resolution)
+    fig = Figure(size=figure_size)
     ax_walk = Axis(fig[1, 1], title=(@lift("time = $(round($time, digits=1)) ms")))
     plot!(ax_walk, pp, simulator.geometry)
     xlims!(ax_walk, -repeats[1]/2, repeats[1]/2)
