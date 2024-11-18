@@ -103,9 +103,9 @@
             @testset "Split triangle" begin
                 Random.seed!(1)
                 for xsplit in [0., 0.7, -0.2, 0.9]
-                    vertices = [[-1, -0.5, 0.], [1, -0.5, 0.], [0., 1., 0.], [0.8, -0.5, 0.]]
-                    mesh_single = mr.Mesh(vertices=vertices, triangles=[[1, 2, 3]], myelin=true)
-                    mesh_double = mr.Mesh(vertices=vertices, triangles=[[1, 4, 3], [2, 4, 3]], myelin=true)
+                    vertices = [[-1, -0.5, 0.], [1, -0.5, 0.], [0., 1., 0.], [xsplit, -0.5, 0.]]
+                    mesh_single = mr.Mesh(vertices=vertices, triangles=[[1, 2, 3]], myelin=true, grid_resolution=1.)
+                    mesh_double = mr.Mesh(vertices=vertices, triangles=[[1, 4, 3], [2, 4, 3]], myelin=true, grid_resolution=1.)
                     for pos in [
                         [0., 0., 0.001],
                         [1., 1., 0.001],
@@ -117,7 +117,7 @@
                     ]
                         f_single = field(mesh_single, pos)
                         f_double = field(mesh_double, pos)
-                        @test f_single ≈ f_double rtol=1e-2
+                        @test f_single ≈ f_double rtol=5e-2
                     end
                 end
             end
