@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Fixed
 - Fixed spurious zeroes in susceptibility calculations for spins outside of a non-repeating geometry.
+- `tortuosity` parameter in timestep is now correctly spelled (i.e., no longer `turtoisity`)
 ### Optimisations
 - `readout` is now roughly 5 times faster `return_snapshot=true` is set.
 ## [v0.11.0]
