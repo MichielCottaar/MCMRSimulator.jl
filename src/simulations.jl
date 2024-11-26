@@ -44,10 +44,11 @@ They can be overriden for individual objects for each [`ObstructionGroup`](@ref)
 Note that `MT_fraction` and `permeability` are internally adjusted to make their effect independent of the timestep.
 
 ## Timestep parameters
-- `timestep` controls the timepoints at which the simulation is evaluated. 
-It can be set directly to a number or one can control the parameters as described in the documentation for [`TimeStep`](@ref) (default).
-To override any of these parameters run: `timestep=(turtoisity=Inf, )`. 
-This example will ignore the turtoisity constraint (by setting the parameter to Inf).
+`timestep` controls the timepoints at which the simulation is evaluated. 
+By default, the maximum allowable timestep will be determined by the geometry and biophysical parameters as described in [`Timestep`](@ref).
+That documentation also describes how to adjust these settings.
+The timestep can also be set to a number to ignore any of these parameters.
+Note that a too large timestep will lead to inaccurate results.
 
 # Running the simulation
 To run a [`Snapshot`](@ref) of spins through the simulations you can use one of the following functions:
