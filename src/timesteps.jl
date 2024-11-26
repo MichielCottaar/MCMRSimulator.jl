@@ -6,14 +6,14 @@ import ..Constants: gyromagnetic_ratio
 import ..Geometries: Internal
 
 """
-    Simulation(timestep=(turtoisity=3e-2, gradient=1e-4, permeability=0.5, surface_relaxation=0.01, transfer_rate=0.01, dwell_time=0.1))
+    Simulation(timestep=(tortuosity=3e-2, gradient=1e-4, permeability=0.5, surface_relaxation=0.01, transfer_rate=0.01, dwell_time=0.1))
 
 Creates an object controlling the timestep of the MCMR simulation.
 
 It can be set by supplying a named tuple to the `timestep` keyword when creating a `Simulation`.
 
 At any time the timestep is guaranteed to be shorter than:
-1. `FullTimeStep.turtoisity_precision` * `size_scale(geometry)`^2 / D, where `size_scale` is the average size of the obstructions and `D` is the `diffusivity`.
+1. `tortuosity` * `size_scale(geometry)`^2 / D, where `size_scale` is the average size of the obstructions and `D` is the `diffusivity`.
 2. timestep greater than `permeability` times 1 / (maximum permeability parameter)^2
 3. timestep that would allow surface relaxation rate at single collision to be greater than `surface_relaxation`.
 4. timestep that would allow magnetisation transfer rate at single collision to be greater than `transfer_rate`.
@@ -28,7 +28,7 @@ end
 
 function TimeStep(; 
     diffusivity, geometry, size_scale=nothing, 
-    turtoisity=3e-2, gradient=1e-4, verbose=true,
+    tortuosity=3e-2, gradient=1e-4, verbose=true,
     permeability=0.5, surface_relaxation=0.01,
     transfer=0.01, dwell_time=0.1
     )
@@ -37,7 +37,7 @@ function TimeStep(;
     end
     use_size_scale = isnothing(size_scale) ? Internal.size_scale(geometry) : size_scale
     options = (
-            turtoisity * use_size_scale^2 / diffusivity,
+            tortuosity * use_size_scale^2 / diffusivity,
             Internal.max_timestep_sticking(geometry, diffusivity, transfer),
             max_timestep_permeability(geometry, permeability),
             max_timestep_surface_relaxation(geometry, surface_relaxation),
@@ -50,7 +50,7 @@ function TimeStep(;
             push!(lines, "No maximum timestep set.")
             push!(lines, "To set a maximum timestep set `timestep=<number>` in the `Simulation` constructor.")
         elseif idx == 1
-            push!(lines, "Maximum timestep set by turtoisity constraint based on size of geometry to $(options[1]) ms.")
+            push!(lines, "Maximum timestep set by tortuosity constraint based on size of geometry to $(options[1]) ms.")
             if isnothing(size_scale)
                 push!(lines, "Size scale of smallest object in the simulation was automatically determined to be $(use_size_scale) um.")
                 push!(lines, "If this value is too small, you can set the size scale explicitly by passing on `size_scale=<new_value>` to the `Simulator` constructor.")
