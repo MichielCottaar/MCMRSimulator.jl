@@ -45,7 +45,7 @@ Note that `MT_fraction` and `permeability` are internally adjusted to make their
 
 ## Timestep parameters
 `timestep` controls the timepoints at which the simulation is evaluated. 
-By default, the maximum allowable timestep will be determined by the geometry and biophysical parameters as described in [`Timestep`](@ref).
+By default, the maximum allowable timestep will be determined by the geometry and biophysical parameters as described in [`MCMRSimulator.TimeStep`](@ref MCMRSimulator.TimeSteps.TimeStep).
 That documentation also describes how to adjust these settings.
 The timestep can also be set to a number to ignore any of these parameters.
 Note that a too large timestep will lead to inaccurate results.
