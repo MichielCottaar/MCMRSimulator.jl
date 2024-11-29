@@ -340,8 +340,43 @@ function readout_internal(snapshot::Snapshot{N}, simulation::Simulation{N}, new_
     return fix_accumulator(accumulator)
 end
 
+
+# Special case when `spins` is an integer value
+# Only run a limited number of spins at a time to save memory
+function readout(spins::Integer, simulation::Simulation{N}, new_readout_times=nothing; bounding_box=500, kwargs...) where {N}
+    if :readouts in keys(kwargs)
+        error("readout timings should be set as the 3rd positional argument, not a keyword argument.")
+    end
+    if iszero(N)
+        nruns = 1
+    else
+        total_magnetisations = spins * N
+        nruns = Int(div(total_magnetisations, 1e6, RoundUp))
+        if nruns < spins
+            nruns = spins
+        end
+        if simulation.verbose && nruns > 1
+            @info "The $spins simulated spins will be split over $nruns independent runs to save memory."
+        end
+    end
+
+    nspins_min = Int(div(spins, nruns, RoundDown))
+    nruns_extra = spins - nspins_min * nruns
+
+    accumulator = GridAccumulator(simulation, 0.; readouts=new_readout_times, kwargs...)
+    repeat = :nTR in keys(kwargs) || :skip_TR in keys(kwargs)
+    for nspins_run in [
+        fill(nspins_min + 1, nruns_extra)...,
+        fill(nspins_min, nruns - nruns_extra)...
+    ]
+        run_readout!(_to_snapshot(nspins_run, simulation, bounding_box), simulation, accumulator, Val(repeat); readouts=new_readout_times)
+    end
+    return fix_accumulator(accumulator)
+end
+
+
 """
-    run_readout!(snapshot, simulation, accumulators)
+    run_readout!(snapshot, simulation, accumulators, repeat; kwargs...)
 
 Runs the simulation starting from `snapshot` and filling the `accumulators`.
 """
