@@ -65,6 +65,7 @@ struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, O<:FixedSuscep
     susceptibility :: O
     timestep :: TimeStep
     flatten::Bool
+    verbose::Bool
     function Simulation(
         sequences, 
         diffusivity::Float64,
@@ -74,6 +75,7 @@ struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, O<:FixedSuscep
         susceptibility::FixedSusceptibility,
         timestep::TimeStep,
         flatten::Bool,
+        verbose::Bool
     )
         nseq = length(sequences)
 
@@ -85,7 +87,8 @@ struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, O<:FixedSuscep
             inside_geometry,
             susceptibility,
             timestep,
-            flatten
+            flatten,
+            verbose,
         )
     end
 end
@@ -132,6 +135,7 @@ function Simulation(
         susceptibility,
         timestep isa Number ? TimeStep(timestep, Inf) : TimeStep(; verbose=verbose, diffusivity=diffusivity, geometry=geometry, timestep...),
         flatten,
+        verbose,
     )
 end
 
