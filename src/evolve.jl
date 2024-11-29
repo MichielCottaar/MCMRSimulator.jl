@@ -351,7 +351,7 @@ function readout(spins::Integer, simulation::Simulation{N}, new_readout_times=no
         nruns = 1
     else
         total_magnetisations = spins * N
-        nruns = Int(div(total_magnetisations, 1e6, RoundUp))
+        nruns = Int(div(total_magnetisations, 1e7, RoundUp))
         if nruns < spins
             nruns = spins
         end
