@@ -139,7 +139,7 @@ Here we use this to plot the actual transverse signal evolution.
 ```@example tutorial
 times = 0:0.1:100
 # simulate 3000 spins for a single repetition time
-average_signals = readout(3000, simulation, times, skip_TR=5)
+average_signals = readout(3000, simulation, times)
 f = lines(times, transverse.(average_signals)/3000.)
 save("tutorial_transverse.png", f) # hide
 nothing # hide
