@@ -105,7 +105,7 @@ This signal is not truely representative from what we expect in a true diffusion
 because the longitudinal signal has not had a chance to relax across multiple repetition times.
 To see what the signal will look like after such equilibriation, we can delay our readout with several TRs:
 ```@example tutorial
-readout(1000, simulation, skip_TR=5)
+readout(1000, simulation, skip_TR=2)
 ```
 
 In addition, to the total signal, we can also get the signal associated with individual compartments:
