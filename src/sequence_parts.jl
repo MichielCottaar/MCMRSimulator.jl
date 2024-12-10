@@ -11,6 +11,7 @@ import LinearAlgebra: norm
 import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, edge_times, get_pulse, iter_instant_gradients, iter_instant_pulses, make_generic, variables, Wait
 import MRIBuilder.Components: GradientWaveform, RFPulseComponent, NoGradient, ConstantGradient, ChangingGradient, InstantGradient, InstantPulse, split_timestep, EventComponent, SingleReadout
 import ..TimeSteps: TimeStep
+import ..Spins: static_vector_type
 
 
 """
@@ -41,8 +42,6 @@ struct LinearPart <: NoPulsePart
     start :: SVector{3, Float64}
     final :: SVector{3, Float64}
 end
-
-static_vector_type(N) = (N < 50 ? SVector : SizedVector){N}
 
 
 """

@@ -14,7 +14,7 @@ import Rotations
 import Bessels: besseli0
 import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, iter_parts, get_readouts, IndexedReadout, first_TR_with_all_readouts, NoGradient
 import ..Methods: get_time
-import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation
+import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation, static_vector_type
 import ..Simulations: Simulation, _to_snapshot
 import ..Relax: relax!
 import ..Properties: GlobalProperties, stick_probability
@@ -59,15 +59,18 @@ by setting `return_snapshot=false` in [`readout`](@ref).
 
 After the simulation a [`Snapshot`](@ref) will be returned.
 """
-struct SnapshotAccumulator{N} <: SingleAccumulator
-    spins :: Vector{Vector{Spin{N}}}
+struct SnapshotAccumulator{N, ST} <: SingleAccumulator
+    spins :: Vector{Vector{Spin{N, ST}}}
     time :: Float64
     nwrite :: Ref{Int}
-    SnapshotAccumulator{N}(time::Number) where {N} = new{N}(
-        Vector{Spin{N}}[],
-        Float64(time),
-        Ref(0)
-    )
+    function SnapshotAccumulator{N}(time::Number) where {N}
+        st = static_vector_type(N){SpinOrientation}
+        return new{N, st}(
+            Vector{Spin{N, st}}[],
+            Float64(time),
+            Ref(0)
+        )
+    end
 end
 
 """
@@ -224,18 +227,18 @@ end
 
 Adds the `spins` to the readout of `single_accumulator`
 """
-function readout!(acc::TotalSignalAccumulator, spins::Vector{Spin{1}})
+function readout!(acc::TotalSignalAccumulator, spins::Vector{<:Spin{1}})
     acc.nspins[] += length(spins)
     acc.as_vector .+= orientation(Snapshot(spins))
     acc.nwrite[] += 1
 end
 
-function readout!(acc::SnapshotAccumulator{N}, spins::Vector{Spin{N}}) where {N}
+function readout!(acc::SnapshotAccumulator{N}, spins::Vector{<:Spin{N}}) where {N}
     push!(acc.spins, deepcopy(spins))
     acc.nwrite[] += 1
 end
 
-readout!(::FillerAccumulator, spins::Vector{Spin{1}}) = nothing
+readout!(::FillerAccumulator, spins::Vector{<:Spin{1}}) = nothing
 
 """
     readout!(grid_accumulator, spins, index_sequence, readout)
@@ -244,7 +247,7 @@ Adds the `spins` to the accumulators corresponding to each subset for given sequ
 
 Returns true if this is the last readout that needs to be considered in the simulation.
 """
-function readout!(acc::GridAccumulator, spins::Vector{Spin{N}}, index_sequence::Int, readout::IndexedReadout) where {N}
+function readout!(acc::GridAccumulator, spins::Vector{<:Spin{N}}, index_sequence::Int, readout::IndexedReadout) where {N}
     @assert N <= 1
     if readout.TR <= acc.first_TR
         return false
@@ -480,7 +483,7 @@ Updates the spin based on a random movement through the given geometry for a giv
   This displacement will take into account the obstructions in `simulation.geometry`.
 - The spin orientation will be affected by relaxation (see [`relax!`](@ref)) and potentially by magnetisation transfer during collisions.
 """
-function draw_step!(spins::Vector{Spin{N}}, simulation::Simulation{N}, sequence_part::MultSequencePart{N}, B0s::StaticVector{N, Float64}) where {N}
+function draw_step!(spins::Vector{<:Spin{N}}, simulation::Simulation{N}, sequence_part::MultSequencePart{N}, B0s::StaticVector{N, Float64}) where {N}
     Threads.@threads for spin in spins
         draw_step!(spin, simulation, sequence_part, B0s)
     end
@@ -615,8 +618,8 @@ Each instant can be:
 
 Returns `true` if this is the final readout and we should stop.
 """
-apply_instants!(spins::Vector{Spin{N}}, instants::InstantSequencePart{N}, accumulator::GridAccumulator) where {N} = apply_instants!(spins, instants.instants, accumulator)
-function apply_instants!(spins::Vector{Spin{N}}, instants::StaticVector{N}, accumulator::GridAccumulator) where {N}
+apply_instants!(spins::Vector{<:Spin{N}}, instants::InstantSequencePart{N}, accumulator::GridAccumulator) where {N} = apply_instants!(spins, instants.instants, accumulator)
+function apply_instants!(spins::Vector{<:Spin{N}}, instants::StaticVector{N}, accumulator::GridAccumulator) where {N}
     final = false
     for i in 1:N
         final |= apply_instants!(spins, i, instants[i], accumulator)
@@ -624,7 +627,7 @@ function apply_instants!(spins::Vector{Spin{N}}, instants::StaticVector{N}, accu
     return final
 end
 
-apply_instants!(spins::Vector{Spin{N}}, instants::StaticVector{N, Nothing}, _) where {N} = false
+apply_instants!(spins::Vector{<:Spin{N}}, instants::StaticVector{N, Nothing}, _) where {N} = false
 apply_instants!(spins::Vector{<:Spin}, index::Int, ::Nothing, _) = false
 
 function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::InstantGradient, _)

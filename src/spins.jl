@@ -18,7 +18,7 @@ Methods:
 module Spins
 
 import Random
-import StaticArrays: SVector
+import StaticArrays: SVector, SizedVector, StaticVector
 import LinearAlgebra: ⋅, norm
 import ..Geometries.Internal: 
     Reflection, empty_reflection, has_intersection,
@@ -113,15 +113,18 @@ Create a new spin with the same position as `reference_spin` with the orientatio
 - [`orientation`](@ref) to get a (`nsequences`x3) matrix with the spin orientations in 3D space
 - [`position`](@ref) to get a length-3 vector with spin location
 """
-mutable struct Spin{N}
+mutable struct Spin{N, ST<:StaticVector{N, SpinOrientation}}
     position :: SVector{3, Float64}
-    orientations :: SVector{N, SpinOrientation}
+    orientations :: ST
     reflection :: Reflection
     rng :: FixedXoshiro
 end
 
-function Spin(position::AbstractArray{<:Real}, orientations::AbstractArray{SpinOrientation}, reflection=empty_reflection, rng::FixedXoshiro=FixedXoshiro()) 
-    Spin{length(orientations)}(SVector{3, Float64}(position), SVector{length(orientations)}(SpinOrientation.(orientations)), reflection, rng)
+static_vector_type(N) = (N < 50 ? SVector : SizedVector){N}
+
+function Spin(position::AbstractArray{<:Real}, orientations::AbstractVector{SpinOrientation}, reflection=empty_reflection, rng::FixedXoshiro=FixedXoshiro()) 
+    st = static_vector_type(length(orientations)){SpinOrientation}
+    Spin{length(orientations), st}(SVector{3, Float64}(position), st(SpinOrientation.(orientations)), reflection, rng)
 end
 
 function Spin(;nsequences=1, position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., reflection=empty_reflection, rng=FixedXoshiro()) 
@@ -318,10 +321,10 @@ Replicates the positions and orientations for a single sequence in the input sna
 
 Information for a single sequence can be extracted by calling [`get_sequence`](@ref) first.
 """
-struct Snapshot{N} <: AbstractVector{Spin{N}}
-    spins :: AbstractVector{Spin{N}}
+struct Snapshot{N, ST} <: AbstractVector{Spin{N, ST}}
+    spins :: AbstractVector{Spin{N, ST}}
     time :: Float64
-    Snapshot(spins :: AbstractVector{Spin{N}}, time=0.) where {N} = new{N}(spins, Float64(time))
+    Snapshot(spins :: AbstractVector{Spin{N, ST}}, time=0.) where {N, ST} = new{N, ST}(spins, Float64(time))
 end
 
 function Snapshot(positions :: AbstractMatrix{<:Real}; time :: Real=0., kwargs...) 
