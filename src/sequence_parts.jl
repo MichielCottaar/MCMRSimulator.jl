@@ -6,7 +6,7 @@ The main interface is by calling `iter_parts`, which will result into a vector o
 To just get the readouts call [`MCMRSimulator.get_readouts`](@ref MCMRSimulator.SequenceParts.get_readouts).
 """
 module SequenceParts
-import StaticArrays: SVector, StaticVector, SizedVector
+import StaticArrays: SVector
 import LinearAlgebra: norm
 import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, edge_times, get_pulse, iter_instant_gradients, iter_instant_pulses, make_generic, variables, Wait
 import MRIBuilder.Components: GradientWaveform, RFPulseComponent, NoGradient, ConstantGradient, ChangingGradient, InstantGradient, InstantPulse, split_timestep, EventComponent, SingleReadout
@@ -71,7 +71,7 @@ end
 
 A set of N [`SequencePart`](@ref) objects representing overlapping parts of `N` sequences.
 """
-struct MultSequencePart{N, T<:SequencePart, ST<:StaticVector{N, T}}
+struct MultSequencePart{N, T<:SequencePart, ST<:AbstractVector{T}}
     duration :: Float64
     parts :: ST
     function MultSequencePart(duration::Number, parts::AbstractVector)
@@ -100,7 +100,7 @@ A set of `N` instant pulses/gradients that should be applied to the spins.
 
 Some of the instants might be `nothing`.
 """
-struct InstantSequencePart{N, T, ST<:StaticVector{N, T}}
+struct InstantSequencePart{N, T, ST<:AbstractVector{T}}
     instants :: ST
     function InstantSequencePart(instants::AbstractVector)
         T = Union{typeof.(instants)...}

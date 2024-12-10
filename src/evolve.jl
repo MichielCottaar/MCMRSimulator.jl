@@ -6,7 +6,7 @@ Defines the functions that run the actual simulation:
 All of these functions call `evolve_to_time` under the hood to actually run the simulation.
 """
 module Evolve
-import StaticArrays: SVector, MVector, StaticVector
+import StaticArrays: SVector, MVector
 import LinearAlgebra: norm, ⋅
 import MRIBuilder: Sequence, variables, B0, build_sequence
 import MRIBuilder.Components: InstantGradient, InstantPulse
@@ -483,14 +483,14 @@ Updates the spin based on a random movement through the given geometry for a giv
   This displacement will take into account the obstructions in `simulation.geometry`.
 - The spin orientation will be affected by relaxation (see [`relax!`](@ref)) and potentially by magnetisation transfer during collisions.
 """
-function draw_step!(spins::Vector{<:Spin{N}}, simulation::Simulation{N}, sequence_part::MultSequencePart{N}, B0s::StaticVector{N, Float64}) where {N}
+function draw_step!(spins::Vector{<:Spin{N}}, simulation::Simulation{N}, sequence_part::MultSequencePart{N}, B0s::AbstractVector{Float64}) where {N}
     Threads.@threads for spin in spins
         draw_step!(spin, simulation, sequence_part, B0s)
     end
 end
 
 
-function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequencePart{N}, B0s::StaticVector{N, Float64}, test_new_pos=nothing) where {N}
+function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequencePart{N}, B0s::AbstractVector{Float64}, test_new_pos=nothing) where {N}
     if ~isnothing(test_new_pos)
         all_positions = [spin.position]
     end
@@ -619,7 +619,7 @@ Each instant can be:
 Returns `true` if this is the final readout and we should stop.
 """
 apply_instants!(spins::Vector{<:Spin{N}}, instants::InstantSequencePart{N}, accumulator::GridAccumulator) where {N} = apply_instants!(spins, instants.instants, accumulator)
-function apply_instants!(spins::Vector{<:Spin{N}}, instants::StaticVector{N}, accumulator::GridAccumulator) where {N}
+function apply_instants!(spins::Vector{<:Spin{N}}, instants::AbstractVector, accumulator::GridAccumulator) where {N}
     final = false
     for i in 1:N
         final |= apply_instants!(spins, i, instants[i], accumulator)
@@ -627,7 +627,7 @@ function apply_instants!(spins::Vector{<:Spin{N}}, instants::StaticVector{N}, ac
     return final
 end
 
-apply_instants!(spins::Vector{<:Spin{N}}, instants::StaticVector{N, Nothing}, _) where {N} = false
+apply_instants!(spins::Vector{<:Spin{N}}, instants::AbstractVector{Nothing}, _) where {N} = false
 apply_instants!(spins::Vector{<:Spin}, index::Int, ::Nothing, _) = false
 
 function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::InstantGradient, _)

@@ -18,7 +18,7 @@ Methods:
 module Spins
 
 import Random
-import StaticArrays: SVector, SizedVector, StaticVector
+import StaticArrays: SVector
 import LinearAlgebra: ⋅, norm
 import ..Geometries.Internal: 
     Reflection, empty_reflection, has_intersection,
@@ -113,14 +113,14 @@ Create a new spin with the same position as `reference_spin` with the orientatio
 - [`orientation`](@ref) to get a (`nsequences`x3) matrix with the spin orientations in 3D space
 - [`position`](@ref) to get a length-3 vector with spin location
 """
-mutable struct Spin{N, ST<:StaticVector{N, SpinOrientation}}
+mutable struct Spin{N, ST<:AbstractVector{SpinOrientation}}
     position :: SVector{3, Float64}
     orientations :: ST
     reflection :: Reflection
     rng :: FixedXoshiro
 end
 
-static_vector_type(N) = (N < 50 ? SVector : SizedVector){N}
+static_vector_type(N) = N < 50 ? SVector{N} : Vector
 
 function Spin(position::AbstractArray{<:Real}, orientations::AbstractVector{SpinOrientation}, reflection=empty_reflection, rng::FixedXoshiro=FixedXoshiro()) 
     st = static_vector_type(length(orientations)){SpinOrientation}
