@@ -35,20 +35,32 @@ function relax!(spin::Spin{N}, new_pos::NewPosType, simulation::Simulation{N}, p
 
     off_resonance_unscaled = susceptibility_off_resonance(simulation, spin.position, new_pos) * 1e-6 * gyromagnetic_ratio
 
+    # pre-compute the R1 and R2 attenuation.
+    # This will be applied for any sequences for which there is no RF pulse active.
+    # Pre-computing this can greatly speed up runs with large number of sequences.
+    pre_comp = (
+        R1_att=exp(-props.R1 * (t2 - t1) * parts.duration),
+        R2_att=exp(-props.R2 * (t2 - t1) * parts.duration),
+    )
+
     for index in 1:N
-        relax!(spin.orientations[index], spin.position, new_pos, parts.parts[index], props, parts.duration, t1, t2, off_resonance_unscaled * B0s[index])
+        relax!(spin.orientations[index], spin.position, new_pos, parts.parts[index], props, parts.duration, t1, t2, off_resonance_unscaled * B0s[index], pre_comp)
     end
 end
 
 
 # no active RF pulse
-function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, part::NoPulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64)
+function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, part::NoPulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, pre_comp::NamedTuple)
     full_off_resonance = off_resonance + props.off_resonance + grad_off_resonance(part, old_pos, new_pos, t1, t2)
     timestep = (t2 - t1) * duration
     orient.phase += full_off_resonance * timestep * 360
-    relax_single_step!(orient, props, timestep)
+    relax_single_step!(orient, props, pre_comp)
 end
 
+function relax_single_step!(orient::SpinOrientation, props::MRIProperties, pre_comp::NamedTuple)
+    orient.longitudinal = (1 - (1 - orient.longitudinal) * pre_comp.R1_att) 
+    orient.transverse *= pre_comp.R2_att
+end
 
 function relax_single_step!(orient::SpinOrientation, props::MRIProperties, timestep::Float64)
     orient.longitudinal = (1 - (1 - orient.longitudinal) * exp(-props.R1 * timestep)) 
@@ -56,7 +68,7 @@ function relax_single_step!(orient::SpinOrientation, props::MRIProperties, times
 end
 
 # with active RF pulse
-function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::PulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64)
+function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::PulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, ::NamedTuple)
     relax_time = 1 / max(props.R1, props.R2)
     if isinf(relax_time)
         nsplit_rotation = Val(1)
