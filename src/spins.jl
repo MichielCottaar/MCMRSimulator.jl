@@ -144,7 +144,7 @@ function Base.show(io::IO, spin::Spin)
     show_helper(io, spin)
 end
 
-Base.deepcopy_internal(spin::Spin{N}, stackdict::IdDict) where {N} = Spin{N}(
+Base.deepcopy_internal(spin::Spin{N, ST}, stackdict::IdDict) where {N, ST} = Spin{N, ST}(
     spin.position, map(spin.orientations) do orient 
         Base.deepcopy_internal(orient, stackdict)
     end, Base.deepcopy_internal(spin.reflection, stackdict), spin.rng
@@ -337,7 +337,8 @@ end
 
 function Snapshot(nspins::Integer, bounding_box=500, geometry=(); time::Real=0., kwargs...)
     if iszero(nspins)
-        return Snapshot(Spin{get(kwargs, :nsequences, 1)}[], time)
+        nseq = get(kwargs, :nsequences, 1)
+        return Snapshot(Spin{nseq, static_vector_type(nseq){SpinOrientation}}[], time)
     end
     bounding_box = BoundingBox(bounding_box)
     sz = (upper(bounding_box) - lower(bounding_box))
