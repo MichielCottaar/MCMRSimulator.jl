@@ -363,7 +363,7 @@ Base.show(io::IO, snap::Snapshot{N}) where {N} = print(io, "Snapshot($(length(sn
 
 
 function random_surface_spins(geometry::FixedGeometry, bounding_box::BoundingBox{3}, volume_density::Number; nsequences=1, kwargs...)
-    spins = Spin{nsequences}[]
+    spins = Spin{nsequences, static_vector_type(nsequences){SpinOrientation}}[]
     for (position, normal, geometry_index, obstruction_index) in random_surface_positions(geometry, bounding_box, volume_density)
         inside = Random.rand() > 0.5
         use_normal = inside ? normal : -normal

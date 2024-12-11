@@ -26,7 +26,7 @@ Makie.plottype(::AbstractVector{<:Snapshot}) = Plot_Trajectory
 
 
 function Makie.plot!(scene::Plot_Trajectory{<:Tuple{<:PlotPlane, <:AbstractVector{<:Snapshot}}})
-    function _get_colors(sequence_index :: Integer, spin_index :: Integer, snapshots :: Vector{Snapshot{N}}, times :: Vector{Float64}) where {N}
+    function _get_colors(sequence_index :: Integer, spin_index :: Integer, snapshots :: Vector{<:Snapshot{N}}, times :: Vector{Float64}) where {N}
         if N == 0 || sequence_index == 0
             return [Colors.HSV() for _ in times]
         else
