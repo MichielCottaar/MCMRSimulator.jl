@@ -13,7 +13,7 @@ import ..TimeSteps: TimeStep
 
 """
     Simulation(
-        sequences; geometry=[], diffusivity=0.,
+        sequences; geometry=[], diffusivity=3.,
         R1=0, T1=Inf, R2=0, T2=Inf, off_resonance=0, MT_fraction=0, permeability=0,, 
         timestep=<default parameters>,
     )
@@ -24,7 +24,7 @@ Defines the setup of the simulation and stores the output of the run.
 ## General parameters:
 - `sequences`: Vector of `MRIBuilder.Sequence` objects. During the spin random walk the simulation will keep track of the spin magnetisations for all of the provided sequences.
 - `geometry`: Set of obstructions, which can be used to restrict the diffusion, produce off-resonance fields, alter the local T1/T2 relaxation, and as sources of magnetisation transfer.
-- `diffusivity`: Rate of the random motion of the spins in um^2/ms.
+- `diffusivity`: Rate of the random motion of the spins in um^2/ms (default: 3).
 - `verbose`: set to false to silence descriptions of the simulation parameters (default: true).
 
 ## MRI properties
