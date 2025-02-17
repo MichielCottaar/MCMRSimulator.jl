@@ -107,15 +107,15 @@ This function will only work if [`Makie`](https://makie.org) is installed and im
     "Plot format to use (:scatter, :dyad, or :image)."
     kind = :scatter
     "Set the color."
-    color = @inherit color
+    color = automatic
     "Which magnetisation to plot if multiple sequences were simulated."
     sequence = 1
 
     # scatter properties
     marker = @inherit marker
     markersize = @inherit markersize
-    strokecolor = @inherit strokecolor
-    strokewidth = @inherit strokewidth
+    strokecolor = @inherit markerstrokecolor
+    strokewidth = @inherit markerstrokewidth
     glowcolor = (:black, 0.0)
     glowwidth = 0.0
     
@@ -126,9 +126,9 @@ This function will only work if [`Makie`](https://makie.org) is installed and im
     ngrid=20
     
     # dyad propertiees
-    arrowsize=@inherit arrowsize
-    arrowhead=@inherit arrowhead
-    arrowtail=@inherit arrowtail
+    arrowsize=automatic
+    arrowhead=automatic
+    arrowtail=automatic
     linestyle=nothing
     lengthscale=1.
     quality=32
