@@ -25,7 +25,7 @@ function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:PlotPlane, <:GeometryLike}})
         :visible, :overdraw, :fxaa, :transparency, :inspectable, :depth_shift, :model, :space,
         :linestyle,
     ]])
-    full_kwargs[:linewidth] = @lift $(scene[:linewidth]) == Makie.automatic ? theme(scene, :linewidth) : $(scene[:linewidth])
+    full_kwargs[:linewidth] = @lift $(scene[:linewidth]) == Makie.automatic ? $(theme(scene, :linewidth)) : $(scene[:linewidth])
 
     lift(to_plot) do to_iter
         for (func, args, kwargs) in to_iter
