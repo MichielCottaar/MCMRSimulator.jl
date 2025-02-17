@@ -265,9 +265,10 @@ function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:GeometryLike}})
     ]])
 
     geometry = @lift $base_geometry isa FixedGeometry ? $base_geometry : (
+        $base_geometry isa Mesh ? fix($base_geometry) : (
         $base_geometry isa Cylinders ? fix(Mesh($base_geometry, height=1.)) : (
         $base_geometry isa ObstructionGroup ? fix(Mesh($base_geometry)) : fix(Mesh.($base_geometry))
-    ))
+    )))
 
     function plot_group(group, color)
         vert = GeometryBasics.Point{3, Float64}.(group.args.vertices)
