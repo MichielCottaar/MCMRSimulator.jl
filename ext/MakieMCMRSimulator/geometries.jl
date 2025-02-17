@@ -4,10 +4,9 @@ import StaticArrays: SVector
 import LinearAlgebra: cross, ⋅, norm
 import Colors
 import GeometryBasics
-import MCMRSimulator.Plot: PlotPlane, Plot_Geometry
+import MCMRSimulator.Plot: PlotPlane, Plot_Geometry, GeometryLike
 import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, obstructions
 import MCMRSimulator.Geometries: ObstructionGroup, fix, Mesh, Cylinders
-import ..Utils: GeometryLike
 
 
 function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:PlotPlane, <:GeometryLike}})
@@ -24,8 +23,9 @@ function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:PlotPlane, <:GeometryLike}})
 
     full_kwargs = Dict([key => scene[key] for key in [
         :visible, :overdraw, :fxaa, :transparency, :inspectable, :depth_shift, :model, :space,
-        :linewidth, :linestyle,
+        :linestyle,
     ]])
+    full_kwargs[:linewidth] = @lift $(scene[:linewidth]) == Makie.automatic ? theme(scene, :linewidth) : $(scene[:linewidth])
 
     lift(to_plot) do to_iter
         for (func, args, kwargs) in to_iter
@@ -256,8 +256,8 @@ function add_overlap!(new_line, prev_point, new_point, sizes)
 end
 
 
-function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:GeometryLike}})
-    base_geometry = scene[1]
+function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:Nothing, <:GeometryLike}})
+    base_geometry = scene[2]
     default_color = scene[:color]
     kwargs = Dict([key => scene[key] for key in [
         :alpha, :visible, :overdraw, :fxaa, :transparency, :inspectable, :depth_shift, :model, :space,

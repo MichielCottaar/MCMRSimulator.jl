@@ -8,13 +8,17 @@ This makes Makie an optional dependency of MCMRSimulator, which will only be req
 In addition to these empty plotting functions, this module defines the [`PlotPlane`](@ref) for any 2D-projections and helper functions to project onto this plane.
 """
 module Plot
-import MakieCore: @recipe, theme, generic_plot_attributes!, Attributes, automatic, shading_attributes!, colormap_attributes!
+import MakieCore: @recipe, theme, generic_plot_attributes!, Attributes, automatic, shading_attributes!, colormap_attributes!, mixin_generic_plot_attributes, mixin_colormap_attributes, mixin_shading_attributes, AbstractPlot, convert_arguments
 import CoordinateTransformations
 import StaticArrays: SVector, MVector
 import ...Spins: Snapshot, orientation, SpinOrientation, position
 import ...Methods: get_rotation
-import ...Geometries.Internal: ray_grid_intersections
+import ...Geometries.Internal: ray_grid_intersections, FixedGeometry, FixedObstructionGroup
+import ...Geometries.User: ObstructionGroup
 
+
+const GeometryLike = Union{FixedGeometry, FixedObstructionGroup, ObstructionGroup, Vector{<:ObstructionGroup}}
+const Projectable = Union{GeometryLike, Snapshot, Vector{<:Snapshot}}
 
 """
     plot([plot_plane,] geometry; kwargs...)
@@ -29,29 +33,22 @@ Otherwise, the geometry is plotted in 3D.
 If you want to overlay the off-resonance field, call [`plot_off_resonance`](@ref) first before calling this function.
 
 This function will only work if a [`Makie`](https://makie.org) backend is imported.
-
-## Attributes
-- `color`: Set the color of the lines (2D) or patches (3D). In 2D it is set to the theme's `linecolor` by default. In 3D each individual obstruction is by default plotted in a different, distinguishable color.
-- `alpha`: Set the transparancy in a 3D plot (0 being fully transparent and 1 fully opague).
-- `linewidth`: Set the linewidth in 2D plots.
-- `linestyle`: Set the linestyle in 2D plots.
-
-$(string(Base.Docs.@doc(shading_attributes!)))
-
-$(string(Base.Docs.@doc(generic_plot_attributes!)))
 """
-@recipe(Plot_Geometry, plot_plane, geometry) do scene
-    attr = Attributes(
-        color=automatic,
-        alpha=1.,
-        fxaa=true,
-        linewidth=theme(scene, :linewidth),
-        linestyle=nothing,
-    )
-    shading_attributes!(attr)
-    generic_plot_attributes!(attr)
-    return attr
+@recipe Plot_Geometry (plot_plane::Union{Nothing, PlotPlane}, geometry::GeometryLike) begin
+    "Set the color of the lines (2D) or patches (3D). In 2D it is set to the theme's `linecolor` by default. In 3D each individual obstruction is by default plotted in a different, distinguishable color."
+    color=automatic
+    "Set the transparancy in a 3D plot (0 being fully transparent and 1 fully opague)."
+    alpha=1.
+    "Set the linewidth in 2D plots."
+    linewidth=automatic
+    "Set the linestyle in 2D plots."
+    linestyle=nothing
+    mixin_generic_plot_attributes()...
+    mixin_shading_attributes()...
+    fxaa=true
 end
+
+convert_arguments(::Type{<:AbstractPlot}, geometry::GeometryLike) = (nothing, geometry)
 
 
 """
