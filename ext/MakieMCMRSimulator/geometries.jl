@@ -6,7 +6,7 @@ import Colors
 import GeometryBasics
 import MCMRSimulator.Plot: PlotPlane, Plot_Geometry, GeometryLike
 import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, obstructions
-import MCMRSimulator.Geometries: ObstructionGroup, fix, Mesh, Cylinders
+import MCMRSimulator.Geometries: ObstructionGroup, fix, Mesh, Cylinders, Spheres, Walls
 
 
 function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:PlotPlane, <:GeometryLike}})
@@ -255,6 +255,12 @@ function add_overlap!(new_line, prev_point, new_point, sizes)
     end
 end
 
+fix_and_mesh(geom::FixedGeometry; height, nsamples) = geom
+fix_and_mesh(geom::Mesh; height, nsamples) = fix(geom)
+fix_and_mesh(geom::Cylinders; height, nsamples) = fix(Mesh(geom; height=height, nsamples=nsamples == Makie.automatic ? 100 : nsamples))
+fix_and_mesh(geom::Spheres; height, nsamples) = fix(Mesh(geom; nsamples=nsamples == Makie.automatic ? 1000 : nsamples))
+fix_and_mesh(geom::Walls; height, nsamples) = fix(Mesh(geom; height=height))
+fix_and_mesh(geom::ObstructionGroup; height, nsamples) = fix(Mesh(geom))
 
 function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:Nothing, <:GeometryLike}})
     base_geometry = scene[2]
@@ -264,11 +270,7 @@ function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:Nothing, <:GeometryLike}})
         :shading, :diffuse, :specular, :shininess, :backlight, :ssao
     ]])
 
-    geometry = @lift $base_geometry isa FixedGeometry ? $base_geometry : (
-        $base_geometry isa Mesh ? fix($base_geometry) : (
-        $base_geometry isa Cylinders ? fix(Mesh($base_geometry, height=1.)) : (
-        $base_geometry isa ObstructionGroup ? fix(Mesh($base_geometry)) : fix(Mesh.($base_geometry))
-    )))
+    geometry = @lift fix_and_mesh($base_geometry; height=$(scene[:height]), nsamples=$(scene[:nsamples]))
 
     function plot_group(group, color)
         vert = GeometryBasics.Point{3, Float64}.(group.args.vertices)
