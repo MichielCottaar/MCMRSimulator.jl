@@ -6,7 +6,7 @@ import ..Utils: Utils
 import MCMRSimulator.Spins: Snapshot, position, get_sequence
 
 
-function Makie.plot!(scene::Plot_Trajectory{<:Tuple{<:AbstractVector{<:Snapshot}}})
+function Makie.plot!(scene::Plot_Trajectory{<:Tuple{Nothing, <:AbstractVector{<:Snapshot}}})
     Makie.@extract scene (trajectory, color, sequence)
     nspins = @lift length($trajectory[1])
     kwargs = Dict([key => scene[key] for key in [
@@ -53,6 +53,6 @@ function Makie.plot!(scene::Plot_Trajectory{<:Tuple{<:PlotPlane, <:AbstractVecto
     scene
 end
 
-Makie.plottype(::PlotPlane, ::Vector{<:Snapshot}) = Plot_Trajectory
+Makie.plottype(::PlotPlane, ::AbstractVector{<:Snapshot}) = Plot_Trajectory
 
 end

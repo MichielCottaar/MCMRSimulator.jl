@@ -43,7 +43,7 @@ function get_kwargs(scene::Plot_Snapshot, image_type::Symbol)
 end
 
 # 3-dimensional plotting
-function scatter_snapshot!(scene::Plot_Snapshot{<:Tuple{<:Snapshot}})
+function scatter_snapshot!(scene::Plot_Snapshot{<:Tuple{Nothing, Snapshot}})
     @extract scene (snapshot, sequence, color)
     kwargs = get_kwargs(scene, :scatter)
     colors = @lift $color == Makie.automatic ? Utils.color.($snapshot; sequence=$sequence) : $color
@@ -51,7 +51,7 @@ function scatter_snapshot!(scene::Plot_Snapshot{<:Tuple{<:Snapshot}})
     Makie.scatter!(scene, pos; color=colors, kwargs...)
 end
 
-function dyad_snapshot!(scene::Plot_Snapshot{<:Tuple{<:Snapshot}})
+function dyad_snapshot!(scene::Plot_Snapshot{<:Tuple{Nothing, Snapshot}})
     @extract scene (snapshot, sequence, color)
     kwargs = get_kwargs(scene, :dyad)
     colors = @lift $color == Makie.automatic ? Utils.color.($snapshot; sequence=$sequence) : $color
@@ -60,7 +60,7 @@ function dyad_snapshot!(scene::Plot_Snapshot{<:Tuple{<:Snapshot}})
     Makie.arrows!(scene, pos, directions; color=colors, kwargs...)
 end
 
-function image_snapshot!(scene::Plot_Snapshot{<:Tuple{<:Snapshot}})
+function image_snapshot!(scene::Plot_Snapshot{<:Tuple{Nothing, Snapshot}})
     error("3D plotting is not supported for snapshot plotting with kind=:image. Please select a different `kind` (:scatter or :dyad) or provide a PlotPlane.")
 end
 
