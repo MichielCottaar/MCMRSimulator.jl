@@ -7,8 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fixed spurious zeroes in susceptibility calculations for spins outside of a non-repeating geometry.
 - `tortuosity` parameter in timestep is now correctly spelled (i.e., no longer `turtoisity`)
+- Plotting improvements: `plot_geometry(mesh)` has been fixed; documentation for plotting functions looks better now; switched to updated `@recipe` syntax in `Makie.jl`.
 ### Optimisations
-- `readout` is now roughly 5 times faster `return_snapshot=true` is set.
+- `readout` is now roughly 5 times faster if `return_snapshot=true` is set.
 ## [v0.11.0]
 ### Added
 - Meshes are automatically split into individual components (based on connectivity). The R1/R2/off-resonance can be set individually within each of these components. The component index of each element can be overwritten using `mesh.component = [...]`.
