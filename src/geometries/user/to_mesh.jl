@@ -333,7 +333,7 @@ function icosahedron(subdivisions::Int)
     return [v ./ norm(v) for v in vertices], triangles
 end
 
-function Mesh(sphere::Sphere; nsamples=100)
+function Mesh(sphere::Sphere; nsamples=1000)
     subdivisions = Int(ceil(sqrt(nsamples / 20)))
     base_vertices, triangles = icosahedron(subdivisions)
 
