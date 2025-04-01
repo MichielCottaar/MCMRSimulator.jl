@@ -16,9 +16,6 @@ Future (potential) features:
 - Off-resonance field by iron particles
 - Contribution from metabolites (i.e., spectroscopy)
 
-!!! warning "beta"
-    This MR simulator is still under very active development and the API might still change substantially at any time!
-
 We use the following units throughout (unless otherwise noted):
 - Times are in ms. Equivalently, RF pulse amplitudes and off-resonance magnetic fields are in kHz (i.e., 1/ms).
 - Positions are in um. So, gradients are in kHz/um (not mT/m).
