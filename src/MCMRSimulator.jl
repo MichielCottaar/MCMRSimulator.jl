@@ -37,7 +37,7 @@ export get_time
 
 import .Spins: position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, SpinOrientationSum, isinside, stuck, stuck_to, orientation, FixedXoshiro, get_sequence
 export position, longitudinal, transverse, phase, Spin, Snapshot, isinside, stuck, stuck_to, orientation, get_sequence
-@compat public Spin, SpinOrientation, SpinOrientationSum, FixedXoshiro
+@compat public SpinOrientation, SpinOrientationSum, FixedXoshiro
 
 import .TimeSteps: TimeStep
 @compat public TimeStep
