@@ -72,7 +72,7 @@ function parse_geometry(v::Vector)
     return parse_geometry.(v)
 end
 
-function parse_geometry(d::Dict)
+function parse_geometry(d::AbstractDict)
     type_name = Symbol(d["type"])
     constructor = getproperty(Obstructions, type_name)
     kwargs = Dict{Symbol, Any}()
