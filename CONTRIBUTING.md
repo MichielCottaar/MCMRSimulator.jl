@@ -10,7 +10,7 @@ Thanks for your interest in helping out! The project is currently maintained by 
   - A minimal example (code snippets or data) that reproduces the problem.
   - Any relevant logs or stack traces.
 - Feature requests can include novel geometries or biophyisical features. MRI acquisition or sequence protocols can be contributed to [MRIBuilder](https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl) instead.
-   - *Novel geometries* are shapes that represent a novel implementation of spin collision algorithm or the calculation of the off-resonance fields. New packing algorithms for existing geometries (spheres/cylinders/mesh) are easier to implement as separate packages rather than included in the simulator.
+   - *Novel geometries* are shapes that require a novel implementation of the spin collision algorithm or the calculation of the off-resonance fields. New packing algorithms for existing geometries (spheres/cylinders/mesh) are easier implemented as separate packages rather than included in the simulator.
    - *Biophysical features* can include any changes to how the spins move around or how the spin magnetisation is updated.
 
 ## Getting started
