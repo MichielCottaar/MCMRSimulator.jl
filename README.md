@@ -37,7 +37,7 @@ This software can be cited using the information in the CITATION.cff file.
 - Update the version number in "Project.toml" and "README.md" citation section.
 - Update the "CHANGELOG.md"
   - Check `[Unreleased]` link for any missing additions to the Changelog
-  - Add line with `## [v<version number>]` just below `## [Ureleased]`
+  - Add line with `## [v<version number>]` just below `## [Unreleased]`
   - Add new link at bottom: `[v<version number>]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v<previous version>...v<version_number>`
   - Update unreleased link at bottom with new version number: `[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v<version number>...main`
 - Login into [zenodo](https://doi.org/10.5281/zenodo.7318656)
