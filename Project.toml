@@ -1,7 +1,7 @@
 name = "MCMRSimulator"
 uuid = "eac06e4d-a854-4bf6-b44f-54c98b0401d1"
-authors = ["Michiel Cottaar <michiel.cottaar@ndcn.ox.ac.uk>"]
 version = "1.0.0"
+authors = ["Michiel Cottaar <michiel.cottaar@ndcn.ox.ac.uk>"]
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
@@ -48,6 +48,7 @@ MakieMCMRSimulator = "Makie"
 [compat]
 Bessels = "0.2.8"
 Compat = "4.16.0"
+MRIBuilder = "0.3.0"
 julia = "1.9"
 
 [extras]
