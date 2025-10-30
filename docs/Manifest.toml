@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.1"
+julia_version = "1.11.7"
 manifest_format = "2.0"
 project_hash = "367e7b1278833cb2d5c00b712b305332686944ed"
 
@@ -1117,7 +1117,7 @@ version = "1.11.0"
 deps = ["Accessors", "ArgParse", "BSplineKit", "Bessels", "CSV", "Colors", "Compat", "CoordinateTransformations", "DataFrames", "DataStructures", "Distributions", "Documenter", "FFTW", "GeometryBasics", "JSON", "LinearAlgebra", "Logging", "MRIBuilder", "MakieCore", "Markdown", "NearestNeighbors", "Optim", "PackageCompiler", "Pkg", "PlyIO", "Random", "Roots", "Rotations", "SparseArrays", "SpecialFunctions", "StaticArrays", "Statistics", "Tables", "UUIDs"]
 path = ".."
 uuid = "eac06e4d-a854-4bf6-b44f-54c98b0401d1"
-version = "0.11.0"
+version = "1.0.0"
 weakdeps = ["Makie"]
 
     [deps.MCMRSimulator.extensions]
@@ -1304,7 +1304,7 @@ version = "3.2.4+0"
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
-version = "0.8.1+2"
+version = "0.8.5+0"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
