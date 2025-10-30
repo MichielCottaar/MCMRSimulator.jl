@@ -4,7 +4,7 @@ variables:
 
 
 default:
-  image: julia:latest
+  image: julia:1.11
   tags:
     - docker
   cache:
