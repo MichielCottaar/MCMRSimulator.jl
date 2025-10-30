@@ -2,7 +2,7 @@
 MCMRSimulator is an application written in the [Julia](https://julialang.org) language.
 You can run simulations either directly from the Julia REPL, in a [Jupyter notebook](@ref jupyter_install), or using the command line interface.
 ## Installing the simulator for a specific project
-1. First install julia from the [official website](https://julialang.org/downloads/).
+1. First install julia 1.11 from the [official website](https://julialang.org/downloads/). Make sure to install julia 1.11. Julia 1.12 is not supported yet.
 2. Create a directory for the project for which you are going to use the simulator. We will install MCMRSimulator in isolation just for this project. This ensures that if we install a newer version of the simulator for another project in the future, it will not interfere with the reproducibility of the results of this project. We will refer to this newly created project directory below as "<project_dir>".
 2. Start the julia REPL in a terminal (`$ julia --project=<project_dir>`). The `--project` flag ensures that we create and activate a Julia environemnt just for this project. This will create a "Project.toml" and "Manifest.toml" inside the directory specifying the installed packages (such as the MCMR simulator).
 3. Enter the package manager by pressing "]"
