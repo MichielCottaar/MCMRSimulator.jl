@@ -46,10 +46,8 @@ Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 MakieMCMRSimulator = "Makie"
 
 [compat]
-Bessels = "0.2.8"
-Compat = "4.16.0"
-MRIBuilder = "0.3.0"
-julia = "1.9"
+MRIBuilder = "0.3"
+julia = "1.11"
 
 [extras]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
