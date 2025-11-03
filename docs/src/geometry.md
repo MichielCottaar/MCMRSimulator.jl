@@ -26,6 +26,9 @@ In other words, the normal of the [`Walls`](@ref) point in the x-axis by default
 Shifts and repeats should only be provided in this lower-dimensional space.
 The `rotation` keyword can be used to define these components along other lines/planes (see [`MCMRSimulator.get_rotation`](@ref MCMRSimulator.Methods.get_rotation)).
 
+!!! warning
+    This repeating geometry means that a spin leaving the geometry at the top of the bounding box, will next see the geometry at the bottom of the bounding box. For this to make sense any geometries going beyond the top of the bounding box should continue at the bottom of the bounding box. Future versions of MCMRSimulator will allow spins to continue in a flipped version of the geometry, which ensures that any geometries crossing the bounding box boundary are continuous (see [tracking issue](https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl/-/issues/66)).
+
 From the command line all of these keywords are available as flags, which can be seen by running:
 ```bash
 mcmr geometry create walls/cylinders/annuli/spheres/bendy_cylinder --help
