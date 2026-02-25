@@ -1,0 +1,9 @@
+[deps]
+Bessels = "0e736298-9ec6-45e8-9647-e4fc86a2fe38"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
+LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
+MCMRSimulator = "eac06e4d-a854-4bf6-b44f-54c98b0401d1"
+MRIBuilder = "691e6122-0b62-4932-92e7-e4ff0ddaf3a0"
+NPZ = "15e1cf62-19b3-5cfa-8e77-841668bca605"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
