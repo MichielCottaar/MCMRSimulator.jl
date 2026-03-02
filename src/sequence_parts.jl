@@ -8,7 +8,7 @@ To just get the readouts call [`MCMRSimulator.get_readouts`](@ref MCMRSimulator.
 module SequenceParts
 import StaticArrays: SVector
 import LinearAlgebra: norm
-import .Sequences: Sequence, BuildingBlock, GradientWaveform, RFPulse, ADC, duration
+import ..Sequences: Sequence, BuildingBlock, GradientWaveform, RFPulse, ADC, duration
 import ..TimeSteps: TimeStep
 import ..Spins: static_vector_type
 

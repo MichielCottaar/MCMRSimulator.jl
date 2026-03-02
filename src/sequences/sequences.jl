@@ -1,6 +1,7 @@
 module Sequences
 
 include("base.jl")
+include("pulseq_io/pulseq_io.jl")
 include("pulseq.jl")
 include("sequence_io.jl")
 

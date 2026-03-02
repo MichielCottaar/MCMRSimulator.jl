@@ -5,7 +5,7 @@ module SequenceIO
 
 import Serialization: serialize, deserialize
 import ..PulseqIO: read_pulseq, write_pulseq, PulseqSequence
-import SVectors: SVector
+import StaticArrays: SVector
 
 
 
