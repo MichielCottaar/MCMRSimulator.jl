@@ -6,7 +6,7 @@ import Interpolations: linear_interpolation
 import ..PulseqIO.Types: PulseqSequence, PulseqBlock, PulseqTrapezoid, PulseqGradient, PulseqRFPulse, PulseqShape, PulseqADC
 import ..PulseqIO.Extensions: parse_extension, get_extension_name, add_extension_definition!, PulseqExtension, PulseqExtensionDefinition
 import ...Scanners: Scanner, B0
-import ..Base: BuildingBlock, Sequence, GradientWaveform, RFPulse, ADC, InstantPulse, InstantGradient
+import ..Base: BuildingBlock, Sequence, GradientWaveform, RFPulse, ADC, InstantPulse, InstantGradient, duration
 
 
 function Sequence(pulseq::PulseqSequence; scanner=nothing, B0=nothing)
@@ -52,8 +52,8 @@ function BuildingBlock(pulseq::PulseqBlock; version, BlockDurationRaster, Radiof
 
     grads = [pulseq.gx, pulseq.gy, pulseq.gz]
     min_duration = max(
-        pulse.duration,
-        adc.duration,
+        duration(pulse),
+        duration(adc),
         maximum(vcat(_control_times.(grads, GradientRasterTime)...); init=0.)
     )
 
