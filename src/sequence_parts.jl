@@ -8,8 +8,7 @@ To just get the readouts call [`MCMRSimulator.get_readouts`](@ref MCMRSimulator.
 module SequenceParts
 import StaticArrays: SVector
 import LinearAlgebra: norm
-import MRIBuilder: BaseSequence, BaseBuildingBlock, waveform_sequence, events, get_gradient, edge_times, get_pulse, iter_instant_gradients, iter_instant_pulses, make_generic, variables, Wait
-import MRIBuilder.Components: GradientWaveform, RFPulseComponent, NoGradient, ConstantGradient, ChangingGradient, InstantGradient, InstantPulse, split_timestep, EventComponent, SingleReadout
+import .Sequences: Sequence, BuildingBlock, GradientWaveform, RFPulse, ADC, duration
 import ..TimeSteps: TimeStep
 import ..Spins: static_vector_type
 
@@ -128,13 +127,13 @@ struct IndexedReadout
 end
 
 
-iter_building_blocks_raw(seq::BaseSequence) = Iterators.flatten(iter_building_blocks_raw.(seq))
+iter_building_blocks_raw(seq::Sequence) = Iterators.flatten(iter_building_blocks_raw.(seq))
 iter_building_blocks_raw(bb::BaseBuildingBlock) = [bb]
 
 iter_building_blocks_no_time(seq, repeat::Val{false}) = Iterators.flatten([iter_building_blocks_raw(seq), [Wait(Inf)]])
 iter_building_blocks_no_time(seq, repeat::Val{true}) = Iterators.cycle(Iterators.flatten([iter_building_blocks_raw(seq), [:TR]]))
 
-iter_building_blocks(seq::BaseSequence, repeat) = Iterators.accumulate(iter_building_blocks_no_time(seq, repeat); init=(1, 0., nothing, Ref{Int}(0))) do (prev_TR, prev_time, prev_bb, readout_index), bb
+iter_building_blocks(seq::Sequence, repeat) = Iterators.accumulate(iter_building_blocks_no_time(seq, repeat); init=(1, 0., nothing, Ref{Int}(0))) do (prev_TR, prev_time, prev_bb, readout_index), bb
     if isnothing(prev_bb)
         return (prev_TR, prev_time, bb, Ref{Int}(0))
     elseif bb == :TR
@@ -145,7 +144,7 @@ iter_building_blocks(seq::BaseSequence, repeat) = Iterators.accumulate(iter_buil
 end
 
 
-function iter_part_times(seq::BaseSequence, repeat::Val; readouts=nothing)
+function iter_part_times(seq::Sequence, repeat::Val; readouts=nothing)
     rep_time = variables.TR(seq)
     Iterators.flatten(
         Iterators.map(iter_building_blocks(seq, repeat)) do (TR, time, bb, readout_index)
@@ -282,11 +281,11 @@ function Base.iterate(ie::_IterEdges, my_state)
     end), (next_time, new_states))
 end
 
-function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart::Number, repeat::Val; kwargs...)
+function iter_part_times(sequences::AbstractVector{<:Sequence}, tstart::Number, repeat::Val; kwargs...)
     iter_part_times(collect(sequences), tstart, repeat; kwargs...)
 end
 
-function iter_part_times(sequences::Vector{<:BaseSequence}, tstart::Number, repeat::Val{R}; kwargs...) where {R}
+function iter_part_times(sequences::Vector{<:Sequence}, tstart::Number, repeat::Val{R}; kwargs...) where {R}
     iters = iter_part_times.(sequences, repeat; kwargs...)
     TRs = Float64.(variables.TR.(sequences))
     dropped = [Iterators.dropwhile(i) do (iTR, _, t2, _, _, _)
@@ -299,7 +298,7 @@ function iter_part_times(sequences::Vector{<:BaseSequence}, tstart::Number, repe
     )
 end
 
-function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, repeat::Val, timestep::TimeStep; kwargs...)
+function iter_part_times(sequences::AbstractVector{<:Sequence}, tstart, repeat::Val, timestep::TimeStep; kwargs...)
     Iterators.flatten(
         Iterators.map(iter_part_times(sequences, tstart, repeat; kwargs...)) do var
             if !(var isa Tuple)
@@ -332,7 +331,7 @@ function iter_part_times(sequences::AbstractVector{<:BaseSequence}, tstart, repe
 end
 
 
-function iter_parts(sequences::AbstractVector{<:BaseSequence}, tstart::Number, repeat::Val, timestep::TimeStep; kwargs...)
+function iter_parts(sequences::AbstractVector{<:Sequence}, tstart::Number, repeat::Val, timestep::TimeStep; kwargs...)
     Iterators.map(iter_part_times(sequences, tstart, repeat, timestep; kwargs...)) do var
         if !(var isa Tuple)
             return InstantSequencePart(var)
@@ -374,11 +373,11 @@ function iter_parts(sequences::AbstractVector{<:BaseSequence}, tstart::Number, r
     end
 end
 
-nreadouts_per_TR(seq::BaseSequence) = length(collect(Iterators.filter(iter_part_times(seq, Val(false))) do state
+nreadouts_per_TR(seq::Sequence) = length(collect(Iterators.filter(iter_part_times(seq, Val(false))) do state
     state[end] isa SingleReadout
 end))
 
-function first_TR_with_all_readouts(seq::BaseSequence, start_time::Number; readouts=nothing)
+function first_TR_with_all_readouts(seq::Sequence, start_time::Number; readouts=nothing)
     if iszero(start_time)
         return 1
     else
@@ -418,7 +417,7 @@ If at `start_time` any of the readouts in the current TR have already passed, th
 We will skip an additional number of TRs given by `skip_TR` (default: 0).
 Then readouts will continue for the number of TRs given by `nTR` (default: 1).
 """
-function get_readouts(seq::BaseSequence, start_time::Number; readouts=nothing, nTR=nothing, skip_TR=nothing) 
+function get_readouts(seq::Sequence, start_time::Number; readouts=nothing, nTR=nothing, skip_TR=nothing) 
     repeat = !(isnothing(nTR) && isnothing(skip_TR))
     if isnothing(nTR)
         nTR = 1
