@@ -48,6 +48,10 @@ export position, longitudinal, transverse, phase, Spin, Snapshot, isinside, stuc
 import .TimeSteps: TimeStep
 @compat public TimeStep
 
+import .Sequences: Sequence, BaseBuildingBlock, BuildingBlock, GradientWaveform, RFPulse, ADC, duration, InstantGradient, InstantPulse, read_sequence, write_sequence
+export Sequence, read_sequence, write_sequence
+@compat public BaseBuildingBlock, BuildingBlock, GradientWaveform, RFPulse, ADC, duration, InstantGradient, InstantPulse
+
 import .SequenceParts: get_readouts, IndexedReadout
 @compat public get_readouts, IndexedReadout
 
