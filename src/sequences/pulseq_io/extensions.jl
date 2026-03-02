@@ -25,7 +25,7 @@ end
 ```
 """
 function parse_extension(ext::PulseqExtensionDefinition{N}) where {N}
-    @warn "Parsing unknown extension: {N}"
+    @warn "Parsing unknown extension: $(N)"
     return UnknownExtensionMapper(ext)
 end
 
