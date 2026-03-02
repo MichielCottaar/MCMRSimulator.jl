@@ -8,9 +8,6 @@ import ..PulseqIO: read_pulseq, write_pulseq, PulseqSequence
 import StaticArrays: SVector
 
 
-
-
-
 function read_sequence(filename::AbstractString, args...; kwargs...)
     open(filename, "r") do io
         read_sequence(io, args...; kwargs...)

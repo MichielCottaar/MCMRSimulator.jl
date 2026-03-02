@@ -33,8 +33,8 @@ import Compat: @compat
 import .Constants: gyromagnetic_ratio
 @compat public gyromagnetic_ratio
 
-import .Scanners: Scanner, B0, gradient_strength, slew_rate, DefaultScanner, Siemens_Prisma, Siemens_Terra, Siemens_Connetom, Siemens_connectom_v2
-export Scanner, DefaultScanner, Siemens_Prisma, Siemens_Terra, Siemens_Connetom, Siemens_connectom_v2
+import .Scanners: Scanner, B0, gradient_strength, slew_rate, Default_Scanner, Siemens_Prisma, Siemens_Terra, Siemens_Connectom, Siemens_Connectom_v2
+export Scanner, Default_Scanner, Siemens_Prisma, Siemens_Terra, Siemens_Connectom, Siemens_Connectom_v2
 @compat public B0, gradient_strength, slew_rate
 
 import .Methods: get_time, get_rotation

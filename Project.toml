@@ -32,6 +32,7 @@ PlyIO = "42171d58-473b-503a-8d5f-782019eb09ec"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
+Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
@@ -47,6 +48,7 @@ MakieMCMRSimulator = "Makie"
 
 [compat]
 Interpolations = "0.16.2"
+Serialization = "1.11.0"
 julia = "1.11"
 
 [extras]

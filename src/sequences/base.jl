@@ -41,11 +41,12 @@ duration(adc::ADC) = adc.samples[end]
 
 duration(::Nothing) = 0.
 
+abstract type BaseBuildingBlock end
 
 """
 Basic building block of a sequence, containing the duration of the block, the gradient waveform, the RF pulse and the ADC events.
 """
-struct BuildingBlock
+struct BuildingBlock <: BaseBuildingBlock
     duration::Float64
     gradient::Union{GradientWaveform, Nothing}
     rf_pulse::Union{RFPulse, Nothing}
@@ -56,10 +57,27 @@ duration(block::BuildingBlock) = block.duration
 
 
 """
+Instantaneous gradient, containing the q-vector of the gradient (in 1/um).
+"""
+struct InstantGradient <: BaseBuildingBlock
+    qvec::SVector{3, Float64}
+end
+
+
+"""
+Instantaneous RF pulse, containing the flip angle and phase of the RF pulse (in degrees).
+"""
+struct InstantPulse <: BaseBuildingBlock
+    flip_angle::Float64
+    phase::Float64
+end
+
+
+"""
 Sequence, containing the building blocks of a sequence, including gradient waveforms, RF pulses and ADC events.
 """
 struct Sequence
-    blocks::Vector{BuildingBlock}
+    blocks::Vector{BaseBuildingBlock}
     scanner::Scanner
 end
 

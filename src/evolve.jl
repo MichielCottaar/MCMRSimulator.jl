@@ -8,13 +8,12 @@ All of these functions call `evolve_to_time` under the hood to actually run the 
 module Evolve
 import StaticArrays: SVector, MVector
 import LinearAlgebra: norm, ⋅
-import MRIBuilder: Sequence, variables, B0, build_sequence
-import MRIBuilder.Components: InstantGradient, InstantPulse
 import Rotations
 import Bessels: besseli0
 import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, iter_parts, get_readouts, IndexedReadout, first_TR_with_all_readouts, NoGradient
 import ..Methods: get_time
 import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation, static_vector_type
+import ..Sequences: Sequence, InstantGradient, InstantPulse
 import ..Simulations: Simulation, _to_snapshot
 import ..Relax: relax!
 import ..Properties: GlobalProperties, stick_probability

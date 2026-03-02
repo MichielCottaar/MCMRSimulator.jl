@@ -6,7 +6,7 @@ import Interpolations: linear_interpolation
 import ..PulseqIO.Types: PulseqSequence, PulseqBlock, PulseqTrapezoid, PulseqGradient, PulseqRFPulse, PulseqShape, PulseqADC
 import ..PulseqIO.Extensions: parse_extension, get_extension_name, add_extension_definition!, PulseqExtension, PulseqExtensionDefinition
 import ...Scanners: Scanner, B0
-import ..Base: BuildingBlock, Sequence, GradientWaveform, RFPulse, ADC
+import ..Base: BuildingBlock, Sequence, GradientWaveform, RFPulse, ADC, InstantPulse, InstantGradient
 
 
 function Sequence(pulseq::PulseqSequence; scanner=nothing, B0=nothing)
@@ -116,7 +116,7 @@ function _get_amplitude(grad::PulseqGradient, time::Number, raster::Number)
 end
 
 
-function PulseqSequence(seq::Sequence{S}) where {S}
+function PulseqSequence(seq::Sequence)
     definitions = (
         Name=S,
         AdcRasterTime=1e-9,
@@ -134,7 +134,7 @@ function PulseqSequence(seq::Sequence{S}) where {S}
     )
 end
 
-function PulseqBlock(block::BaseBuildingBlock; BlockDurationRaster, AdcRasterTime, kwargs...)
+function PulseqBlock(block::BuildingBlock; BlockDurationRaster, AdcRasterTime, kwargs...)
     rf = nothing
     adc = nothing
     ext = []
@@ -201,7 +201,7 @@ function parse_extension(ext::PulseqExtensionDefinition{:InstantPulse})
     mapping = Dict{Int, Tuple{Float64, InstantPulse}}()
     for line in ext.content
         (id, delay, flip_angle, phase) = parse.((Int, Float64, Float64, Float64), split(line))
-        mapping[id] = (delay, InstantPulse(flip_angle, phase, nothing))
+        mapping[id] = (delay, InstantPulse(flip_angle, phase))
     end
     return mapping
 end
@@ -226,7 +226,7 @@ function parse_extension(ext::PulseqExtensionDefinition{:InstantGradient})
     mapping = Dict{Int, Tuple{Float64, InstantGradient3D}}()
     for line in ext.content
         (id, delay, qvec...) = parse.((Int, Float64, Float64, Float64, Float64), split(line))
-        mapping[id] = (delay, InstantGradient3D([qvec...], nothing))
+        mapping[id] = (delay, InstantGradient3D(qvec))
     end
     return mapping
 end

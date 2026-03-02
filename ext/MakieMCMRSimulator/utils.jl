@@ -4,7 +4,6 @@ import Colors
 import MCMRSimulator.Spins: Spin, SpinOrientation, phase, transverse
 import MCMRSimulator: Snapshot
 import MCMRSimulator.Plot: PlotPlane, print_sequence, Projectable
-import MRIBuilder: plot_sequence
 
 
 """
