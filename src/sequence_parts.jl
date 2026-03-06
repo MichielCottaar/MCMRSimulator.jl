@@ -8,9 +8,11 @@ To just get the readouts call [`MCMRSimulator.get_readouts`](@ref MCMRSimulator.
 module SequenceParts
 import StaticArrays: SVector
 import LinearAlgebra: norm
-import ..Sequences: Sequence, BaseBuildingBlock, BuildingBlock, GradientWaveform, RFPulse, ADC, duration
+import Statistics: mean
+import Interpolations: linear_interpolation, deduplicate_knots!
 import ..TimeSteps: TimeStep
 import ..Spins: static_vector_type
+import KomaMRIBase
 
 
 """
@@ -43,6 +45,301 @@ struct LinearPart <: NoPulsePart
 end
 
 
+abstract type SequenceEvent end
+
+struct PulseEvent <: SequenceEvent
+    flip_angle :: Float64
+    phase :: Float64
+end
+
+struct GradientEvent <: SequenceEvent
+    qvec :: SVector{3, Float64}
+end
+
+"""
+    IndexedReadout(time, TR, readout)
+
+Represents a readout in an MR sequence.
+
+Generate these for a sequence of interest using [`get_readouts`](@ref).
+
+All indices are integers. They refer to:
+- `time`: time since beginning of this repetition of the sequence in ms.
+- `TR`: which TR the simulation is in (defaults to 0 if not set).
+- `readout`: which readout within the TR (or total sequence) this is.
+"""
+struct IndexedReadout <: SequenceEvent
+    time::Float64
+    TR::Int
+    readout::Int
+end
+
+
+struct SequenceWaveform
+    grads::NTuple{3, Tuple{Vector{Float64}, Vector{Float64}}}
+    rf::Vector{Tuple{Float64, Float64, Vector{ConstantPulse}}}
+    samples::Vector{Float64}
+    TR::Float64
+end
+
+function SequenceWaveform(sequence::KomaMRIBase.Sequence)
+    grads = (
+        gradient_waveform(sequence, 1),
+        gradient_waveform(sequence, 2),
+        gradient_waveform(sequence, 3),
+    )
+    rf = get_pulses(sequence)
+    samples = readout_times(sequence)
+    return SequenceWaveform(
+        grads, 
+        rf, 
+        samples,
+        grads[1][1][end]
+    )
+end
+
+
+function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep; kwargs...)
+    waveforms = [SequenceWaveform(seq) for seq in sequences]
+    (repeats, readouts) = zip([get_readouts(waveform.samples, waveform.TR, start_time; kwargs...) for waveform in waveforms]...)
+
+    # Figure out control times
+    set_control_times = Set{Float64}([start_time])
+    for ro in readouts
+        union!(set_control_times, [r.time for r in ro])
+    end
+    max_ro = maximum(set_control_times)
+    for waveform in waveforms
+        for index in 1:3
+            (new_times, _) = compress_timeseries(waveform.grads[index]...)
+
+            union!(set_control_times, filter(new_times) do t
+                t > start_time && t < max_ro
+            end)
+        end
+    end
+
+    for (t0_rf, t1_rf, _) in waveforms[1].rf
+        for t in (t0_rf, t1_rf)
+            if start_time < t < max_ro
+                push!(set_control_times, t)
+            end
+        end
+    end
+    control_times = sort(collect(set_control_times))
+
+    grad_interpolators = map(waveforms, repeats) do waveform, repeating
+        map(waveform.grads) do (times, ampls)
+            inter = linear_interpolation(deduplicate_knots!(times), ampls; extrapolation_bc=0.)
+            if repeating
+                time -> inter(time % waveform.TR)
+            else
+                inter
+            end
+        end
+    end
+
+    # split control times based on the maximum allowed timestep
+    for (t0, t1) in zip(control_times[1:end-1], control_times[2:end])
+        max_gradient = maximum(map(grad_interpolators) do interpolators
+            maximum(map(interpolators) do interpolator
+                max(abs(interpolator(t0)), abs(interpolator(t1)))
+            end)
+        end)
+        nsplit = ceil(Int, (t1 - t0) / timestep(max_gradient))
+        append!(control_times, range(t0, t1; length=nsplit+1)[2:end-1])
+    end
+    sort!(control_times)
+
+    vector_type = static_vector_type(length(waveforms))
+    return build_blocks(control_times, vector_type, waveforms, grad_interpolators)
+end
+
+function build_blocks(control_times, vector_type, waveforms, grad_interpolators)
+    return map(control_times[1:end-1], control_times[2:end]) do t0, t1
+        MultSequencePart{vector_type}(
+            t1 - t0,
+            map(zip(waveforms, grad_interpolators)) do (waveform, interpolators)
+                get_block(waveform, t0, t1, interpolators)
+            end
+        )
+    end
+end
+
+function get_block(waveform, t0, t1, grad_interpolators)
+    grad0 = SVector{3, Float64}(grad_interpolators[1](t0), grad_interpolators[2](t0), grad_interpolators[3](t0))
+    grad1 = SVector{3, Float64}(grad_interpolators[1](t1), grad_interpolators[2](t1), grad_interpolators[3](t1))
+
+    grad_part = if all(iszero.(grad0)) && all(iszero.(grad1))
+        EmptyPart()
+    elseif all(grad0 .== grad1)
+        ConstantPart(grad0) 
+    else
+        LinearPart(grad0, grad1)
+    end
+
+    frac_start = 1.
+    frac_final = 1.
+    for (t0_rf, t1_rf, rf_pulse) in waveform.rf
+        if t0_rf >= t1 || t1_rf <= t0
+            continue
+        end
+        @assert t0_rf <= t0 && t1_rf >= t1 "RF pulse should not start or end within the block. This should have been split in the control times."
+
+        full_pulses = PulsePart(rf_pulse, EmptyPart())
+        if t0_rf < t0
+            frac_start = (t0 - t0_rf) / (t1_rf - t0_rf)
+            _, full_pulses = split_fraction(full_pulses, frac_start)
+        end
+        if t1_rf > t1
+            frac_final = (t1 - t0) / (t1_rf - t0)
+            full_pulses, _ = split_fraction(full_pulses, frac_final)
+        end
+        return PulsePart(full_pulses.pulse, grad_part, full_pulses.first_duration, full_pulses.last_duration)
+    end
+    return grad_part
+end
+
+
+
+
+"""
+    gradient_waveform(sequence, index::Int)
+
+Extracts the gradient waveform for a sequence.
+
+This needs to be implemented for any sequence type that needs to be processed by the simulator in addition to `get_pulses` and `readout_times`.
+"""
+function gradient_waveform(sequence::KomaMRIBase.Sequence, index::Int)
+    times = [[0.]]
+    ampls = [[0.]]
+    current_time = 0.
+    for block in sequence
+        obj = block.GR[index, 1]
+        new_times = min.(KomaMRIBase.times(obj), KomaMRIBase.dur(block))
+        new_ampls = KomaMRIBase.ampls(obj)
+        push!(times, new_times .+ current_time)
+        push!(ampls, new_ampls)
+        current_time += KomaMRIBase.dur(block)
+    end
+    push!(times, [KomaMRIBase.dur(sequence)])
+    push!(ampls, [0.])
+    ftimes = vcat(times...)
+    fampls = vcat(ampls...)
+    return ftimes, fampls
+end
+
+
+"""
+    get_pulses(sequence)
+
+Extracts the pulse events for a sequence.
+
+This needs to be implemented for any sequence type that needs to be processed by the simulator in addition to `gradient_waveform` and `readout_times`.
+
+It returns a tuple with:
+- the time of the start of the pulse event in ms since the beginning of the sequence.
+- the time of the end of the pulse event in ms since the beginning of the sequence.
+- a vector of `ConstantPulse` objects representing the pulse event.
+"""
+function get_pulses(sequence::KomaMRIBase.Sequence)
+    pulses = Tuple{Float64, Float64, Vector{ConstantPulse}}[]
+    for (index_block, block) in enumerate(sequence)
+        times = KomaMRIBase.times(block.RF[1])
+        if length(times) == 0
+            continue
+        end
+        complex_ampls = KomaMRIBase.ampls(block.RF[1])
+        ampls = abs.(complex_ampls)
+        phases = rad2deg.(angle.(complex_ampls))
+        freqs = fill(NaN, length(times))
+        for i in 2:length(freqs)-1
+            lower_index = i - 1
+            upper_index = i + 1
+            if iszero(ampls[i])
+                continue
+            end
+            while lower_index > 0 && iszero(ampls[lower_index])
+                lower_index -= 1
+            end
+            if lower_index == 0
+                lower_index = i
+            end
+            while upper_index <= length(ampls) && iszero(ampls[upper_index])
+                upper_index += 1
+            end
+            if upper_index == length(ampls) + 1
+                upper_index = i
+            end
+            if lower_index == upper_index
+                error("Frequency can not be determined for isolated non-zero pulse for block $index_block.")
+            end
+            dphase = (phases[upper_index] - phases[lower_index])
+            if dphase > 180
+                dphase -= 360
+            elseif dphase < -180
+                dphase += 360
+            end
+            freqs[i] = dphase / (times[upper_index] - times[lower_index]) / 360
+        end
+        first_index = findfirst(!iszero, ampls)
+        last_index = findlast(!iszero, ampls)
+        all_timestep = diff(times[first_index:last_index])
+        timestep = mean(all_timestep)
+        @assert all(isapprox.(all_timestep, timestep; rtol=1e-4)) "non-constant timestep in RF pulse for block $index_block."
+
+        pulses_parts = [ConstantPulse(ampls[i], phases[i], freqs[i]) for i in first_index:last_index]
+        push!(pulses, (times[first_index] - timestep/2, times[last_index] + timestep/2, pulses_parts))
+    end
+    return pulses
+end
+
+
+"""
+    readout_times(sequence)
+
+Returns the ADC sampling times for the sequence.
+
+This needs to be implemented for any sequence type that needs to be processed by the simulator in addition to `gradient_waveform` and `get_pulses`.
+"""
+readout_times(sequence::KomaMRIBase.Sequence) = KomaMRIBase.get_adc_sampling_times(sequence)
+
+function compress_timeseries(times::AbstractVector{<:Number}, values::AbstractVector{<:Number}; rtol=1e-4)
+    @assert length(times) == length(values)
+    ctimes = [times[1]]
+    cvalues = [values[1]]
+
+    next_index = 2
+    while next_index <= length(times)
+        guess_slope = (values[next_index] - cvalues[end]) / (times[next_index] - ctimes[end])
+        while (next_index < length(times))  && isapprox(values[next_index + 1] - values[next_index], guess_slope * (times[next_index+1] - times[next_index]); rtol=rtol)
+            next_index += 1
+        end
+        push!(ctimes, times[next_index])
+        push!(cvalues, values[next_index])
+        next_index += 1
+    end
+    return ctimes, cvalues
+end
+
+
+"""
+    split_fraction(part::SequencePart, fractions::Number(s))
+
+Splits the `SequencePart` into two parts at the given fraction(s) of the duration of the part.
+
+If fraction is a single number a tuple with the two parts is returned.
+If fraction is a vector of numbers, a vector of `SequencePart`s is returned of length `length(fractions) + 1`.
+The fractions are assumed to be ordered!
+"""
+split_fraction(::EmptyPart, ::Number) = (EmptyPart(), EmptyPart())
+split_fraction(part::ConstantPart, ::Number) = (ConstantPart(part.strength), ConstantPart(part.strength))
+split_fraction(part::LinearPart, fraction::Number) = (
+    LinearPart(part.start, part.start + fraction * (part.final - part.start)),
+    LinearPart(part.start + fraction * (part.final - part.start), part.final)
+)
+
+
 """
     ConstantPulse(amplitude, phase, frequency)
 
@@ -59,9 +356,97 @@ struct ConstantPulse
     frequency :: Float64
 end
 
+"""
+    PulsePart{T}(pulse, gradient)
+
+A `SequencePart` containing a constant RF pulse and a gradient of type `T` (which is a subtype of `NoPulsePart`).
+
+The RF pulse is represented by a vector of `ConstantPulse`s, which are assumed to be played sequentially during the part.
+The duration of the first and last `ConstantPulse` might be different from the others as represented by `first_duration` and `last_duration`.
+If `first_duration` and `last_duration` are 1 (default) then all `ConstantPulse`s are assumed to have the same duration.
+
+In the special case of there only being one `ConstantPulse`, only `first_duration` is used and represents the duration of that `ConstantPulse`.
+"""
 struct PulsePart{T<:NoPulsePart} <: SequencePart
     pulse :: Vector{ConstantPulse}
     gradient :: T
+    first_duration :: Float64
+    last_duration :: Float64
+end
+
+PulsePart(pulse::Vector{ConstantPulse}, gradient::T) where {T<:NoPulsePart} = PulsePart{T}(pulse, gradient, 1., 1.)
+
+
+function split_fraction(part::PulsePart{T}, fraction::Number) where {T<:NoPulsePart}
+    grad1, grad2 = split_fraction(part.gradient, fraction)
+    total_duration = length(part.pulse) - 2 + part.first_duration + part.last_duration
+    split_duration = total_duration * fraction
+
+    if split_duration < part.first_duration
+        # split is within the first pulse
+        return (
+            PulsePart(part.pulse[1:1], grad1, split_duration, 1.),
+            PulsePart(part.pulse, grad2, part.first_duration - split_duration, part.last_duration)
+        )
+    elseif split_duration > total_duration - part.last_duration
+        # split is within the last pulse
+        return (
+            PulsePart(part.pulse, grad1, part.first_duration, part.last_duration - (total_duration - split_duration)),
+            PulsePart(part.pulse[end:end], grad2, 1., split_duration - (total_duration - part.last_duration))
+        )
+    end
+    index_split = split_duration - part.first_duration + 1
+    if index_split == round(index_split)
+        # split is between two pulses
+        cut_index = Int(index_split)
+        return (
+            PulsePart(part.pulse[1:cut_index], grad1, part.first_duration, 1.),
+            PulsePart(part.pulse[cut_index+1:end], grad2, 1., part.last_duration)
+        )
+    end
+
+    cut_index = Int(ceil(index_split))
+    relative_split = index_split - (cut_index - 1)
+    return (
+        PulsePart(part.pulse[1:cut_index], grad1, part.first_duration, relative_split),
+        PulsePart(part.pulse[cut_index:end], grad2, 1 - relative_split, part.last_duration)
+    )
+end
+
+
+function split_fraction(part::T, fractions::AbstractVector{<:Number}) where {T}
+    result = Vector{T}(undef, length(fractions) + 1)
+    current_part = part
+    current_fraction = 1.
+    for (i, fraction) in enumerate(fractions)
+        relative_fraction = (fraction - (1 - current_fraction)) / current_fraction
+        if relative_fraction < 0 || relative_fraction > 1
+            error("Fractions should be between 0 and 1 and ordered.")
+        end
+        part1, part2 = split_fraction(current_part, relative_fraction)
+        result[i] = part1
+        current_part = part2
+        current_fraction = 1. - fraction
+    end
+    result[end] = current_part
+    return result
+end
+
+
+"""
+    split_number(part::SequencePart, n::Int)
+
+Splits the `SequencePart` into `n` equal parts.
+"""
+function split_number(part, n::Int)
+    if n < 1
+        error("n should be at least 1.")
+    elseif n == 1
+        return [part]
+    else
+        fractions = (1:n-1) ./ n
+        return split_fraction(part, fractions)
+    end
 end
 
 
@@ -73,23 +458,38 @@ A set of N [`SequencePart`](@ref) objects representing overlapping parts of `N` 
 struct MultSequencePart{N, T<:SequencePart, ST<:AbstractVector{T}}
     duration :: Float64
     parts :: ST
-    function MultSequencePart(duration::Number, parts::AbstractVector)
-        N = length(parts)
-        if iszero(N)
-            return new{0, EmptyPart, SVector{0, EmptyPart}}(Float64(duration), SVector{0, EmptyPart}())
-        end
+end
 
-        base_type = typeof(parts[1])
-        if all(p -> p isa base_type, parts)
-            T = base_type
-        else
-            T = SequencePart
-        end
-        return new{N, T, static_vector_type(N){T}}(
-            Float64(duration),
-            static_vector_type(N){T}(parts)
-        )
+function MultSequencePart{VT}(duration::Number, parts::AbstractVector) where {VT}
+    N = length(parts)
+    if iszero(N)
+        return new{0, EmptyPart, SVector{0, EmptyPart}}(Float64(duration), SVector{0, EmptyPart}())
     end
+
+    base_type = typeof(parts[1])
+    if all(p -> p isa base_type, parts)
+        T = base_type
+    else
+        T = SequencePart
+    end
+    return MultSequencePart{N, T, VT{T}}(
+        Float64(duration),
+        VT{T}(parts)
+    )
+end
+
+function split_fraction(part::T, fraction::Number) where {T<:MultSequencePart}
+    full_parts = split_fraction.(part.parts, Ref(fraction))
+    part1 = map(full_parts) do (p1, _)
+        p1
+    end
+    part2 = map(full_parts) do (_, p2)
+        p2
+    end
+    return (
+        T(part.duration * fraction, part1),
+        T(part.duration * (1 - fraction), part2)
+    )
 end
 
 """
@@ -108,295 +508,18 @@ struct InstantSequencePart{N, T, ST<:AbstractVector{T}}
     end
 end
 
-"""
-    IndexedReadout(time, TR, readout)
-
-Represents a readout in an MR sequence.
-
-Generate these for a sequence of interest using [`get_readouts`](@ref).
-
-All indices are integers. They refer to:
-- `time`: time since beginning of sequence in ms
-- `TR`: which TR the simulation is in (defaults to 0 if not set).
-- `readout`: which readout within the TR (or total sequence) this is.
-"""
-struct IndexedReadout
-    time::Float64
-    TR::Int
-    readout::Int
-end
-
-
-iter_building_blocks_raw(seq::Sequence) = Iterators.flatten(iter_building_blocks_raw.(seq))
-iter_building_blocks_raw(bb::BaseBuildingBlock) = [bb]
-
-iter_building_blocks_no_time(seq, repeat::Val{false}) = Iterators.flatten([iter_building_blocks_raw(seq), [Wait(Inf)]])
-iter_building_blocks_no_time(seq, repeat::Val{true}) = Iterators.cycle(Iterators.flatten([iter_building_blocks_raw(seq), [:TR]]))
-
-iter_building_blocks(seq::Sequence, repeat) = Iterators.accumulate(iter_building_blocks_no_time(seq, repeat); init=(1, 0., nothing, Ref{Int}(0))) do (prev_TR, prev_time, prev_bb, readout_index), bb
-    if isnothing(prev_bb)
-        return (prev_TR, prev_time, bb, Ref{Int}(0))
-    elseif bb == :TR
-        return (prev_TR + 1, 0., Wait(0.), Ref{Int}(0))
-    else
-        return (prev_TR, prev_time + variables.duration(prev_bb), bb, readout_index)
-    end
-end
-
-
-function iter_part_times(seq::Sequence, repeat::Val; readouts=nothing)
-    rep_time = variables.TR(seq)
-    Iterators.flatten(
-        Iterators.map(iter_building_blocks(seq, repeat)) do (TR, time, bb, readout_index)
-            gradients = Tuple{Float64, Float64, GradientWaveform}[]
-            pulses = Tuple{Float64, Float64, RFPulseComponent}[]
-            instants = Tuple{Float64, Union{InstantGradient, InstantPulse, SingleReadout, IndexedReadout}}[]
-
-            full_time = (TR - 1) * rep_time + time
-
-            current_grad = NoGradient(0.)
-            current_time = time
-            next_time = time
-            for key in keys(bb)
-                component = bb[key]
-                if component isa GradientWaveform
-                    duration = component.duration
-                    current_time = next_time
-                    next_time += duration
-                    if duration > 0.
-                        push!(gradients, (current_time, next_time, component))
-                    end
-                elseif component isa Tuple{<:Number, <:EventComponent}
-                    delay, event = component
-                    if event isa Union{InstantGradient, InstantPulse}
-                        push!(instants, (current_time + delay, event))
-                    elseif event isa RFPulseComponent
-                        duration = variables.duration(event)
-                        push!(pulses, (current_time + delay, current_time + delay + duration, event))
-                    elseif event isa SingleReadout && isnothing(readouts)
-                        readout_index[] += 1
-                        push!(instants, (current_time + delay, IndexedReadout((TR - 1) * rep_time + current_time + delay, TR, readout_index[])))
-                    end
-                end
-            end
-
-            if !isnothing(readouts)
-                # add custom readouts
-                end_time = time + variables.duration(bb)
-                for (index, readout) in enumerate(readouts)
-                    if (
-                        (time < readout <= end_time) ||  # readout is during this block
-                        (iszero(time) && iszero(readout) && time != end_time) # or readout is at beginning of TR (and this block is not instant)
-                    )
-                        push!(instants, (readout, IndexedReadout((TR - 1) * rep_time + readout, TR, index)))
-                    end
-                end
-            end
-
-            et = sort!(unique!([
-                time,
-                [t for (_, t, _) in gradients]...,
-                [t for (t, _, _) in pulses]...,
-                [t for (_, t, _) in pulses]...,
-                [t for (t, _) in instants]...,
-            ]))
-
-            current_grad(time) = findfirst(gradients) do (t1, t2, _)
-                t2 > time
-            end
-            current_pulse(time) = findfirst(pulses) do (t1, t2, _)
-                t1 <= time < t2
-            end
-
-            result = Tuple{Int, Float64, Float64, Tuple{Float64, GradientWaveform}, Union{Nothing, Tuple{Float64, RFPulseComponent}}, Union{Nothing, InstantGradient, InstantPulse, SingleReadout, IndexedReadout}}[]
-            for (t1, t2) in zip(et[1:end-1], et[2:end])
-                index_grad = current_grad(t1)
-                t_grad, _, grad = gradients[index_grad]
-                index_pulse = current_pulse(t1)
-                pulse = isnothing(index_pulse) ? nothing : (t1 - pulses[index_pulse][1], pulses[index_pulse][end])
-                for (t, instant) in instants
-                    if t == t1
-                        push!(result, (TR, t1, t1, (t1 - t_grad, grad), pulse, instant))
-                    end
-                end
-                push!(result, (TR, t1, t2, (t1 - t_grad, grad), pulse, nothing))
-            end
-            for (t, instant) in instants
-                if t == et[end]
-                    t_grad, _, grad = iszero(length(gradients)) ? (t, t, NoGradient(0.)) : gradients[end]
-                    push!(result, (TR, t, t, (t - t_grad, grad), nothing, instant))
-                end
-            end
-            return result
-        end
-    )
-end
-
-struct _IterEdges{R, T}
-    individual_iterators::Vector{T}
-    TRs::Vector{Float64}
-    tstart::Float64
-end
-
-Base.iterate(ie::_IterEdges) = Base.iterate(ie, (ie.tstart, iterate.(ie.individual_iterators)))
-Base.IteratorSize(::Type{<:_IterEdges{false}}) = Base.SizeUnknown()
-Base.IteratorSize(::Type{<:_IterEdges{true}}) = Base.IsInfinite()
-
-function Base.iterate(ie::_IterEdges, my_state)
-    current_time, states = my_state
-
-    new_states = map(ie.individual_iterators, ie.TRs, states) do iter, rep_time, state
-        (iTR, _, t2, _, _, instant), _ = state
-        while isnothing(instant) && ((t2 + (iTR - 1) * rep_time) <= current_time || isapprox(t2, current_time, atol=1e-8))
-            state = Base.iterate(iter, state[2])
-            (iTR, _, t2, _, _, instant), _ = state
-        end
-        return state
-    end
-    if any(!isnothing(state[1][end]) for state in new_states)
-        result = (map(new_states) do state
-            instant = state[1][end]
-            return instant
-        end)
-        new_states = map(ie.individual_iterators, new_states) do iter, state
-            if isnothing(state[1][end])
-                return state
-            else
-                return Base.iterate(iter, state[2])
-            end
-        end
-        return (result, (current_time, new_states))
-    end
-
-    next_time = minimum(zip(new_states, ie.TRs); init=Inf) do (((iTR, _, t2, _, _, _), _), rep_time)
-        t2 + (iTR - 1) * rep_time
-    end
-    if isinf(next_time)
-        return nothing
-    end
-    return ((current_time, next_time, map(new_states, ie.TRs) do state, rep_time
-        (iTR, t1, _, (t_grad, grad), pulse, _), _ = state
-        correct_pulse = isnothing(pulse) ? pulse : (current_time - t1 - (iTR - 1) * rep_time + pulse[1], pulse[2])
-        return ((current_time - t1 - (iTR - 1) * rep_time + t_grad, grad), correct_pulse)
-    end), (next_time, new_states))
-end
-
-function iter_part_times(sequences::AbstractVector{<:Sequence}, tstart::Number, repeat::Val; kwargs...)
-    iter_part_times(collect(sequences), tstart, repeat; kwargs...)
-end
-
-function iter_part_times(sequences::Vector{<:Sequence}, tstart::Number, repeat::Val{R}; kwargs...) where {R}
-    iters = iter_part_times.(sequences, repeat; kwargs...)
-    TRs = Float64.(variables.TR.(sequences))
-    dropped = [Iterators.dropwhile(i) do (iTR, _, t2, _, _, _)
-        ((iTR - 1) * TR + t2) < tstart
-    end for (i, TR) in zip(iters, TRs)]
-    return _IterEdges{R, eltype(dropped)}(
-        dropped,
-        TRs,
-        Float64(tstart)
-    )
-end
-
-function iter_part_times(sequences::AbstractVector{<:Sequence}, tstart, repeat::Val, timestep::TimeStep; kwargs...)
-    Iterators.flatten(
-        Iterators.map(iter_part_times(sequences, tstart, repeat; kwargs...)) do var
-            if !(var isa Tuple)
-                # instants
-                return (var, )
-            end
-            
-            (t1, t2, bbs) = var
-
-            max_grad = iszero(length(sequences)) ? 0. : maximum(bbs) do ((t_grad, grad), _)
-                max(
-                    norm(variables.gradient_strength(grad, t_grad)),
-                    norm(variables.gradient_strength(grad, t_grad + t2 - t1))
-                )
-            end
-            use_timestep = timestep(max_grad)
-            nsteps = isinf(use_timestep) ? 1 : Int(div(t2 - t1, use_timestep, RoundUp))
-            splits = range(t1, t2, length=nsteps+1)
-            return (
-                (
-                    t1p, t2p, map(bbs) do ((t_grad, grad), pulse)
-                        correct_pulse = isnothing(pulse) ? nothing : (pulse[1] + t1p - t1, pulse[2])
-                        return ((t_grad + t1p - t1, grad), correct_pulse)
-                    end
-                )
-                for (t1p, t2p) in zip(splits[1:end-1], splits[2:end])
-            )
-        end
-    )
-end
-
-
-function iter_parts(sequences::AbstractVector{<:Sequence}, tstart::Number, repeat::Val, timestep::TimeStep; kwargs...)
-    Iterators.map(iter_part_times(sequences, tstart, repeat, timestep; kwargs...)) do var
-        if !(var isa Tuple)
-            return InstantSequencePart(var)
-        else
-            (t1, t2, bbs) = var
-            if iszero(length(sequences))
-                return MultSequencePart(t2 - t1, SVector{0, EmptyPart}())
-            end
-            return MultSequencePart(t2 - t1, map(bbs) do ((t_grad, gradient), gp)
-                if gradient isa NoGradient
-                    grad_part = EmptyPart()
-                elseif gradient isa ConstantGradient
-                    grad_part = ConstantPart(variables.gradient_strength(gradient))
-                elseif gradient isa ChangingGradient
-                    grad_part = LinearPart(variables.gradient_strength(gradient, t_grad), variables.gradient_strength(gradient, t_grad + t2 - t1))
-                else
-                    error("Gradient waveform $gradient is not implemented in the MCMR simulator yet.")
-                end
-                if isnothing(gp)
-                    return grad_part
-                else
-                    (pulse_t1, pulse) = gp
-                    pulse_t2 = (t2 - t1) + pulse_t1
-        
-                    max_ts = split_timestep(pulse, 1e-3)
-        
-                    nparts = isinf(max_ts) ? 1 : Int(div(pulse_t2 - pulse_t1, max_ts, RoundUp))
-                    ts = (pulse_t2 - pulse_t1) / nparts
-        
-                    time_parts = ((1:nparts) .- 0.5) .* ts .+ pulse_t1
-                    parts = [
-                        ConstantPulse(variables.amplitude(pulse, t), variables.phase(pulse, t) - variables.frequency(pulse, t) * 180 * ts, variables.frequency(pulse, t))
-                        for t in time_parts
-                    ]
-                    return PulsePart{typeof(grad_part)}(parts, grad_part)
-                end
-            end)
-        end
-    end
-end
-
-nreadouts_per_TR(seq::Sequence) = length(collect(Iterators.filter(iter_part_times(seq, Val(false))) do state
-    state[end] isa SingleReadout
-end))
-
-function first_TR_with_all_readouts(seq::Sequence, start_time::Number; readouts=nothing)
-    if iszero(start_time)
-        return 1
-    else
-        current_TR = 1
-        for ro in get_readouts(seq, 0.; nTR=typemax(Int), readouts=readouts)
-            if ro.time <= start_time
-                current_TR = ro.TR + 1
-            else
-                return current_TR
-            end
-        end
-    end
-    error()
-end
 
 """
-    get_readouts(sequence, start_time; readouts=nothing, nTR=1, skip_TR=0)
+    get_readouts(sequence[, start_time]; readouts=nothing, nTR=1, skip_TR=0)
+    get_readouts(adc_sample_times, TR[, start_time]; readouts=nothing, nTR=1, skip_TR=0)
 
-Returns a iterator of the readouts ([`IndexedReadout`](@ref) objects) that will be used for the given sequence in the simulator.
+Returns whether this sequence repeats and when it will be readout.
+
+The return in a tuple with:
+1. a boolean indicating whether the sequence is repeating or not, and
+2. a vector of `IndexedReadout`s indicating the readouts that will be used in the simulation.
+
+The sequence `adc_sample_times` and `TR` can be given directly, or they can be extracted from the sequence using `sequencee_waveform(sequence, start_time; kwargs...)`.
 
 This can be used to identify which readouts will be (or have been) used in the simulation by running:
 `collect(get_readouts(sequence, snapshot.current_time; kwargs...))`
@@ -412,12 +535,12 @@ Any readouts before the `start_time` are ignored.
 Any readouts after the `start_time` (whether from the `readouts` keyword or within the sequence definition) are returned.
 
 # Repeating sequences
-This is the behaviour if either `nTR` or `skip_TR` or both are not set by the user.
+This is the behaviour if either `nTR` or `skip_TR` or both are set by the user.
 If at `start_time` any of the readouts in the current TR have already passed, then the readout will only start in the next TR (unless `skip_TR` is set to -1).
 We will skip an additional number of TRs given by `skip_TR` (default: 0).
 Then readouts will continue for the number of TRs given by `nTR` (default: 1).
 """
-function get_readouts(seq::Sequence, start_time::Number; readouts=nothing, nTR=nothing, skip_TR=nothing) 
+function get_readouts(adc_sample_times::AbstractVector, TR::Number, start_time::Number=0.; readouts=nothing, nTR=nothing, skip_TR=nothing) 
     repeat = !(isnothing(nTR) && isnothing(skip_TR))
     if isnothing(nTR)
         nTR = 1
@@ -427,36 +550,45 @@ function get_readouts(seq::Sequence, start_time::Number; readouts=nothing, nTR=n
     end
 
     if !isnothing(readouts)
-        readouts = collect(readouts)
+        use_readouts = collect(readouts)
         if repeat
-            rep_time = variables.TR(seq)
-            max_ro = maximum(readouts)
-            if max_ro > rep_time
-                if isapprox(max_ro, rep_time, rtol=1e-3)
-                    @warn "Adjusting maximum readout time ($max_ro) to match the TR of $rep_time."
+            max_ro = maximum(use_readouts)
+            if max_ro > TR
+                if isapprox(max_ro, TR, rtol=1e-3)
+                    @warn "Adjusting maximum readout time ($max_ro) to match the TR of $TR."
                 else
-                    error("Readouts have been scheduled at $max_ro ms beyond the sequence repetitition time of $rep_time ms.")
+                    error("Readouts have been scheduled at $max_ro ms beyond the sequence repetitition time of $TR ms.")
                 end
             end
-            readouts = min.(readouts, rep_time)
+            use_readouts = min.(use_readouts, TR)
         end
-    end
-    base_iterator = iter_part_times(seq, Val(repeat); readouts=readouts)
-    if repeat
-        first_TR = first_TR_with_all_readouts(seq, start_time, readouts=readouts) + skip_TR
-        last_TR = first_TR + nTR - 1
-        drop_first = Iterators.dropwhile(res -> res[1] < first_TR, base_iterator)
-        drop_last = Iterators.takewhile(res -> res[1] <= last_TR, drop_first)
     else
-        drop_last = Iterators.dropwhile(res -> res[2] < start_time, base_iterator)
+        use_readouts = collect(adc_sample_times)
     end
 
-    filtered = Iterators.filter(drop_last) do res
-        return res[end] isa IndexedReadout
+    if !repeat
+        return repeat, [IndexedReadout(time, 0, index) for (index, time) in enumerate(use_readouts) if time >= start_time]
     end
-    return Iterators.map(filtered) do res
-        return res[end]
+
+    time_in_TR = start_time % TR
+    current_TR = floor(Int, start_time / TR) + 1
+    first_TR = if time_in_TR > 0 && any(ro -> ro >= time_in_TR, use_readouts)
+        current_TR + 1 + skip_TR
+    else
+        current_TR + skip_TR
     end
+
+    return repeat, [
+        IndexedReadout(TR * (tr - 1) + ro, tr, index) 
+        for tr in first_TR:first_TR + nTR - 1 
+        for (index, ro) in enumerate(use_readouts)
+        if (TR * (tr - 1) + ro) >= start_time
+    ]
+end
+
+function get_readouts(sequence, start_time::Number=0.; kwargs...) 
+    obj = sequence_waveform(sequence)
+    get_readouts(obj.samples, obj.TR, start_time; kwargs...)
 end
 
 
