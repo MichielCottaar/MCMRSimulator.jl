@@ -13,6 +13,7 @@ import Interpolations: linear_interpolation, deduplicate_knots!
 import ..TimeSteps: TimeStep
 import ..Spins: static_vector_type
 import KomaMRIBase
+import KomaMRIFiles: read_seq
 
 
 """
@@ -52,6 +53,80 @@ Part of the sequence with no RF pulse and a linearly changing gradient amplitude
 struct LinearPart <: NoPulsePart
     start :: SVector{3, Float64}
     final :: SVector{3, Float64}
+end
+
+
+"""
+    ConstantPulse(amplitude, phase, frequency)
+
+Stores the RF pulse state during a single timestep.
+
+It contains:
+- `amplitude` of RF pulse in kHz (assumed to be constant over the timestep).
+- `phase` of the RF pulse at the beginning of the timestep in degrees.
+- off-resonance `frequency` of the RF pulse in kHz.
+"""
+struct ConstantPulse
+    amplitude :: Float64
+    phase :: Float64
+    frequency :: Float64
+end
+
+"""
+    PulsePart{T}(pulse, gradient)
+
+A `SequencePart` containing a constant RF pulse and a gradient of type `T` (which is a subtype of `NoPulsePart`).
+
+The RF pulse is represented by a vector of `ConstantPulse`s, which are assumed to be played sequentially during the part.
+The duration of the first and last `ConstantPulse` might be different from the others as represented by `first_duration` and `last_duration`.
+If `first_duration` and `last_duration` are 1 (default) then all `ConstantPulse`s are assumed to have the same duration.
+
+In the special case of there only being one `ConstantPulse`, only `first_duration` is used and represents the duration of that `ConstantPulse`.
+"""
+struct PulsePart{T<:NoPulsePart} <: SequencePart
+    pulse :: Vector{ConstantPulse}
+    gradient :: T
+    first_duration :: Float64
+    last_duration :: Float64
+end
+
+PulsePart(pulse::Vector{ConstantPulse}, gradient::T) where {T<:NoPulsePart} = PulsePart{T}(pulse, gradient, 1., 1.)
+
+
+function split_fraction(part::PulsePart{T}, fraction::Number) where {T<:NoPulsePart}
+    grad1, grad2 = split_fraction(part.gradient, fraction)
+    total_duration = length(part.pulse) - 2 + part.first_duration + part.last_duration
+    split_duration = total_duration * fraction
+
+    if split_duration < part.first_duration
+        # split is within the first pulse
+        return (
+            PulsePart(part.pulse[1:1], grad1, split_duration, 1.),
+            PulsePart(part.pulse, grad2, part.first_duration - split_duration, part.last_duration)
+        )
+    elseif split_duration > total_duration - part.last_duration
+        # split is within the last pulse
+        return (
+            PulsePart(part.pulse, grad1, part.first_duration, part.last_duration - (total_duration - split_duration)),
+            PulsePart(part.pulse[end:end], grad2, 1., split_duration - (total_duration - part.last_duration))
+        )
+    end
+    index_split = split_duration - part.first_duration + 1
+    if index_split == round(index_split)
+        # split is between two pulses
+        cut_index = Int(index_split)
+        return (
+            PulsePart(part.pulse[1:cut_index], grad1, part.first_duration, 1.),
+            PulsePart(part.pulse[cut_index+1:end], grad2, 1., part.last_duration)
+        )
+    end
+
+    cut_index = Int(ceil(index_split))
+    relative_split = index_split - (cut_index - 1)
+    return (
+        PulsePart(part.pulse[1:cut_index], grad1, part.first_duration, relative_split),
+        PulsePart(part.pulse[cut_index:end], grad2, 1 - relative_split, part.last_duration)
+    )
 end
 
 
@@ -98,6 +173,8 @@ end
 
 """
     SequenceWaveform(gradients, rf_pulses, samples, TR)
+    SequenceWaveform(koma_sequence::KomaMRIBase.Sequence)
+    SequenceWaveform(pulseq_filename::String)
 
 Represents the sequence as a continous gradient waveform, a list of RF pulses and the readout times.
 """
@@ -123,6 +200,8 @@ function SequenceWaveform(sequence::KomaMRIBase.Sequence)
         grads[1][1][end]
     )
 end
+
+SequenceWaveform(filename::AbstractString) = SequenceWaveform(read_seq(filename))
 
 
 """
@@ -187,22 +266,38 @@ function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep
     end
     sort!(control_times)
 
+    index_ro = ones(length(waveforms))
+    instants = map(control_times) do t
+        map(1:length(waveforms)) do index_seq
+            i_ro = index_ro[index_seq]
+            if i_ro <= length(ro) && (t == ro[i_ro].time)
+                index_ro[index_seq] += 1
+                return ro[i_ro]
+            end
+            return nothing
+        end
+    end
     vector_type = static_vector_type(length(waveforms))
-    return build_blocks(control_times, vector_type, waveforms, grad_interpolators)
+    return build_blocks(control_times, vector_type, waveforms, grad_interpolators, instants)
 end
 
-function build_blocks(control_times, vector_type, waveforms, grad_interpolators)
-    return map(control_times[1:end-1], control_times[2:end]) do t0, t1
+function build_blocks(control_times, vector_type, waveforms, grad_interpolators, instants)
+    return map(control_times[1:end-1], control_times[2:end], instants[2:end]) do t0, t1, instant
         MultSequencePart{vector_type}(
             t1 - t0,
-            map(zip(waveforms, grad_interpolators)) do (waveform, interpolators)
+            map(waveforms, grad_interpolators) do waveform, interpolators
                 get_block(waveform, t0, t1, interpolators)
-            end
+            end,
+            instant
         )
     end
 end
 
 function get_block(waveform, t0, t1, grad_interpolators)
+    @assert t0 <= t1
+    if t0 == t1
+        return EmptyPart()
+    end
     grad0 = SVector{3, Float64}(grad_interpolators[1](t0), grad_interpolators[2](t0), grad_interpolators[3](t0))
     grad1 = SVector{3, Float64}(grad_interpolators[1](t1), grad_interpolators[2](t1), grad_interpolators[3](t1))
 
@@ -236,7 +331,7 @@ function get_block(waveform, t0, t1, grad_interpolators)
     return grad_part
 end
 
-
+empty_sequence() = KomaMRIBase.Sequence()
 
 
 """
@@ -376,78 +471,6 @@ split_fraction(part::LinearPart, fraction::Number) = (
 )
 
 
-"""
-    ConstantPulse(amplitude, phase, frequency)
-
-Stores the RF pulse state during a single timestep.
-
-It contains:
-- `amplitude` of RF pulse in kHz (assumed to be constant over the timestep).
-- `phase` of the RF pulse at the beginning of the timestep in degrees.
-- off-resonance `frequency` of the RF pulse in kHz.
-"""
-struct ConstantPulse
-    amplitude :: Float64
-    phase :: Float64
-    frequency :: Float64
-end
-
-"""
-    PulsePart{T}(pulse, gradient)
-
-A `SequencePart` containing a constant RF pulse and a gradient of type `T` (which is a subtype of `NoPulsePart`).
-
-The RF pulse is represented by a vector of `ConstantPulse`s, which are assumed to be played sequentially during the part.
-The duration of the first and last `ConstantPulse` might be different from the others as represented by `first_duration` and `last_duration`.
-If `first_duration` and `last_duration` are 1 (default) then all `ConstantPulse`s are assumed to have the same duration.
-
-In the special case of there only being one `ConstantPulse`, only `first_duration` is used and represents the duration of that `ConstantPulse`.
-"""
-struct PulsePart{T<:NoPulsePart} <: SequencePart
-    pulse :: Vector{ConstantPulse}
-    gradient :: T
-    first_duration :: Float64
-    last_duration :: Float64
-end
-
-PulsePart(pulse::Vector{ConstantPulse}, gradient::T) where {T<:NoPulsePart} = PulsePart{T}(pulse, gradient, 1., 1.)
-
-
-function split_fraction(part::PulsePart{T}, fraction::Number) where {T<:NoPulsePart}
-    grad1, grad2 = split_fraction(part.gradient, fraction)
-    total_duration = length(part.pulse) - 2 + part.first_duration + part.last_duration
-    split_duration = total_duration * fraction
-
-    if split_duration < part.first_duration
-        # split is within the first pulse
-        return (
-            PulsePart(part.pulse[1:1], grad1, split_duration, 1.),
-            PulsePart(part.pulse, grad2, part.first_duration - split_duration, part.last_duration)
-        )
-    elseif split_duration > total_duration - part.last_duration
-        # split is within the last pulse
-        return (
-            PulsePart(part.pulse, grad1, part.first_duration, part.last_duration - (total_duration - split_duration)),
-            PulsePart(part.pulse[end:end], grad2, 1., split_duration - (total_duration - part.last_duration))
-        )
-    end
-    index_split = split_duration - part.first_duration + 1
-    if index_split == round(index_split)
-        # split is between two pulses
-        cut_index = Int(index_split)
-        return (
-            PulsePart(part.pulse[1:cut_index], grad1, part.first_duration, 1.),
-            PulsePart(part.pulse[cut_index+1:end], grad2, 1., part.last_duration)
-        )
-    end
-
-    cut_index = Int(ceil(index_split))
-    relative_split = index_split - (cut_index - 1)
-    return (
-        PulsePart(part.pulse[1:cut_index], grad1, part.first_duration, relative_split),
-        PulsePart(part.pulse[cut_index:end], grad2, 1 - relative_split, part.last_duration)
-    )
-end
 
 
 function split_fraction(part::T, fractions::AbstractVector{<:Number}) where {T}
@@ -487,16 +510,34 @@ end
 
 
 """
+    InstantSequencePart(instants)
+
+A set of `N` instant pulses/gradients/readouts that should be applied to the spins.
+
+Some of the instants might be `nothing`.
+"""
+struct InstantSequencePart{N, T, ST<:AbstractVector{T}}
+    instants :: ST
+    function InstantSequencePart{VT}(instants::AbstractVector) where {VT}
+        T = Union{typeof.(instants)...}
+        N = length(instants)
+        return new{N, T, VT{T}}(VT{T}(instants))
+    end
+end
+
+
+"""
     MultSequencePart(duration, parts)
 
 A set of N [`SequencePart`](@ref) objects representing overlapping parts of `N` sequences.
 """
-struct MultSequencePart{N, T<:SequencePart, ST<:AbstractVector{T}}
+struct MultSequencePart{N, T<:SequencePart, ST<:AbstractVector{T}, IT, IST}
     duration :: Float64
     parts :: ST
+    instants :: InstantSequencePart{N, IT, IST}
 end
 
-function MultSequencePart{VT}(duration::Number, parts::AbstractVector) where {VT}
+function MultSequencePart{VT}(duration::Number, parts::AbstractVector, instants::AbstractVector) where {VT}
     N = length(parts)
     if iszero(N)
         return new{0, EmptyPart, SVector{0, EmptyPart}}(Float64(duration), SVector{0, EmptyPart}())
@@ -510,38 +551,9 @@ function MultSequencePart{VT}(duration::Number, parts::AbstractVector) where {VT
     end
     return MultSequencePart{N, T, VT{T}}(
         Float64(duration),
-        VT{T}(parts)
+        VT{T}(parts),
+        InstantSequencePart{VT}(instants),
     )
-end
-
-function split_fraction(part::T, fraction::Number) where {T<:MultSequencePart}
-    full_parts = split_fraction.(part.parts, Ref(fraction))
-    part1 = map(full_parts) do (p1, _)
-        p1
-    end
-    part2 = map(full_parts) do (_, p2)
-        p2
-    end
-    return (
-        T(part.duration * fraction, part1),
-        T(part.duration * (1 - fraction), part2)
-    )
-end
-
-"""
-    InstantSequencePart(instants)
-
-A set of `N` instant pulses/gradients that should be applied to the spins.
-
-Some of the instants might be `nothing`.
-"""
-struct InstantSequencePart{N, T, ST<:AbstractVector{T}}
-    instants :: ST
-    function InstantSequencePart(instants::AbstractVector)
-        T = Union{typeof.(instants)...}
-        N = length(instants)
-        return new{N, T, static_vector_type(N){T}}(static_vector_type(N){T}(instants))
-    end
 end
 
 

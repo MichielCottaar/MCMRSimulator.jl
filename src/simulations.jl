@@ -3,13 +3,14 @@ Defines the main [`Simulation`](@ref) object.
 """
 module Simulations
 import StaticArrays: SVector, SizedVector
-import ..Sequences: Sequence
 import ..Geometries: ObstructionGroup, fix, fix_susceptibility
 import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility, susceptibility_off_resonance, prepare_isinside!
 import ..Spins: Spin, Snapshot, SpinOrientation, stuck
 import ..Methods: get_time
 import ..Properties: GlobalProperties, R1, R2, off_resonance
 import ..TimeSteps: TimeStep
+import ..SequenceParts: MultSequencePart, parts
+
 
 """
     Simulation(
@@ -22,7 +23,7 @@ Defines the setup of the simulation and stores the output of the run.
 
 # Argument
 ## General parameters:
-- `sequences`: Vector of `MRIBuilder.Sequence` objects. During the spin random walk the simulation will keep track of the spin magnetisations for all of the provided sequences.
+- `sequences`: One or more sequences. During the spin random walk the simulation will keep track of the spin magnetisations for all of the provided sequences. Sequences can be filenames of `pulseq` files or `KomaMRIFiles.Sequence` objects.
 - `geometry`: Set of obstructions, which can be used to restrict the diffusion, produce off-resonance fields, alter the local T1/T2 relaxation, and as sources of magnetisation transfer.
 - `diffusivity`: Rate of the random motion of the spins in um^2/ms (default: 3).
 - `verbose`: set to false to silence descriptions of the simulation parameters (default: true).
@@ -57,7 +58,7 @@ To run a [`Snapshot`](@ref) of spins through the simulations you can use one of 
 """
 struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, O<:FixedSusceptibility}
     # N sequences, datatype T
-    sequences :: SizedVector{N, Sequence}
+    sequences :: Vector
     diffusivity :: Float64
     properties :: GlobalProperties
     geometry :: G
@@ -67,7 +68,7 @@ struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, O<:FixedSuscep
     flatten::Bool
     verbose::Bool
     function Simulation(
-        sequences, 
+        sequences::Vector, 
         diffusivity::Float64,
         properties::GlobalProperties,
         geometry::FixedGeometry,
@@ -78,9 +79,8 @@ struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, O<:FixedSuscep
         verbose::Bool
     )
         nseq = length(sequences)
-
         new{nseq, length(geometry), typeof(geometry), typeof(inside_geometry), typeof(susceptibility)}(
-            SizedVector{nseq, Sequence}(sequences),
+            collect(sequences),
             diffusivity,
             properties,
             geometry,
@@ -107,12 +107,9 @@ function Simulation(
     verbose=true,
     timestep=(),
 )
-    flatten = false
-    if isa(sequences, Sequence)
+    flatten = !isa(sequences, AbstractVector)
+    if flatten
         sequences = [sequences]
-        flatten = true
-    elseif length(sequences) == 0
-        sequences = Sequence[]
     end
     susceptibility = fix_susceptibility(geometry)
     geometry = fix(geometry; permeability=permeability, density=surface_density, dwell_time=dwell_time, relaxation=surface_relaxation)
@@ -126,6 +123,7 @@ function Simulation(
     if iszero(diffusivity) && length(geometry) > 0
         @warn "Restrictive geometry will have no effect, because the diffusivity is set at zero"
     end
+    timestep = timestep isa Number ? TimeStep(timestep, Inf) : TimeStep(; verbose=verbose, diffusivity=diffusivity, geometry=geometry, timestep...),
     return Simulation(
         sequences, 
         Float64(diffusivity),

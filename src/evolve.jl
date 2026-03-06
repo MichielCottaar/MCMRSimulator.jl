@@ -10,10 +10,9 @@ import StaticArrays: SVector, MVector
 import LinearAlgebra: norm, ⋅
 import Rotations
 import Bessels: besseli0
-import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, iter_parts, get_readouts, IndexedReadout, first_TR_with_all_readouts, NoGradient
+import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, get_readouts, IndexedReadout, empty_sequence, GradientEvent, PulseEvent, parts
 import ..Methods: get_time
 import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation, static_vector_type
-import ..Sequences: Sequence, InstantGradient, InstantPulse
 import ..Simulations: Simulation, _to_snapshot
 import ..Relax: relax!
 import ..Properties: GlobalProperties, stick_probability
@@ -337,8 +336,7 @@ function readout_internal(snapshot::Snapshot{N}, simulation::Simulation{N}, new_
         error("readout timings should be set as the 3rd positional argument, not a keyword argument.")
     end
     accumulator = GridAccumulator(simulation, snapshot.time; readouts=new_readout_times, kwargs...)
-    repeat = :nTR in keys(kwargs) || :skip_TR in keys(kwargs)
-    run_readout!(snapshot, simulation, accumulator, Val(repeat); readouts=new_readout_times)
+    run_readout!(snapshot, simulation, accumulator; readouts=new_readout_times)
     return fix_accumulator(accumulator)
 end
 
@@ -366,26 +364,25 @@ function readout(spins::Integer, simulation::Simulation{N}, new_readout_times=no
     nruns_extra = spins - nspins_min * nruns
 
     accumulator = GridAccumulator(simulation, 0.; readouts=new_readout_times, kwargs...)
-    repeat = :nTR in keys(kwargs) || :skip_TR in keys(kwargs)
     for nspins_run in [
         fill(nspins_min + 1, nruns_extra)...,
         fill(nspins_min, nruns - nruns_extra)...
     ]
-        run_readout!(_to_snapshot(nspins_run, simulation, bounding_box), simulation, accumulator, Val(repeat); readouts=new_readout_times)
+        run_readout!(_to_snapshot(nspins_run, simulation, bounding_box), simulation, accumulator; readouts=new_readout_times)
     end
     return fix_accumulator(accumulator)
 end
 
 
 """
-    run_readout!(snapshot, simulation, accumulators, repeat; kwargs...)
+    run_readout!(snapshot, simulation, accumulators; kwargs...)
 
 Runs the simulation starting from `snapshot` and filling the `accumulators`.
 """
-function run_readout!(snapshot::Snapshot{N}, simulation::Simulation{N}, accumulator::GridAccumulator, repeat::Val; kwargs...) where {N}
+function run_readout!(snapshot::Snapshot{N}, simulation::Simulation{N}, accumulator::GridAccumulator; kwargs...) where {N}
     @assert N > 0
     B0s = map(B0, simulation.sequences)
-    for part in iter_parts(simulation.sequences, snapshot.time, repeat, simulation.timestep; kwargs...)
+    for part in parts(simulation.sequences, snapshot.time, simulation.timestep; kwargs...)
         if process_sequence_step!(snapshot.spins, simulation, part, B0s, accumulator)
             return
         end
@@ -393,22 +390,11 @@ function run_readout!(snapshot::Snapshot{N}, simulation::Simulation{N}, accumula
     error("Simulation ended before all readout accumulators were filled.")
 end
 
-function run_readout!(snapshot::Snapshot{0}, simulation::Simulation{0}, accumulator::GridAccumulator, repeat::Val{R}; readouts, kwargs...) where {R}
-    if R
-        error("Cannot set `nTR` or `skip_TR` when there are no sequences.")
-    end
-    empty_sequence = build_sequence() do 
-        Sequence([1.]) 
-    end
+function run_readout!(snapshot::Snapshot{0}, simulation::Simulation{0}, accumulator::GridAccumulator; readouts, kwargs...)
+    seq = empty_sequence()
     B0s = zero(SVector{0, Float64})
-    for part in iter_parts([empty_sequence], snapshot.time, Val(false), simulation.timestep; readouts=readouts)
-        if part isa MultSequencePart
-            draw_step!(snapshot.spins, simulation, MultSequencePart(part.duration, NoGradient[]), B0s)
-        else
-            if readout!(accumulator, snapshot.spins, 1, part.instants[1])
-                return
-            end
-        end
+    for part in parts(seq, snapshot.time, simulation.timestep; readouts=readouts)
+        process_sequence_step!(snapshot.spins, simulation, part, B0s, accumulator)
     end
     error("Simulation ended before all readout accumulators were filled.")
 end
@@ -468,11 +454,10 @@ function evolve(spins, simulation::Simulation{N}, new_time; TR=nothing, bounding
     )
 end
 
-function process_sequence_step!(spins, simulation, sequence_part::MultSequencePart, B0s, _) 
+function process_sequence_step!(spins, simulation, sequence_part::MultSequencePart, B0s, accumulator) 
     draw_step!(spins, simulation, sequence_part, B0s)
-    return false
+    return apply_instants!(spins, sequence_part.instants, accumulator)
 end
-process_sequence_step!(spins, simulation, sequence_part::InstantSequencePart, _, accumulator) = apply_instants!(spins, sequence_part, accumulator)
 
 """
     draw_step!(spin(s), simulation, mult_sequence_part, B0s)
@@ -611,8 +596,8 @@ Apply a set of `N` instants to a vector of spins for each of the `N` sequences b
 
 Each instant can be:
 - `nothing`: do nothing
-- `MRIBuilder.Components.InstantPulse`: apply RF pulse rotation
-- `MRIBuilder.Components.InstantGradient`: add phase corresponding to gradient
+- `MRIBuilder.Components.PulseEvent`: apply RF pulse rotation
+- `MRIBuilder.Components.GradientEvent`: add phase corresponding to gradient
 - `IndexedReadout`: add the current snapshot to `accumulator`
 
 Returns `true` if this is the final readout and we should stop.
@@ -629,7 +614,7 @@ end
 apply_instants!(spins::Vector{<:Spin{N}}, instants::AbstractVector{Nothing}, _) where {N} = false
 apply_instants!(spins::Vector{<:Spin}, index::Int, ::Nothing, _) = false
 
-function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::InstantGradient, _)
+function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::GradientEvent, _)
     Threads.@threads for spin in spins
         new_phase = rad2deg(spin.position ⋅ variables.qvec(grad))
         spin.orientations[index].phase += new_phase
@@ -645,7 +630,7 @@ function apply_instants!(spins::Vector{<:Spin{1}}, index::Int, readout::IndexedR
     readout!(accumulator, spins, index, readout)
 end
 
-function apply_instants!(spins::Vector{<:Spin}, index::Int, pulse::InstantPulse, _)
+function apply_instants!(spins::Vector{<:Spin}, index::Int, pulse::PulseEvent, _)
     rotation = Rotations.RotationVec(
         deg2rad(pulse.flip_angle) * cosd(pulse.phase),
         deg2rad(pulse.flip_angle) * sind(pulse.phase),

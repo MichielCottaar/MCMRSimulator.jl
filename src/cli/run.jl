@@ -8,7 +8,6 @@ import DataFrames: DataFrame
 import CSV
 import Tables
 import Random
-import ...Sequences: read_sequence, Sequence
 import ...Geometries.User.JSON: read_geometry
 import ...Simulations: Simulation
 import ...Spins: Snapshot, BoundingBox, longitudinal, transverse, phase, orientation, position

@@ -20,7 +20,6 @@ include("geometries/geometries.jl")
 include("spins.jl")
 include("timesteps.jl")
 include("sequence_parts.jl")
-include("sequences/sequences.jl")
 include("simulations.jl")
 include("relax.jl")
 include("subsets.jl")
@@ -50,10 +49,6 @@ import .TimeSteps: TimeStep
 
 import .SequenceParts: get_readouts, IndexedReadout, iter_parts
 @compat public get_readouts, IndexedReadout
-
-import .Sequences: Sequence, BaseBuildingBlock, BuildingBlock, GradientWaveform, RFPulse, ADC, duration, InstantGradient, InstantPulse, read_sequence, write_sequence
-export Sequence, read_sequence, write_sequence
-@compat public BaseBuildingBlock, BuildingBlock, GradientWaveform, RFPulse, ADC, duration, InstantGradient, InstantPulse
 
 import .Simulations: Simulation, susceptibility_off_resonance
 export Simulation
