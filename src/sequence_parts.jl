@@ -22,9 +22,7 @@ There are 4 types:
 - [`EmptyPart`](@ref): no pulse or gradient
 - [`ContantPart`](@ref): no pulse; constant gradient
 - [`LinearPart`](@ref): no pulse; linear gradient
-- [`PulsePart`](@ref): RF pulse; constant gradient
-
-To break down a generic sequence in these parts will require some approximations.
+- [`PulsePart`](@ref): RF pulse; gradient can be any of the above
 """
 abstract type SequencePart end
 
