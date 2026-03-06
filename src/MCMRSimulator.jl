@@ -47,8 +47,8 @@ export position, longitudinal, transverse, phase, Spin, Snapshot, isinside, stuc
 import .TimeSteps: TimeStep
 @compat public TimeStep
 
-import .SequenceParts: get_readouts, IndexedReadout, iter_parts
-@compat public get_readouts, IndexedReadout
+import .SequenceParts: get_readouts, IndexedReadout, parts
+@compat public get_readouts, IndexedReadout, parts
 
 import .Simulations: Simulation, susceptibility_off_resonance
 export Simulation
