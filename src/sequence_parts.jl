@@ -391,6 +391,7 @@ function get_pulses(sequence::KomaMRIBase.Sequence)
             lower_index = i - 1
             upper_index = i + 1
             if iszero(ampls[i])
+                freqs[i] = 0.
                 continue
             end
             while lower_index > 0 && iszero(ampls[lower_index])
