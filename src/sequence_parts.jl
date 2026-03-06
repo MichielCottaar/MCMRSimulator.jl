@@ -262,17 +262,19 @@ function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep
             end)
         end)
         nsplit = ceil(Int, (t1 - t0) / timestep(max_gradient))
-        append!(control_times, range(t0, t1; length=nsplit+1)[2:end-1])
+        if nsplit > 1
+            append!(control_times, range(t0, t1; length=nsplit+1)[2:end-1])
+        end
     end
     sort!(control_times)
 
-    index_ro = ones(length(waveforms))
+    index_ro = ones(Int, length(waveforms))
     instants = map(control_times) do t
         map(1:length(waveforms)) do index_seq
             i_ro = index_ro[index_seq]
-            if i_ro <= length(ro) && (t == ro[i_ro].time)
+            if i_ro <= length(readouts[index_seq]) && (t == readouts[index_seq][i_ro].time)
                 index_ro[index_seq] += 1
-                return ro[i_ro]
+                return readouts[index_seq][i_ro]
             end
             return nothing
         end
@@ -549,10 +551,12 @@ function MultSequencePart{VT}(duration::Number, parts::AbstractVector, instants:
     else
         T = SequencePart
     end
-    return MultSequencePart{N, T, VT{T}}(
+    instants_obj = InstantSequencePart{VT}(instants)
+    (IT, IST) = (eltype(instants_obj.instants), typeof(instants_obj.instants))
+    return MultSequencePart{N, T, VT{T}, IT, IST}(
         Float64(duration),
         VT{T}(parts),
-        InstantSequencePart{VT}(instants),
+        instants_obj,
     )
 end
 
@@ -635,7 +639,7 @@ function get_readouts(adc_sample_times::AbstractVector, TR::Number, start_time::
 end
 
 function get_readouts(sequence, start_time::Number=0.; kwargs...) 
-    obj = sequence_waveform(sequence)
+    obj = SequenceWaveform(sequence)
     get_readouts(obj.samples, obj.TR, start_time; kwargs...)
 end
 

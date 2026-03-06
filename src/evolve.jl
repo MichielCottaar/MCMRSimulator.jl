@@ -147,7 +147,7 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
         )
     end
 
-    actual_readouts = collect.(get_readouts.(simulation.sequences, start_time; readouts=readouts, nTR=nTR, kwargs...))
+    actual_readouts = [get_readouts(seq, start_time; readouts=readouts, nTR=nTR, kwargs...)[2] for seq in simulation.sequences]
 
     if any(iszero.(length.(actual_readouts)))
         error("No readouts scheduled for at least one of the sequences.")
@@ -373,6 +373,7 @@ function readout(spins::Integer, simulation::Simulation{N}, new_readout_times=no
     return fix_accumulator(accumulator)
 end
 
+B0(seq) = 3.
 
 """
     run_readout!(snapshot, simulation, accumulators; kwargs...)
@@ -611,7 +612,7 @@ function apply_instants!(spins::Vector{<:Spin{N}}, instants::AbstractVector, acc
     return final
 end
 
-apply_instants!(spins::Vector{<:Spin{N}}, instants::AbstractVector{Nothing}, _) where {N} = false
+apply_instants!(spins::Vector{<:Spin{N}}, instants::AbstractVector{Nothing}, _::GridAccumulator) where {N} = false
 apply_instants!(spins::Vector{<:Spin}, index::Int, ::Nothing, _) = false
 
 function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::GradientEvent, _)
