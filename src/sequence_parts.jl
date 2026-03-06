@@ -26,30 +26,53 @@ There are 4 types:
 """
 abstract type SequencePart end
 
+"""
+Any part of the sequence not containing an RF pulse.
+"""
 abstract type NoPulsePart <: SequencePart end
 
+"""
+Part of the sequence with no RF pulse or gradient.
+"""
 struct EmptyPart <: NoPulsePart
 end
 
 
+"""
+Part of the sequence with no RF pulse and a constant gradient amplitude (given by `strength`).
+"""
 struct ConstantPart <: NoPulsePart
     strength :: SVector{3, Float64}
 end
 
 
+"""
+Part of the sequence with no RF pulse and a linearly changing gradient amplitude (given by `start` and `final`).
+"""
 struct LinearPart <: NoPulsePart
     start :: SVector{3, Float64}
     final :: SVector{3, Float64}
 end
 
 
+"""
+Instantaneous event within the sequence, such as a readout or an narrow-pulse approximation of a gradient or RF pulse.
+"""
 abstract type SequenceEvent end
 
+"""
+Instantaneous approximation of an RF pulse with the `flip_angle` in degrees and `phase` in degrees.
+
+The bandwidth is infinite, so the pulse does not have a frequency.
+"""
 struct PulseEvent <: SequenceEvent
     flip_angle :: Float64
     phase :: Float64
 end
 
+"""
+Instantaneous approximation of a gradient with the q-vector `qvec` in 1/um.
+"""
 struct GradientEvent <: SequenceEvent
     qvec :: SVector{3, Float64}
 end
@@ -73,6 +96,11 @@ struct IndexedReadout <: SequenceEvent
 end
 
 
+"""
+    SequenceWaveform(gradients, rf_pulses, samples, TR)
+
+Represents the sequence as a continous gradient waveform, a list of RF pulses and the readout times.
+"""
 struct SequenceWaveform
     grads::NTuple{3, Tuple{Vector{Float64}, Vector{Float64}}}
     rf::Vector{Tuple{Float64, Float64, Vector{ConstantPulse}}}
@@ -97,6 +125,16 @@ function SequenceWaveform(sequence::KomaMRIBase.Sequence)
 end
 
 
+"""
+    parts(sequences::AbstractVector, start_time, timestep; kwargs...)
+
+Splits the sequences into parts that can be handled by the simulator based on the control times of the sequence and the maximum allowed timestep.
+
+The control times include:
+- any readout times. The readout times are determined by `get_readouts` and can be altered by passing on the relevant keywords to `parts`.
+- any time points where the gradient slew rate changes.
+- any time points where an RF pulse starts or ends.
+"""
 function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep; kwargs...)
     waveforms = [SequenceWaveform(seq) for seq in sequences]
     (repeats, readouts) = zip([get_readouts(waveform.samples, waveform.TR, start_time; kwargs...) for waveform in waveforms]...)
