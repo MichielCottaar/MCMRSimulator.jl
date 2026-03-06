@@ -12,6 +12,7 @@ import Statistics: mean
 import Interpolations: linear_interpolation, deduplicate_knots!
 import ..TimeSteps: TimeStep
 import ..Spins: static_vector_type
+import ..Constants: gyromagnetic_ratio
 import KomaMRIBase
 import KomaMRIFiles: read_seq
 
@@ -357,8 +358,8 @@ function gradient_waveform(sequence::KomaMRIBase.Sequence, index::Int)
     end
     push!(times, [KomaMRIBase.dur(sequence)])
     push!(ampls, [0.])
-    ftimes = vcat(times...)
-    fampls = vcat(ampls...)
+    ftimes = vcat(times...) * 1000 # seconds -> milliseconds
+    fampls = vcat(ampls...) * gyromagnetic_ratio * 1e-6 # T/m -> kHz/um
     return ftimes, fampls
 end
 
@@ -378,11 +379,11 @@ It returns a tuple with:
 function get_pulses(sequence::KomaMRIBase.Sequence)
     pulses = Tuple{Float64, Float64, Vector{ConstantPulse}}[]
     for (index_block, block) in enumerate(sequence)
-        times = KomaMRIBase.times(block.RF[1])
+        times = KomaMRIBase.times(block.RF[1]) .* 1000 # seconds -> milliseconds
         if length(times) == 0
             continue
         end
-        complex_ampls = KomaMRIBase.ampls(block.RF[1])
+        complex_ampls = KomaMRIBase.ampls(block.RF[1]) .* 1e-3 # Hz -> kHz
         ampls = abs.(complex_ampls)
         phases = rad2deg.(angle.(complex_ampls))
         freqs = fill(NaN, length(times))
@@ -435,7 +436,7 @@ Returns the ADC sampling times for the sequence.
 
 This needs to be implemented for any sequence type that needs to be processed by the simulator in addition to `gradient_waveform` and `get_pulses`.
 """
-readout_times(sequence::KomaMRIBase.Sequence) = KomaMRIBase.get_adc_sampling_times(sequence)
+readout_times(sequence::KomaMRIBase.Sequence) = KomaMRIBase.get_adc_sampling_times(sequence) .* 1000 # seconds -> milliseconds
 
 function compress_timeseries(times::AbstractVector{<:Number}, values::AbstractVector{<:Number}; rtol=1e-4)
     @assert length(times) == length(values)
