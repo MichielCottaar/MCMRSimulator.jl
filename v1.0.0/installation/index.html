@@ -127,15 +127,14 @@
                     <li>Install <code>juliaup</code> as explained on the <a href="https://julialang.org/downloads/">official
                             website</a>.</li>
                     <li>Use <code>juliaup</code> to install Julia 1.11 (not 1.12): <code>$ juliaup add 1.11</code>.</li>
-                    <li>Download the "<a href="../../Manifest.toml">Manifest.toml</a>" and the "<a
-                            href="../../Project.toml">Project.toml</a>". Together these two files define a virtual
-                        environment, which was used to generate all the plots in the paper and is guaranteed to work.
-                        Put these two files inside your working directory (you might need to backup the old
-                        "Manifest.toml" and "Project.toml").</li>
+                    <li>Download the "<a href="../../Project.toml">Project.toml</a>". This file defines a virtual
+                        environment, which was used to generate all the plots in the paper.
+                        Put this file inside your working directory (you might need to backup the old
+                        "Project.toml").</li>
                     <li>Run the following command, which will set up the virtual environment on your computer:
-                        <pre><code class="language-bash hljs">julia +1.11 --project="working directory with downloaded Manifest and Project.toml" -e "using Pkg; Pkg.add(url=\"https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl.git#v0.3.0\"); Pkg.add(url=\"https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl.git#v1.0.0\"); Pkg.resolve(); Pkg.precompile()"</code></pre>
+                        <pre><code class="language-bash hljs">julia +1.11 --project="working directory with downloaded Project.toml" -e "using Pkg; Pkg.instantiate()"</code></pre>
                     </li>
-                    <li>Start <code>julia</code> within this virtual environment using <code>$ julia +1.11 --project="working directory with downloaded Manifest and Project.toml"</code></li>
+                    <li>Start <code>julia</code> within this virtual environment using <code>$ julia +1.11 --project="working directory with downloaded Project.toml"</code></li>
                 </ol>
                 <h2>(Outdated) Installing the simulator for a specific project</h2>
                 <ol>

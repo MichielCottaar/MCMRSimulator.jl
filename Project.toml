@@ -7,3 +7,10 @@ MCMRSimulator = "eac06e4d-a854-4bf6-b44f-54c98b0401d1"
 MRIBuilder = "691e6122-0b62-4932-92e7-e4ff0ddaf3a0"
 NPZ = "15e1cf62-19b3-5cfa-8e77-841668bca605"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[sources]
+MCMRSimulator = {url="https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl", rev="v1.0.0"}
+MRIBuilder = {url="https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl", rev="v0.3.0"}
+
+[compat]
+CairoMakie = "0.12"
