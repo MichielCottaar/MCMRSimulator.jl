@@ -133,9 +133,9 @@
                         Put these two files inside your working directory (you might need to backup the old
                         "Manifest.toml" and "Project.toml").</li>
                     <li>Run the following command, which will set up the virtual environment on your computer:
-                        <pre><code class="language-bash hljs">julia +1.11 --project=`working directory with downloaded Manifest and Project.toml` -e "using Pkg; Pkg.add(url=\"https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl.git#v0.3.0\"); Pkg.add(url=\"https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl.git#v1.0.0\"); Pkg.resolve(); Pkg.precompile()"</code></pre>
+                        <pre><code class="language-bash hljs">julia +1.11 --project="working directory with downloaded Manifest and Project.toml" -e "using Pkg; Pkg.add(url=\"https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl.git#v0.3.0\"); Pkg.add(url=\"https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl.git#v1.0.0\"); Pkg.resolve(); Pkg.precompile()"</code></pre>
                     </li>
-                    <li>Start <code>julia</code> within this virtual environment using <code>$ julia +1.11 --project=`working directory with downloaded Manifest and Project.toml`</code></li>
+                    <li>Start <code>julia</code> within this virtual environment using <code>$ julia +1.11 --project="working directory with downloaded Manifest and Project.toml"</code></li>
                 </ol>
                 <h2>(Outdated) Installing the simulator for a specific project</h2>
                 <ol>
