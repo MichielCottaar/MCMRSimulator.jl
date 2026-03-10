@@ -5,6 +5,9 @@ authors:
     orcid: "https://orcid.org/0000-0003-4679-7724"
 cff-version: 1.2.0
 identifiers:
+  - description: "This is the journal article describing MCMRSimulator.jl"
+    type: doi
+    value: 10.1162/IMAG.a.1177
   - description: "This is a collection of all archived snapshots of MCMRSimulator.jl"
     type: doi
     value: 10.5281/zenodo.7318656
