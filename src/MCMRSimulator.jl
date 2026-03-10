@@ -19,6 +19,7 @@ include("properties.jl")
 include("geometries/geometries.jl")
 include("spins.jl")
 include("timesteps.jl")
+include("pulseq/pulseq.jl")
 include("sequence_parts.jl")
 include("simulations.jl")
 include("relax.jl")
@@ -46,6 +47,9 @@ export position, longitudinal, transverse, phase, Spin, Snapshot, isinside, stuc
 
 import .TimeSteps: TimeStep
 @compat public TimeStep
+
+import .Pulseq: read_pulseq, write_pulseq
+export read_pulseq, write_pulseq
 
 import .SequenceParts: get_readouts, IndexedReadout, parts
 @compat public get_readouts, IndexedReadout, parts
