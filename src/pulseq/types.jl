@@ -23,6 +23,8 @@ struct PulseqShape
     samples :: Vector{Float64}
 end
 
+Base.length(shape::PulseqShape) = length(shape.samples)
+
 """
 Super-type for any RF pulses/gradients/ADC/extensions that can play out during a [`PulseqBlock`](@ref).
 """
@@ -43,6 +45,8 @@ struct PulseqRFPulse <: AnyPulseqComponent
     frequency :: Float64
     phase_offset :: Float64
 end
+
+Base.length(rf::PulseqRFPulse) = length(rf.magnitude)
 
 """
 Super-type of Pulseq gradients:
@@ -79,7 +83,7 @@ end
 """
     PulseqADC(num::Int, dwell::Float64, delay::Int, frequency::Number, phase::Number)
 
-A trapezoidal gradient pulse defined in Pulseq (see [specification](https://raw.githubusercontent.com/pulseq/pulseq/master/doc/specification.pdf)).
+An ADC readout event defined in Pulseq (see [specification](https://raw.githubusercontent.com/pulseq/pulseq/master/doc/specification.pdf)).
 """
 struct PulseqADC <: AnyPulseqComponent
     num :: Int

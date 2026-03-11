@@ -15,6 +15,7 @@ import ..Spins: static_vector_type
 import ..Constants: gyromagnetic_ratio
 import KomaMRIBase
 import KomaMRIFiles: read_seq
+import ..Pulseq: read_pulseq, PulseqSequence, PulseqBlock, PulseqADC
 
 
 """
@@ -438,6 +439,26 @@ Returns the ADC sampling times for the sequence.
 This needs to be implemented for any sequence type that needs to be processed by the simulator in addition to `gradient_waveform` and `get_pulses`.
 """
 readout_times(sequence::KomaMRIBase.Sequence) = KomaMRIBase.get_adc_sampling_times(sequence) .* 1000 # seconds -> milliseconds
+
+function readout_times(sequence::PulseqSequence)
+    times = Float64[]
+    current_time = 0.
+    block_raster = sequence.definitions.BlockDurationRaster
+    adc_raster = sequence.definitions.AdcRasterTime
+    for block in sequence.blocks
+        append!(times, current_time * block_raster .+ readout_times(block, adc_raster))
+        current_time += block.duration
+    end
+    return times .* 1000 # seconds -> milliseconds
+end
+
+readout_times(block::PulseqBlock, adc_raster::Number) = readout_times(block.adc, adc_raster)
+function readout_times(adc::PulseqADC, adc_raster::Number) 
+    unnorm = @. 1e-6 * adc.delay + 1e-9 .* (adc.dwell * (0.5:adc.num))
+    norm = @. (round(unnorm / adc_raster + 0.5) - 0.5) * adc_raster
+    return norm
+end
+readout_times(::Nothing, ::Number) = Float64[]
 
 function compress_timeseries(times::AbstractVector{<:Number}, values::AbstractVector{<:Number}; rtol=1e-4)
     @assert length(times) == length(values)
