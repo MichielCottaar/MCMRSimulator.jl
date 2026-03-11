@@ -214,7 +214,7 @@ function rf_pulses(seq::PulseqSequence, unit=:second)
                 prepend!(time_seconds, 0.)
                 prepend!(mag, (3 * mag[1] - mag[2]) / 2)
                 prepend!(phase, (3 * phase[1] - phase[2]) / 2)
-                append!(time_seconds, time_seconds[end] + seq.definitions.RadiofrequencyRasterTime)
+                append!(time_seconds, length(pulse) * seq.definitions.RadiofrequencyRasterTime)
                 append!(mag, (3 * mag[end] - mag[end-1]) / 2)
                 append!(phase, (3 * phase[end] - phase[end-1]) / 2)
             end
