@@ -143,7 +143,7 @@ function gradient_waveform(grad::PulseqGradient, gradient_raster_time::Number)
     end
 end
 
-gradient_waveform(::Nothing) = (Int[], Float64[])
+gradient_waveform(::Nothing, ::Number) = (Int[], Float64[])
 
 gradient_waveform(seq::PulseqSequence) = gradient_waveform(seq, Val(:all), :second)
 
@@ -153,7 +153,7 @@ function gradient_waveform(seq::PulseqSequence, dimension::Val{D}, time_unit::Sy
         amplitude = (D == :all ? SVector{3, Float64} : Float64)[]
         current_time = 0
         for block in seq.blocks
-            (block_time, grad) = gradient_waveform(block, dimension)
+            (block_time, grad) = gradient_waveform(block, dimension, seq.definitions.GradientRasterTime)
             for sub_time in block_time
                 push!(times, (current_time, sub_time))
             end
