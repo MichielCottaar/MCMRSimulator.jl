@@ -444,8 +444,8 @@ function get_pulses(sequence::Pulseq.PulseqSequence)
         phase_second_grad = diff(phase_grad) ./ diff(mean_times)
 
         propose_timestep_second = min(
-            1e-3/maximum(mag_grad),
-            1e-3/sqrt(maximum(phase_second_grad)),
+            1e-2/maximum(mag_grad),
+            1e-2/sqrt(maximum(phase_second_grad)),
         )
         propose_timestep_raster = round(Int, propose_timestep_second / sequence.definitions.RadiofrequencyRasterTime)
         if propose_timestep_raster < 1
@@ -464,7 +464,7 @@ function get_pulses(sequence::Pulseq.PulseqSequence)
 
         new_times = range(times[1], times[end]; length=nsteps * 2 + 1)[2:2:end-1]
 
-        pulses_parts = [ConstantPulse(mag_interp(t) * 1000, rad2deg(phase_interp(t)), freq_interp(t) * 1000) for t in new_times]
+        pulses_parts = [ConstantPulse(mag_interp(t) * 1e-3, rad2deg(phase_interp(t)), freq_interp(t) * 1e-3) for t in new_times]
         push!(rf_pulses, (t0, t1, pulses_parts))
     end
     return rf_pulses
