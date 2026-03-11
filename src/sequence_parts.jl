@@ -15,7 +15,7 @@ import ..Spins: static_vector_type
 import ..Constants: gyromagnetic_ratio
 import KomaMRIBase
 import KomaMRIFiles: read_seq
-import ..Pulseq: read_pulseq, PulseqSequence, PulseqBlock, PulseqADC
+import ..Pulseq: Pulseq
 
 
 """
@@ -187,7 +187,7 @@ struct SequenceWaveform
     TR::Float64
 end
 
-function SequenceWaveform(sequence::KomaMRIBase.Sequence)
+function SequenceWaveform(sequence)
     grads = (
         gradient_waveform(sequence, 1),
         gradient_waveform(sequence, 2),
@@ -203,7 +203,7 @@ function SequenceWaveform(sequence::KomaMRIBase.Sequence)
     )
 end
 
-SequenceWaveform(filename::AbstractString) = SequenceWaveform(read_seq(filename))
+SequenceWaveform(filename::AbstractString) = SequenceWaveform(Pulseq.read_pulseq(filename))
 
 
 """
@@ -364,6 +364,8 @@ function gradient_waveform(sequence::KomaMRIBase.Sequence, index::Int)
     return ftimes, fampls
 end
 
+gradient_waveform(sequence::Pulseq.PulseqSequence, dimension::Int) = Pulseq.gradient_waveform(sequence, dimension)
+
 
 """
     get_pulses(sequence)
@@ -430,35 +432,21 @@ function get_pulses(sequence::KomaMRIBase.Sequence)
     return pulses
 end
 
+function get_pulses(sequence::Pulseq.PulseqSequence)
+    return Pulseq.rf_pulses(sequence)
+end
+
 
 """
     readout_times(sequence)
 
-Returns the ADC sampling times for the sequence.
+Returns the ADC sampling times for the sequence in milliseconds.
 
 This needs to be implemented for any sequence type that needs to be processed by the simulator in addition to `gradient_waveform` and `get_pulses`.
 """
 readout_times(sequence::KomaMRIBase.Sequence) = KomaMRIBase.get_adc_sampling_times(sequence) .* 1000 # seconds -> milliseconds
+readout_times(sequence::Pulseq.PulseqSequence) = Pulseq.adc_sample_times(sequence, :ms)
 
-function readout_times(sequence::PulseqSequence)
-    times = Float64[]
-    current_time = 0.
-    block_raster = sequence.definitions.BlockDurationRaster
-    adc_raster = sequence.definitions.AdcRasterTime
-    for block in sequence.blocks
-        append!(times, current_time * block_raster .+ readout_times(block, adc_raster))
-        current_time += block.duration
-    end
-    return times .* 1000 # seconds -> milliseconds
-end
-
-readout_times(block::PulseqBlock, adc_raster::Number) = readout_times(block.adc, adc_raster)
-function readout_times(adc::PulseqADC, adc_raster::Number) 
-    unnorm = @. 1e-6 * adc.delay + 1e-9 .* (adc.dwell * (0.5:adc.num))
-    norm = @. (round(unnorm / adc_raster + 0.5) - 0.5) * adc_raster
-    return norm
-end
-readout_times(::Nothing, ::Number) = Float64[]
 
 function compress_timeseries(times::AbstractVector{<:Number}, values::AbstractVector{<:Number}; rtol=1e-4)
     @assert length(times) == length(values)
