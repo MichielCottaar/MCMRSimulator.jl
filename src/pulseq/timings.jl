@@ -183,25 +183,51 @@ Returns a list of all RF pulses in a sequence.
 
 Each pulse is returned as a tuple of the:
 - The pulse start time (including the pulse delay). If `unit` is set to :second (default) or :ms, the time is returned in seconds or milliseconds, respectively.
-- `PulseqRFPulse` object.
+- Three equal length vectors with:
+    - The time of the RF pulse sample in given `unit`.
+    - The RF pulse magnitude in Hz.
+    - The RF pulse phase in rad.
 """
 function rf_pulses(seq::PulseqSequence, unit=:second)
-    pulses = Tuple{unit == :raster ? Int : Float64, PulseqRFPulse}[]
+    pulses = Tuple{unit == :raster ? Int : Float64, Vector{Float64}, Vector{Float64}, Vector{Float64}}[]
     current_time = 0
     for block in seq.blocks
         if !isnothing(block.rf)
             pulse = block.rf
-            if unit in (:s, :second)
-                push!(pulses, (current_time * seq.definitions.BlockDurationRaster + pulse.delay * 1e-6, pulse))
+            mult = if unit in (:s, :second)
+                1.
             elseif unit in (:ms, :millisecond)
-                push!(pulses, ((current_time * seq.definitions.BlockDurationRaster + pulse.delay * 1e-6) * 1e3, pulse))
+                1e3
             else
-                error("Unknown unit: $unit. Use :second, :ms, or :raster.")
+                error("Unknown unit: $unit. Use :second or :ms.")
             end
+            time_seconds = collect(if isnothing(pulse.time)
+                (0.5:length(pulse)) .* (seq.definitions.RadiofrequencyRasterTime)
+            else
+                pulse.time
+            end)
+            base_phase = pulse.phase.samples
+            phase = base_phase .+ pulse.phase_offset .+ pulse.frequency .* time_seconds * 2π
+            mag = pulse.magnitude.samples .* pulse.amplitude
+
+            if isnothing(pulse.time)
+                prepend!(time_seconds, 0.)
+                prepend!(mag, (3 * mag[1] - mag[2]) / 2)
+                prepend!(phase, (3 * phase[1] - phase[2]) / 2)
+                append!(time_seconds, time_seconds[end] + seq.definitions.RadiofrequencyRasterTime)
+                append!(mag, (3 * mag[end] - mag[end-1]) / 2)
+                append!(phase, (3 * phase[end] - phase[end-1]) / 2)
+            end
+            push!(pulses, (
+                (current_time * seq.definitions.BlockDurationRaster + pulse.delay * 1e-6) * mult, 
+                time_seconds .* mult,
+                mag,
+                phase
+            ))
         end
         current_time += duration(block)
     end
-    return sort(pulses; by=first)
+    return pulses
 end
 
 

@@ -433,7 +433,41 @@ function get_pulses(sequence::KomaMRIBase.Sequence)
 end
 
 function get_pulses(sequence::Pulseq.PulseqSequence)
-    return Pulseq.rf_pulses(sequence)
+    rf_pulses = Tuple{Float64, Float64, Vector{ConstantPulse}}[]
+    for (t0_raw, times, mag, phase) in Pulseq.rf_pulses(sequence)
+        t0 = t0_raw + times[1]
+        t1 = t0_raw + times[end]
+
+        mag_grad = diff(mag ./ maximum(abs.(mag))) ./ diff(times)
+        phase_grad = diff(phase) ./ diff(times)
+        mean_times = (times[1:end-1] + times[2:end]) / 2
+        phase_second_grad = diff(phase_grad) ./ diff(mean_times)
+
+        propose_timestep_second = min(
+            1e-3/maximum(mag_grad),
+            1e-3/sqrt(maximum(phase_second_grad)),
+        )
+        propose_timestep_raster = round(Int, propose_timestep_second / sequence.definitions.RadiofrequencyRasterTime)
+        if propose_timestep_raster < 1
+            propose_timestep_raster = 1
+        end
+        nsteps = round(Int, (times[end] - times[1]) / (propose_timestep_raster * sequence.definitions.RadiofrequencyRasterTime))
+        if nsteps < 1
+            nsteps = 1
+        end
+
+        mag_interp = linear_interpolation(times, mag)
+        phase_interp = linear_interpolation(times, phase)
+
+        freq = diff(phase) ./ diff(times) ./ 2π  # in Hz
+        freq_interp = linear_interpolation(mean_times, freq)
+
+        new_times = range(times[1], times[end]; length=nsteps * 2 + 1)[2:2:end-1]
+
+        pulses_parts = [ConstantPulse(mag_interp(t) * 1000, rad2deg(phase_interp(t)), freq_interp(t) * 1000) for t in new_times]
+        push!(rf_pulses, (t0, t1, pulses_parts))
+    end
+    return rf_pulses
 end
 
 
