@@ -39,6 +39,7 @@ In Julia, the easiest way to get the documentation for all keywords is to run:
 ?Walls/Cylinders/Annuli/Spheres/Mesh/BendyCylinder
 ```
 or by following the links in the table above.
+For meshes use the [`load_mesh`](@ref) function to read a mesh from disk.
 
 
 For example, we can create two base cylinders, which repeat infinitely by running:
