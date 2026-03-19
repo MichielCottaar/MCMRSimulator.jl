@@ -143,4 +143,8 @@ struct PulseqSequence
     blocks:: Vector{PulseqBlock}
 end
 
+Base.length(seq::PulseqSequence) = length(seq.blocks)
+Base.getindex(seq::PulseqSequence, i::Int) = PulseqSequence(seq.version, seq.definitions, [seq.blocks[i]])
+Base.getindex(seq::PulseqSequence, range) = PulseqSequence(seq.version, seq.definitions, seq.blocks[range])
+
 end
