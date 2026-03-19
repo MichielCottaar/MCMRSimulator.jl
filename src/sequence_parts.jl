@@ -465,7 +465,7 @@ function get_pulses(sequence::Pulseq.PulseqSequence)
         new_times = range(times[1], times[end]; length=nsteps * 2 + 1)[2:2:end-1]
 
         pulses_parts = [ConstantPulse(mag_interp(t) * 1e-3, rad2deg(phase_interp(t)), freq_interp(t) * 1e-3) for t in new_times]
-        push!(rf_pulses, (t0, t1, pulses_parts))
+        push!(rf_pulses, (t0 * 1000, t1 * 1000, pulses_parts))
     end
     return rf_pulses
 end
