@@ -200,7 +200,7 @@ end
 function curvature(triangles, vertices) 
     sizes = [triangle_size(vertices[t[1]], vertices[t[2]], vertices[t[3]]) ./ 3 for t in triangles]
     all_curv = [(sizes[i1] + sizes[i2], curvature(triangles, vertices, i1, i2)) for (i1, i2) in neighbours(triangles)]
-    return sum([w .* c for (w, c) in all_curv]) / sum([w for (w, _) in all_curv])
+    return sum([w .* c for (w, c) in all_curv if !isnan(c)]) / sum([w for (w, c) in all_curv if !isnan(c)])
 end
 
 curvature(triangles::AbstractVector{IndexTriangle}, vertices) = curvature([t.indices for t in triangles], vertices)
