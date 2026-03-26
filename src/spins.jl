@@ -502,6 +502,7 @@ position(s::Snapshot) = position.(s.spins)
 
 Snapshot(snap :: Snapshot{1}, nsequences::Integer) = Snapshot([Spin(spin, nsequences) for spin in snap.spins], snap.time)
 get_sequence(snap::Snapshot, index) = Snapshot(get_sequence.(snap.spins, index), snap.time)
-isinside(something, snapshot::Snapshot) = [isinside(something, spin) for spin in snapshot]
+isinside(geometry::FixedGeometry, snapshot::Snapshot) = [isinside(geometry, spin) for spin in snapshot]
+isinside(something, snapshot::Snapshot) = length.(isinside(fix(something), snapshot))
 
 end
