@@ -157,7 +157,7 @@ end
     end
 end
 @testset "Test readout formats" begin
-    sequence = read_sequence(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_1000.seq"))
+    sequence = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_1000.seq"))
     seq = build_sequence() do 
         Sequence([10., SingleReadout(), 20., SingleReadout(), 70]) 
     end
@@ -214,8 +214,8 @@ end
 
 @testset "Test simulation pretty printing" begin
     sequences = [
-        read_sequence(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_1.seq")),
-        read_sequence(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2.seq")),
+        mr.read_pulseq(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_1.seq")),
+        mr.read_pulseq(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2.seq")),
     ]
     sim = mr.Simulation(sequences, geometry=mr.Spheres(radius=[1, 2.], repeats=[5, 5, 5]), R1=0.1, surface_relaxation=0.3)
     @test repr(sim, context=:compact => true) == "Simulation(2 sequences, Geometry(2 repeating Round objects, ), D=3.0um^2/ms, GlobalProperties(R1=0.1kHz, ))" 

@@ -138,7 +138,7 @@ end
     mesh = box_mesh()
     snap = mr.Snapshot(rand(100, 3) .- 0.5)
 
-    sequence = read_sequence(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2_instant.seq"))
+    sequence = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2_instant.seq"))
 
     simulation = mr.Simulation([sequence]; geometry=mesh, diffusivity=3.)
     final = mr.evolve(snap, simulation, 20)

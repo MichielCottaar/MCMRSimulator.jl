@@ -111,7 +111,7 @@ end
             Random.seed!(1234)
             geometry = mr.Walls(surface_relaxation=-log(1-transfer))
             spins = [mr.Spin(position=Random.rand(3) .* wall_dist) for _ in 1:nspins]
-            sequence = read_sequence(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_100000.seq"))
+            sequence = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_100000.seq"))
             simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=diffusivity, timestep=1.)
             signal = mr.readout(spins, simulation, 1.)
             fhit = frachit(wall_dist, diffusivity, 1.)
@@ -125,7 +125,7 @@ end
     @testset "Test that surface relaxation does not depend on timestep" begin
         Random.seed!(1234)
         geometry = mr.Walls(repeats=1, surface_relaxation=0.1)
-        sequence = read_sequence(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_100000.seq"))
+        sequence = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_100000.seq"))
 
         reference = nothing
         for ts_weight in (1e-4, 3e-3, 1e-2)
@@ -167,7 +167,7 @@ end
         Random.seed!(1234)
         geometry = mr.Walls(repeats=1, R2_surface=1e6)
         init = mr.Snapshot(100000)
-        seq = read_sequence(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_1000.seq"))
+        seq = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_1000.seq"))
         for density in (0, 0.5, 1)
             for dwell_time in (1, 2)
                 @testset "Density = $density; dwell_time = $dwell_time" begin
