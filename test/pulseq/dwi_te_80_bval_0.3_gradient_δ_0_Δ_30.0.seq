@@ -10,7 +10,7 @@ AdcRasterTime 1.0e-9
 BlockDurationRaster 1.0e-9
 RadiofrequencyRasterTime 1.0e-9
 GradientRasterTime 1.0e-9
-TotalDuration 0.08000000000690716
+TotalDuration 0.08000000000019648
 B0 3.0
 
 
@@ -28,7 +28,7 @@ B0 3.0
 
 
 [ADC]
-1 0 0.0 0 0.0 0.0
+1 1 0.0 0 0.0 0.0
 
 
 [EXTENSIONS]
@@ -37,7 +37,7 @@ B0 3.0
 3 2 2 0
 
 extension InstantGradient 1
-1 0.0 0.10000000000027767 0.0 0.0
+1 0.0 0.10000000000027766 0.0 0.0
 
 extension InstantPulse 2
 1 0.0 90.0 0.0
