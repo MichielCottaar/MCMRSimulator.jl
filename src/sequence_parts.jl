@@ -247,6 +247,9 @@ function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep
 
     grad_interpolators = map(waveforms, repeats) do waveform, repeating
         map(waveform.grads) do (times, ampls)
+            if length(times) == 0
+                return time -> 0.
+            end
             inter = linear_interpolation(deduplicate_knots!(times), ampls; extrapolation_bc=0.)
             if repeating
                 time -> inter(time % waveform.TR)
@@ -484,6 +487,9 @@ readout_times(sequence::Pulseq.PulseqSequence) = Pulseq.adc_sample_times(sequenc
 
 function compress_timeseries(times::AbstractVector{<:Number}, values::AbstractVector{<:Number}; rtol=1e-4)
     @assert length(times) == length(values)
+    if length(times) == 0
+        return Float64[], Float64[]
+    end
     ctimes = [times[1]]
     cvalues = [values[1]]
 
