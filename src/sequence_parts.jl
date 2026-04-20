@@ -474,12 +474,12 @@ end
 """
     readout_times(sequence)
 
-Returns the ADC sampling times for the sequence in milliseconds.
+Returns the ADC sampling times for the sequence in seconds.
 
 This needs to be implemented for any sequence type that needs to be processed by the simulator in addition to `gradient_waveform` and `get_pulses`.
 """
-readout_times(sequence::KomaMRIBase.Sequence) = KomaMRIBase.get_adc_sampling_times(sequence) .* 1000 # seconds -> milliseconds
-readout_times(sequence::Pulseq.PulseqSequence) = Pulseq.adc_sample_times(sequence, :ms)
+readout_times(sequence::KomaMRIBase.Sequence) = KomaMRIBase.get_adc_sampling_times(sequence)
+readout_times(sequence::Pulseq.PulseqSequence) = Pulseq.adc_sample_times(sequence, :s)
 
 
 function compress_timeseries(times::AbstractVector{<:Number}, values::AbstractVector{<:Number}; rtol=1e-4)
