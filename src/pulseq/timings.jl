@@ -137,8 +137,9 @@ function gradient_waveform(grad::PulseqGradient, gradient_raster_time::Number)
         append!(ampls, 0.)
         return ndelay .+ times, ampls
     else
-        times = grad.time * 2
+        times = grad.time.samples * 2
         ampls = grad.shape.samples .* grad.amplitude
+        @assert length(times) == length(ampls) "Gradient time and shape must have the same number of samples."
         return ndelay .+ times, ampls
     end
 end
