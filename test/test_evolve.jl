@@ -28,7 +28,7 @@
         @test length(snaps) == 6
     end
     @testset "Gradient echo sequence" begin
-        simulation = mr.Simulation(GradientEcho(TE=2.8))
+        simulation = mr.Simulation(read_sequence(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_2.8.seq")))
         snaps = mr.readout(zeros(3), simulation, 0:0.5:2.8)
         for snap in snaps
             @test mr.orientation(snap) ≈ SA[0., -1., 0.]
@@ -63,7 +63,7 @@
         @test_throws MethodError mr.evolve(snaps, simulation)
     end
     @testset "Basic diffusion has no effect in constant fields" begin
-        sequence = GradientEcho(TE=2.)
+        sequence = read_sequence(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_2.seq"))
         no_diff = mr.Simulation([sequence], diffusivity=0., R2=0.3)
         with_diff = mr.Simulation([sequence], diffusivity=1., R2=0.3)
         spin_no_diff = mr.evolve(mr.Spin(), no_diff, 2.).spins[1]
@@ -75,7 +75,7 @@
         @test abs(mr.longitudinal(spin_no_diff)) < Float64(1e-6)
     end
     @testset "Basic diffusion run within sphere" begin
-        sequence = GradientEcho(TE=20.)
+        sequence = read_sequence(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_20.seq"))
         sphere = mr.Spheres(radius=1.)
         Random.seed!(12)
         diff = mr.Simulation(sequence, diffusivity=2., geometry=sphere)

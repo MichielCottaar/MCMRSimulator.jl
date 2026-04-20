@@ -16,7 +16,7 @@
             @test mr.off_resonance(pos_out, obstruction, defaults) == (0., 1.)
         end
         @testset "Test simulation in $(typeof(obstruction))" begin
-            sequence = GradientEcho(TE=100.)
+            sequence = read_sequence(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_100.seq"))
             sim = mr.Simulation(sequence, R2=1., geometry=obstruction, diffusivity=1.)
             snap = mr.evolve([pos_in, pos_out], sim, 10.)
             within = snap[1].orientations[1]

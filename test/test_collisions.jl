@@ -231,7 +231,7 @@
                 mr.Cylinders(radius=[0.8, 0.9], position=[[0, 0], [0, 0]], repeats=[2, 2]),
                 mr.Spheres(radius=[0.8, 0.9], position=[[0, 0, 0], [2, 0, 2]], repeats=[2, 2, 2]),
             )
-                sequence = DWI(TE=80., bval=2., gradient=(type=:instant, ), diffusion_time=40.)
+                sequence = read_sequence(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2_instant_diffusion_time_40.seq"))
 
                 snap = mr.Snapshot(300);
 
@@ -247,7 +247,7 @@
             Random.seed!(1234)
             walls = mr.Walls(position=[0, 1])
             snap = mr.Snapshot([mr.Spin(position=rand(3)) for _ in 1:3000])
-            sequence = DWI(TE=80., bval=2., gradient=(type=:instant, ), diffusion_time=40.)
+            sequence = read_sequence(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2_instant_diffusion_time_40.seq"))
             simulation = mr.Simulation([sequence]; geometry=walls, diffusivity=3.);
 
             final = mr.evolve(snap, simulation, 200.)

@@ -1,0 +1,35 @@
+[VERSION]
+major 1
+minor 4
+revision 0
+
+
+[DEFINITIONS]
+Name GradientEcho
+AdcRasterTime 1.0e-9
+BlockDurationRaster 1.0e-9
+RadiofrequencyRasterTime 1.0e-9
+GradientRasterTime 1.0e-9
+TotalDuration 0.0020000000004041104
+B0 1.5
+
+
+[BLOCKS]
+1 0 0 0 0 0 0 1
+2 2000000 0 0 0 0 0 0
+3 0 0 0 0 0 1 0
+4 0 0 0 0 0 0 0
+
+
+[ADC]
+1 0 0.0 0 0.0 0.0
+
+
+[EXTENSIONS]
+1 1 1 0
+
+extension InstantPulse 1
+1 0.0 90.0 0.0
+
+
+
