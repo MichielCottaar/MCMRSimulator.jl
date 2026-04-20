@@ -166,7 +166,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
         Random.seed!(args["seed"])
     end
     geometry = read_geometry(args["geometry"])
-    sequences = read_sequence.(args["sequence"])
+    sequences = mr.read_pulseq.(args["sequence"])
 
     if isnothing(args["bvecs"])
         sequence_indices = 1:length(sequences)
