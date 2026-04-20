@@ -5,6 +5,7 @@ module Pulseq
 
 include("types.jl")
 include("extensions.jl")
+include("instant_extensions.jl")
 include("basic_parsers.jl")
 include("sections_io.jl")
 include("components.jl")
