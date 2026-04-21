@@ -338,13 +338,13 @@ function get_instants(sequence::Pulseq.PulseqSequence)
         if !isnothing(block.ext)
             for ext in block.ext
                 if ext isa Tuple{<:Number, <:Pulseq.InstantPulse}
-                    push!(instants, (current_time + ext[1], PulseEvent(ext[2].flip_angle, ext[2].phase)))
+                    push!(instants, (current_time + ext[1] * 1e3, PulseEvent(ext[2].flip_angle, ext[2].phase)))
                 elseif ext isa Tuple{<:Number, <:Pulseq.InstantGradient}
-                    push!(instants, (current_time + ext[1], GradientEvent(ext[2].qvec)))
+                    push!(instants, (current_time + ext[1] * 1e3, GradientEvent(ext[2].qvec)))
                 end
             end
         end
-        current_time += Pulseq.duration(block) * sequence.definitions.BlockDurationRaster
+        current_time += Pulseq.duration(block) * sequence.definitions.BlockDurationRaster * 1e3
     end
     return sort(instants; by=x->x[1])
 end
@@ -433,7 +433,7 @@ function gradient_waveform(sequence::KomaMRIBase.Sequence, index::Int)
     return ftimes, fampls
 end
 
-gradient_waveform(sequence::Pulseq.PulseqSequence, dimension::Int) = Pulseq.gradient_waveform(sequence, dimension)
+gradient_waveform(sequence::Pulseq.PulseqSequence, dimension::Int) = Pulseq.gradient_waveform(sequence, dimension, :ms, :kHz_per_um)
 
 
 """
@@ -548,7 +548,7 @@ Returns the ADC sampling times for the sequence in seconds.
 This needs to be implemented for any sequence type that needs to be processed by the simulator in addition to `gradient_waveform` and `get_pulses`.
 """
 readout_times(sequence::KomaMRIBase.Sequence) = KomaMRIBase.get_adc_sampling_times(sequence)
-readout_times(sequence::Pulseq.PulseqSequence) = Pulseq.adc_sample_times(sequence, :s)
+readout_times(sequence::Pulseq.PulseqSequence) = Pulseq.adc_sample_times(sequence, :ms)
 
 
 function compress_timeseries(times::AbstractVector{<:Number}, values::AbstractVector{<:Number}; rtol=1e-4)
