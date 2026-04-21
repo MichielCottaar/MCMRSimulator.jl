@@ -88,15 +88,15 @@ The `dimension` can be set to :x, :y, :z, or :all (default) to return the gradie
 The `time_unit` can be set to :second (default) or :ms to return the times in seconds or milliseconds, respectively. This is only supported for sequences.
 For blocks and gradient objects, the times are always returned in units of the block duration raster/2.
 
-Gradient amplitudes are returned in units of Hz/m. They can be converted to `kHz/um` (as used in the simulator) by multiplying by 1e3.
+Gradient amplitudes are returned in units of Hz/m or kHz/um.
 """
 gradient_waveform(object, dimension::Symbol, args...) = gradient_waveform(object, Val(dimension), args...)
 gradient_waveform(object, dimension::Int, args...) = gradient_waveform(object, Val((:x, :y, :z)[dimension]), args...)
 
-function gradient_waveform(grad::PulseqBlock, ::Val{:all}, gradient_raster_time::Number)
-    t1, g1 = gradient_waveform(grad, Val(:x), gradient_raster_time)
-    t2, g2 = gradient_waveform(grad, Val(:y), gradient_raster_time)
-    t3, g3 = gradient_waveform(grad, Val(:z), gradient_raster_time)
+function gradient_waveform(grad::PulseqBlock, ::Val{:all}, gradient_raster_time::Number, amplitude_unit::Symbol=:Hz_per_m)
+    t1, g1 = gradient_waveform(grad, Val(:x), gradient_raster_time, amplitude_unit)
+    t2, g2 = gradient_waveform(grad, Val(:y), gradient_raster_time, aimplitude_unit)
+    t3, g3 = gradient_waveform(grad, Val(:z), gradient_raster_time, amplitude_unit)
     all_times = sort!(unique(vcat(t1, t2, t3)))
     if length(all_times) == 0
         return all_times, SVector{3, Float64}[]
@@ -106,31 +106,45 @@ function gradient_waveform(grad::PulseqBlock, ::Val{:all}, gradient_raster_time:
         length(t2) == 0 ? t -> 0. : linear_interpolation(t2, g2, extrapolation_bc=0),
         length(t3) == 0 ? t -> 0. : linear_interpolation(t3, g3, extrapolation_bc=0),
     )
-    return all_times, [SVector{3, Float64}(interp(time) for interp in interpolators) for time in all_times]
+    return all_times, [SVector{3, Float64}(interp(time) .* mult for interp in interpolators) for time in all_times]
 end
 
 for symb in (:x, :y, :z)
     sgx = Symbol("g", symb)
-    @eval function gradient_waveform(grad::PulseqBlock, ::Val{$(QuoteNode(symb))}, gradient_raster_time::Number)
-        gradient_waveform(grad.$sgx, gradient_raster_time)
+    @eval function gradient_waveform(grad::PulseqBlock, ::Val{$(QuoteNode(symb))}, gradient_raster_time::Number, amplitude_unit::Symbol=:Hz_per_m)
+        gradient_waveform(grad.$sgx, gradient_raster_time, amplitude_unit)
     end
 end
 
-function gradient_waveform(grad::PulseqTrapezoid, gradient_raster_time::Number)
+function gradient_waveform(grad::PulseqTrapezoid, gradient_raster_time::Number, amplitude_unit::Symbol=:Hz_per_m)
     ndelay = round(Int, grad.delay * 1e-6 / gradient_raster_time)
     @assert ndelay ≈ grad.delay * 1e-6 / gradient_raster_time "Trapezoid delay is not an integer multiple of the gradient raster time."
     durations = [ndelay, grad.rise, grad.flat, grad.fall]
     times = cumsum(durations)
-    amps = [0., grad.amplitude, grad.amplitude, 0.]
+    mult = if amplitude_unit == :Hz_per_m
+        1
+    elseif amplitude_unit == :kHz_per_um
+        1e3
+    else
+        error("Unknown amplitude unit: $amplitude_unit. Use :Hz_per_m or :kHz_per_um.")
+    end
+    amps = [0., grad.amplitude * mult, grad.amplitude * mult, 0.]
     return times, amps
 end
 
-function gradient_waveform(grad::PulseqGradient, gradient_raster_time::Number)
+function gradient_waveform(grad::PulseqGradient, gradient_raster_time::Number, amplitude_unit::Symbol=:Hz_per_m)
     ndelay = round(Int, grad.delay * 1e-6 / gradient_raster_time)
     @assert ndelay ≈ grad.delay * 1e-6 / gradient_raster_time "Gradient delay is not an integer multiple of the gradient raster time."
+    mult = if amplitude_unit == :Hz_per_m
+        1
+    elseif amplitude_unit == :kHz_per_um
+        1e3
+    else
+        error("Unknown amplitude unit: $amplitude_unit. Use :Hz_per_m or :kHz_per_um.")
+    end
     if isnothing(grad.time)
         times = collect(1:2:(2 * length(grad.shape)))
-        ampls = grad.shape.samples .* grad.amplitude
+        ampls = grad.shape.samples .* grad.amplitude .* mult
         prepend!(times, 0)
         prepend!(ampls, 0.)
         append!(times, 2 * length(grad.shape))
@@ -138,23 +152,23 @@ function gradient_waveform(grad::PulseqGradient, gradient_raster_time::Number)
         return ndelay .+ times, ampls
     else
         times = grad.time.samples * 2
-        ampls = grad.shape.samples .* grad.amplitude
+        ampls = grad.shape.samples .* grad.amplitude .* mult
         @assert length(times) == length(ampls) "Gradient time and shape must have the same number of samples."
         return ndelay .+ times, ampls
     end
 end
 
-gradient_waveform(::Nothing, ::Number) = (Int[], Float64[])
+gradient_waveform(::Nothing, ::Number, ::Symbol) = (Int[], Float64[])
 
 gradient_waveform(seq::PulseqSequence) = gradient_waveform(seq, Val(:all), :second)
 
-function gradient_waveform(seq::PulseqSequence, dimension::Val{D}, time_unit::Symbol=:second) where {D}
+function gradient_waveform(seq::PulseqSequence, dimension::Val{D}, time_unit::Symbol=:second, amplitude_unit::Symbol=:Hz_per_m) where {D}
     if time_unit == :raster
         times = Tuple{Int, Int}[]
         amplitude = (D == :all ? SVector{3, Float64} : Float64)[]
         current_time = 0
         for block in seq.blocks
-            (block_time, grad) = gradient_waveform(block, dimension, seq.definitions.GradientRasterTime)
+            (block_time, grad) = gradient_waveform(block, dimension, seq.definitions.GradientRasterTime, amplitude_unit)
             for sub_time in block_time
                 push!(times, (current_time, sub_time))
             end
@@ -163,13 +177,13 @@ function gradient_waveform(seq::PulseqSequence, dimension::Val{D}, time_unit::Sy
         end
         return times, amplitude
     elseif time_unit in (:s, :second)
-        base, grads = gradient_waveform(seq, dimension, :raster)
+        base, grads = gradient_waveform(seq, dimension, :raster, amplitude_unit)
         times = map(base) do (block_time, sub_time)
             block_time * seq.definitions.BlockDurationRaster + sub_time * seq.definitions.GradientRasterTime / 2
         end
         return times, grads
     elseif time_unit in (:ms, :millisecond)
-        times, grads = gradient_waveform(seq, dimension, :second)
+        times, grads = gradient_waveform(seq, dimension, :second, amplitude_unit)
         return times .* 1e3, grads
     else
         error("Unknown time unit: $time_unit. Use :second, :ms, or :raster.")
