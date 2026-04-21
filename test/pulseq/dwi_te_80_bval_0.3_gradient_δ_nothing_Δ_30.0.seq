@@ -10,7 +10,7 @@ AdcRasterTime 1.0e-9
 BlockDurationRaster 1.0e-9
 RadiofrequencyRasterTime 1.0e-9
 GradientRasterTime 1.0e-9
-TotalDuration 0.0800000000000039
+TotalDuration 0.08000000000000393
 B0 3.0
 
 
@@ -28,8 +28,8 @@ B0 3.0
 
 
 [GRADIENTS]
-1 11.677269625668977 1 2 0
-2 11.677269626887332 1 2 0
+1 1.1677269625385674e7 1 2 0
+2 1.1677269627231622e7 1 2 0
 
 
 [ADC]
