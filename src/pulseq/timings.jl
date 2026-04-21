@@ -124,7 +124,7 @@ function gradient_waveform(grad::PulseqTrapezoid, gradient_raster_time::Number, 
     mult = if amplitude_unit == :Hz_per_m
         1
     elseif amplitude_unit == :kHz_per_um
-        1e3
+        1e-9
     else
         error("Unknown amplitude unit: $amplitude_unit. Use :Hz_per_m or :kHz_per_um.")
     end
@@ -138,7 +138,7 @@ function gradient_waveform(grad::PulseqGradient, gradient_raster_time::Number, a
     mult = if amplitude_unit == :Hz_per_m
         1
     elseif amplitude_unit == :kHz_per_um
-        1e3
+        1e-9
     else
         error("Unknown amplitude unit: $amplitude_unit. Use :Hz_per_m or :kHz_per_um.")
     end
