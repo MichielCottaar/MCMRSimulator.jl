@@ -197,12 +197,21 @@ function SequenceWaveform(sequence)
     rf = get_pulses(sequence)
     instants = get_instants(sequence)
     samples = readout_times(sequence)
+    total_time = max(
+        maximum(grads[1][1], init=0.),
+        maximum(grads[2][1], init=0.),
+        maximum(grads[3][1], init=0.),
+        maximum(samples, init=0.),
+        maximum(map(instants) do (t, _)
+            t
+        end, init=0.),
+    )
     return SequenceWaveform(
         grads, 
         rf, 
         instants,
         samples,
-        grads[1][1][end]
+        total_time
     )
 end
 
