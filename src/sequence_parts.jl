@@ -183,6 +183,7 @@ Represents the sequence as a continous gradient waveform, a list of RF pulses an
 struct SequenceWaveform
     grads::NTuple{3, Tuple{Vector{Float64}, Vector{Float64}}}
     rf::Vector{Tuple{Float64, Float64, Vector{ConstantPulse}}}
+    instants::Vector{Tuple{Float64, SequenceEvent}}
     samples::Vector{Float64}
     TR::Float64
 end
@@ -194,10 +195,12 @@ function SequenceWaveform(sequence)
         gradient_waveform(sequence, 3),
     )
     rf = get_pulses(sequence)
+    instants = get_instants(sequence)
     samples = readout_times(sequence)
     return SequenceWaveform(
         grads, 
         rf, 
+        instants,
         samples,
         grads[1][1][end]
     )
@@ -226,7 +229,23 @@ function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep
         union!(set_control_times, [r.time for r in ro])
     end
     max_ro = maximum(set_control_times)
-    for waveform in waveforms
+    for (waveform, repeating) in zip(waveforms, repeats)
+        for (t, _) in waveform.instants
+            if repeating
+                rep_start = Int(div(start_time, waveform.TR, RoundDown))
+                rep_end = Int(div(max_ro, waveform.TR, RoundUp))
+                for index_rep in rep_start:rep_end
+                    t_rep = t + index_rep * waveform.TR
+                    if start_time < t_rep < max_ro
+                        push!(set_control_times, t_rep)
+                    end
+                end
+            else
+                if start_time < t < max_ro
+                    push!(set_control_times, t)
+                end
+            end
+        end
         for index in 1:3
             (new_times, _) = compress_timeseries(waveform.grads[index]...)
 
@@ -236,10 +255,23 @@ function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep
         end
     end
 
-    for (t0_rf, t1_rf, _) in waveforms[1].rf
-        for t in (t0_rf, t1_rf)
-            if start_time < t < max_ro
-                push!(set_control_times, t)
+    for (waveform, repeating) in zip(waveforms, repeats)
+        for (t0_rf, t1_rf, _) in waveform.rf
+            for t in (t0_rf, t1_rf)
+                if repeating
+                    rep_start = Int(div(start_time, waveform.TR, RoundDown))
+                    rep_end = Int(div(max_ro, waveform.TR, RoundUp))
+                    for index_rep in rep_start:rep_end
+                        t_rep = t + index_rep * waveform.TR
+                        if start_time < t_rep < max_ro
+                            push!(set_control_times, t_rep)
+                        end
+                    end
+                else
+                    if start_time < t < max_ro
+                        push!(set_control_times, t)
+                    end
+                end
             end
         end
     end
@@ -276,6 +308,17 @@ function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep
     index_ro = ones(Int, length(waveforms))
     instants = map(control_times) do t
         map(1:length(waveforms)) do index_seq
+            repeating = repeats[index_seq]
+            normed_time = if repeating
+                t % waveforms[index_seq].TR
+            else
+                t
+            end
+            for (t_ro, event) in waveforms[index_seq].instants
+                if normed_time == t_ro
+                    return event
+                end
+            end
             i_ro = index_ro[index_seq]
             if i_ro <= length(readouts[index_seq]) && (t == readouts[index_seq][i_ro].time)
                 index_ro[index_seq] += 1
@@ -288,7 +331,30 @@ function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep
     return build_blocks(control_times, vector_type, waveforms, grad_interpolators, instants)
 end
 
+function get_instants(sequence::Pulseq.PulseqSequence)
+    instants = Tuple{Float64, SequenceEvent}[]
+    current_time = 0.
+    for block in sequence.blocks
+        if !isnothing(block.ext)
+            for ext in block.ext
+                if ext isa Tuple{<:Number, <:Pulseq.InstantPulse}
+                    push!(instants, (current_time + ext[1], PulseEvent(ext[2].flip_angle, ext[2].phase)))
+                elseif ext isa Tuple{<:Number, <:Pulseq.InstantGradient}
+                    push!(instants, (current_time + ext[1], GradientEvent(ext[2].qvec)))
+                end
+            end
+        end
+        current_time += Pulseq.duration(block) * sequence.definitions.BlockDurationRaster
+    end
+    return sort(instants; by=x->x[1])
+end
+
 function build_blocks(control_times, vector_type, waveforms, grad_interpolators, instants)
+    if !all(isnothing, instants[1])
+        insert!(control_times, 1, control_times[1])
+        insert!(instants, 1, [nothing for _ in 1:length(waveforms)])
+    end
+
     return map(control_times[1:end-1], control_times[2:end], instants[2:end]) do t0, t1, instant
         MultSequencePart{vector_type}(
             t1 - t0,

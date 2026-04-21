@@ -15,6 +15,7 @@ include("timings.jl")
 
 import .Types: PulseqSequence, PulseqBlock, PulseqSection, PulseqRFPulse, PulseqGradient, AnyPulseqComponent, AnyPulseqGradient, PulseqShape, PulseqExtension, PulseqExtensionDefinition, PulseqADC
 import .Extensions: parse_extension, get_extension_name, add_extension_definition!
+import .InstantExtensions: InstantPulse, InstantGradient
 import .Timings: duration, adc_sample_times, gradient_waveform, rf_pulses
 
 
