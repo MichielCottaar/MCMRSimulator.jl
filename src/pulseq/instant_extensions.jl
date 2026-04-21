@@ -47,6 +47,7 @@ function parse_extension(ext::PulseqExtensionDefinition{:InstantGradient})
         (id, delay, qvec...) = parse.((Int, Float64, Float64, Float64, Float64), split(line))
         mapping[id] = (delay, InstantGradient(SVector{3, Float64}(qvec...)))
     end
+    return mapping
 end
 
 get_extension_name(::Tuple{<:Number, InstantGradient}) = :InstantGradient
