@@ -37,14 +37,12 @@ end
 """
     correct_collisions(movement, geometry)
 
-Splits the given movement from point A to point B into multiple steps that bounce off the given obstructions.
-This function assumes perfect reflection rather than the diffuse reflection used in [`draw_step`](@ref).
-It is used to test the collision detection and resolution, but not actually used in the simulations.
+It is used to test the collision detection and resolution (i.e., `Evolve.draw_step!`), but not actually used in the simulations.
 """
 function correct_collisions(start, dest, geometry)
     simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
     spin = mr.Spin(nsequences=0, position=start)
-    parts = mr.SequenceParts.MultSequencePart(1., mr.SequenceParts.SequencePart[], mr.SequenceParts.InstantSequencePart{Svector{0}}([]))
+    parts = mr.SequenceParts.MultSequencePart(1., mr.SequenceParts.SequencePart[], mr.SequenceParts.InstantSequencePart{SVector{0}}([]))
     B0s = SVector{0, Float64}()
     return mr.Evolve.draw_step!(spin, simulation, parts, B0s, SVector{3, Float64}(dest))
 end
