@@ -770,4 +770,13 @@ function get_readouts(sequence, start_time::Number=0.; kwargs...)
 end
 
 
+"""
+    repetition_time(sequence)
+
+Returns the repetition time of the sequence in ms.
+"""
+repetition_time(sequence::SequenceWaveform) = sequence.TR
+repetition_time(sequence) = TR(SequenceWaveform(sequence))
+
+
 end

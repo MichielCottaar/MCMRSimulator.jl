@@ -53,7 +53,7 @@ end
 get_extension_name(::Tuple{<:Number, InstantGradient}) = :InstantGradient
 
 function add_extension_definition!(content::Vector{String}, obj::Tuple{<:Number, <:InstantGradient})
-    to_store = (obj[1], variables.qvec(obj[2])...)
+    to_store = (obj[1], obj[2].qvec...)
     for line in content
         (id, this_line...) = parse.((Int, Float64, Float64, Float64, Float64), split(line))
         if all(to_store .≈ this_line)

@@ -10,7 +10,7 @@ import StaticArrays: SVector, MVector
 import LinearAlgebra: norm, ⋅
 import Rotations
 import Bessels: besseli0
-import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, get_readouts, IndexedReadout, empty_sequence, GradientEvent, PulseEvent, parts
+import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, get_readouts, IndexedReadout, empty_sequence, GradientEvent, PulseEvent, parts, repetition_time
 import ..Methods: get_time
 import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation, static_vector_type
 import ..Simulations: Simulation, _to_snapshot
@@ -91,7 +91,7 @@ Keywords match the relevant ones described in [`readout`](@ref).
 # Properties
 - `grid`: 4-dimensional grid of [`SingleAccumulator`](@ref) objects. Each dimension corresponds to a possible dimension of the [`readout`](@ref) output, namely:
     1. multiple sequences
-    2. multiple readouts in single TR
+    2. multiple readouts in single repetition time (TR)
     3. subsequent sequence repetitions
     4. individual subsets (see [`Subset`](@ref))
 - `flatten`: length-4 vector of booleans indicating which dimensions should be kept when producing the output from [`readout`](@ref).
@@ -419,8 +419,8 @@ function evolve(spins, simulation::Simulation{N}, new_time; TR=nothing, bounding
         if iszero(N)
             error("Cannot set `TR` in evolve without having a sequence in simulation.")
         end
-        rep_time = variables.TR(simulation.sequences[1])
-        if !all(variables.duration(s) ≈ rep_time for s in simulation.sequences)
+        rep_time = repetition_time(simulation.sequences[1])
+        if !all(repetition_time(s) ≈ rep_time for s in simulation.sequences)
             error("Cannot evolve snapshot for multiple repetition times, because the simulation contains sequences with different TRs. Please set a `new_time` explicitly.")
         end
         if new_time > rep_time
@@ -617,7 +617,7 @@ apply_instants!(spins::Vector{<:Spin}, index::Int, ::Nothing, _) = false
 
 function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::GradientEvent, _)
     Threads.@threads for spin in spins
-        new_phase = rad2deg(spin.position ⋅ variables.qvec(grad))
+        new_phase = rad2deg(spin.position ⋅ grad.qvec)
         spin.orientations[index].phase += new_phase
     end
     return false
