@@ -44,7 +44,7 @@ It is used to test the collision detection and resolution, but not actually used
 function correct_collisions(start, dest, geometry)
     simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
     spin = mr.Spin(nsequences=0, position=start)
-    parts = mr.SequenceParts.MultSequencePart(1., mr.SequenceParts.SequencePart[])
+    parts = mr.SequenceParts.MultSequencePart(1., mr.SequenceParts.SequencePart[], mr.SequenceParts.InstantSequencePart{Svector{0}}([]))
     B0s = SVector{0, Float64}()
     return mr.Evolve.draw_step!(spin, simulation, parts, B0s, SVector{3, Float64}(dest))
 end
