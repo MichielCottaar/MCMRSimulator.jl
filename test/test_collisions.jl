@@ -168,8 +168,8 @@
             spin = mr.Spin(position=[200., 200., 0.])
             @test mr.isinside(geometry, spin) == 2
             inside = true
-            empty_sequence = build_sequence(10.)
-            seq_part = mr.SequenceParts.MultSequencePart(0.5, [mr.SequenceParts.EmptyPart()])
+            empty_sequence = build_sequence([10., :readout])
+            seq_part = mr.parts([empty_sequence], 0., mr.TimeStep(0.5, Inf))[1]
             for _ in 1:100
                 mr.Evolve.draw_step!(spin, mr.Simulation(empty_sequence, diffusivity=3., geometry=geometry), seq_part, [3.])
                 inside &= mr.isinside(geometry, spin) == 2
