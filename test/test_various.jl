@@ -158,9 +158,7 @@ end
 end
 @testset "Test readout formats" begin
     sequence = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_1000.seq"))
-    seq = build_sequence() do 
-        Sequence([10., SingleReadout(), 20., SingleReadout(), 70]) 
-    end
+    seq = build_sequence([10., :readout, 20., :readout, 70])
     sim_empty = mr.Simulation([])
     sim_flat = mr.Simulation(seq)
     sim_single = mr.Simulation([seq])

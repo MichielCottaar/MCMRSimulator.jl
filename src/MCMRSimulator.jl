@@ -51,8 +51,8 @@ import .TimeSteps: TimeStep
 import .Pulseq: read_pulseq, write_pulseq
 export read_pulseq, write_pulseq
 
-import .SequenceParts: get_readouts, IndexedReadout, parts
-@compat public get_readouts, IndexedReadout, parts
+import .SequenceParts: get_readouts, IndexedReadout, parts, PulseEvent, InstantPulse
+@compat public get_readouts, parts
 
 import .Simulations: Simulation, susceptibility_off_resonance
 export Simulation

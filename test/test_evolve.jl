@@ -1,6 +1,6 @@
 @testset "test_evolve.jl" begin
     @testset "Empty environment and sequence" begin
-        empty_sequence = build_empty_sequence(2.8)
+        empty_sequence = build_sequence(2.8)
         simulation = mr.Simulation(empty_sequence)
         snaps = mr.readout(zeros(3), simulation, 0:0.5:2.8, return_snapshot=true)
         time = 0.
@@ -34,7 +34,7 @@
         @test length(snaps) == 6
     end
     @testset "Ensure data is stored at requested time" begin
-        empty_sequence = build_empty_sequence(2.8)
+        empty_sequence = build_sequence(2.8)
         simulation = mr.Simulation(empty_sequence)
 
         snaps = mr.evolve(mr.Spin(), simulation, 2.3)
@@ -87,15 +87,9 @@
     end
     @testset "Run simulation with multiple sequences at once" begin
         sequences = [
-            build_sequence() do 
-                Sequence([InstantPulse(flip_angle=0, phase=0.), 2., SingleReadout(), 1.]) 
-            end,
-            build_sequence() do 
-                Sequence([InstantPulse(flip_angle=90, phase=0.), 2., SingleReadout(), 1.]) 
-            end,
-            build_sequence() do 
-                Sequence([InstantPulse(flip_angle=90, phase=0.), 1., SingleReadout(), 1.]) 
-            end,
+            build_sequence([mr.PulseEvent(flip_angle=0, phase=0.), 2., :readout, 1.]),
+            build_sequence([mr.PulseEvent(flip_angle=90, phase=0.), 2., :readout, 1.]),
+            build_sequence([mr.PulseEvent(flip_angle=90, phase=0.), 1., :readout, 1.])
         ]
         all_snaps = mr.Simulation(sequences, diffusivity=1., R2=1.)
 
@@ -112,16 +106,14 @@
     end
 
     @testset "Test readout identification" begin
-        seq = build_sequence() do 
-            Sequence([
-                InstantPulse(flip_angle=0, phase=0.), 
-                2., 
-                SingleReadout(), 
-                1.,
-                SingleReadout(), 
-                1.
-            ]) 
-        end
+        seq = build_sequence([
+            mr.PulseEvent(flip_angle=0, phase=0.), 
+            2., 
+            :readout, 
+            1.,
+            :readout, 
+            1.
+        ])
         @test collect(mr.get_readouts(seq, 0.)) == [
             mr.IndexedReadout(2., 1, 1),
             mr.IndexedReadout(3., 1, 2)

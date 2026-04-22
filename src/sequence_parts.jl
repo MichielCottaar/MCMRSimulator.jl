@@ -142,7 +142,7 @@ Instantaneous approximation of an RF pulse with the `flip_angle` in degrees and 
 
 The bandwidth is infinite, so the pulse does not have a frequency.
 """
-struct PulseEvent <: SequenceEvent
+@kwdef struct PulseEvent <: SequenceEvent
     flip_angle :: Float64
     phase :: Float64
 end
@@ -187,6 +187,8 @@ struct SequenceWaveform
     samples::Vector{Float64}
     TR::Float64
 end
+
+SequenceWaveform(sequence::SequenceWaveform) = sequence
 
 function SequenceWaveform(sequence)
     grads = (
@@ -360,8 +362,8 @@ end
 
 function build_blocks(control_times, vector_type, waveforms, grad_interpolators, instants)
     if !all(isnothing, instants[1])
-        insert!(control_times, 1, control_times[1])
-        insert!(instants, 1, [nothing for _ in 1:length(waveforms)])
+        control_times = [control_times[1], control_times...]
+        instants = [[nothing for _ in 1:length(waveforms)], instants...]
     end
 
     return map(control_times[1:end-1], control_times[2:end], instants[2:end]) do t0, t1, instant

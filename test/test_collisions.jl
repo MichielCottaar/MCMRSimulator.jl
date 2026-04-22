@@ -168,7 +168,7 @@
             spin = mr.Spin(position=[200., 200., 0.])
             @test mr.isinside(geometry, spin) == 2
             inside = true
-            empty_sequence = build_empty_sequence(10.)
+            empty_sequence = build_sequence(10.)
             seq_part = mr.SequenceParts.MultSequencePart(0.5, [mr.SequenceParts.EmptyPart()])
             for _ in 1:100
                 mr.Evolve.draw_step!(spin, mr.Simulation(empty_sequence, diffusivity=3., geometry=geometry), seq_part, [3.])

@@ -47,7 +47,27 @@ function correct_collisions(start, dest, geometry)
     return mr.Evolve.draw_step!(spin, simulation, parts, B0s, SVector{3, Float64}(dest))
 end
 
-build_empty_sequence(duration) = mr.SequenceParts.SequenceWaveform((([], []), ([], []), ([], [])), [], [], [], 10.)
+function build_sequence(parts)
+    if parts isa Number
+        parts = [parts]
+    end
+    current_time = 0.
+    instants = Tuple{Float64, mr.SequenceParts.SequenceEvent}[]
+    samples = Float64[]
+    for part in parts
+        if part isa Number
+            current_time += part
+        elseif part == :readout
+            push!(samples, current_time)
+        elseif part isa mr.SequenceParts.SequenceEvent
+            push!(instants, (current_time, part))
+        else
+            error("Unknown part: $(part) of type $(typeof(part))")
+        end
+    end
+    return mr.SequenceParts.SequenceWaveform((([], []), ([], []), ([], [])), [], instants, samples, current_time)
+end
+
 
 @testset "MCMRSimulator tests" begin
     for test in tests

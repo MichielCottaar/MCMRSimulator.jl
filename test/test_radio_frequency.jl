@@ -1,9 +1,13 @@
 @testset "test_radio_frequency.jl: Using finite RF pulses" begin
     @testset "Constant RF pulse without off-resonance" begin
         for phase in (0, 30)
-            seq = build_sequence() do 
-                Sequence([ConstantPulse(; flip_angle=90, phase=phase, frequency=0., duration=9.), nothing, SingleReadout()]; duration=10) 
-            end
+            seq = mr.SequenceParts.SequenceWaveform(
+                (([], []), ([], []), ([], [])),
+                [(0., 9., [mr.SequenceParts.ConstantPulse(0.25 / 9, phase, 0.)])],
+                [],
+                [10.],
+                10.
+            )
             sim = mr.Simulation(seq)
             signal = mr.readout(100, sim, 0:0.1:10)
             increasing = signal[1:90]
@@ -17,9 +21,13 @@
     end
     @testset "Constant RF pulse with off-resonance" begin
         for phase in (0, 30)
-            seq = build_sequence() do 
-                Sequence([ConstantPulse(; flip_angle=90, phase=phase, frequency=1., duration=9.), nothing, SingleReadout()]; duration=10) 
-            end
+            seq = mr.SequenceParts.SequenceWaveform(
+                (([], []), ([], []), ([], [])),
+                [(0., 9., [mr.SequenceParts.ConstantPulse(0.25 / 9, phase, 1.)])],
+                [],
+                [10.],
+                10.
+            )
             sim = mr.Simulation(seq, off_resonance=1)
             signal = mr.readout(100, sim, 0:0.1:10)
             increasing = signal[1:90]
