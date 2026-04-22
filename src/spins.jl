@@ -501,6 +501,7 @@ Returns all the positions of the spin particles as a vector of length-3 vectors.
 position(s::Snapshot) = position.(s.spins)
 
 Snapshot(snap :: Snapshot{1}, nsequences::Integer) = Snapshot([Spin(spin, nsequences) for spin in snap.spins], snap.time)
+Snapshot(snap :: Snapshot{0}, nsequences::Integer) = Snapshot(Snapshot(position(snap)), nsequences)
 get_sequence(snap::Snapshot, index) = Snapshot(get_sequence.(snap.spins, index), snap.time)
 isinside(geometry::FixedGeometry, snapshot::Snapshot) = [isinside(geometry, spin) for spin in snapshot]
 isinside(something, snapshot::Snapshot) = length.(isinside(fix(something), snapshot))
