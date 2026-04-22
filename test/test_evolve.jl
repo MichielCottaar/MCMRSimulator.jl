@@ -1,8 +1,6 @@
 @testset "test_evolve.jl" begin
     @testset "Empty environment and sequence" begin
-        empty_sequence = build_sequence() do
-            Sequence([2.8])
-        end
+        empty_sequence = build_empty_sequence(2.8)
         simulation = mr.Simulation(empty_sequence)
         snaps = mr.readout(zeros(3), simulation, 0:0.5:2.8, return_snapshot=true)
         time = 0.
@@ -36,9 +34,7 @@
         @test length(snaps) == 6
     end
     @testset "Ensure data is stored at requested time" begin
-        empty_sequence = build_sequence() do
-            Sequence([2.8])
-        end
+        empty_sequence = build_empty_sequence(2.8)
         simulation = mr.Simulation(empty_sequence)
 
         snaps = mr.evolve(mr.Spin(), simulation, 2.3)

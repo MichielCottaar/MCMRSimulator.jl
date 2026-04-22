@@ -174,7 +174,7 @@ end
 
 
 """
-    SequenceWaveform(gradients, rf_pulses, samples, TR)
+    SequenceWaveform(gradients, rf_pulses, instants, samples, TR)
     SequenceWaveform(koma_sequence::KomaMRIBase.Sequence)
     SequenceWaveform(pulseq_filename::String)
 

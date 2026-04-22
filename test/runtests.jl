@@ -47,6 +47,8 @@ function correct_collisions(start, dest, geometry)
     return mr.Evolve.draw_step!(spin, simulation, parts, B0s, SVector{3, Float64}(dest))
 end
 
+build_empty_sequence(duration) = mr.SequenceParts.SequenceWaveform((([], []), ([], []), ([], [])), [], [], [], 10.)
+
 @testset "MCMRSimulator tests" begin
     for test in tests
         if test == "plots"
