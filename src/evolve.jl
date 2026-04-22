@@ -621,8 +621,16 @@ function apply_instants!(spins::Vector{<:Spin{N}}, instants::AbstractVector, acc
     return final
 end
 
-apply_instants!(spins::Vector{<:Spin{N}}, instants::AbstractVector{Nothing}, _::GridAccumulator) where {N} = false
-apply_instants!(spins::Vector{<:Spin}, index::Int, ::Nothing, _) = false
+apply_instants!(spins::Vector{<:Spin{N}}, instants::AbstractVector{NTuple{0}}, _::GridAccumulator) where {N} = false
+apply_instants!(spins::Vector{<:Spin}, index::Int, ::NTuple{0}, _) = false
+apply_instants!(spins::Vector{<:Spin}, index::Int, instants::NTuple{1}, accumulator) = apply_instants!(spins, index, instants[1], accumulator)
+function apply_instants!(spins::Vector{<:Spin}, index::Int, instants::Tuple, accumulator)
+    final = false
+    for instant in instants
+        final |= apply_instants!(spins, index, instant, accumulator)
+    end
+    return final
+end
 
 function apply_instants!(spins::Vector{<:Spin}, index::Int, grad::GradientEvent, _)
     Threads.@threads for spin in spins

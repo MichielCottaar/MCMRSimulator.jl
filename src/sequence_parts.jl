@@ -325,17 +325,18 @@ function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep
             else
                 t
             end
+            instants = SequenceEvent[]
             for (t_ro, event) in waveforms[index_seq].instants
                 if normed_time == t_ro
-                    return event
+                    push!(instants, event)
                 end
             end
             i_ro = index_ro[index_seq]
             if i_ro <= length(readouts[index_seq]) && (t == readouts[index_seq][i_ro].time)
                 index_ro[index_seq] += 1
-                return readouts[index_seq][i_ro]
+                push!(instants, readouts[index_seq][i_ro])
             end
-            return nothing
+            return Tuple(instants)
         end
     end
     vector_type = static_vector_type(length(waveforms))
