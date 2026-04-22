@@ -86,7 +86,7 @@ Returns the gradient waveform of a sequence, building block, or gradient object.
 
 The `dimension` can be set to :x, :y, :z, or :all (default) to return the gradient waveform for the corresponding dimension(s).
 The `time_unit` can be set to :second (default) or :ms to return the times in seconds or milliseconds, respectively. This is only supported for sequences.
-For blocks and gradient objects, the times are always returned in units of the block duration raster/2.
+For blocks and gradient objects, the times are always returned in units of half of the block duration raster.
 
 Gradient amplitudes are returned in units of Hz/m or kHz/um.
 """
@@ -118,8 +118,8 @@ end
 
 function gradient_waveform(grad::PulseqTrapezoid, gradient_raster_time::Number, amplitude_unit::Symbol=:Hz_per_m)
     durations = map([grad.delay, grad.rise, grad.flat, grad.fall]) do time_us
-        time_raster = Int(div(time_us * 1e-6, gradient_raster_time, RoundNearest))
-        @assert time_raster ≈ time_us * 1e-6 / gradient_raster_time "Trapezoid times must be integer multiples of the gradient raster time."
+        time_raster = Int(div(time_us * 1e-6, gradient_raster_time / 2, RoundNearest))
+        @assert time_raster ≈ time_us * 2e-6 / gradient_raster_time "Trapezoid times must be integer multiples of the gradient raster time."
         time_raster
     end
     times = cumsum(durations)
@@ -181,7 +181,7 @@ function gradient_waveform(seq::PulseqSequence, dimension::Val{D}, time_unit::Sy
     elseif time_unit in (:s, :second)
         base, grads = gradient_waveform(seq, dimension, :raster, amplitude_unit)
         times = map(base) do (block_time, sub_time)
-            block_time * seq.definitions.BlockDurationRaster + sub_time * seq.definitions.GradientRasterTime
+            block_time * seq.definitions.BlockDurationRaster + sub_time * seq.definitions.GradientRasterTime / 2
         end
         return times, grads
     elseif time_unit in (:ms, :millisecond)
