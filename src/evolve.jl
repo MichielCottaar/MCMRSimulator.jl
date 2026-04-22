@@ -341,6 +341,15 @@ function readout_internal(snapshot::Snapshot{N}, simulation::Simulation{N}, new_
 end
 
 
+function readout_internal(snapshot::Snapshot{0}, simulation::Simulation{0}, new_readout_times=nothing; kwargs...)
+    if :readouts in keys(kwargs)
+        error("readout timings should be set as the 3rd positional argument, not a keyword argument.")
+    end
+    sim_1 = Simulation([empty_sequence()], simulation.diffusivity, simulation.properties, simulation.geometry, simulation.inside_geometry, simulation.susceptibility, simulation.timestep, true, simulation.verbose)
+    return Snapshot(readout_internal(Snapshot(snapshot, 1), sim_1, new_readout_times; kwargs...), 0)
+end
+
+
 # Special case when `spins` is an integer value
 # Only run a limited number of spins at a time to save memory
 function readout(spins::Integer, simulation::Simulation{N}, new_readout_times=nothing; bounding_box=500, kwargs...) where {N}

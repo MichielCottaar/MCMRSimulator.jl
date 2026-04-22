@@ -415,7 +415,7 @@ function get_block(waveform, t0, t1, grad_interpolators)
     return grad_part
 end
 
-empty_sequence() = KomaMRIBase.Sequence()
+empty_sequence() = SequenceWaveform((([], []), ([], []), ([], [])), [], [], [], 0.)
 
 
 """
