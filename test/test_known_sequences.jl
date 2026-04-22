@@ -35,7 +35,7 @@
                 nspins = 3000
                 TE = 80.
                 gradient = (isnothing(δ) || !iszero(δ)) ? (type=:trapezoid, δ=δ) : (type=:instant, )
-                sequence = mr.read_pulseq(joinpath(@__DIR__, "test", "pulseq", "dwi_te_80_bval_0.3_gradient_δ_$(δ)_Δ_$(Δ).seq"))
+                sequence = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_0.3_gradient_δ_$(δ)_Δ_$(Δ).seq"))
                 sim = mr.Simulation(sequence, diffusivity=0.5)
                 snap = mr.readout(nspins, sim, return_snapshot=true)
                 @show δ Δ
