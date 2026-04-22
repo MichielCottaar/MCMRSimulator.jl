@@ -721,7 +721,7 @@ If at `start_time` any of the readouts in the current TR have already passed, th
 We will skip an additional number of TRs given by `skip_TR` (default: 0).
 Then readouts will continue for the number of TRs given by `nTR` (default: 1).
 """
-function get_readouts(adc_sample_times::AbstractVector, TR::Number, start_time::Number=0.; readouts=nothing, nTR=nothing, skip_TR=nothing) 
+function get_readouts(adc_sample_times::AbstractVector{<:Number}, TR::Number, start_time::Number=0.; readouts=nothing, nTR=nothing, skip_TR=nothing) 
     repeat = !(isnothing(nTR) && isnothing(skip_TR))
     if repeat && iszero(TR)
         error("The `nTR` and `skip_TR` keywords can only be used for sequences with a non-zero TR.")
