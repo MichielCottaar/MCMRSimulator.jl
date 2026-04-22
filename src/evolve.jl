@@ -352,7 +352,7 @@ end
 
 # Special case when `spins` is an integer value
 # Only run a limited number of spins at a time to save memory
-function readout(spins::Integer, simulation::Simulation{N}, new_readout_times=nothing; bounding_box=500, kwargs...) where {N}
+function readout(spins::Integer, simulation::Simulation{N}, new_readout_times=nothing; bounding_box=500, return_snapshot=false, kwargs...) where {N}
     if :readouts in keys(kwargs)
         error("readout timings should be set as the 3rd positional argument, not a keyword argument.")
     end
@@ -373,12 +373,12 @@ function readout(spins::Integer, simulation::Simulation{N}, new_readout_times=no
     nspins_min = Int(div(spins, nruns, RoundDown))
     nruns_extra = spins - nspins_min * nruns
 
-    accumulator = GridAccumulator(simulation, 0.; readouts=new_readout_times, kwargs...)
+    accumulator = GridAccumulator(simulation, 0.; readouts=new_readout_times, return_snapshot=return_snapshot, kwargs...)
     for nspins_run in [
         fill(nspins_min + 1, nruns_extra)...,
         fill(nspins_min, nruns - nruns_extra)...
     ]
-        run_readout!(_to_snapshot(nspins_run, simulation, bounding_box), simulation, accumulator; readouts=new_readout_times)
+        run_readout!(_to_snapshot(nspins_run, simulation, bounding_box), simulation, accumulator; readouts=new_readout_times, kwargs...)
     end
     return fix_accumulator(accumulator)
 end
@@ -397,15 +397,6 @@ function run_readout!(snapshot::Snapshot{N}, simulation::Simulation{N}, accumula
         if process_sequence_step!(snapshot.spins, simulation, part, B0s, accumulator)
             return
         end
-    end
-    error("Simulation ended before all readout accumulators were filled.")
-end
-
-function run_readout!(snapshot::Snapshot{0}, simulation::Simulation{0}, accumulator::GridAccumulator; readouts, kwargs...)
-    seq = empty_sequence()
-    B0s = zero(SVector{0, Float64})
-    for part in parts(seq, snapshot.time, simulation.timestep; readouts=readouts)
-        process_sequence_step!(snapshot.spins, simulation, part, B0s, accumulator)
     end
     error("Simulation ended before all readout accumulators were filled.")
 end
