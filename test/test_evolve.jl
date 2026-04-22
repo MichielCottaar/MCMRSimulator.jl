@@ -115,17 +115,17 @@
             1.
         ])
         @test collect(mr.get_readouts(seq, 0.)) == [
-            mr.IndexedReadout(2., 1, 1),
-            mr.IndexedReadout(3., 1, 2)
+            mr.IndexedReadout(2., 0, 1),
+            mr.IndexedReadout(3., 0, 2)
         ]
         @test collect(mr.get_readouts(seq, 2.)) == [
-            mr.IndexedReadout(2., 1, 1),
-            mr.IndexedReadout(3., 1, 2)
+            mr.IndexedReadout(2., 0, 1),
+            mr.IndexedReadout(3., 0, 2)
         ]
         @test collect(mr.get_readouts(seq, 2., readouts=[20., 1., 3., 2.])) == [
-            mr.IndexedReadout(2., 1, 4),
-            mr.IndexedReadout(3., 1, 3),
-            mr.IndexedReadout(20., 1, 1)
+            mr.IndexedReadout(2., 0, 4),
+            mr.IndexedReadout(3., 0, 3),
+            mr.IndexedReadout(20., 0, 1)
         ]
         @test collect(mr.get_readouts(seq, 0., nTR=2)) == [
             mr.IndexedReadout(2., 1, 1),
