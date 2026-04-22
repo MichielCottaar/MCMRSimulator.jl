@@ -79,6 +79,7 @@ mutable struct SpinOrientation
     SpinOrientation(longitudinal, transverse, phase) = new(Float64(longitudinal), Float64(transverse), Float64(phase))
 end
 
+SpinOrientation() = SpinOrientation(1., 0., 0.)
 SpinOrientation(orientation::AbstractVector) = SpinOrientation(SVector{3, Float64}(orientation))
 SpinOrientation(so::SpinOrientation) = SpinOrientation(so.longitudinal, so.transverse, so.phase)
 SpinOrientation(vector::SVector{3, Float64}) = SpinOrientation(
@@ -132,6 +133,7 @@ function Spin(;nsequences=1, position=zero(SVector{3,Float64}), longitudinal=1.,
     return nsequences == 1 ? base : Spin(base, nsequences)
 end
 Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.reflection, reference_spin.rng)
+Spin(reference_spin::Spin{0}, nsequences::Int) = Spin(reference_spin.position, repeat([SpinOrientation()], nsequences), reference_spin.reflection, reference_spin.rng)
 
 show_helper(io::IO, spin::Spin{0}) = print(io, "with no magnetisation information)")
 show_helper(io::IO, spin::Spin{1}) = print(io, "with $(repr(spin.orientations[1], context=io)))")
@@ -501,7 +503,7 @@ Returns all the positions of the spin particles as a vector of length-3 vectors.
 position(s::Snapshot) = position.(s.spins)
 
 Snapshot(snap :: Snapshot{1}, nsequences::Integer) = Snapshot([Spin(spin, nsequences) for spin in snap.spins], snap.time)
-Snapshot(snap :: Snapshot{0}, nsequences::Integer) = Snapshot(Snapshot(position(snap)), nsequences)
+Snapshot(snap :: Snapshot{0}, nsequences::Integer) = Snapshot([Spin(spin, nsequences) for spin in snap.spins], snap.time)
 Snapshot(snap :: AbstractVector{<:Snapshot}, nsequences::Integer) = map(s -> Snapshot(s, nsequences), snap)
 get_sequence(snap::Snapshot, index) = Snapshot(get_sequence.(snap.spins, index), snap.time)
 isinside(geometry::FixedGeometry, snapshot::Snapshot) = [isinside(geometry, spin) for spin in snapshot]
