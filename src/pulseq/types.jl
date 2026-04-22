@@ -41,9 +41,30 @@ struct PulseqRFPulse <: AnyPulseqComponent
     magnitude :: PulseqShape
     phase :: PulseqShape
     time :: Union{Nothing, PulseqShape}
+    center :: Float64
     delay :: Int
+    frequency_ppm :: Float64
+    phase_ppm :: Float64
     frequency :: Float64
     phase_offset :: Float64
+    use :: Char
+end
+
+function PulseqRFPulse(amplitude::Number, magnitude::PulseqShape, phase::PulseqShape, time::PulseqShape, delay::Int, frequency::Number, phase_offset::Number)
+    # Support for <v1.5.0 pulseq format
+    return PulseqRFPulse(
+        amplitude,
+        magnitude,
+        phase,
+        time,
+        NaN,
+        delay,
+        0.,
+        0.,
+        frequency,
+        phase,
+        'u'
+    )
 end
 
 Base.length(rf::PulseqRFPulse) = length(rf.magnitude)
@@ -62,9 +83,23 @@ A generic gradient waveform defined in Pulseq (see [specification](https://raw.g
 """
 struct PulseqGradient <: AnyPulseqGradient
     amplitude :: Float64
+    first :: Float64
+    last :: Float64
     shape :: PulseqShape
     time :: Union{Nothing, PulseqShape}
     delay :: Int
+end
+
+function PulseqGradient(amplitude::Number, shape::PulseqShape, time::PulseqShape, delay::Int)
+    # Support for <v1.5.0 pulseq format
+    return PulseqGradient(
+        amplitude,
+        NaN,
+        NaN,
+        shape,
+        time,
+        delay
+    )
 end
 
 """
@@ -89,8 +124,25 @@ struct PulseqADC <: AnyPulseqComponent
     num :: Int
     dwell :: Float64
     delay :: Int
+    frequency_ppm :: Float64
+    phase_ppm :: Float64
     frequency :: Float64
     phase :: Float64
+    phase_shape :: Union{Nothing, PulseqShape}
+end
+
+function PulseqADC(num::Int, dwell::Float64, delay::Int, frequency::Number, phase::Number)
+    # Support for <v1.5.0 pulseq format
+    return PulseqADC(
+        num,
+        dwell,
+        delay,
+        0.,
+        0.,
+        frequency,
+        phase,
+        nothing
+    )
 end
 
 """

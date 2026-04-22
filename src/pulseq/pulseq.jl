@@ -38,8 +38,8 @@ read_pulseq(filename::AbstractString) = open(read_pulseq, filename)
 Writes a sequence to an output IO file.
 """
 function write_pulseq(io::IO, sequence::Types.PulseqSequence)
-    if sequence.version < v"1.4"
-        error("Can only write to pulseq version 1.4 or later.")
+    if sequence.version < v"1.5"
+        error("Can only write to pulseq version 1.5 or later.")
     end
     sections = ParseSections.gen_all_sections(sequence)
     for key in [:version, :definitions, :blocks, :rf, :gradients, :trap, :adc, :extensions, :shapes]

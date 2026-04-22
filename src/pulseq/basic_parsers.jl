@@ -10,10 +10,20 @@ This is useful to parse most of the columnar data in Pulseq, such as in BLOCKS, 
 function parse_pulseq_dict(line, names, dtypes)
     parts = split(line)
     @assert length(parts) == length(names)
-    values = parse.(dtypes, split(line))
+    values = my_parse_dtype.(dtypes, split(line))
     @assert names[1] == :id
     return Dict(Symbol(name) => value for (name, value) in zip(names, values))
 end
+
+
+function my_parse_dtype(::Type{Char}, value::AbstractString)
+    if length(value) != 1
+        throw(ArgumentError("Expected a single character, got $value"))
+    end
+    return value[1]
+end
+
+my_parse_dtype(::Type{T}, value) where T = parse(T, value)
 
 """
     parse_pulseq_properties(lines)
