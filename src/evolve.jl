@@ -357,7 +357,10 @@ function readout(spins::Integer, simulation::Simulation{N}, new_readout_times=no
         error("readout timings should be set as the 3rd positional argument, not a keyword argument.")
     end
     if iszero(N)
-        result = readout(spins, Simulation([empty_sequence()], simulation.diffusivity, simulation.properties, simulation.geometry, simulation.inside_geometry, simulation.susceptibility, simulation.timestep, true, simulation.verbose), new_readout_times; bounding_box=bounding_box, kwargs...)
+        if !return_snapshot
+            error("`return_snapshot` should be set to true when running a simulation with 0 sequences")
+        end
+        result = readout(spins, Simulation([empty_sequence()], simulation.diffusivity, simulation.properties, simulation.geometry, simulation.inside_geometry, simulation.susceptibility, simulation.timestep, true, simulation.verbose), new_readout_times; bounding_box=bounding_box, return_snapshot=return_snapshot, kwargs...)
         return Snapshot(result, 0)
     else
         total_magnetisations = spins * N
