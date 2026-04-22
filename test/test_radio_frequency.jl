@@ -38,6 +38,50 @@
             @test all(mr.transverse.(increasing) .≈ sind.(0:89) .* 100.)
         end
     end
+    @testset "Two-part constant RF pulse with off-resonance" begin
+        for phase in (0, 30)
+            seq = mr.SequenceParts.SequenceWaveform(
+                (([], []), ([], []), ([], [])),
+                [(0., 9., [
+                    mr.SequenceParts.ConstantPulse(0.25 / 9, phase, 1.),
+                    mr.SequenceParts.ConstantPulse(0.25 / 9, phase + 180, 1.)
+                ])],
+                [],
+                [10.],
+                10.
+            )
+            sim = mr.Simulation(seq, off_resonance=1)
+            signal = mr.readout(100, sim, 0:0.1:10)
+            increasing = signal[1:90]
+            constant = signal[91:end]
+            @test all(abs.(mr.longitudinal.(constant)) .<= 1e-8)
+            @test all(mr.transverse.(constant) .≈ 100.)
+            @test all(mr.longitudinal.(increasing) .≈ cosd.(0:89) .* 100.)
+            @test all(mr.transverse.(increasing) .≈ sind.(0:89) .* 100.)
+        end
+    end
+    @testset "Many-part constant RF pulse with off-resonance" begin
+        for phase in (0, 30)
+            seq = mr.SequenceParts.SequenceWaveform(
+                (([], []), ([], []), ([], [])),
+                [(0., 9., [
+                    mr.SequenceParts.ConstantPulse(0.25 / 9, phase, 1.)
+                    for _ in 1:9
+                ])],
+                [],
+                [10.],
+                10.
+            )
+            sim = mr.Simulation(seq, off_resonance=1)
+            signal = mr.readout(100, sim, 0:0.1:10)
+            increasing = signal[1:90]
+            constant = signal[91:end]
+            @test all(abs.(mr.longitudinal.(constant)) .<= 1e-8)
+            @test all(mr.transverse.(constant) .≈ 100.)
+            @test all(mr.longitudinal.(increasing) .≈ cosd.(0:89) .* 100.)
+            @test all(mr.transverse.(increasing) .≈ sind.(0:89) .* 100.)
+        end
+    end
     @testset "Adiabatic pulse test" begin
         # Adopted from a jupyter notebook from Will Clarke
         ω = 0.52

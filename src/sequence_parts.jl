@@ -100,17 +100,26 @@ function split_fraction(part::PulsePart{T}, fraction::Number) where {T<:NoPulseP
     total_duration = length(part.pulse) - 2 + part.first_duration + part.last_duration
     split_duration = total_duration * fraction
 
+    if length(part.pulse) == 1
+        # only one pulse, so we just split the duration
+        return (
+            PulsePart(part.pulse, grad2, part.first_duration, part.last_duration - (total_duration - split_duration)),
+            PulsePart(part.pulse, grad1, part.first_duration - split_duration, part.last_duration),
+        )
+    end
+
     if split_duration < part.first_duration
         # split is within the first pulse
         return (
-            PulsePart(part.pulse[1:1], grad1, split_duration, 1.),
+            PulsePart(part.pulse[1:1], grad1, part.first_duration, 1 - part.first_duration + split_duration),
             PulsePart(part.pulse, grad2, part.first_duration - split_duration, part.last_duration)
         )
     elseif split_duration > total_duration - part.last_duration
+        internal_split = total_duration - split_duration
         # split is within the last pulse
         return (
-            PulsePart(part.pulse, grad1, part.first_duration, part.last_duration - (total_duration - split_duration)),
-            PulsePart(part.pulse[end:end], grad2, 1., split_duration - (total_duration - part.last_duration))
+            PulsePart(part.pulse, grad1, part.first_duration, part.last_duration - internal_split),
+            PulsePart(part.pulse[end:end], grad2, 1 - part.last_duration + internal_split, part.last_duration)
         )
     end
     index_split = split_duration - part.first_duration + 1
@@ -394,8 +403,6 @@ function get_block(waveform, t0, t1, grad_interpolators)
         LinearPart(grad0, grad1)
     end
 
-    frac_start = 1.
-    frac_final = 1.
     for (t0_rf, t1_rf, rf_pulse) in waveform.rf
         if t0_rf >= t1 || t1_rf <= t0
             continue

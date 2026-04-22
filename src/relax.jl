@@ -68,14 +68,20 @@ function relax_single_step!(orient::SpinOrientation, props::MRIProperties, times
 end
 
 # with active RF pulse
-function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::PulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, ::NamedTuple)
+function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::PulsePart, props::MRIProperties, duration_ext::Float64, t1_ext::Float64, t2_ext::Float64, off_resonance::Float64, ::NamedTuple)
     relax_time = 1 / max(props.R1, props.R2)
+    internal_timestep = 1/length(pulse.pulse)
     if isinf(relax_time)
         nsplit_rotation = Val(1)
     else
-        internal_timestep = 1/length(pulse.pulse)
         nsplit_rotation = Val(Int(div(internal_timestep * duration, relax_time/10, RoundUp)))
     end
+
+    # correct for pulse.first_duration and pulse.last_duration
+    total_duration = length(pulse.pulse) - 2 + pulse.first_duration + pulse.last_duration
+    t1 = (t1_ext * total_duration + (1 - pulse.first_duration)) * internal_timestep
+    t2 = (t2_ext * total_duration + (1 - pulse.first_duration)) * internal_timestep
+    duration = duration_ext / (total_duration * internal_timestep)
     relax!(orient, old_pos, new_pos, pulse, props, duration, t1, t2, off_resonance, nsplit_rotation)
 end
     
