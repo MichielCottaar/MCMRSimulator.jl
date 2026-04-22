@@ -782,7 +782,7 @@ end
 Returns the repetition time of the sequence in ms.
 """
 repetition_time(sequence::SequenceWaveform) = sequence.TR
-repetition_time(sequence) = TR(SequenceWaveform(sequence))
+repetition_time(sequence) = repetition_time(SequenceWaveform(sequence))
 
 
 end
