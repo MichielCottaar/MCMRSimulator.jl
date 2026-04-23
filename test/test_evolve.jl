@@ -114,50 +114,50 @@
             :readout, 
             1.
         ])
-        @test collect(mr.get_readouts(seq, 0.)) == [
+        @test mr.get_readouts(seq, 0.) == (false, [
             mr.IndexedReadout(2., 0, 1),
             mr.IndexedReadout(3., 0, 2)
-        ]
-        @test collect(mr.get_readouts(seq, 2.)) == [
+        ])
+        @test mr.get_readouts(seq, 2.) == (false, [
             mr.IndexedReadout(2., 0, 1),
             mr.IndexedReadout(3., 0, 2)
-        ]
-        @test collect(mr.get_readouts(seq, 2., readouts=[20., 1., 3., 2.])) == [
+        ])
+        @test mr.get_readouts(seq, 2., readouts=[20., 1., 3., 2.]) == (false, [
             mr.IndexedReadout(2., 0, 4),
             mr.IndexedReadout(3., 0, 3),
             mr.IndexedReadout(20., 0, 1)
-        ]
-        @test collect(mr.get_readouts(seq, 0., nTR=2)) == [
+        ])
+        @test mr.get_readouts(seq, 0., nTR=2) == (true, [
             mr.IndexedReadout(2., 1, 1),
             mr.IndexedReadout(3., 1, 2),
             mr.IndexedReadout(6., 2, 1),
             mr.IndexedReadout(7., 2, 2),
-        ]
-        @test collect(mr.get_readouts(seq, 1., nTR=2)) == [
+        ])
+        @test mr.get_readouts(seq, 1., nTR=2) == (true, [
             mr.IndexedReadout(2., 1, 1),
             mr.IndexedReadout(3., 1, 2),
             mr.IndexedReadout(6., 2, 1),
             mr.IndexedReadout(7., 2, 2),
-        ]
-        @test collect(mr.get_readouts(seq, 0., skip_TR=1)) == [
+        ])
+        @test mr.get_readouts(seq, 0., skip_TR=1) == (true, [
             mr.IndexedReadout(6., 2, 1),
             mr.IndexedReadout(7., 2, 2),
-        ]
-        @test collect(mr.get_readouts(seq, 2.5, skip_TR=0)) == [
+        ])
+        @test mr.get_readouts(seq, 2.5, skip_TR=0) == (true, [
             mr.IndexedReadout(6., 2, 1),
             mr.IndexedReadout(7., 2, 2),
-        ]
-        @test collect(mr.get_readouts(seq, 2., skip_TR=0)) == [
+        ])
+        @test mr.get_readouts(seq, 2., skip_TR=0) == (true, [
             mr.IndexedReadout(6., 2, 1),
             mr.IndexedReadout(7., 2, 2),
-        ]
+        ])
 
         @test_throws ErrorException mr.get_readouts(seq, 2., skip_TR=0, readouts=[2., 30])
         
-        @test collect(mr.get_readouts(seq, 2., skip_TR=0, readouts=[2., 4.00001])) == [
+        @test mr.get_readouts(seq, 2., skip_TR=0, readouts=[2., 4.00001])[2] == (true, [
             mr.IndexedReadout(6., 2, 1),
             mr.IndexedReadout(8., 2, 2),
-        ]
+        ])
     end
 
 end
