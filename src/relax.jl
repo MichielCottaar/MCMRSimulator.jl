@@ -74,7 +74,7 @@ function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::
     if isinf(relax_time)
         nsplit_rotation = Val(1)
     else
-        nsplit_rotation = Val(Int(div(internal_timestep * duration, relax_time/10, RoundUp)))
+        nsplit_rotation = Val(Int(div(internal_timestep * duration_ext, relax_time/10, RoundUp)))
     end
 
     # correct for pulse.first_duration and pulse.last_duration
