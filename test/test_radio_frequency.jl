@@ -9,77 +9,44 @@
                 10.
             )
             sim = mr.Simulation(seq)
-            signal = mr.readout(100, sim, 0:0.1:10)
-            increasing = signal[1:90]
-            constant = signal[91:end]
+            signal = mr.readout(100, sim, 0:1.1:11)
+            angle = (0:1.1:11)[1:9] ./ 9 * 90
+            increasing = signal[1:9]
+            constant = signal[10:end]
             @test all(abs.(mr.longitudinal.(constant)) .<= 1e-8)
             @test all(mr.transverse.(constant) .≈ 100.)
-            @test all(mr.longitudinal.(increasing) .≈ cosd.(0:89) .* 100.)
-            @test all(mr.transverse.(increasing) .≈ sind.(0:89) .* 100.)
+            @test all(mr.longitudinal.(increasing) .≈ cosd.(angle) .* 100.)
+            @test all(mr.transverse.(increasing) .≈ sind.(angle) .* 100.)
             @test all(mr.phase.(signal[2:end]) .≈ (phase - 90))
         end
     end
     @testset "Constant RF pulse with off-resonance" begin
-        for phase in (0, 30)
-            seq = mr.SequenceParts.SequenceWaveform(
-                (([], []), ([], []), ([], [])),
-                [(0., 9., [mr.SequenceParts.ConstantPulse(0.25 / 9, phase, 1.)])],
-                [],
-                [10.],
-                10.
-            )
-            sim = mr.Simulation(seq, off_resonance=1)
-            signal = mr.readout(100, sim, 0:0.1:10)
-            increasing = signal[1:90]
-            constant = signal[91:end]
-            @test all(abs.(mr.longitudinal.(constant)) .<= 1e-8)
-            @test all(mr.transverse.(constant) .≈ 100.)
-            @test all(mr.longitudinal.(increasing) .≈ cosd.(0:89) .* 100.)
-            @test all(mr.transverse.(increasing) .≈ sind.(0:89) .* 100.)
-        end
-    end
-    @testset "Two-part constant RF pulse with off-resonance" begin
-        for phase in (0, 30)
-            seq = mr.SequenceParts.SequenceWaveform(
-                (([], []), ([], []), ([], [])),
-                [(0., 9., [
-                    mr.SequenceParts.ConstantPulse(0.25 / 9, phase, 1.),
-                    mr.SequenceParts.ConstantPulse(0.25 / 9, phase + 180, 1.)
-                ])],
-                [],
-                [10.],
-                10.
-            )
-            sim = mr.Simulation(seq, off_resonance=1)
-            signal = mr.readout(100, sim, 0:0.1:10)
-            increasing = signal[1:90]
-            constant = signal[91:end]
-            @test all(abs.(mr.longitudinal.(constant)) .<= 1e-8)
-            @test all(mr.transverse.(constant) .≈ 100.)
-            @test all(mr.longitudinal.(increasing) .≈ cosd.(0:89) .* 100.)
-            @test all(mr.transverse.(increasing) .≈ sind.(0:89) .* 100.)
-        end
-    end
-    @testset "Many-part constant RF pulse with off-resonance" begin
-        for phase in (0, 30)
-            seq = mr.SequenceParts.SequenceWaveform(
-                (([], []), ([], []), ([], [])),
-                [(0., 9., [
-                    mr.SequenceParts.ConstantPulse(0.25 / 9, phase, 1.)
-                    for _ in 1:9
-                ])],
-                [],
-                [10.],
-                10.
-            )
-            sim = mr.Simulation(seq, off_resonance=1)
-            signal = mr.readout(100, sim, 0:0.1:10)
-            increasing = signal[1:90]
-            constant = signal[91:end]
-            @test all(abs.(mr.longitudinal.(constant)) .<= 1e-8)
-            @test all(mr.transverse.(constant) .≈ 100.)
-            @test all(mr.longitudinal.(increasing) .≈ cosd.(0:89) .* 100.)
-            @test all(mr.transverse.(increasing) .≈ sind.(0:89) .* 100.)
+        for pulse_shifts in (
+            [0.],
+            [0, 180.],
+            zeros(9),
+            mod.((0:0.05:9) .* 360, 360)[1:end-1],
+        )
+            @testset "Test with $(length(pulse_shifts)) RF pulse parts" begin
+                for phase in (0, 30)
+                    seq = mr.SequenceParts.SequenceWaveform(
+                        (([], []), ([], []), ([], [])),
+                        [(0., 9., [mr.SequenceParts.ConstantPulse(0.25 / 9, phase + shift, 1.) for shift in pulse_shifts])],
+                        [],
+                        [10.],
+                        10.
+                    )
+                    sim = mr.Simulation(seq, off_resonance=1)
+                    signal = mr.readout(100, sim, 0:1.1:11)
+                    angle = (0:1.1:11)[1:9] ./ 9 * 90
+                    increasing = signal[1:9]
+                    constant = signal[10:end]
+                    @test all(abs.(mr.longitudinal.(constant)) .<= 1e-8)
+                    @test all(mr.transverse.(constant) .≈ 100.)
+                    @test all(mr.longitudinal.(increasing) .≈ cosd.(angle) .* 100.)
+                    @test all(mr.transverse.(increasing) .≈ sind.(angle) .* 100.)
+                end
+            end
         end
     end
     @testset "Adiabatic pulse test" begin
