@@ -1,4 +1,15 @@
 @testset "test_radio_frequency.jl: Using finite RF pulses" begin
+
+    function create_rf_pulse(time, amplitude, phase)
+        step_size = (time[end] - time[1]) / (length(time) - 1)
+        @assert all(diff(time) .≈ step_size) "Time points should be equally spaced"
+        freq = diff(phase) ./ 360.
+        av_ampl = (amplitude[1:end-1] .+ amplitude[2:end]) ./ 2
+        return (time[1], time[end], [
+            mr.SequenceParts.ConstantPulse(a, p, f)
+            for (a, p, f) in zip(av_ampl, phase[1:end-1], freq)
+        ])
+    end
     @testset "Constant RF pulse without off-resonance" begin
         for phase in (0, 30)
             seq = mr.SequenceParts.SequenceWaveform(
@@ -64,11 +75,13 @@
         amplitude = @. ω * (1 / cosh(beta * t_axis))
         pulse_phase = @. log(amplitude / ω) * μ
 
-        pulse = GenericPulse(t_axis .+ t .+ 1e-10, amplitude, rad2deg.(pulse_phase))
-        bb = BuildingBlock([(0, [1., 0., 0.]), (2 * t + 1, [1., 0., 0.])], [(0., pulse)])
-        seq = build_sequence() do 
-            Sequence([bb, nothing, SingleReadout()], duration=2 * t + 2) 
-        end
+        seq = mr.SequenceParts.SequenceWaveform(
+            (([0., 2*t+1, 2*t+1, 2*t+2], [1., 1., 0., 0.]), ([], []), ([], [])),
+            [create_rf_pulse(t_axis .+ t, amplitude, rad2deg.(pulse_phase))],
+            [],
+            [2 * t + 2.],
+            2 * t + 2.
+        )
         sim = mr.Simulation(seq, diffusivity=0.)
 
         get_signal(off_resonance) = mr.readout(mr.Spin(position=[off_resonance, 0, 0]), sim)
@@ -95,11 +108,14 @@
         ampl[t_axis .== 0] .= π / 2
         ampl .*= (90 / 102.79339283389233)
 
-        pulse = GenericPulse(t_axis .+ (t + 1e-3), ampl)
-        bb = BuildingBlock([(0, [1., 0., 0.]), (2 * t + 1, [1., 0., 0.])], [(0., pulse)])
-        seq = build_sequence() do 
-            Sequence([bb, nothing, SingleReadout()], duration=2 * t + 2) 
-        end
+        seq = mr.SequenceParts.SequenceWaveform(
+            (([0., 2*t+1, 2*t+1, 2*t+2], [1., 1., 0., 0.]), ([], []), ([], [])),
+            [create_rf_pulse(t_axis .+ t, ampl, zeros(length(t_axis)))],
+            [],
+            [2 * t + 2.],
+            2 * t + 2.
+        )
+
         sim = mr.Simulation(seq, diffusivity=0.)
 
         get_signal(off_resonance) = mr.readout(mr.Spin(position=[off_resonance, 0, 0]), sim)
