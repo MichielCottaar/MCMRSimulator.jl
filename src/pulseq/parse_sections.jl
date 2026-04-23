@@ -3,7 +3,7 @@ Translate between sets of [`PulseqSection`](@ref) objects and [`PulseqSequence`]
 """
 module ParseSections
 
-import ..Types: PulseqSequence, PulseqSection
+import ..Types: PulseqSequence, PulseqSection, PulseqShape
 import ..Components: PulseqComponents
 import ..Parsers: parse_section, gen_section
 
@@ -21,6 +21,10 @@ function parse_all_sections(sections:: Dict{String, PulseqSection})
         if name in keys(sections)
             section = pop!(sections, name)
             all_parts[Symbol(name)] = parse_section(section; all_parts...)
+        elseif name == "shapes"
+            all_parts[:shapes] = Dict{Int, PulseqShape}()
+        elseif name in ("version", "definitions", "blocks")
+            error("Missing required section $name in pulseq file.")
         end
     end
     if length(sections) > 0
