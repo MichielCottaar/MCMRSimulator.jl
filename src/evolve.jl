@@ -434,7 +434,7 @@ function evolve(spins, simulation::Simulation{N}, new_time; TR=nothing, bounding
                 error("When evolving to a time within a given `TR`, the time cannot be greater than the sequence repetition time.")
             end
         end
-        current_TR = first_TR_with_all_readouts(simulation.sequences[1], snapshot.time; readouts=new_time)
+        current_TR = get_readouts(simulation.sequences[1], snapshot.time; readouts=new_time, skip_TR=0)[2][1].TR
         res = readout_internal(snapshot, simulation, new_time; skip_TR=TR - current_TR, return_snapshot=true)
     end
     if simulation.flatten || iszero(N)
