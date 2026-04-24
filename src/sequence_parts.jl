@@ -769,12 +769,12 @@ function get_readouts(adc_sample_times::AbstractVector{<:Number}, TR::Number, st
         current_TR + skip_TR
     end
 
-    return repeat, [
+    return repeat, sort([
         IndexedReadout(TR * (tr - 1) + ro, tr, index) 
         for tr in first_TR:first_TR + nTR - 1 
         for (index, ro) in enumerate(use_readouts)
         if (TR * (tr - 1) + ro) >= start_time
-    ]
+    ], key=x->x.time)
 end
 
 function get_readouts(sequence, start_time::Number=0.; kwargs...) 
