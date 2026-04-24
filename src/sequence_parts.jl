@@ -758,7 +758,7 @@ function get_readouts(adc_sample_times::AbstractVector{<:Number}, TR::Number, st
     end
 
     if !repeat
-        return repeat, [IndexedReadout(time, 0, index) for (index, time) in enumerate(use_readouts) if time >= start_time]
+        return repeat, sort([IndexedReadout(time, 0, index) for (index, time) in enumerate(use_readouts) if time >= start_time], by=x->x.time)
     end
 
     time_in_TR = start_time % TR
