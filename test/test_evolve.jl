@@ -154,7 +154,7 @@
 
         @test_throws ErrorException mr.get_readouts(seq, 2., skip_TR=0, readouts=[2., 30])
         
-        @test mr.get_readouts(seq, 2., skip_TR=0, readouts=[2., 4.00001])[2] == (true, [
+        @test mr.get_readouts(seq, 2., skip_TR=0, readouts=[2., 4.00001]) == (true, [
             mr.IndexedReadout(6., 2, 1),
             mr.IndexedReadout(8., 2, 2),
         ])
