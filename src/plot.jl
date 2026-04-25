@@ -35,28 +35,7 @@ function plot_trajectory end
 function plot_trajectory! end
 
 
-"""
-    plot([plot_plane], snapshots; kwargs...)
-    plot!([scene,] [plot_plane], snapshots; kwargs...)
-    plot_trajectory([plot_plane], snapshots; kwargs...)
-    plot_trajectory!([scene,] [plot_plane], snapshots; kwargs...)
 
-Plots the spin trajectory in a vector of [`Snapshot`](@ref) on an existing plot scene.
-
-The spins are plotted in 2D projected onto the [`PlotPlane`](@ref) if one is provided.
-Otherwise, the spins are plotted in 3D.
-At each location along the trajectory, the colour is set by the transverse magnetisation.
-Additional keywords are passed on to `Makie.lines!`.
-
-This function will only work if [`Makie`](https://makie.org) is installed and imported.
-"""
-@recipe Plot_Trajectory (plot_plane::Union{Nothing, PlotPlane}, trajectory::AbstractVector{<:Snapshot}) begin
-    "Which magnetisation to plot if multiple sequences were simulated."
-    sequence=1
-    color=automatic
-    mixin_generic_plot_attributes()...
-    fxaa=true
-end
 
 convert_arguments(::Type{Plot_Trajectory}, trajectory::AbstractVector{<:Snapshot}) = (nothing, trajectory)
 

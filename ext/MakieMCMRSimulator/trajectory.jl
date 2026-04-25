@@ -5,21 +5,47 @@ import MCMRSimulator.Plot: PlotPlane, project_trajectory, Plot_Trajectory
 import ..Utils: Utils
 import MCMRSimulator.Spins: Snapshot, position, get_sequence
 
+"""
+    plot([plot_plane], snapshots; kwargs...)
+    plot!([scene,] [plot_plane], snapshots; kwargs...)
+    plot_trajectory([plot_plane], snapshots; kwargs...)
+    plot_trajectory!([scene,] [plot_plane], snapshots; kwargs...)
+
+Plots the spin trajectory in a vector of [`Snapshot`](@ref) on an existing plot scene.
+
+The spins are plotted in 2D projected onto the [`PlotPlane`](@ref) if one is provided.
+Otherwise, the spins are plotted in 3D.
+At each location along the trajectory, the colour is set by the transverse magnetisation.
+Additional keywords are passed on to `Makie.lines!`.
+
+This function will only work if [`Makie`](https://makie.org) is installed and imported.
+"""
+@recipe Plot_Trajectory (plot_plane::Union{Nothing, PlotPlane}, trajectory::AbstractVector{<:Snapshot}) begin
+    "Which magnetisation to plot if multiple sequences were simulated."
+    sequence=1
+    color=automatic
+    Makie.mixin_generic_plot_attributes()...
+end
+
+Makie.argument_names(::Type{<: Plot_Trajectory}, N) = (:plot_plane, :trajectory)
 
 function Makie.plot!(scene::Plot_Trajectory{<:Tuple{Nothing, <:AbstractVector{<:Snapshot}}})
-    Makie.@extract scene (trajectory, color, sequence)
-    nspins = @lift length($trajectory[1])
-    kwargs = Dict([key => scene[key] for key in [
-        :visible, :overdraw, :fxaa, :transparency, :inspectable, :depth_shift, :model, :space,
-    ]])
-    lift(nspins) do N 
-        for index in 1:N
-            positions = @lift map(s -> Makie.Point3f(position(s[index])), $trajectory)
-            colors = @lift $color === Makie.automatic ? map(s -> Utils.color(s[index]; sequence=$sequence), $trajectory) : $color
-            Makie.lines!(scene, positions; color=colors, kwargs...)
+    Makie.register_computation!(scene.attributes, [:trajectory, :color, :sequence, :nspins], [:positions, :colors]) do inputs, changed, cached
+        positions = Makie.Point3f[]
+        colors = Any[]
+        for index in 1:inputs.nspins
+            append!(positions, map(s -> Makie.Point3f(position(s[index])), inputs.trajectory))
+            if inputs.color == Makie.automatic
+                append!(colors, map(s -> Utils.color(s[index]; sequence=inputs.sequence), inputs.trajectory))
+            else
+                append!(colors, fill(inputs.color, length(inputs.trajectory)))
+            end
+            push!(positions, Makie.Point3f(NaN, NaN, NaN))
+            push!(colors, Colors.HSV())
         end
+        return positions, colors
     end
-    scene
+    Makie.lines!(scene, scene.attributes, scene.positions; color=scene.colors)
 end
 
 Makie.plottype(::AbstractVector{<:Snapshot}) = Plot_Trajectory
@@ -34,23 +60,24 @@ function Makie.plot!(scene::Plot_Trajectory{<:Tuple{<:PlotPlane, <:AbstractVecto
             return [isfinite(time) ? colors_main[Int(round(time))] : Colors.HSV() for time in times]
         end
     end
-    plot_plane = scene[1]
-    trajectory = scene[2]
-    Makie.@extract scene (color, sequence)
-    kwargs = Dict([key => scene[key] for key in [
-        :visible, :overdraw, :fxaa, :transparency, :inspectable, :depth_shift, :model, :space,
-    ]])
-    nspins = @lift length($trajectory[1])
-    lift(nspins) do N 
-        for index in 1:N
-            positions_3d = @lift map(s -> position(s[index]), $trajectory)
-            projected = @lift project_trajectory($plot_plane, $positions_3d)
-            positions = @lift Makie.Point2f.($projected[1])
-            colors = @lift $color == Makie.automatic ? _get_colors($(scene[:sequence]), index, $trajectory, $projected[2]) : $color
-            Makie.lines!(scene, positions; color=colors, kwargs...)
+    Makie.register_computation!(scene.attributes, [:plot_plane, :trajectory, :color, :sequence, :nspins], [:positions, :colors]) do inputs, changed, cached
+        positions = Makie.Point2f[]
+        colors = Any[]
+        for index in 1:inputs.nspins
+            positions_3d = map(s -> position(s[index]), inputs.trajectory)
+            projected = project_trajectory(inputs.plot_plane, positions_3d)
+            append!(positions, Makie.Point2f.(projected[1]))
+            if inputs.color == Makie.automatic
+                append!(colors, _get_colors(inputs.sequence, index, inputs.trajectory, projected[2]))
+            else
+                append!(colors, fill(inputs.color, length(inputs.trajectory)))
+            end
+            push!(positions, Makie.Point2f(NaN, NaN))
+            push!(colors, Colors.HSV())
         end
+        return positions, colors
     end
-    scene
+    Makie.lines!(scene, scene.attributes, scene.positions; color=scene.colors)
 end
 
 Makie.plottype(::PlotPlane, ::AbstractVector{<:Snapshot}) = Plot_Trajectory
