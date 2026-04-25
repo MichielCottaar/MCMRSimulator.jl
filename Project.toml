@@ -24,7 +24,6 @@ KomaMRIBase = "d0bc0b20-b151-4d03-b2a4-6ca51751cb9c"
 KomaMRIFiles = "fcf631a6-1c7e-4e88-9e64-b8888386d9dc"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
-MakieCore = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 NearestNeighbors = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
@@ -43,20 +42,20 @@ Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [weakdeps]
-Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 MRIBuilder = "691e6122-0b62-4932-92e7-e4ff0ddaf3a0"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [extensions]
-MakieMCMRSimulator = "Makie"
 MRIBuilderToMCMRSimulator = "MRIBuilder"
+MakieMCMRSimulator = "Makie"
 
 [compat]
 Interpolations = "0.16.2"
 KomaMRIBase = "0.9.8"
 KomaMRIFiles = "0.9.9"
+Makie = "0.24"
 Serialization = "1.11.0"
 julia = "1.11"
-Makie = "0.24"
 
 [extras]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
