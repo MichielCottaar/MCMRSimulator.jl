@@ -2,7 +2,7 @@ module Snapshots
 using Makie
 import MCMRSimulator.Spins: Snapshot, get_sequence, position, orientation
 import ..Utils: Utils
-import MCMRSimulator.Plot: PlotPlane, project, project_on_grid, Plot_Snapshot
+import MCMRSimulator.Plot: PlotPlane, project, project_on_grid, plot_snapshot, plot_snapshot!
 
 
 function scatter_plot_attributes()
@@ -102,6 +102,7 @@ end
 Makie.plottype(::Snapshot) = Plot_Snapshot
 Makie.plottype(::PlotPlane, ::Snapshot) = Plot_Snapshot
 
+Makie.convert_arguments(::Type{Plot_Snapshot}, snap::Snapshot) = (nothing, snap)
 Makie.convert_arguments(::Plot_Snapshot, pp::PlotPlane, snapshot::Snapshot) = (pp, snapshot)
 
 
