@@ -8,7 +8,6 @@ This makes Makie an optional dependency of MCMRSimulator, which will only be req
 In addition to these empty plotting functions, this module defines the [`PlotPlane`](@ref) for any 2D-projections and helper functions to project onto this plane.
 """
 module Plot
-import MakieCore: @recipe, automatic, mixin_generic_plot_attributes, mixin_colormap_attributes, mixin_shading_attributes, convert_arguments
 import CoordinateTransformations
 import LinearAlgebra: cross, ⋅, norm
 import StaticArrays: SVector, MVector
@@ -34,10 +33,6 @@ function plot_off_resonance! end
 function plot_trajectory end
 function plot_trajectory! end
 
-
-
-
-convert_arguments(::Type{Plot_Trajectory}, trajectory::AbstractVector{<:Snapshot}) = (nothing, trajectory)
 
 
 """

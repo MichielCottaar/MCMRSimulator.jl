@@ -80,6 +80,8 @@ function Makie.plot!(scene::Plot_Trajectory{<:Tuple{<:PlotPlane, <:AbstractVecto
     Makie.lines!(scene, scene.attributes, scene.positions; color=scene.colors)
 end
 
+Makie.convert_arguments(::Type{Plot_Trajectory}, trajectory::AbstractVector{<:Snapshot}) = (nothing, trajectory)
+
 Makie.plottype(::PlotPlane, ::AbstractVector{<:Snapshot}) = Plot_Trajectory
 
 end
