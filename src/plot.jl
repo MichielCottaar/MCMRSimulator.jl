@@ -31,8 +31,6 @@ function plot_snapshot! end
 function plot_off_resonance end
 function plot_off_resonance! end
 
-
-
 function plot_trajectory end
 function plot_trajectory! end
 
