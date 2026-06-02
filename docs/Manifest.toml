@@ -2,7 +2,7 @@
 
 julia_version = "1.11.8"
 manifest_format = "2.0"
-project_hash = "367e7b1278833cb2d5c00b712b305332686944ed"
+project_hash = "fe4fd61164ebc5ecaede30ff7afce5af2a5bd337"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "f7304359109c768cf32dc5fa2d371565bb63b68a"
@@ -1386,7 +1386,7 @@ version = "0.4.6"
 [[deps.MRIBuilder]]
 deps = ["Interpolations", "Ipopt", "JuMP", "Juniper", "LinearAlgebra", "MacroTools", "MakieCore", "Polynomials", "Printf", "QuadGK", "Rotations", "Serialization", "StaticArrays"]
 git-tree-sha1 = "dbcd10157d5bb69c1ca4c7c73b58fe81ca8838ca"
-repo-rev = "v0.3.0"
+repo-rev = "v0.4.0"
 repo-url = "https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl"
 uuid = "691e6122-0b62-4932-92e7-e4ff0ddaf3a0"
 version = "0.3.0"
