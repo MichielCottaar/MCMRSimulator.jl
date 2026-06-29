@@ -31,12 +31,13 @@ This function will only work if a [`Makie`](https://makie.org) backend is import
     linewidth=@inherit linewidth
     "Set the linestyle in 2D plots."
     linestyle=nothing
+    "Set the line colour in 2D plots"
+    linecolor=@inherit linecolor
     "Number of samples in mesh used to plot cylinders (default: 100) and spheres (default: 1000) in 3D plot."
     nsamples=Makie.automatic
     "Size to plot in μm of infinite walls and cylinders in 3D plot."
     height=1.
 
-    @inherit linecolor
 
     Makie.mixin_generic_plot_attributes()...
     Makie.mixin_shading_attributes()...
