@@ -62,7 +62,7 @@ function PulseqRFPulse(amplitude::Number, magnitude::PulseqShape, phase::PulseqS
         0.,
         0.,
         frequency,
-        phase,
+        phase_offset,
         'u'
     )
 end
