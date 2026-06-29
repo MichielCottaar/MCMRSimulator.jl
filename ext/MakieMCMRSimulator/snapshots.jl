@@ -7,7 +7,6 @@ import MCMRSimulator.Plot: PlotPlane, project, project_on_grid, plot_snapshot, p
 
 function scatter_plot_attributes()
     Makie.@DocumentedAttributes begin
-        "Used in 2D and 3D scatter plot of snapshots"
         marker = @inherit marker
         markersize = @inherit markersize
         strokecolor = @inherit markerstrokecolor
@@ -19,7 +18,6 @@ end
 
 function dyad_plot_attributes()
     Makie.@DocumentedAttributes begin
-        "Used in 2D and 3D dyad plot of snapshots"
         arrowsize=automatic
         arrowhead=automatic
         arrowtail=automatic
@@ -35,7 +33,6 @@ end
 
 function image_plot_attributes()
     Makie.@DocumentedAttributes begin
-        "Used in 2D image plot of snapshots"
         "Whether to interpolate for `kind=:image`."
         interpolate=true
         "Number of grid elements to plot for `kind=:image`."
