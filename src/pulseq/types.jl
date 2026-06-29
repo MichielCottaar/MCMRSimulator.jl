@@ -198,5 +198,6 @@ end
 Base.length(seq::PulseqSequence) = length(seq.blocks)
 Base.getindex(seq::PulseqSequence, i::Int) = PulseqSequence(seq.version, seq.definitions, [seq.blocks[i]])
 Base.getindex(seq::PulseqSequence, range) = PulseqSequence(seq.version, seq.definitions, seq.blocks[range])
+Base.show(io::IO, seq::PulseqSequence) = print(io, "PulseqSequence v$(seq.version) with $(length(seq.blocks)) blocks")
 
 end
