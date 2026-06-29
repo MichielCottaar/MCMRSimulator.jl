@@ -50,7 +50,7 @@ struct PulseqRFPulse <: AnyPulseqComponent
     use :: Char
 end
 
-function PulseqRFPulse(amplitude::Number, magnitude::PulseqShape, phase::PulseqShape, time::PulseqShape, delay::Int, frequency::Number, phase_offset::Number)
+function PulseqRFPulse(amplitude::Number, magnitude::PulseqShape, phase::PulseqShape, time::Union{Nothing, PulseqShape}, delay::Int, frequency::Number, phase_offset::Number)
     # Support for <v1.5.0 pulseq format
     return PulseqRFPulse(
         amplitude,
@@ -90,7 +90,7 @@ struct PulseqGradient <: AnyPulseqGradient
     delay :: Int
 end
 
-function PulseqGradient(amplitude::Number, shape::PulseqShape, time::PulseqShape, delay::Int)
+function PulseqGradient(amplitude::Number, shape::PulseqShape, time::Union{Nothing, PulseqShape}, delay::Int)
     # Support for <v1.5.0 pulseq format
     return PulseqGradient(
         amplitude,
