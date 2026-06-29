@@ -23,7 +23,7 @@ This function will only work if [`Makie`](https://makie.org) is installed and im
 @recipe Plot_Trajectory (plot_plane::Union{Nothing, PlotPlane}, trajectory::AbstractVector{<:Snapshot}) begin
     "Which magnetisation to plot if multiple sequences were simulated."
     sequence=1
-    color=automatic
+    color=Makie.automatic
     Makie.mixin_generic_plot_attributes()...
 end
 

@@ -18,9 +18,9 @@ end
 
 function dyad_plot_attributes()
     Makie.@DocumentedAttributes begin
-        arrowsize=automatic
-        arrowhead=automatic
-        arrowtail=automatic
+        arrowsize=Makie.automatic
+        arrowhead=Makie.automatic
+        arrowtail=Makie.automatic
         linestyle=nothing
         lengthscale=1.
         quality=32
@@ -75,7 +75,7 @@ This function will only work if [`Makie`](https://makie.org) is installed and im
     "Plot format to use (:scatter, :dyad, or :image)."
     kind = :scatter
     "Set the color."
-    color = automatic
+    color = Makie.automatic
     "Which magnetisation to plot if multiple sequences were simulated."
     sequence = 1
 
@@ -105,7 +105,7 @@ Makie.convert_arguments(::Plot_Snapshot, pp::PlotPlane, snapshot::Snapshot) = (p
 
 @recipe Plot_Snapshot_Kind (plot_plane::Union{Nothing, PlotPlane}, snapshot::Snapshot, kind::Val) begin
     "Set the color."
-    color = automatic
+    color = Makie.automatic
     "Which magnetisation to plot if multiple sequences were simulated."
     sequence = 1
 
