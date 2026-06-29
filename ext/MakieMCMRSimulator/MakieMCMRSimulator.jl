@@ -6,6 +6,7 @@ include("geometries.jl")
 include("off_resonance.jl")
 include("snapshots.jl")
 include("trajectory.jl")
+include("sequences.jl")
 include("movie.jl")
 
 

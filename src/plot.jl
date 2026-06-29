@@ -15,6 +15,7 @@ import ...Spins: Snapshot, orientation, SpinOrientation, position
 import ...Methods: get_rotation
 import ...Geometries.Internal: ray_grid_intersections, FixedGeometry, FixedObstructionGroup, Wall, Cylinder, Sphere, obstructions
 import ...Geometries.User: ObstructionGroup, fix
+import ...SequenceParts: SequenceWaveform, SequenceEvent, GradientEvent, PulseEvent
 
 
 const GeometryLike = Union{FixedGeometry, FixedObstructionGroup, ObstructionGroup, Vector{<:ObstructionGroup}}
@@ -32,6 +33,9 @@ function plot_off_resonance! end
 
 function plot_trajectory end
 function plot_trajectory! end
+
+function plot_sequence end
+function plot_sequence! end
 
 
 
@@ -414,5 +418,118 @@ function add_overlap!(new_line, prev_point, new_point, sizes)
         end
     end
 end
+
+
+"""
+    SingleSequenceDiagramLine(times, amplitudes, event_times, event_amplitudes)
+
+A single line in a sequence diagram (e.g., RFx, Gy, ADC).
+"""
+struct SingleSequenceDiagramLine
+    times :: Vector{Float64}
+    amplitudes :: Vector{Float64}
+    event_times :: Vector{Float64}
+    event_amplitudes :: Vector{Float64}
+end
+
+duration_diagram(pl::SingleSequenceDiagramLine) = iszero(length(pl.times)) ? 0. : pl.times[end]
+SingleSequenceDiagramLine(times::Vector{Float64}, amplitudes::Vector{Float64}) = SingleSequenceDiagramLine(times, amplitudes, Float64[], Float64[])
+
+function SingleSequenceDiagramLine(control_points::AbstractVector{<:Tuple}, duration::Number)
+    times = [cp[1] for cp in control_points]
+    amplitudes = [cp[2] for cp in control_points]
+    if times[1] > 0
+        pushfirst!(times, 0.)
+        pushfirst!(amplitudes, 0.)
+    end
+    if times[end] < duration
+        push!(times, duration)
+        push!(amplitudes, 0.)
+    end
+    return SingleSequenceDiagramLine(times, amplitudes, Float64[], Float64[])
+end
+
+SingleSequenceDiagramLine(duration::Number) = SingleSequenceDiagramLine([0., duration], [0., 0.], Float64[], Float64[])
+
+function normalise(lines::Vector{SingleSequenceDiagramLine})
+    max_amp = maximum([maximum(abs.(line.amplitudes), init=0.) for line in lines])
+    if iszero(max_amp)
+        max_amp = 1.
+    end
+
+    max_event_amp = maximum([maximum(abs.(line.event_amplitudes), init=0.) for line in lines])
+    if iszero(max_event_amp)
+        max_event_amp = 1.
+    end
+    [SingleSequenceDiagramLine(line.times, line.amplitudes ./ max_amp, line.event_times, line.event_amplitudes ./ max_event_amp) for line in lines]
+end
+
+"""
+    SequenceDiagram(; RFx, RFy, Gx, Gy, Gz, ADC)
+
+All the lines forming a sequence diagram.
+
+Each parameter should be a [`SinglePlotLine`](@ref) if provided.
+Any parameters not provided will be set to a [`SinglePlotLine`](@ref) with zero amplitude.
+"""
+struct SequenceDiagram
+    RFx :: SingleSequenceDiagramLine
+    RFy :: SingleSequenceDiagramLine
+    Gx :: SingleSequenceDiagramLine
+    Gy :: SingleSequenceDiagramLine
+    Gz :: SingleSequenceDiagramLine
+    ADC :: SingleSequenceDiagramLine
+end
+
+normalise(sd::SequenceDiagram) = SequenceDiagram(
+    normalise([sd.RFx, sd.RFy])...,
+    normalise([sd.Gx, sd.Gy, sd.Gz])...,
+    normalise([sd.ADC])...,
+)
+
+function SequenceDiagram(waveform::SequenceWaveform)
+    RF_times = Float64[]
+    RF_ampl = ComplexF64[]
+
+    for (start, finish, parts) in waveform.rf
+        push!(RF_times, start)
+        push!(RF_ampl, zero(ComplexF64))
+        step_size = (finish - start) / length(parts)
+        for (index, part) in enumerate(parts)
+            push!(RF_times, start + (index - 0.5) * step_size)
+            push!(RF_ampl, part.amplitude * exp(1im * deg2rad(part.phase)))
+        end
+    end
+
+    instant_pulse_times = [t for (t, event) in waveform.instants if event isa PulseEvent]
+    instant_pulse_amplitudes = [event.flip_angle * exp(1im * deg2rad(event.phase)) for (_, event) in waveform.instants if event isa PulseEvent]
+
+    instant_grad_times = [t for (t, event) in waveform.instants if event isa GradientEvent]
+    instant_grad_amplitudes = [
+        [event.qvec[index] for (_, event) in waveform.instants if event isa GradientEvent]
+        for index in 1:3
+    ]
+    SequenceDiagram(
+        SingleSequenceDiagramLine(RF_times, real.(RF_ampl), instant_pulse_times, real.(instant_pulse_amplitudes)),
+        SingleSequenceDiagramLine(RF_times, imag.(RF_ampl), instant_pulse_times, imag.(instant_pulse_amplitudes)),
+        SingleSequenceDiagramLine(waveform.grads[1]..., instant_grad_times, instant_grad_amplitudes[1]),
+        SingleSequenceDiagramLine(waveform.grads[2]..., instant_grad_times, instant_grad_amplitudes[2]),
+        SingleSequenceDiagramLine(waveform.grads[3]..., instant_grad_times, instant_grad_amplitudes[3]),
+        SingleSequenceDiagramLine(Float64[], Float64[], waveform.samples, [1. for _ in waveform.samples]),
+    )
+end
+
+SequenceDiagram(diagram::SequenceDiagram) = diagram
+SequenceDiagram(sequence) = SequenceDiagram(SequenceWaveform(sequence))
+
+duration_diagram(sd::SequenceDiagram) = maximum([
+    duration_diagram(sd.RFx),
+    duration_diagram(sd.RFy),
+    duration_diagram(sd.Gx),
+    duration_diagram(sd.Gy),
+    duration_diagram(sd.Gz),
+    duration_diagram(sd.ADC),
+])
+
 
 end
