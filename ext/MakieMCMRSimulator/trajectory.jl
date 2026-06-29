@@ -1,7 +1,7 @@
 module Trajectory
 using Makie
 import Colors
-import MCMRSimulator.Plot: PlotPlane, project_trajectory, Plot_Trajectory
+import MCMRSimulator.Plot: PlotPlane, project_trajectory
 import ..Utils: Utils
 import MCMRSimulator.Spins: Snapshot, position, get_sequence
 
