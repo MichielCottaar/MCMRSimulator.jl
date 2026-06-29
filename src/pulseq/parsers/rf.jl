@@ -9,7 +9,7 @@ function parse_section(section::PulseqSection{:rf}; shapes::Dict{Int, PulseqShap
                     [Int, Float64, Int, Int, Int, Float64, Float64],
                 )
                 props[:time_id] = 0
-            else version < v"1.5.0"
+            else
                 props = parse_pulseq_dict(
                     line,
                     [:id, :amp, :mag_id, :phase_id, :time_id, :delay, :freq, :phase], 
