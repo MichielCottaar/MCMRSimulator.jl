@@ -50,6 +50,6 @@ This vector can be appended to, when adding a new object.
 
 If the object is already in the `definition` the reference index of the already existing object should be returned instead.
 """
-add_extension_definition!(content::Vector{String}, ext::PulseqExtension) = ext.index
+add_extension_definition!(content::Vector{String}, ext::PulseqExtension) = ext.id
 
 end
