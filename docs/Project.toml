@@ -4,3 +4,6 @@ Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
 MCMRSimulator = "eac06e4d-a854-4bf6-b44f-54c98b0401d1"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+
+[sources]
+MCMRSimulator = {path=".."}
