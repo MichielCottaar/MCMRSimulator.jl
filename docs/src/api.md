@@ -43,6 +43,22 @@ load_mesh
 random_positions_radii
 ```
 
+## Sequence I/O
+```@docs
+read_pulseq
+write_pulseq
+```
+
+## Scanners
+```@docs
+Scanner
+Default_Scanner
+Siemens_Prisma
+Siemens_Terra
+Siemens_Connectom
+Siemens_Connectom_v2
+```
+
 ## Querying simulation output
 ```@docs
 position

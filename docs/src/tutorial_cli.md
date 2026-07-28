@@ -45,23 +45,6 @@ How these various properties affect the simulation is described [here](@ref prop
 The procedure to create [`Walls`](@ref), [`Spheres`](@ref), or [`Annuli`](@ref) is very similar as for the [`Cylinders`](@ref) illustrated above.
 Randomly distributed cylinders, annuli, and spheres can be created using `mcmr geometry create-random`.
 
-## Defining the sequence
-In this case we will use an idealised DWI sequence produced by [`MRIBuilder.jl`](https://open.win.ox.ac.uk/pages/ndcn0236/mribuilder.jl/dev/).
-Note that any [pulseq](http://pulseq.github.io/) file can be used instead.
-```@example
-using MRIBuilder
-seq = DWI(TE=80, bval=2., Δ=40, δ=:min, TR=2000)
-write_sequence("dwi.seq", seq)
-
-# Optional to plot the sequence
-using CairoMakie
-f = plot_sequence(seq)
-f
-save("tutorial_cli_sequence.png", f); # hide
-nothing # hide
-```
-![](tutorial_cli_sequence.png)
-
 ## Running the simulation
 To get instructions on running the simulations, we can check the help message of `mcmr run`:
 ```bash
@@ -77,13 +60,15 @@ We can see that in addition to defining the geometry and the sequence, we can al
 The simulation is initialised by randomly distributing a number of spins (set by `--Nspins`) uniformly across a bounding box with size given by `--voxel-size`.
 This initial state might also contain bound spins (if the `--density` flag was set to a non-zero value during the geometry generation).
 
-The DWI sequence defined above contains a `MRIBuilder.SingleReadout` object at the echo time (80 ms). By default, this is used for readout:
+We will use a pre-defined diffusion-weighted MRI sequence with an echo time of 80 ms and a b-value of 2 mm^2/s.
+
+The DWI sequence defined above contains a single ADC event at the echo time (80 ms). By default, this is used for readout:
 ```bash
-mcmr run geometry.json dwi.seq -o signal.csv
+mcmr run geometry.json dwi_te_80_bval_2.seq -o signal.csv
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run geometry.json dwi.seq -o signal.csv --seed=1")
+run_main_docs("run geometry.json dwi_te_80_bval_2.seq -o signal.csv --seed=1")
 ```
 
 This produces the CSV file, which looks like

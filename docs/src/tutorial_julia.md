@@ -17,6 +17,7 @@ In general, running a simulation will consist of the following three steps:
 - Simulating a random walk of the spins through the microstructure and the MR signal produced by those spins.
 - Plotting the MR signal or storing it to disk.
 We will look through each of these steps below.
+
 ## Defining the simulation
 The first step is to define the environment through which the spins will evolve.
 We will do so by creating an appropriate [`Simulation`](@ref) object.
@@ -45,11 +46,13 @@ nothing # hide
 More complicated geometries can be generated as described [here](@ref geometry).
 More details on plotting geometries can be found in the [`plot_geometry`](@ref) documentation.
 
+The next step is to load a sequence.
+Here we load a pre-defined diffusion-weighted MRI sequence.
+
 The next step is to define a sequence using [MRIBuilder.jl](https://open.win.ox.ac.uk/pages/ndcn0236/mribuilder.jl/dev/). 
-Here we will adopt a single diffusion-weighted MRI sequence.
+Here we will adopt a diffusion-weighted MRI sequence defined in pulseq.
 ```@example tutorial
-using MRIBuilder
-sequence = DWI(bval=2., TE=80, TR=300, scanner=Siemens_Prisma)
+sequence = read_pulseq("dwi_te_80_bval_2.seq", TR=300)
 f = plot_sequence(sequence)
 f
 save("tutorial_sequence.png", f); # hide
@@ -94,8 +97,9 @@ This function takes a [`Snapshot`](@ref) and a [`Simulation`](@ref) as input (or
 There are various ways to define when the output will be read out (as described in the [`readout`](@ref) documentation).
 
 Here, we will illustrate various examples of using this function:
+
 ## Simple signal readouts
-Most sequences will contain one or more `MRIBuilder.SingleReadout` or `MRIBuilder.ADC` objects, which define when the sequence will be read out during each repetition time (TR).
+Most sequences will contain one or more ADC events, which define when the sequence will be read out during each repetition time (TR).
 To get the signal at this time, we can simply call:
 ```@example tutorial
 readout(1000, simulation)
