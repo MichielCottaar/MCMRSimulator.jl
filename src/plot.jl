@@ -13,7 +13,7 @@ import LinearAlgebra: cross, ⋅, norm
 import StaticArrays: SVector, MVector
 import ...Spins: Snapshot, orientation, SpinOrientation, position
 import ...Methods: get_rotation
-import ...Geometries.Internal: ray_grid_intersections, FixedGeometry, FixedObstructionGroup, Wall, Cylinder, Sphere, obstructions
+import ...Geometries.Internal: ray_grid_intersections, FixedGeometry, FixedObstructionGroup, Wall, Cylinder, Sphere, obstructions, Shift
 import ...Geometries.User: ObstructionGroup, fix
 import ...SequenceParts: SequenceWaveform, SequenceEvent, GradientEvent, PulseEvent
 
@@ -219,8 +219,14 @@ function project_geometry(plot_plane::PlotPlane, group::FixedObstructionGroup{N}
 
     projections = []
     for obstruction in obstructions(group)
-        obstruction_center_in_plot_plane = plot_plane.transformation(group.rotation * obstruction.shift)
-        append!(projections, project_obstruction(obstruction.base, obstruction_center_in_plot_plane, obstruction_coordinates_in_plot_plane, group.repeats, (plot_plane.sizex, plot_plane.sizey)))
+        base, shift = if obstruction isa Shift
+            obstruction.base, obstruction.shift
+        else
+            obstruction, zero(SVector{N, Float64})
+        end
+
+        obstruction_center_in_plot_plane = plot_plane.transformation(group.rotation * shift)
+        append!(projections, project_obstruction(base, obstruction_center_in_plot_plane, obstruction_coordinates_in_plot_plane, group.repeats, (plot_plane.sizex, plot_plane.sizey)))
     end
     projections
 end
