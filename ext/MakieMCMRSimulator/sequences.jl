@@ -15,6 +15,8 @@ const SequenceLike = Union{SequenceWaveform, PulseqSequence, SequenceDiagram}
 
 Plots a given sequence in a sequence diagram.
 
+The recommended way to call this is using `plot_sequence` rather than `plot`, which leads to a cleaner sequence diagram.
+
 The sequence diagram is a 2D plot with time on the x-axis and the different sequence components on the y-axis. 
 
 This function will only work if a [`Makie`](https://makie.org) backend is imported.
@@ -117,6 +119,16 @@ function range_full(spl::SingleSequenceDiagramLine)
         min(l1, l2),
         max(u1, u2),
     )
+end
+
+function plot_sequence(sequence; figure=(), axis=(xgridvisible=false, ygridvisible=false), kwargs...)
+    f = Figure(; figure...)
+    ax = Axis(f[1, 1]; axis...)
+    p = plot!(ax, sequence; kwargs...)
+    ax.xlabel[] = "Time (ms)"
+    hideydecorations!(ax)
+    hidespines!(ax, :l, :r, :t)
+    return Makie.FigureAxisPlot(f, ax, p)
 end
 
 end

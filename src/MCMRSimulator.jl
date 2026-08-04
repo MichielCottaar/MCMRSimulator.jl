@@ -88,8 +88,8 @@ export BoundingBox
 import .Properties: GlobalProperties, R1, R2, off_resonance
 @compat public GlobalProperties, R1, R2, off_resonance
 
-import .Plot: PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance
-export PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance
+import .Plot: PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance, plot_sequence
+export PlotPlane, plot_snapshot, plot_geometry, plot_trajectory, simulator_movie, plot_off_resonance, plot_sequence
 
 import .Plot: plot_snapshot!, plot_geometry!, plot_trajectory!, plot_off_resonance!
 export plot_snapshot!, plot_geometry!, plot_trajectory!, plot_off_resonance!
