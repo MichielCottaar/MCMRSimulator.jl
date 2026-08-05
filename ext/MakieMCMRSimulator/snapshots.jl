@@ -141,13 +141,13 @@ function plot_snapshot_kind!(scene::Plot_Snapshot_Kind{<:Tuple{Nothing, Snapshot
     Makie.scatter!(scene, scene.attributes, scene.position; color=scene.final_color)
 end
 
-function plot_snapshot_kind!(scene::Plot_Snapshot{<:Tuple{Nothing, Snapshot, Val{:dyad}}})
+function plot_snapshot_kind!(scene::Plot_Snapshot_Kind{<:Tuple{Nothing, Snapshot, Val{:dyad}}})
     set_color_from_magnetisation!(scene)
     set_3d_position!(scene)
     map!(scene.attributes, [:snapshot, :sequence], :directions) do snapshot, sequence
         [Makie.Point3f(orientation(get_sequence(s, sequence))) for s in snapshot]
     end
-    Makie.arrows!(scene, scene.attributes, scene.position, directions; color=scene.final_color)
+    Makie.arrows!(scene, scene.attributes, scene.position, scene.directions; color=scene.final_color)
 end
 
 function plot_snapshot_kind!(::Plot_Snapshot_Kind{<:Tuple{Nothing, Snapshot, Val{:image}}})
@@ -163,13 +163,13 @@ function set_2d_position!(scene)
 end
 
 # 2-dimensional plotting
-function plot_snapshot_kind!(scene::Plot_Snapshot{<:Tuple{PlotPlane, Snapshot, Val{:scatter}}})
+function plot_snapshot_kind!(scene::Plot_Snapshot_Kind{<:Tuple{PlotPlane, Snapshot, Val{:scatter}}})
     set_color_from_magnetisation!(scene)
     set_2d_position!(scene)
     Makie.scatter!(scene, scene.attributes, scene.position; color=scene.final_color)
 end
 
-function plot_snapshot_kind!(scene::Plot_Snapshot{<:Tuple{PlotPlane, Snapshot, Val{:dyad}}})
+function plot_snapshot_kind!(scene::Plot_Snapshot_Kind{<:Tuple{PlotPlane, Snapshot, Val{:dyad}}})
     set_color_from_magnetisation!(scene)
     set_2d_position!(scene)
     map!(scene.attributes, [:sequence, :snapshot], :directions) do sequence, snapshot
@@ -179,7 +179,7 @@ function plot_snapshot_kind!(scene::Plot_Snapshot{<:Tuple{PlotPlane, Snapshot, V
     Makie.arrows!(scene, scene.attributes, scene.position, scene.directions; color=scene.final_color)
 end
 
-function plot_snapshot_kind!(scene::Plot_Snapshot{<:Tuple{PlotPlane, Snapshot, Val{:image}}})
+function plot_snapshot_kind!(scene::Plot_Snapshot_Kind{<:Tuple{PlotPlane, Snapshot, Val{:image}}})
     Makie.register_computation!(scene.attributes, [:sequence, :plot_plane, :snapshot, :ngrid], [:x, :y, :matrix]) do inputs, changed, cached
         return project_on_grid(inputs.plot_plane, get_sequence(inputs.snapshot, inputs.sequence), inputs.ngrid)
     end
