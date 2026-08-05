@@ -30,7 +30,7 @@ We use the following units throughout (unless otherwise noted):
 3. If you want more information on a specific topic, you can check one of the more dedicated sections:
     - [Geometry](@ref geometry).
     - [MRI & collision properties](@ref properties).
-    - For sequences see [read_pulseq](@read_pulseq).
+    - For sequences see [read_pulseq](@ref read_pulseq).
     - Full [API](@ref api).
 
 ## Contributors

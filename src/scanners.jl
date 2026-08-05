@@ -9,9 +9,9 @@ const gyromagnetic_ratio = 42576.38476  # (kHz/T)
     Scanner(;B0=3., gradient=Inf, slew_rate=Inf, units=:kHz)
 
 Properties of an MRI scanner relevant for the MR signal simulations.
-- [`B0`](@ref): magnetic field strength (in Tesla)
-- [`gradient_strength`](@ref): maximum gradient strength long each axis.
-- [`slew_rate`](@ref): maximum rate of change in the gradient strength
+- B0: magnetic field strength (in Tesla)
+- gradient_strength: maximum gradient strength long each axis.
+- slew_rate: maximum rate of change in the gradient strength
 
 By default `gradient` and `slew_rate` are expected to be provided in units of, respectively, kHz/um and kHz/um/ms.
 However, if the keyword `units=:Tesla` is set, the `gradient` and `slew_rate` should be provided in units of, respectively, mT/m and T/m/s.
