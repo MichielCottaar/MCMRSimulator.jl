@@ -148,7 +148,7 @@ end
                 _, err = run_main_test("geometry create spheres 1 spheres.json --radius 1 --repeats 2.2,2.2,2.2")
                 @test length(err) == 0
                 gradient_echo = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_30.seq"))
-                write_pulseq("ge.seq", gradient_echo)
+                mr.write_pulseq("ge.seq", gradient_echo)
                 @test length(err) == 0
                 _, err = run_main_test("run spheres.json ge.seq --R2 0.1 -N 100 -o global.csv")
                 @test length(err) == 0
@@ -180,7 +180,7 @@ end
         _, err = run_main_test("geometry create spheres 1 spheres.json --radius 1 --repeats 2.2,2.2,2.2 --R1_inside=0.02")
         @test length(err) == 0
         gradient_echo = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_30.seq"))
-        write_pulseq("ge.seq", gradient_echo)
+        mr.write_pulseq("ge.seq", gradient_echo)
         _, err = run_main_test("run spheres.json ge.seq --R1 0.01 -N 100 -o R1.csv --subset inside --subset outside")
         @test length(err) == 0
         result = DataFrame(CSV.File("R1.csv"))
