@@ -1,7 +1,7 @@
 module OffResonance
 using Makie
 import StaticArrays: SVector
-import MCMRSimulator.Plot: PlotPlane, plot_off_resonance, plot_off_resonance!
+import MCMRSimulator.Plot: PlotPlane, plot_off_resonance, plot_off_resonance!, GeometryLike
 import MCMRSimulator.Geometries.Internal: FixedSusceptibility, susceptibility_off_resonance
 import MCMRSimulator.Geometries: fix_susceptibility
 
@@ -24,7 +24,7 @@ Makie.argument_names(::Type{<: Plot_Off_Resonance}, N) = (:plot_plane, :raw_geom
 
 function Makie.plot!(scene::Plot_Off_Resonance)
     Makie.register_computation!(scene.attributes, [:raw_geometry, :plot_plane, :ngrid], [:x_interval, :y_interval, :field]) do inputs, changed, cached
-        susc = raw_geometry isa FixedSusceptibility ? raw_geometry : fix_susceptibility(inputs.raw_geometry)
+        susc = inputs.raw_geometry isa FixedSusceptibility ? inputs.raw_geometry : fix_susceptibility(inputs.raw_geometry)
 
         dims = -0.5:(1/inputs.ngrid):0.5
         xx_1d = dims * inputs.plot_plane.sizex
