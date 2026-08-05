@@ -148,7 +148,7 @@ end
                 _, err = run_main_test("geometry create spheres 1 spheres.json --radius 1 --repeats 2.2,2.2,2.2")
                 @test length(err) == 0
                 gradient_echo = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_30.seq"))
-                write_sequence("ge.seq", gradient_echo)
+                write_pulseq("ge.seq", gradient_echo)
                 @test length(err) == 0
                 _, err = run_main_test("run spheres.json ge.seq --R2 0.1 -N 100 -o global.csv")
                 @test length(err) == 0
@@ -180,7 +180,7 @@ end
         _, err = run_main_test("geometry create spheres 1 spheres.json --radius 1 --repeats 2.2,2.2,2.2 --R1_inside=0.02")
         @test length(err) == 0
         gradient_echo = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_30.seq"))
-        write_sequence("ge.seq", gradient_echo)
+        write_pulseq("ge.seq", gradient_echo)
         _, err = run_main_test("run spheres.json ge.seq --R1 0.01 -N 100 -o R1.csv --subset inside --subset outside")
         @test length(err) == 0
         result = DataFrame(CSV.File("R1.csv"))
@@ -199,7 +199,7 @@ if false
     in_tmpdir() do
         _, err = run_main_test("geometry create walls 1 walls.json --repeats 1")
         @test length(err) == 0
-        write_sequence("dwi.seq", mr.read_pulseq(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2.seq")))
+        write_pulseq("dwi.seq", mr.read_pulseq(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2.seq")))
         @test length(err) == 0
         open("bvecs", "w") do f
             write(f, "1 0

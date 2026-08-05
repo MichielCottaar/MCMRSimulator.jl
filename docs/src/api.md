@@ -105,7 +105,6 @@ MCMRSimulator.GlobalProperties
 MCMRSimulator.R1
 MCMRSimulator.R2
 MCMRSimulator.off_resonance
-MCMRSimulator.install_cli
 MCMRSimulator.run_main
 ```
 

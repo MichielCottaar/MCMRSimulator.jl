@@ -4,7 +4,7 @@
 
 - This is a single Julia package; use the root `Project.toml` environment.
 - The package entrypoint is `src/MCMRSimulator.jl`; it wires together simulation, geometry, Pulseq, plotting, and CLI modules. Geometry code is split between user-facing definitions under `src/geometries/user/` and internal collision/field implementations under `src/geometries/internal/`.
-- The CLI entrypoint is `MCMRSimulator.CLI.run_main`, with `run` and `geometry` subcommands. The installed command is `mcmr`.
+- The CLI entrypoint is `MCMRSimulator.CLI.@main`, with `run` and `geometry` subcommands. The `mcmr` app is declared in `Project.toml` and installed through `Pkg.Apps.add`/`pkg> app add`.
 
 ## Commands
 

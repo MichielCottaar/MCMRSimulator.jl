@@ -65,8 +65,8 @@ export Subset
 import .Evolve: evolve, readout
 export evolve, readout
 
-import .CLI: run_main, install_cli
-@compat public run_main, install_cli
+import .CLI: run_main
+@compat public run_main
 
 import .Geometries: 
     ObstructionGroup, IndexedObstruction,
@@ -95,4 +95,3 @@ import .Plot: plot_snapshot!, plot_geometry!, plot_trajectory!, plot_off_resonan
 export plot_snapshot!, plot_geometry!, plot_trajectory!, plot_off_resonance!
 
 end
-
