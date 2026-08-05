@@ -763,7 +763,7 @@ function get_readouts(adc_sample_times::AbstractVector{<:Number}, TR::Number, st
 
     time_in_TR = start_time % TR
     current_TR = floor(Int, start_time / TR) + 1
-    first_TR = if time_in_TR > 0 && any(ro -> ro >= time_in_TR, use_readouts)
+    first_TR = if time_in_TR > 0 && any(ro -> ro <= time_in_TR, use_readouts)
         current_TR + 1 + skip_TR
     else
         current_TR + skip_TR
