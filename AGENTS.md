@@ -10,7 +10,7 @@
 
 - Instantiate dependencies with `julia --project -e 'using Pkg; Pkg.instantiate()'`.
 - Run all tests with `julia --project -e 'using Pkg; Pkg.test()'`.
-- Run selected test files by passing names to the test runner, for example `julia --project test/runtests.jl collisions evolve`; use `julia --project test/runtests.jl no-plots` to skip the visual `plots` suite.
+- Run selected test files through `Pkg.test` using `test_args`, for example `julia --project -e 'using Pkg; Pkg.test("MCMRSimulator", test_args=["collisions", "evolve"])'`; use `julia --project -e 'using Pkg; Pkg.test("MCMRSimulator", test_args=["no-plots"])'` to skip the visual `plots` suite.
 - CI installs `xvfb` and adds MRIBuilder from its GitLab repository before testing; use `xvfb-run julia --project=@. -e 'using Pkg; Pkg.add(url="https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl.git"); Pkg.test(coverage=true)'` when reproducing CI rather than assuming a plain test run has identical setup.
 - Build documentation with `julia --project=docs -e 'using Pkg; Pkg.instantiate(); include("docs/make.jl")'`. `docs/make.jl` temporarily generates `docs/src/installation.md` and removes it afterward; do not edit that generated file.
 
