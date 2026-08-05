@@ -239,9 +239,12 @@ The control times include:
 - any time points where the gradient slew rate changes.
 - any time points where an RF pulse starts or ends.
 """
-function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep; kwargs...)
+function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep; readouts=nothing, nTR=nothing, skip_TR=nothing, kwargs...)
     waveforms = [SequenceWaveform(seq) for seq in sequences]
-    (repeats, readouts) = zip([get_readouts(waveform.samples, waveform.TR, start_time; kwargs...) for waveform in waveforms]...)
+    (repeats, readouts) = zip([
+        get_readouts(waveform.samples, waveform.TR, start_time; readouts=readouts, nTR=nTR, skip_TR=skip_TR)
+        for waveform in waveforms
+    ]...)
 
     # Figure out control times
     set_control_times = Set{Float64}([start_time])

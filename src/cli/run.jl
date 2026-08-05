@@ -8,6 +8,7 @@ import DataFrames: DataFrame
 import CSV
 import Random
 import ...Geometries.User.JSON: read_geometry
+import ...Pulseq: read_pulseq
 import ...Simulations: Simulation
 import ...Spins: Snapshot, BoundingBox, longitudinal, transverse, phase, orientation, position
 import ...Evolve: readout
@@ -144,7 +145,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
         Random.seed!(args["seed"])
     end
     geometry = read_geometry(args["geometry"])
-    sequences = mr.read_pulseq.(args["sequence"])
+    sequences = read_pulseq.(args["sequence"])
 
     sequence_indices = eachindex(sequences)
     all_sequences = sequences
@@ -163,7 +164,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
 
     # convert to tabular format
     if !isnothing(args["output-signal"])
-        df_list = []
+        df_list = NamedTuple[]
         for index in eachindex(IndexCartesian(), result)
             if as_snapshot
                 value = SpinOrientationSum(result[index])
@@ -185,13 +186,25 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 Sy=orient_as_vec[2],
             ))
         end
-        df = DataFrame(df_list)
+        df = DataFrame(
+            sequence=[row.sequence for row in df_list],
+            sequence_index=[row.sequence_index for row in df_list],
+            TR=[row.TR for row in df_list],
+            readout=[row.readout for row in df_list],
+            subset=[row.subset for row in df_list],
+            nspins=[row.nspins for row in df_list],
+            longitudinal=[row.longitudinal for row in df_list],
+            transverse=[row.transverse for row in df_list],
+            phase=[row.phase for row in df_list],
+            Sx=[row.Sx for row in df_list],
+            Sy=[row.Sy for row in df_list],
+        )
         @show df
         CSV.write(args["output-signal"], df)
     end
 
     if !isnothing(args["output-snapshot"])
-        df_list = []
+        df_list = NamedTuple[]
         for index in eachindex(IndexCartesian(), result)
             snapshot = result[index]
             for (ispin, spin) in enumerate(snapshot)
@@ -214,7 +227,21 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 ))
             end
         end
-        df = DataFrame(df_list)
+        df = DataFrame(
+            sequence=[row.sequence for row in df_list],
+            sequence_index=[row.sequence_index for row in df_list],
+            TR=[row.TR for row in df_list],
+            readout=[row.readout for row in df_list],
+            spin=[row.spin for row in df_list],
+            x=[row.x for row in df_list],
+            y=[row.y for row in df_list],
+            z=[row.z for row in df_list],
+            longitudinal=[row.longitudinal for row in df_list],
+            transverse=[row.transverse for row in df_list],
+            phase=[row.phase for row in df_list],
+            Sx=[row.Sx for row in df_list],
+            Sy=[row.Sy for row in df_list],
+        )
         CSV.write(args["output-snapshot"], df)
     end
 
