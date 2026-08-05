@@ -144,13 +144,11 @@ end
 @testset "Test full simulations" begin
     @testset "Setting R2" begin
         in_tmpdir() do
+            sequence_file = joinpath(@__DIR__, "pulseq", "gradient_echo_TE_30.seq")
             @testset "Single global R2" begin
                 _, err = run_main_test("geometry create spheres 1 spheres.json --radius 1 --repeats 2.2,2.2,2.2")
                 @test length(err) == 0
-                gradient_echo = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_30.seq"))
-                mr.write_pulseq("ge.seq", gradient_echo)
-                @test length(err) == 0
-                _, err = run_main_test("run spheres.json ge.seq --R2 0.1 -N 100 -o global.csv")
+                _, err = run_main_test("run spheres.json $sequence_file --R2 0.1 -N 100 -o global.csv")
                 @test length(err) == 0
                 result = DataFrame(CSV.File("global.csv"))
                 @test size(result, 1) == 1
@@ -160,7 +158,7 @@ end
             @testset "Change R2 within sphere" begin
                 _, err = run_main_test("geometry create spheres 1 spheres.json --radius 1 --repeats 2.2,2.2,2.2 --R2_inside=0.2")
                 @test length(err) == 0
-                _, err = run_main_test("run spheres.json ge.seq --R2 0.1 -N 100 -o varies.csv --subset inside --subset outside")
+                _, err = run_main_test("run spheres.json $sequence_file --R2 0.1 -N 100 -o varies.csv --subset inside --subset outside")
                 @test length(err) == 0
                 result = DataFrame(CSV.File("varies.csv"))
                 @test size(result, 1) == 3
@@ -169,7 +167,7 @@ end
                 @test result[3, :nspins] < 100
                 @test result[2, :transverse] / result[2, :nspins] ≈ exp(-9.)
                 @test result[3, :transverse] / result[3, :nspins] ≈ exp(-3.)
-                @test all(result[!, :sequence] .== "ge.seq")
+                @test all(result[!, :sequence] .== sequence_file)
                 @test all(result[!, :sequence_index] .== 1)
             end
         end
@@ -179,9 +177,8 @@ end
     in_tmpdir() do
         _, err = run_main_test("geometry create spheres 1 spheres.json --radius 1 --repeats 2.2,2.2,2.2 --R1_inside=0.02")
         @test length(err) == 0
-        gradient_echo = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_30.seq"))
-        mr.write_pulseq("ge.seq", gradient_echo)
-        _, err = run_main_test("run spheres.json ge.seq --R1 0.01 -N 100 -o R1.csv --subset inside --subset outside")
+        sequence_file = joinpath(@__DIR__, "pulseq", "gradient_echo_TE_30.seq")
+        _, err = run_main_test("run spheres.json $sequence_file --R1 0.01 -N 100 -o R1.csv --subset inside --subset outside")
         @test length(err) == 0
         result = DataFrame(CSV.File("R1.csv"))
         @test size(result, 1) == 3
@@ -190,7 +187,7 @@ end
         @test result[3, :nspins] < 100
         @test result[2, :longitudinal] / result[2, :nspins] ≈ 1. - exp(-0.9)
         @test result[3, :longitudinal] / result[3, :nspins] ≈ 1. - exp(-0.3)
-        @test all(result[!, :sequence] .== "ge.seq")
+        @test all(result[!, :sequence] .== sequence_file)
         @test all(result[!, :sequence_index] .== 1)
     end
 end
