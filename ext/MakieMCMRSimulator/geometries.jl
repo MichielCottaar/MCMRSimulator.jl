@@ -8,20 +8,6 @@ import MCMRSimulator.Plot: PlotPlane, GeometryLike, project_geometry, plot_geome
 import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, obstructions
 import MCMRSimulator.Geometries: ObstructionGroup, fix, Mesh, Cylinders, Spheres, Walls
 
-"""
-    plot([plot_plane,] geometry; kwargs...)
-    plot!([scene,] [plot_plane,] geometry; kwargs...)
-    plot_geometry([plot_plane,] geometry; kwargs...)
-    plot_geometry!([scene,] [plot_plane,] geometry; kwargs...)
-
-Plots a given geometry. 
-If a [`PlotPlane`](@ref) is provided the 2D projection of the geometry onto this plane is plotted.
-Otherwise, the geometry is plotted in 3D.
-
-If you want to overlay the off-resonance field, call [`plot_off_resonance`](@ref) first before calling this function.
-
-This function will only work if a [`Makie`](https://makie.org) backend is imported.
-"""
 @recipe Plot_Geometry (plot_plane::Union{Nothing, PlotPlane}, geometry::GeometryLike) begin
     "Set the color of the lines (2D) or patches (3D). In 2D it is set to the :black by default. In 3D each individual obstruction is by default plotted in a different, distinguishable color."
     color=Makie.automatic

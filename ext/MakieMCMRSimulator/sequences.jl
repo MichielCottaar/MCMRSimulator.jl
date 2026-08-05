@@ -7,20 +7,6 @@ import MCMRSimulator.Pulseq: PulseqSequence
 
 const SequenceLike = Union{SequenceWaveform, PulseqSequence, SequenceDiagram}
 
-"""
-    plot(sequence; kwargs...)
-    plot!([scene,] sequence; kwargs...)
-    plot_sequence(sequence; kwargs...)
-    plot_sequence!([scene,] sequence; kwargs...)
-
-Plots a given sequence in a sequence diagram.
-
-The recommended way to call this is using `plot_sequence` rather than `plot`, which leads to a cleaner sequence diagram.
-
-The sequence diagram is a 2D plot with time on the x-axis and the different sequence components on the y-axis. 
-
-This function will only work if a [`Makie`](https://makie.org) backend is imported.
-"""
 @recipe Plot_Sequence (sequence::SequenceLike, ) begin
     color = @inherit textcolor
     linecolor = Makie.automatic
