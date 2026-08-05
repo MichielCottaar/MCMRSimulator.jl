@@ -4,10 +4,18 @@ All notable changes to MCMRSimulator.jl will be documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+### Added
+- Pulseq support was expanded substantially: more complete parsing, timing validation, extension handling, and `write_pulseq` filename support.
+- `read_pulseq(...; TR=...)` now accepts an explicit TR override.
+- Plotting support was kept in-package and updated across geometry, snapshot, trajectory, off-resonance, and sequence diagrams.
+### Changed
+- This package no longer depends on MRIBuilder to load, run, or plot sequences and now uses a local `read_pulseq` / plotting APIs. MRIBuilder sequences are still supported.
+- The CLI app install workflow now follows the new Julia standard: `pkg> app add MCMRSimulator`. This will install the `mcmr` tool in `~/.julia/bin`. Please ensure that is in your PATH.
+- The CLI now uses the updated interface and no longer exposes `--bvec`/`--bvecs`.
 ### Fixed
 - Fixed spurious zeroes in susceptibility calculations for spins outside of a non-repeating geometry.
 - `tortuosity` parameter in timestep is now correctly spelled (i.e., no longer `turtoisity`)
-- Plotting improvements: `plot_geometry(mesh)` has been fixed; documentation for plotting functions looks better now; switched to updated `@recipe` syntax in `Makie.jl`.
+- Makie support was moved to an extension, meaning that it is no longer a required dependency. I switched to updated `@recipe` syntax for `Makie.jl` plotting allowing the running the latest version of `Makie.jl`.
 ### Optimisations
 - `readout` is now roughly 5 times faster if `return_snapshot=true` is set.
 ## [v0.11.0]
