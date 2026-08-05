@@ -331,12 +331,12 @@ If `return_snapshot=true` is set, each element is the full [`Snapshot`](@ref) in
 """
 readout(spins, simulation::Simulation, new_readout_times=nothing; bounding_box=500, kwargs...) = readout_internal(_to_snapshot(spins, simulation, bounding_box), simulation, new_readout_times; kwargs...)
 
-function readout_internal(snapshot::Snapshot{N}, simulation::Simulation{N}, new_readout_times=nothing; kwargs...) where {N}
+function readout_internal(snapshot::Snapshot{N}, simulation::Simulation{N}, new_readout_times=nothing; return_snapshot=false, kwargs...) where {N}
     if :readouts in keys(kwargs)
         error("readout timings should be set as the 3rd positional argument, not a keyword argument.")
     end
-    accumulator = GridAccumulator(simulation, snapshot.time; readouts=new_readout_times, kwargs...)
-    run_readout!(snapshot, simulation, accumulator; readouts=new_readout_times)
+    accumulator = GridAccumulator(simulation, snapshot.time; readouts=new_readout_times, return_snapshot=return_snapshot, kwargs...)
+    run_readout!(snapshot, simulation, accumulator; readouts=new_readout_times, kwargs...)
     return fix_accumulator(accumulator)
 end
 
