@@ -64,13 +64,7 @@ function run_main_test(cmd::AbstractString)
     Base.is_interactive = false
 
     try
-        try
-            run_main(split(cmd), exc_handler=cmdline_debug_handler, exit_after_help=false)
-        catch err
-            if hasproperty(err, :msg) && length(err.msg) > 0
-                rethrow(err)
-            end
-        end
+        run_main(split(cmd), exc_handler=cmdline_debug_handler, exit_after_help=false)
     finally
         close(err_rd)
         redirect_stderr(original_stderr)
