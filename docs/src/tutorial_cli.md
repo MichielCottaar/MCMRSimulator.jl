@@ -93,11 +93,11 @@ The columns in this file store the following information:
 
 We can also output the signal of specific subsets of spins. For example, in the following we request to separately the output for just the spins inside the cylinders and just the spins outside of the cylinders.
 ```bash
-mcmr run geometry.json dwi.seq -o signal.csv --subset inside --subset outside
+mcmr run geometry.json dwi_te_80_bval_2.seq -o signal.csv --subset inside --subset outside
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run geometry.json dwi.seq -o signal2.csv --subset inside --subset outside --seed=2")
+run_main_docs("run geometry.json dwi_te_80_bval_2.seq -o signal2.csv --subset inside --subset outside --seed=2")
 ```
 
 We can see two additional rows in the output. 
@@ -115,11 +115,11 @@ All the spins are either inside or outside the cylinders, so in this case the fi
 A more complete state of all the spins can be produced using the `--output-snapshot` flag.
 For example, the command
 ```bash
-mcmr run geometry.json dwi.seq --output-snapshot snapshot.csv
+mcmr run geometry.json dwi_te_80_bval_2.seq --output-snapshot snapshot.csv
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run geometry.json dwi.seq --output-snapshot snapshot.csv --seed=3")
+run_main_docs("run geometry.json dwi_te_80_bval_2.seq --output-snapshot snapshot.csv --seed=3")
 ```
 will produce a file named "snapshot.csv" with:
 ```@eval
