@@ -12,12 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - This package no longer depends on MRIBuilder to load, run, or plot sequences and now uses a local `read_pulseq` / plotting APIs. MRIBuilder sequences are still supported.
 - The CLI app install workflow now follows the new Julia standard: `pkg> app add MCMRSimulator`. This will install the `mcmr` tool in `~/.julia/bin`. Please ensure that is in your PATH.
 - The CLI now uses the updated interface and no longer exposes `--bvec`/`--bvecs`.
+
+## [v1.0.0]
 ### Fixed
 - Fixed spurious zeroes in susceptibility calculations for spins outside of a non-repeating geometry.
 - `tortuosity` parameter in timestep is now correctly spelled (i.e., no longer `turtoisity`)
-- Makie support was moved to an extension, meaning that it is no longer a required dependency. I switched to updated `@recipe` syntax for `Makie.jl` plotting allowing the running the latest version of `Makie.jl`.
+- Plotting improvements: `plot_geometry(mesh)` has been fixed; documentation for plotting functions looks better now; switched to updated `@recipe` syntax in `Makie.jl`.
 ### Optimisations
-- `readout` is now roughly 5 times faster if `return_snapshot=true` is set.
+- `readout` is now roughly 5 times faster if return_snapshot=true is set.
 ## [v0.11.0]
 ### Added
 - Meshes are automatically split into individual components (based on connectivity). The R1/R2/off-resonance can be set individually within each of these components. The component index of each element can be overwritten using `mesh.component = [...]`.
@@ -167,7 +169,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added citation instructions
 
 
-[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.11.0...main
+[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v1.0.0...main
+[v1.0.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.11.0...v1.0.0
 [v0.11.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.10.0...v0.11.0
 [v0.10.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.9.0...v0.10.0
 [v0.9.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.8.0...v0.9.0
