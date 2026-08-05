@@ -18,7 +18,7 @@
             else
                 plot(f[1, 1], snapshot; kind=kind)
             end
-            CairoMakie.save(fname, f)
+            save_rgb(fname, f)
         end
 
         @visualtest plot_dyads "$dir/dyad_snapshot.png" !isCI
@@ -39,7 +39,7 @@
             plot_plane = mr.PlotPlane()
             f = Figure()
             plot(f[1, 1], plot_plane, snapshot, kind=:image, ngrid=10)
-            CairoMakie.save(fname, f)
+            save_rgb(fname, f)
         end
 
         @visualtest plot_image "$dir/image_snapshot.png" !isCI

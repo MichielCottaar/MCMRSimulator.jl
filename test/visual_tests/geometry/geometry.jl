@@ -15,7 +15,7 @@ isCI = get(ENV, "CI", "false") == "true"
             function plot_mesh(fname)
                 f = Figure()
                 plot(f[1, 1], geometry, alpha=0.6)
-                CairoMakie.save(fname, f)
+                save_rgb(fname, f)
             end
 
             @visualtest plot_mesh "$dir/$(name)_3D.png" !isCI
@@ -33,7 +33,7 @@ end
     function plot_walls(fname)
         f = Figure()
         plot(f[1, 1], pp, geometry)
-        CairoMakie.save(fname, f)
+        save_rgb(fname, f)
     end
 
     @visualtest plot_walls "$dir/walls.png" !isCI
@@ -47,7 +47,7 @@ end
     function plot_annuli(fname)
         f = Figure()
         plot(f[1, 1], pp, geometry)
-        CairoMakie.save(fname, f)
+        save_rgb(fname, f)
     end
 
     @visualtest plot_annuli "$dir/annuli.png" !isCI
@@ -62,7 +62,7 @@ end
         f = Figure()
         mr.plot_off_resonance(f[1, 1], pp, geometry)
         plot!(f[1, 1], pp, geometry)
-        CairoMakie.save(fname, f)
+        save_rgb(fname, f)
     end
 
     @visualtest plot_myelinated_annuli "$dir/myelinated_annuli.png" !isCI

@@ -6,6 +6,9 @@ import Random
 import SpecialFunctions: erf
 using Statistics
 import Logging
+using FileIO
+using ColorTypes
+
 
 Logging.disable_logging(Logging.Info)
 
@@ -68,6 +71,11 @@ function build_sequence(parts)
     return mr.SequenceParts.SequenceWaveform((([], []), ([], []), ([], [])), [], instants, samples, current_time)
 end
 
+function save_rgb(fname, fig)
+    tmp = tempname() * ".png"
+    CairoMakie.save(tmp, fig)
+    FileIO.save(fname, RGB.(load(tmp)))
+end
 
 @testset "MCMRSimulator tests" begin
     for test in tests
