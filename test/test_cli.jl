@@ -170,6 +170,21 @@ end
                 @test all(result[!, :sequence] .== sequence_file)
                 @test all(result[!, :sequence_index] .== 1)
             end
+            @testset "Multiple sequences" begin
+                sequence_files = [
+                    joinpath(@__DIR__, "pulseq", "gradient_echo_TE_30.seq"),
+                    joinpath(@__DIR__, "pulseq", "gradient_echo_TE_100.seq"),
+                ]
+                R2 = 0.01
+                _, err = run_main_test("run spheres.json $(join(sequence_files, ' ')) --R2 $R2 -N 100 -o multiple.csv")
+                @test length(err) == 0
+                result = DataFrame(CSV.File("multiple.csv"))
+                @test size(result, 1) == 2
+                @test result[!, :sequence] == sequence_files
+                @test result[!, :sequence_index] == [1, 2]
+                @test all(result[!, :nspins] .== 100)
+                @test result[1, :transverse] / result[2, :transverse] ≈ exp(R2 * (100 - 30)) rtol=0.01
+            end
         end
     end
 end
