@@ -4,7 +4,9 @@
 /Manifest.toml
 /benchmark/*.json
 /docs/build/
+/docs/Manifest.toml
 /docs/src/installation.md
 /lcov.info
 /.vscode
 /test_ext
+/test/Manifest.toml
