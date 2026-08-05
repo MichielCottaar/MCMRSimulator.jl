@@ -121,9 +121,9 @@ Makie.argument_names(::Type{<: Plot_Snapshot_Kind}, N) = (:plot_plane, :snapshot
 function set_color_from_magnetisation!(scene)
     map!(scene.attributes, [:color, :snapshot, :sequence], :final_color) do color, snapshot, sequence
         if color == Makie.automatic
-            return color
-        else
             return Utils.color.(snapshot; sequence=sequence)
+        else
+            return fill(color, length(snapshot))
         end
     end
 end
@@ -147,7 +147,7 @@ function Makie.plot!(scene::Plot_Snapshot_Kind{<:Tuple{Nothing, Snapshot, Val{:d
     map!(scene.attributes, [:snapshot, :sequence], :directions) do snapshot, sequence
         [Makie.Point3f(orientation(get_sequence(s, sequence))) for s in snapshot]
     end
-    Makie.arrows!(scene, scene.attributes, scene.position, scene.directions; color=scene.final_color)
+    Makie.arrows3d!(scene, scene.attributes, scene.position, scene.directions; color=scene.final_color)
 end
 
 function Makie.plot!(::Plot_Snapshot_Kind{<:Tuple{Nothing, <:Snapshot, Val{:image}}})
@@ -176,12 +176,13 @@ function Makie.plot!(scene::Plot_Snapshot_Kind{<:Tuple{PlotPlane, <:Snapshot, Va
         # Transverse magnetisation is returned irrespective of plot plane orientation
         [Makie.Point2f(orientation(get_sequence(s, sequence))[1:2]) for s in snapshot]
     end
-    Makie.arrows!(scene, scene.attributes, scene.position, scene.directions; color=scene.final_color)
+    Makie.arrows2d!(scene, scene.attributes, scene.position, scene.directions; color=scene.final_color)
 end
 
 function Makie.plot!(scene::Plot_Snapshot_Kind{<:Tuple{PlotPlane, <:Snapshot, Val{:image}}})
     Makie.register_computation!(scene.attributes, [:sequence, :plot_plane, :snapshot, :ngrid], [:x, :y, :matrix]) do inputs, changed, cached
-        return project_on_grid(inputs.plot_plane, get_sequence(inputs.snapshot, inputs.sequence), inputs.ngrid)
+        x, y, orientations = project_on_grid(inputs.plot_plane, get_sequence(inputs.snapshot, inputs.sequence), inputs.ngrid)
+        return x, y, Utils.color.(orientations)
     end
     Makie.heatmap!(scene, scene.attributes, scene.x, scene.y, scene.matrix)
 end
