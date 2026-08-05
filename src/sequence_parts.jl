@@ -350,7 +350,7 @@ function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep
             i_ro = index_ro[index_seq]
             if i_ro <= length(readouts[index_seq]) && (t == readouts[index_seq][i_ro].time)
                 index_ro[index_seq] += 1
-                push!(instants, readouts[index_seq][i_ro])
+                pushfirst!(instants, readouts[index_seq][i_ro])
             end
             return Tuple(instants)
         end
