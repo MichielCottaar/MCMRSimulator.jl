@@ -2,6 +2,15 @@
 @testset "test_various.jl" begin
 @test length(detect_ambiguities(mr)) == 0
 
+@testset "Pulseq repetition time override" begin
+    filename = joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2.seq")
+    sequence = mr.read_pulseq(filename; TR=300)
+    @test sequence.TR == 0.3
+    @test mr.SequenceParts.SequenceWaveform(sequence).TR == 0.3
+    @test mr.read_pulseq(filename).TR === nothing
+    @test_throws ErrorException mr.read_pulseq(filename; TR=10)
+end
+
 @testset "Draw random positions and radii" begin
     pos, rad = mr.random_positions_radii([20., 20.], 0.7, 2; variance=0.01)
     n_too_close = 0
