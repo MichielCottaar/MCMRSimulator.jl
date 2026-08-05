@@ -79,8 +79,8 @@ Markdown.parse("```\n$(text)\n```")
 ```
 
 The columns in this file store the following information:
-- "sequence": integer; index of the sequence (always 1 if only single sequence used)
-- "bvec": integer; index of the gradient orientation (if a `--bvec` flag is provided)
+- "sequence": string; input filename of the sequence
+- "sequence_index": integer; index of the sequence (always 1 if only a single sequence is used)
 - "TR": integer; index of the repetition time that this data was acquired (between 1 and the value of `--nTR`)
 - "readout": integer; index of the readout within a TR.
 - "subset": integer; index of the subset of the total signal (e.g., intra-axonal) that has been output (see the `--subset` flag). The total signal will always be included with "subset" of 0.
@@ -128,8 +128,12 @@ lines = split(read("snapshot.csv", String), '\n')
 text = join(lines[1:5], '\n')
 Markdown.parse("```csv\n$(text)\n...\n```")
 ```
-Each row corresponds to the state of a single spin. In addition to all the columns listed above, we now have 4 more columns:
+Each row corresponds to the state of a single spin. In addition to the sequence, sequence index, TR, and readout columns listed above, snapshot output contains:
 - "spin": integer; index of the spin
 - "x"/"y"/"z": floats; position of the spin at the time of the readout
+- "longitudinal": longitudinal magnetisation
+- "transverse": magnitude of the transverse magnetisation
+- "phase": phase of the transverse magnetisation in degrees
+- "Sx"/"Sy": transverse magnetisation components
 
-The readout times can be adjusted using the `--nTR`, `--time`, and `--skip-TR` flags.
+The readout times can be adjusted using the `--nTR`, `--times`, and `--skip-TR` flags.

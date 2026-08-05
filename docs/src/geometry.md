@@ -31,7 +31,7 @@ The `rotation` keyword can be used to define these components along other lines/
 
 From the command line all of these keywords are available as flags, which can be seen by running:
 ```bash
-mcmr geometry create walls/cylinders/annuli/spheres/bendy_cylinder --help
+ mcmr geometry create walls/cylinders/annuli/spheres/bendy-cylinder --help
 ```
 
 In Julia, the easiest way to get the documentation for all keywords is to run:
@@ -70,7 +70,7 @@ nothing # hide
 ```  
 ![Plot showing single cylinders repeating ad infinitum](regular_cylinders2.png)
 
-### Randomly distributed cylinders/annuli/spirals
+### Randomly distributed cylinders/annuli/spheres
 A random set of positions and radii can be created using [`random_positions_radii`](@ref).
 The user in this case sets a target density (70% in the example below) and over which length scale the configuration should repeat itself (20x20 micrometer in the example below).
 ```@example random_distribution
@@ -92,7 +92,7 @@ nothing # hide
 ```
 ![Illustrating configuration of random cylinders](random_cylinders.png)
 
-When used as initialisation for annuli or spirals, an inner radius will also need to be computed:
+When used as initialisation for annuli, an inner radius will also need to be computed:
 ```@example random_distribution
 geometry = Annuli(inner=0.8 .* outer_radii, outer=outer_radii, position=positions, repeats=(20, 20))
 using CairoMakie # hide
