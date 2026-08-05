@@ -6,7 +6,6 @@ module Run
 import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_group!, parse_args
 import DataFrames: DataFrame
 import CSV
-import Tables
 import Random
 import ...Geometries.User.JSON: read_geometry
 import ...Simulations: Simulation
@@ -37,8 +36,6 @@ function add_simulation_definition!(parser)
             help = "Transverse relaxation in 1/ms. This relaxation rate will at the very least be applied to free, extra-cellular spins. It might be overriden in the 'geometry' for bound spins or spins inside any obstructions."
             arg_type = Float64
             default = 0.
-        "--bvecs"
-            help = "ASCII text file with gradient orientations in FSL format (https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FDT/UserGuide#Processing_pipeline)."
     end
 end
 
@@ -130,23 +127,6 @@ end
 
 
 """
-    read_bvecs(filename)
-
-Reads the bvecs into a Nx3 matrix.
-"""
-function read_bvecs(filename)
-    table = CSV.read(filename, Tables.matrix, delim=' ', ignorerepeated=true, header=false)
-    (r, c) = size(table)
-    if c != 3
-        if r != 3
-            error("bvec shape is $(size(table)) rather than (N, 3) or (3, N)")
-        end
-        table = transpose(table)
-    end
-    return table
-end
-
-"""
     run_main([arguments])
 
 Runs the `mcmr run` command line interface.
@@ -168,30 +148,8 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     geometry = read_geometry(args["geometry"])
     sequences = mr.read_pulseq.(args["sequence"])
 
-    if isnothing(args["bvecs"])
-        sequence_indices = 1:length(sequences)
-        bvec_indices = zeros(Int, length(sequences))
-        all_sequences = sequences
-    else
-        sequence_indices = Int[]
-        bvec_indices = Int[]
-        all_sequences = Sequence[]
-        bvecs = read_bvecs(args["bvecs"])
-        for (index_seq, sequence) in enumerate(sequences)
-            if can_rotate_bvec(sequence)
-                append!(sequence_indices, fill(index_seq, size(bvecs, 1)))
-                append!(bvec_indices, 1:size(bvecs, 1))
-                append!(all_sequences, [rotate_bvec(sequence, bv) for bv in eachrow(bvecs)])
-            else
-                push!(sequence_indices, index_seq)
-                push!(bvec_indices, 0)
-                push!(all_sequences, sequence)
-            end
-        end
-        if all(iszero.(bvec_indices))
-            @warn "None of the input sequences include bvec-dependent gradients, so the `--bvec` flag will have no effect."
-        end
-    end
+    sequence_indices = eachindex(sequences)
+    all_sequences = sequences
 
     sequence_names = [args["sequence"][i] for i in sequence_indices]
 
@@ -218,7 +176,6 @@ function run_main(args::Dict{<:AbstractString, <:Any})
             push!(df_list, (
                 sequence=sequence_names[index[1]],
                 sequence_index=sequence_indices[index[1]],
-                bvec=bvec_indices[index[1]],
                 TR=index[3],
                 readout=index[2],
                 subset=index[4] - 1,
@@ -245,7 +202,6 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 push!(df_list, (
                     sequence=sequence_names[index[1]],
                     sequence_index=sequence_indices[index[1]],
-                    bvec=bvec_indices[index[1]],
                     TR=index[3],
                     readout=index[2],
                     spin=ispin,

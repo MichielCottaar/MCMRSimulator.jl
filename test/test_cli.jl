@@ -194,38 +194,4 @@ end
         @test all(result[!, :sequence_index] .== 1)
     end
 end
-if false
-@testset "Using bvecs" begin
-    in_tmpdir() do
-        _, err = run_main_test("geometry create walls 1 walls.json --repeats 1")
-        @test length(err) == 0
-        write_pulseq("dwi.seq", mr.read_pulseq(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2.seq")))
-        @test length(err) == 0
-        open("bvecs", "w") do f
-            write(f, "1 0
-            0 1
-            0 0")
-        end
-        _, err = run_main_test("run walls.json dwi.seq -o with_diff.csv --diffusivity 3. --bvecs=bvecs")
-        @test length(err) == 0
-        with_diff = DataFrame(CSV.File("with_diff.csv"))
-        @test size(with_diff, 1) == 2
-        @test with_diff[!, :sequence_index] == [1, 1]
-        @test with_diff[!, :sequence] == ["dwi.json", "dwi.json"]
-        @test with_diff[!, :bvec] == [1, 2]
-        @test with_diff[1, :transverse] > exp(-1) * with_diff[1, :nspins]
-        @test with_diff[2, :transverse] ≈ with_diff[2, :nspins] * exp(-1.5) rtol=0.1
-
-        _, err = run_main_test("run walls.json dwi.json -o no_diff.csv --diffusivity 0. --bvecs=bvecs")
-        no_diff = DataFrame(CSV.File("no_diff.csv"))
-        @test size(no_diff, 1) == 2
-        @test with_diff[!, :sequence_index] == [1, 1]
-        @test with_diff[!, :sequence] == ["dwi.json", "dwi.json"]
-        @test no_diff[!, :bvec] == [1, 2]
-        @test no_diff[1, :transverse] ≈ no_diff[1, :nspins]
-        @test no_diff[2, :transverse] ≈ no_diff[2, :nspins]
-    end
-end
-end
-
 end
