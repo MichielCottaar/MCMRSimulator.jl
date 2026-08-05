@@ -83,7 +83,6 @@ function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:Nothing, <:GeometryLike}})
             patch_color = inputs[:color] == Makie.automatic ? mesh_color_arr[index] : inputs[:color]
             append!(colors, [patch_color for _ in group.args.vertices])
         end
-        @show size(vertices), size(triangles), size(colors)
         return (vertices, triangles, colors)
     end
 
