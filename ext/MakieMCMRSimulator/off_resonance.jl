@@ -20,11 +20,11 @@ This function will only work if a [`Makie`](https://makie.org) backend is import
     Makie.mixin_generic_plot_attributes()...
 end
 
-Makie.argument_names(::Type{<: Plot_Off_Resonance}, N) = (:plot_plane, :raw_geometry)
+Makie.argument_names(::Type{<: Plot_Off_Resonance}, N) = (:plot_plane, :geometry)
 
 function Makie.plot!(scene::Plot_Off_Resonance)
-    Makie.register_computation!(scene.attributes, [:raw_geometry, :plot_plane, :ngrid], [:x_interval, :y_interval, :field]) do inputs, changed, cached
-        susc = inputs.raw_geometry isa FixedSusceptibility ? inputs.raw_geometry : fix_susceptibility(inputs.raw_geometry)
+    Makie.register_computation!(scene.attributes, [:geometry, :plot_plane, :ngrid], [:x_interval, :y_interval, :field]) do inputs, changed, cached
+        susc = inputs.geometry isa FixedSusceptibility ? inputs.geometry : fix_susceptibility(inputs.geometry)
 
         dims = -0.5:(1/inputs.ngrid):0.5
         xx_1d = dims * inputs.plot_plane.sizex
