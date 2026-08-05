@@ -30,10 +30,11 @@ end
 Makie.argument_names(::Type{<: Plot_Trajectory}, N) = (:plot_plane, :trajectory)
 
 function Makie.plot!(scene::Plot_Trajectory{<:Tuple{Nothing, <:AbstractVector{<:Snapshot}}})
-    Makie.register_computation!(scene.attributes, [:trajectory, :color, :sequence, :nspins], [:positions, :colors]) do inputs, changed, cached
+    Makie.register_computation!(scene.attributes, [:trajectory, :color, :sequence], [:positions, :colors]) do inputs, changed, cached
         positions = Makie.Point3f[]
         colors = Any[]
-        for index in 1:inputs.nspins
+        nspins = length(inputs.trajectory[1])
+        for index in 1:nspins
             append!(positions, map(s -> Makie.Point3f(position(s[index])), inputs.trajectory))
             if inputs.color == Makie.automatic
                 append!(colors, map(s -> Utils.color(s[index]; sequence=inputs.sequence), inputs.trajectory))
@@ -60,10 +61,11 @@ function Makie.plot!(scene::Plot_Trajectory{<:Tuple{<:PlotPlane, <:AbstractVecto
             return [isfinite(time) ? colors_main[Int(round(time))] : Colors.HSV() for time in times]
         end
     end
-    Makie.register_computation!(scene.attributes, [:plot_plane, :trajectory, :color, :sequence, :nspins], [:positions, :colors]) do inputs, changed, cached
+    Makie.register_computation!(scene.attributes, [:plot_plane, :trajectory, :color, :sequence], [:positions, :colors]) do inputs, changed, cached
         positions = Makie.Point2f[]
         colors = Any[]
-        for index in 1:inputs.nspins
+        nspins = length(inputs.trajectory[1])
+        for index in 1:nspins
             positions_3d = map(s -> position(s[index]), inputs.trajectory)
             projected = project_trajectory(inputs.plot_plane, positions_3d)
             append!(positions, Makie.Point2f.(projected[1]))
