@@ -197,6 +197,9 @@ struct SequenceWaveform
     TR::Float64
 end
 
+override_repetition_time(sequence) = nothing
+override_repetition_time(sequence::Pulseq.PulseqSequence) = sequence.TR
+
 SequenceWaveform(sequence::SequenceWaveform) = sequence
 
 function SequenceWaveform(sequence)
@@ -217,12 +220,13 @@ function SequenceWaveform(sequence)
             t
         end, init=0.),
     )
+    repetition_time_override = override_repetition_time(sequence)
     return SequenceWaveform(
         grads, 
         rf, 
         instants,
         samples,
-        total_time
+        isnothing(repetition_time_override) ? total_time : repetition_time_override
     )
 end
 

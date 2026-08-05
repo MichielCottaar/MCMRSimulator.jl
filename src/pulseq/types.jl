@@ -185,7 +185,7 @@ struct PulseqBlock
 end
 
 """
-    PulseqSequence(version::VersionNumber, definitions::NamedTuple, blocks::Vector{PulseqBlock})
+    PulseqSequence(version::VersionNumber, definitions::NamedTuple, blocks::Vector{PulseqBlock}, TR=nothing)
 
 A full sequence defined according to the Pulseq [specification](https://raw.githubusercontent.com/pulseq/pulseq/master/doc/specification.pdf).
 """
@@ -193,11 +193,14 @@ struct PulseqSequence
     version:: VersionNumber
     definitions:: NamedTuple
     blocks:: Vector{PulseqBlock}
+    TR:: Union{Nothing, Float64}
 end
 
+PulseqSequence(version::VersionNumber, definitions::NamedTuple, blocks::Vector{PulseqBlock}) = PulseqSequence(version, definitions, blocks, nothing)
+
 Base.length(seq::PulseqSequence) = length(seq.blocks)
-Base.getindex(seq::PulseqSequence, i::Int) = PulseqSequence(seq.version, seq.definitions, [seq.blocks[i]])
-Base.getindex(seq::PulseqSequence, range) = PulseqSequence(seq.version, seq.definitions, seq.blocks[range])
+Base.getindex(seq::PulseqSequence, i::Int) = PulseqSequence(seq.version, seq.definitions, [seq.blocks[i]], seq.TR)
+Base.getindex(seq::PulseqSequence, range) = PulseqSequence(seq.version, seq.definitions, seq.blocks[range], seq.TR)
 Base.show(io::IO, seq::PulseqSequence) = print(io, "PulseqSequence v$(seq.version) with $(length(seq.blocks)) blocks")
 
 end

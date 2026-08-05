@@ -30,7 +30,7 @@ function parse_all_sections(sections:: Dict{String, PulseqSection})
     if length(sections) > 0
         @warn "Following sections in pulseq input file are not being used: $(keys(sections))"
     end
-    return PulseqSequence(all_parts[:version], all_parts[:definitions], all_parts[:blocks])
+    return PulseqSequence(all_parts[:version], all_parts[:definitions], all_parts[:blocks], nothing)
 end
 
 function gen_all_sections(seq:: PulseqSequence)
