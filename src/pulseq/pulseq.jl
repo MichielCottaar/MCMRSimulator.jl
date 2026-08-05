@@ -50,4 +50,8 @@ function write_pulseq(io::IO, sequence::Types.PulseqSequence)
     end
 end
 
+write_pulseq(filename::AbstractString, sequence::Types.PulseqSequence) = open(filename, "w") do io
+    write_pulseq(io, sequence)
+end
+
 end
