@@ -6,4 +6,5 @@ using Gtk
 include("geometry/geometry.jl")
 include("snapshot/snapshot.jl")
 include("trajectory/trajectory.jl")
+include("sequence/sequence.jl")
 end
