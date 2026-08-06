@@ -64,6 +64,10 @@ function Makie.plot!(scene:: Plot_Sequence)
             push!(text, string(label))
             push!(text_x, -duration_diagram(sequence_diagram) / 40)
             push!(text_y, shift)
+            if label == :ADC
+                current_y += 0.3
+                continue
+            end
             append!(times, line.times)
             append!(amplitudes, line.amplitudes .+ shift)
             push!(times, NaN)
@@ -81,9 +85,15 @@ function Makie.plot!(scene:: Plot_Sequence)
         return (text, text_x, text_y, times, amplitudes, event_times, event_amplitudes, fake_x, fake_y)
     end
 
+    Makie.register_computation!(scene.attributes, [:sequence_diagram], [:time_adc]) do inputs, changed, cached
+        times = inputs.sequence_diagram.ADC.event_times
+        return ([Makie.Point2((t, 0.)) for t in times], )
+    end
+
     Makie.text!(scene, scene.attributes, scene[:text_x], scene[:text_y]; align=(:right, :center), color=scene[:textcolor_final])
     Makie.lines!(scene, scene.attributes, scene[:times], scene[:amplitudes]; color=scene[:linecolor_final])
     Makie.lines!(scene, scene.attributes, scene[:event_times], scene[:event_amplitudes]; linewidth=scene[:linewidth_instant], color=scene[:linecolor_final])
+    Makie.scatter!(scene, scene[:time_adc]; color=scene[:linecolor_final], marker=:rect, markersize=scene[:linewidth_instant])
 
     Makie.lines!(scene, scene[:fake_x], scene[:fake_y], color=(:black, 0.))
 end
