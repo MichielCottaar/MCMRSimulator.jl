@@ -61,12 +61,50 @@ function fix_type(cylinders::Cylinders, index::Int, original_index::Int; kwargs.
 end
 
 function fix_type(spheres::Spheres, index::Int, original_index::Int; kwargs...)
-    if isglobal(spheres.radius)
-        base_obstructions = fill(Internal.Sphere(spheres.radius.value), length(spheres))
+    # Special case for SWC-like substrates represented as overlapping spheres.
+    # Instead of converting each sphere independently, we build a single
+    # internal object containing all sphere centers and radii.
+    if spheres.overlapping.value
+        radii = if isglobal(spheres.radius)
+            fill(spheres.radius.value, length(spheres))
+        else
+            spheres.radius.value
+        end
+
+        # Overlapping spheres must have explicit positions.
+        if !hasproperty(spheres, :position)
+            error("Overlapping spheres require positions.")
+        end
+
+        positions = if isglobal(spheres.position)
+            fill(spheres.position.value, length(spheres))
+        else
+            spheres.position.value
+        end
+
+        # Convert each sphere to (position, radius) format expected internally.
+        sphere_data = [
+            (SVector{3, Float64}(pos), r)
+            for (pos, r) in zip(positions, radii)
+        ]
+
+        # Create a single internal geometry object for the whole set
+        # of overlapping spheres.
+        base_obstructions = [Internal.OverlappingSpheres(sphere_data)]
+
+        # Positions are already encoded in `sphere_data`, so no additional shift
+        # should be applied here.
+        apply_properties(spheres, base_obstructions, index, original_index;
+            surface="surface", volume="inside", apply_shift=false, kwargs...)
     else
-        base_obstructions = [Internal.Sphere(r) for r in spheres.radius.value]
+        # Standard case: convert each sphere independently.
+        if isglobal(spheres.radius)
+            base_obstructions = fill(Internal.Sphere(spheres.radius.value), length(spheres))
+        else
+            base_obstructions = [Internal.Sphere(r) for r in spheres.radius.value]
+        end
+        apply_properties(spheres, base_obstructions, index, original_index; surface="surface", volume="inside", kwargs...)
     end
-    apply_properties(spheres, base_obstructions, index, original_index; surface="surface", volume="inside", kwargs...)
 end
 
 function fix_type(base_annuli::Annuli, index::Int, original_index::Int; kwargs...)
@@ -115,9 +153,9 @@ This function applies (if appropriate):
 - repeats
 - mesh vertices
 """
-function apply_properties(user_obstructions::ObstructionGroup, internal_obstructions::Vector{<:Internal.FixedObstruction}, index::Int, original_index::Int; surface=nothing, volume=nothing, kwargs...)
+function apply_properties(user_obstructions::ObstructionGroup, internal_obstructions::Vector{<:Internal.FixedObstruction}, index::Int, original_index::Int; surface=nothing, volume=nothing, apply_shift=true, kwargs...)
     # apply shifts
-    if hasproperty(user_obstructions, :position)
+    if apply_shift && hasproperty(user_obstructions, :position)
         shifts = isglobal(user_obstructions.position) ? fill(user_obstructions.position.value, length(user_obstructions)) : user_obstructions.position.value
         if hasproperty(user_obstructions, :repeats) && ~isnothing(user_obstructions.repeats.value)
             shifts = [mod.(s .+ user_obstructions.repeats.value/2, user_obstructions.repeats.value) .- user_obstructions.repeats.value/2 for s in shifts]

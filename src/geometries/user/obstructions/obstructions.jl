@@ -44,10 +44,17 @@ for obstruction_type in (
             Field{Float64}(:susceptibility_aniso, "Anisotropic component of the myelin susceptibility (in ppm).", -0.1),
             Field{Float64}(:lorentz_radius, "Only compute field explicitly for a annuli with this Lorentz radius.", 5.),
         ]),
+    # Sphere geometry definition.
+    # Modified to support SWC-derived substrates represented as overlapping spheres.
     ObstructionType(
         :Sphere; ndim=3, fields=[
-            Field{Float64}(:radius, "Radius of the cylinder.", required=true), 
+            Field{Float64}(:radius, "Radius of the sphere.", required=true),
+
+            # Allows multiple spheres to intersect, which is useful when reconstructing
+            # a cellular substrate from SWC points and radii.
+            Field{Bool}(:overlapping, "Whether overlapping spheres should be treated as permeable in the overlapping region.", false),
         ]),
+    
     ObstructionType(
         :Triangle; plural=:Mesh, ndim=3, include_shift=false, group_volumes=true, fields=[
             Field{MVector{3, Int}}(:triangles, "Each triangle is defined by 3 vertices into the mesh.", required=true),
