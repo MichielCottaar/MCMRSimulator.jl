@@ -108,8 +108,6 @@ function plot_trajectory! end
 
 Plots a given sequence in a sequence diagram.
 
-The recommended way to call this is using `plot_sequence` rather than `plot`, which leads to a cleaner sequence diagram.
-
 The sequence diagram is a 2D plot with time on the x-axis and the different sequence components on the y-axis.
 
 This function will only work if a [`Makie`](https://makie.org) backend is imported.
@@ -272,9 +270,6 @@ function project_on_grid(pp::PlotPlane, snap::Snapshot{1}, ngrid::Int)
     end
     (range(xrange..., ngrid), range(yrange..., ngrid), SpinOrientation.(res ./ hits))
 end
-
-# Helper functions for CLI plotting
-function print_sequence end
 
 
 project_geometry(plot_plane::PlotPlane, geometry::GeometryLike) = project_geometry(plot_plane, fix(geometry))

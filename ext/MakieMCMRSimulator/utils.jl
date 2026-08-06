@@ -3,7 +3,7 @@ import Makie
 import Colors
 import MCMRSimulator.Spins: Spin, SpinOrientation, phase, transverse
 import MCMRSimulator: Snapshot
-import MCMRSimulator.Plot: PlotPlane, print_sequence, Projectable
+import MCMRSimulator.Plot: PlotPlane, Projectable
 
 
 """
@@ -21,10 +21,4 @@ color(spin::Spin{N}; sequence=1, kwargs...) where {N} = color(spin.orientations[
 Makie.args_preferred_axis(::Projectable) = Makie.LScene
 Makie.args_preferred_axis(::PlotPlane) = Makie.Axis
 
-function print_sequence(; sequence_file, output_file, t0, t1, kwargs...)
-    sequence = read_sequence(sequence_file)
-    f = plot_sequence(sequence)
-    xlims!(f.axis, t0, t1)
-    Makie.save(output_file, f)
-end
 end

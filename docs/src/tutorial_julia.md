@@ -53,7 +53,7 @@ The next step is to define a sequence using [MRIBuilder.jl](https://open.win.ox.
 Here we will adopt a diffusion-weighted MRI sequence defined in pulseq.
 ```@example tutorial
 sequence = read_pulseq("dwi_te_80_bval_2.seq", TR=300)
-f = plot_sequence(sequence)
+f = plot(sequence)
 f
 save("tutorial_sequence.png", f); # hide
 nothing # hide

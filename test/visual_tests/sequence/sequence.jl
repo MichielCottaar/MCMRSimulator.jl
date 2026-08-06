@@ -10,14 +10,14 @@
         ("PRESS", "07_PRESS_offcenter.seq"),
     ]
         @testset "$name" begin
-            function plot_sequence(fname)
+            function plot_single_sequence(fname)
                 sequence = mr.read_pulseq(joinpath(pulseq_dir, filename))
                 f = Figure()
                 plot(f[1, 1], sequence)
                 save_rgb(fname, f)
             end
 
-            @visualtest plot_sequence "$dir/$(name).png" !isCI
+            @visualtest plot_single_sequence "$dir/$(name).png" !isCI
         end
     end
 end

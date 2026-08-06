@@ -1,6 +1,6 @@
 module Sequences
 using Makie
-import MCMRSimulator.Plot: plot_sequence, plot_sequence!, SequenceDiagram, normalise, SingleSequenceDiagramLine, duration_diagram
+import MCMRSimulator.Plot: plot_sequence, plot_sequence!, SequenceDiagram, normalise, SingleSequenceDiagramLine, duration_diagram, extend
 import MCMRSimulator.SequenceParts: SequenceWaveform
 import MCMRSimulator.Pulseq: PulseqSequence
 
@@ -42,7 +42,7 @@ function Makie.plot!(scene:: Plot_Sequence)
     end
 
     Makie.register_computation!(scene.attributes, [:sequence_diagram], [:text, :text_x, :text_y, :times, :amplitudes, :event_times, :event_amplitudes, :fake_x, :fake_y]) do inputs, changed, cached
-        sequence_diagram = normalise(inputs.sequence_diagram)
+        sequence_diagram = extend(normalise(inputs.sequence_diagram))
 
         text = String[]
         text_x = Float64[]
@@ -107,14 +107,20 @@ function range_full(spl::SingleSequenceDiagramLine)
     )
 end
 
-function plot_sequence(sequence; figure=(), axis=(xgridvisible=false, ygridvisible=false), kwargs...)
-    f = Figure(; figure...)
-    ax = Axis(f[1, 1]; axis...)
-    p = plot!(ax, sequence; kwargs...)
-    ax.xlabel[] = "Time (ms)"
-    hideydecorations!(ax)
-    hidespines!(ax, :l, :r, :t)
-    return Makie.FigureAxisPlot(f, ax, p)
+function Makie.preferred_axis_attributes(::Type{Axis}, ::Plot_Sequence)
+    return (
+        xlabel = "Time (ms)",
+        xgridvisible = false,
+        ygridvisible = false,
+        ylabelvisible = false,
+        yticklabelsvisible = false,
+        yticksvisible = false,
+        yminorgridvisible = false,
+        yminorticksvisible = false,
+        leftspinevisible = false,
+        rightspinevisible = false,
+        topspinevisible = false,
+    )
 end
 
 end
