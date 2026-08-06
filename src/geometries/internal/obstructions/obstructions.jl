@@ -8,6 +8,7 @@ include("obstruction_intersections.jl")
 include("fixed_obstructions.jl")
 include("walls.jl")
 include("rounds.jl")
+include("OverlappingSphere.jl")
 include("triangles.jl")
 include("shifts.jl")
 
