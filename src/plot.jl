@@ -518,7 +518,11 @@ struct SingleSequenceDiagramLine
     event_amplitudes :: Vector{Float64}
 end
 
-duration_diagram(pl::SingleSequenceDiagramLine) = iszero(length(pl.times)) ? 0. : pl.times[end]
+duration_diagram(pl::SingleSequenceDiagramLine) = max(
+    iszero(length(pl.times)) ? 0. : pl.times[end],
+    iszero(length(pl.event_times)) ? 0. : pl.event_times[end],
+)
+
 SingleSequenceDiagramLine(times::Vector{Float64}, amplitudes::Vector{Float64}) = SingleSequenceDiagramLine(times, amplitudes, Float64[], Float64[])
 
 function SingleSequenceDiagramLine(control_points::AbstractVector{<:Tuple}, duration::Number)
@@ -565,6 +569,32 @@ struct SequenceDiagram
     Gy :: SingleSequenceDiagramLine
     Gz :: SingleSequenceDiagramLine
     ADC :: SingleSequenceDiagramLine
+end
+
+function extend(sd::SingleSequenceDiagramLine, duration::Number)
+    new_times = copy(sd.times)
+    new_amplitudes = copy(sd.amplitudes)
+    if length(sd.times) == 0 || sd.times[1] > 0
+        pushfirst!(new_times, 0.)
+        pushfirst!(new_amplitudes, 0.)
+    end
+    if new_times[end] < duration
+        push!(new_times, duration)
+        push!(new_amplitudes, 0.)
+    end
+    return SingleSequenceDiagramLine(new_times, new_amplitudes, sd.event_times, sd.event_amplitudes)
+end
+
+function extend(sd::SequenceDiagram)
+    duration = duration_diagram(sd)
+    SequenceDiagram(
+        extend(sd.RFx, duration),
+        extend(sd.RFy, duration),
+        extend(sd.Gx, duration),
+        extend(sd.Gy, duration),
+        extend(sd.Gz, duration),
+        extend(sd.ADC, duration),
+    )
 end
 
 normalise(sd::SequenceDiagram) = SequenceDiagram(
