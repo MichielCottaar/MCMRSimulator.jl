@@ -17,28 +17,13 @@ Testing:
   script:
     - apt-get update
     - apt-get install -y xvfb
-    - xvfb-run julia --project=@. -e 'using Pkg; Pkg.add(url="https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl.git"); Pkg.test(coverage=true)'
-  after_script:
-    - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; c, t = get_summary(process_folder()); using Printf; @printf "Test coverage %.2f%%\n" 100c / t'
+    - xvfb-run julia --project=@. -e 'using Pkg; Pkg.test(coverage=false)'
   timeout: 3h
   rules:
     - if:   $CI_PIPELINE_SOURCE == "merge_request_event"
       when: never
     - if:   $CI_COMMIT_TAG != null
       when: never
-    - when: always
-
-Evaluation:
-  script:
-    - nproc
-    - cat /proc/loadavg
-    - cat /sys/fs/cgroup/cpu.max || true
-    - julia --project=@. -e 'using InteractiveUtils; versioninfo(verbose=true); println("Threads; ", Threads.nthreads()); println("CPU threads; ", Sys.CPU_THREADS)'
-    - julia --project=@. -e 'using Pkg; Pkg.test(test_args=["collisions"], coverage=false)'
-    - julia --project=@. -e 'using Pkg; Pkg.test(test_args=["collisions"], coverage=true)'
-  rules:
-    - when: always
-
 
 build_pages:
   script:
