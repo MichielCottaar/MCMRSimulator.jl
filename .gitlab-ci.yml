@@ -34,7 +34,7 @@ Evaluation:
     - free -h
     - cat /proc/loadavg
     - cat /sys/fs/cgroup/cpu.max || true
-    - julia --project=@. -e 'using InteractiveUtils; versioninfo(verbose=true); println("Threads: ", Threads.nthreads()); println("CPU threads: ", Sys.CPU_THREADS)'
+    - julia --project=@. -e 'using InteractiveUtils; versioninfo(verbose=true); println("Threads; ", Threads.nthreads()); println("CPU threads; ", Sys.CPU_THREADS)'
     - julia --project=@. -e 'using Pkg; Pkg.test(test_args=["collisions"], coverage=false)'
     - julia --project=@. -e 'using Pkg; Pkg.test(test_args=["collisions"], coverage=true)'
   rules:
