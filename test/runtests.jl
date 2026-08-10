@@ -79,10 +79,11 @@ end
 
 @testset "MCMRSimulator tests" begin
     for test in tests
+        println("Running $test")
         if test == "plots"
-            include("visual_tests/run_visual_tests.jl")
+            @time include("visual_tests/run_visual_tests.jl")
         else
-            include("test_$test.jl")
+            @time include("test_$test.jl")
         end
     end
 end
