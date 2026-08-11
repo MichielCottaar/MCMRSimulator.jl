@@ -211,7 +211,8 @@ function detect_intersection(g::FixedObstructionGroup{N}, start::SVector{3}, des
         rotate_to_global(g, intersection.normal),
         intersection.inside,
         g.parent_index,
-        index
+        index,
+        intersection.hit_gap
     )
 end
 

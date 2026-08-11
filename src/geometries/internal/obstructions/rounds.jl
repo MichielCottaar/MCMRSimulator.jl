@@ -47,7 +47,8 @@ function detect_intersection(round::Round{N}, start::SVector{N}, dest::SVector{N
     return ObstructionIntersection(
         solution,
         inside ? -normal : normal,
-        inside
+        inside,
+        false
     )
 end
 

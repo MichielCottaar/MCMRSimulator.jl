@@ -11,9 +11,10 @@ struct Intersection
     inside :: Bool
     geometry_index :: Int
     obstruction_index :: Int
+    hit_gap :: Bool
 end
 
-const empty_intersection = Intersection(Inf, zero(SVector{3, Float64}), false, 0, 0)
+const empty_intersection = Intersection(Inf, zero(SVector{3, Float64}), false, 0, 0, false)
 
 has_intersection(intersection::Intersection) = (intersection.distance <= 1) && (intersection.distance >= 0)
 end

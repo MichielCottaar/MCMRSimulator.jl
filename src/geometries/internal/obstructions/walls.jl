@@ -32,7 +32,8 @@ function detect_intersection(::Wall, start::AbstractVector, dest::AbstractVector
     ObstructionIntersection(
         abs(origin) / abs(origin - destination),
         inside ? positive_normal : negative_normal,
-        inside
+        inside,
+        false
     )
 end
 

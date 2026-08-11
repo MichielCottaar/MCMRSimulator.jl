@@ -22,6 +22,7 @@ struct ObstructionIntersection{N}
     distance :: Float64
     normal :: SVector{N, Float64}
     inside :: Bool
+    hit_gap :: Bool
 end
 
 """
@@ -30,9 +31,9 @@ end
 This is a tuple with the ObstructionIntersection for 1, 2, or 3 dimensions.
 """
 const empty_obstruction_intersections = (
-    ObstructionIntersection(Inf, zero(SVector{1}), false),
-    ObstructionIntersection(Inf, zero(SVector{2}), false),
-    ObstructionIntersection(Inf, zero(SVector{3}), false)
+    ObstructionIntersection(Inf, zero(SVector{1}), false, false),
+    ObstructionIntersection(Inf, zero(SVector{2}), false, false),
+    ObstructionIntersection(Inf, zero(SVector{3}), false, false)
 )
 
 """

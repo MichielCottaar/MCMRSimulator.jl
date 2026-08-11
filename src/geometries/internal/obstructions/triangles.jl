@@ -156,7 +156,8 @@ function detect_intersection_partial(triangle::FullTriangle, start::SVector{N}, 
     return (ObstructionIntersection(
         time,
         inside ? -t_normal : t_normal,
-        inside
+        inside,
+        false
     ), partial)
 end
 

@@ -77,6 +77,7 @@ end
 
 
 for symbol in (:permeability, :surface_relaxation, :dwell_time, :surface_density)
+    gap_constant = Symbol("gap_", symbol)
     @eval begin
         """
             $($symbol)(geometry, reflection)
@@ -98,10 +99,20 @@ for symbol in (:permeability, :surface_relaxation, :dwell_time, :surface_density
         end
 
         function $symbol(geometry::FixedGeometry, has_hit::Union{Intersection, Reflection})
+            if has_hit.hit_gap  
+                # This is a gap in the geometry, so return an appropriate value for a gap.
+                # By treating this as a purely permeable surface, we ensure that the transition between inside and outside is still detected.
+                return $gap_constant
+            end
             $symbol(geometry, (has_hit.geometry_index, has_hit.obstruction_index))
         end
     end
 end
+
+const gap_permeability = Inf
+const gap_surface_relaxation = 0.
+const gap_surface_density = 0.
+const gap_dwell_time = 0.
 
 """
     max_timestep_sticking(geometry, diffusivity, scaling)
