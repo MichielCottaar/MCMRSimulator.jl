@@ -64,7 +64,7 @@ isinside(bb::BoundingBox, pos::AbstractVector) = all(pos .>= lower(bb)) && all(p
 
 Returns true if a line connecting `start` to `dest` could intersect with an obstruction in `bounding_box`.
 This function only does some very fast, high-level checks.
-Just because it returns true does not mean that there is an interesection of the obstruction (or even the bounding box) with the line.
+Just because it returns true does not mean that there is an intersection of the obstruction (or even the bounding box) with the line.
 However, if it returns false, there is guaranteed to be no intersection.
 """
 function could_intersect(bb::BoundingBox{1}, start::AbstractVector, dest::AbstractVector)
