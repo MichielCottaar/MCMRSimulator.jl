@@ -1,0 +1,2 @@
+sequence,sequence_index,TR,readout,subset,nspins,longitudinal,transverse,phase,Sx,Sy
+dwi_te_80_bval_2.seq,1,1,1,0,10000,-2.1951329642888595e-12,5108.584036141809,89.47687024386735,46.642444055172824,5108.3711040541575
