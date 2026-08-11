@@ -8,6 +8,7 @@ include("size_scales.jl")
 include("fix.jl")
 include("fix_susceptibility.jl")
 include("load_mesh.jl")
+include("load_swc.jl")
 include("random_distribution.jl")
 include("json.jl")
 include("to_mesh.jl")
@@ -23,5 +24,6 @@ import .Obstructions: ObstructionGroup, IndexedObstruction, nvolumes,
 import .SizeScales: size_scale
 import .RandomDistribution: random_positions_radii
 import .LoadMesh: load_mesh
+import .LoadSWC: SWCFile, SWCNode, read_swc
 import .JSON: write_geometry, read_geometry
 end

@@ -13,6 +13,6 @@ import .User:
     Annulus, Annuli,
     Triangle, Mesh,
     Ring, BendyCylinder,
-    load_mesh, random_positions_radii, nvolumes,
+    load_mesh, SWCFile, SWCNode, read_swc, random_positions_radii, nvolumes,
     write_geometry, read_geometry
 end

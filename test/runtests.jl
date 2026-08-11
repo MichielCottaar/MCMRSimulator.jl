@@ -24,6 +24,7 @@ all_tests = [
     "hierarchical_mri",
     "various",
     "subsets",
+    "swc",
     "plots",
     "cli",
 ]
