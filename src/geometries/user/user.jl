@@ -25,7 +25,7 @@ import .Obstructions: ObstructionGroup, IndexedObstruction, nvolumes,
 import .SizeScales: size_scale
 import .RandomDistribution: random_positions_radii
 import .LoadMesh: load_mesh
-import .LoadSWC: SWCFile, SWCNode, read_swc, read_swc_as_spheres
+import .LoadSWC: SWCFile, SWCNode, read_swc, read_swc_raw
 import .LoadGeometry: read_geometry
 import .JSON: write_geometry, read_geometry_json
 end

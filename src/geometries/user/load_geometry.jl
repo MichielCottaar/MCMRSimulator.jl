@@ -3,7 +3,7 @@ module LoadGeometry
 
 import ..JSON: read_geometry_json
 import ..LoadMesh: load_mesh
-import ..LoadSWC: read_swc_as_spheres
+import ..LoadSWC: read_swc
 
 function _format(format)
     format = lowercase(String(format))
@@ -19,11 +19,7 @@ function _read_geometry(io::IO, format; swc_as_spheres=false, kwargs...)
     elseif format == :ply
         return load_mesh(io; kwargs...)
     elseif format == :swc
-        if swc_as_spheres
-            return read_swc_as_spheres(io; kwargs...)
-        else
-            throw(ArgumentError("Reading SWC files as geometries including the links between spheres is not supported yet. Set `swc_as_spheres` to true if you want to load them as individual overlapping spheres without linking cylinders."))
-        end
+        return read_swc(io; swc_as_spheres=swc_as_spheres, kwargs...)
     end
     throw(ArgumentError("Unsupported geometry format '$format'. Expected :json, :ply, or :swc."))
 end

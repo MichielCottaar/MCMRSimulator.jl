@@ -2,7 +2,6 @@
     SWCNode
     SWCFile
     read_swc
-    read_swc_as_spheres
 
 Representation and loading of files in the standard SWC neuron morphology
 format. Coordinates and radii retain the micrometre units used by SWC files.
@@ -65,14 +64,14 @@ function _validate_node(node, line_number, ids)
 end
 
 """
-    read_swc(filename::AbstractString)
-    read_swc(io::IO)
+    read_swc_raw(filename::AbstractString)
+    read_swc_raw(io::IO)
 
 Read an SWC file from `io` or `filename`.
 
 Blank lines are ignored and comment lines are retained as header or footer lines.
 """
-function read_swc(io::IO)
+function read_swc_raw(io::IO)
     header = String[]
     footer = String[]
     nodes = SWCNode[]
@@ -100,25 +99,33 @@ function read_swc(io::IO)
     SWCFile(header, nodes, footer)
 end
 
-function read_swc(filename::AbstractString)
-    open(read_swc, filename; read=true)
+function read_swc_raw(filename::AbstractString)
+    open(read_swc_raw, filename; read=true)
 end
 
 
 """
-    read_swc_as_spheres(swc_file; kwargs...)
+    read_swc(swc_file; swc_as_spheres=false, kwargs...)
 
 Read an SWC file and return a `Spheres` object with the node positions and radii.
 
 See [`Spheres`](@ref) for the available keyword arguments. 
-The `overlapping` keyword argument is set to `true` by default, as SWC files should allow spins to pass between overlapping spheres.
+
+In the future, this function may be extended to return a more complete representation of the SWC file, including the links between spheres. 
+For now, it only returns the spheres themselves with the `overlapping` keyword set to `true` by default.
+
+For forwards compatibility, the `swc_as_spheres` keyword argument is provided, but it must be set to `true` to avoid an error.
+In the future, this argument may be removed when the function is extended to return a more complete representation of the SWC file.
 """
-function read_swc_as_spheres(swc_file::SWCFile; overlapping=true, kwargs...)
+function read_swc(swc_file::SWCFile; swc_as_spheres=false, kwargs...)
+    if !swc_as_spheres
+        throw(ArgumentError("Reading SWC files as geometries including the links between spheres is not supported yet. Set `swc_as_spheres` to true if you want to load them as individual overlapping spheres without linking cylinders."))
+    end
     radii = [node.radius for node in swc_file.nodes]
     positions = [node.position for node in swc_file.nodes]
-    return Spheres(; position=positions, radius=radii, overlapping=overlapping, kwargs...)
+    return Spheres(; position=positions, radius=radii, overlapping=swc_as_spheres, kwargs...)
 end
 
-read_swc_as_spheres(in_file::Union{IO, AbstractString}; kwargs...) = read_swc_as_spheres(read_swc(in_file); kwargs...)
+read_swc(in_file::Union{IO, AbstractString}; kwargs...) = read_swc(read_swc_raw(in_file); kwargs...)
 
 end

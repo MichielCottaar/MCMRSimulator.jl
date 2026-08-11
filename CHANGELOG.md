@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `v1.1.0` requires Julia 1.12 or later! This is a big change from `v1.0.0` which only supports Julia 1.11.
 ### Added
 - `Spheres` now has an `overlapping` property, which if set to `true` will freely allow spins to pass between overlapping spheres, even if the permeability is not 1.
-- `read_swc_as_spheres` has been added to read an SWC file as a sequence of overlapping spheres.
+- `read_swc` has been added to read an SWC file as a sequence of overlapping spheres. Cylindrical connections between the spheres will be added at a later date.
 - Pulseq support was expanded substantially: more complete parsing, timing validation, extension handling, and `write_pulseq` filename support.
 - `read_pulseq(...; TR=...)` now accepts an explicit TR override.
 - Plotting support was kept in-package and updated across geometry, snapshot, trajectory, off-resonance, and sequence diagrams.

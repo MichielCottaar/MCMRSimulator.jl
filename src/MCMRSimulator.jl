@@ -76,9 +76,9 @@ import .Geometries:
     Sphere, Spheres,
     Ring, BendyCylinder,
     Triangle, Mesh, nvolumes,
-    load_mesh, SWCFile, SWCNode, read_swc, read_swc_as_spheres, fix, fix_susceptibility,
+    load_mesh, SWCFile, SWCNode, read_swc, read_swc_raw, fix, fix_susceptibility,
     random_positions_radii, write_geometry, read_geometry_json, read_geometry
-export Annuli, Cylinders, Walls, Spheres, Mesh, load_mesh, read_swc, read_swc_as_spheres, random_positions_radii, BendyCylinder, write_geometry, read_geometry_json, read_geometry
+export Annuli, Cylinders, Walls, Spheres, Mesh, load_mesh, read_swc, read_swc_raw, random_positions_radii, BendyCylinder, write_geometry, read_geometry_json, read_geometry
 @compat public ObstructionGroup, IndexedObstruction, Annulus, Cylinder, Wall, Sphere, Ring, Triangle, nvolumes, fix_susceptibility, fix, SWCFile, SWCNode 
 
 import .Geometries.Internal: BoundingBox, FixedGeometry, surface_relaxation, surface_density, dwell_time, permeability, FixedObstructionGroup

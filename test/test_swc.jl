@@ -10,7 +10,7 @@
         # end of example
         """
 
-        swc = mr.read_swc(IOBuffer(swc_text))
+        swc = mr.read_swc_raw(IOBuffer(swc_text))
         @test swc isa mr.SWCFile
         @test swc.header == ["# source: example", "# coordinate: micrometers"]
         @test swc.footer == ["# end of example"]
@@ -59,7 +59,7 @@
             open(filename, "w") do io
                 write(io, swc_text)
             end
-            loaded = mr.read_swc(filename)
+            loaded = mr.read_swc_raw(filename)
             @test loaded.header == swc.header
             @test loaded.nodes == swc.nodes
             @test loaded.footer == swc.footer
@@ -69,7 +69,7 @@
     end
 
     @testset "reading an SWC file as spheres" begin
-        cylinder = mr.read_swc_as_spheres(joinpath(@__DIR__, "geometries", "cylinder.swc"), R2_inside=0.1)
+        cylinder = mr.read_swc(joinpath(@__DIR__, "geometries", "cylinder.swc"), R2_inside=0.1, swc_as_spheres=true)
 
         @test cylinder isa mr.Spheres
 

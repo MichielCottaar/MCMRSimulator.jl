@@ -147,7 +147,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     if "seed" in keys(args)
         Random.seed!(args["seed"])
     end
-    geometry = read_geometry(args["geometry"]; swc_as_spheres=args["swc_as_spheres"])
+    geometry = read_geometry(args["geometry"]; swc_as_spheres=args["swc-as-spheres"])
     sequences = read_pulseq.(args["sequence"])
 
     sequence_indices = eachindex(sequences)
