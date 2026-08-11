@@ -4,6 +4,8 @@ All notable changes to MCMRSimulator.jl will be documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+
+## [v1.1.0]
 `v1.1.0` requires Julia 1.12 or later! This is a big change from `v1.0.0` which only supports Julia 1.11.
 ### Added
 - `Spheres` now has an `overlapping` property, which if set to `true` will freely allow spins to pass between overlapping spheres, even if the permeability is not 1.
@@ -173,7 +175,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added citation instructions
 
 
-[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v1.0.0...main
+[Unreleased]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v1.1.0...main
+[v1.1.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v1.0.0...v1.1.0
 [v1.0.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.11.0...v1.0.0
 [v0.11.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.10.0...v0.11.0
 [v0.10.0]: https://git.fmrib.ox.ac.uk/ndcn0236/MCMRSimulator.jl/-/compare/v0.9.0...v0.10.0
