@@ -11,6 +11,7 @@ include("load_mesh.jl")
 include("load_swc.jl")
 include("random_distribution.jl")
 include("json.jl")
+include("load_geometry.jl")
 include("to_mesh.jl")
 import .Fix: fix
 import .FixSusceptibility: fix_susceptibility
@@ -25,5 +26,6 @@ import .SizeScales: size_scale
 import .RandomDistribution: random_positions_radii
 import .LoadMesh: load_mesh
 import .LoadSWC: SWCFile, SWCNode, read_swc, read_swc_as_spheres
-import .JSON: write_geometry, read_geometry
+import .LoadGeometry: read_geometry
+import .JSON: write_geometry, read_geometry_json
 end

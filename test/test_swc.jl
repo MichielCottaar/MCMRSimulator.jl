@@ -20,6 +20,32 @@
         @test swc.nodes[2].radius == 0.5
         @test swc.nodes[3].parent_id == 1
 
+        spheres = mr.read_geometry(IOBuffer(swc_text); format=:swc, swc_as_spheres=true)
+        @test spheres isa mr.Spheres
+        @test length(spheres) == 3
+        @test spheres[1].position == [0., 1., 2.]
+        @test spheres[2].radius == 0.5
+
+        ply_text = """
+        ply
+        format ascii 1.0
+        element vertex 3
+        property float x
+        property float y
+        property float z
+        element face 1
+        property list uchar int vertex_indices
+        end_header
+        0 0 0
+        1 0 0
+        0 1 0
+        3 0 1 2
+        """
+        mesh = mr.read_geometry(IOBuffer(ply_text); format=:ply)
+        @test mesh isa mr.Mesh
+        @test length(mesh.vertices.value) == 3
+        @test length(mesh.triangles) == 1
+
         @test_throws ArgumentError mr.read_swc(IOBuffer("1 1 0 0 0 1 0\n"))
         @test_throws ArgumentError mr.read_swc(IOBuffer("1 1 0 0 0 1 -1\n2 3 0 0 0\n"))
         @test_throws ArgumentError mr.read_swc(IOBuffer("1 1 0 0 0 1 -1\n2 3 0 0 0 1 3\n"))

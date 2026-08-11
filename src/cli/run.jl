@@ -7,7 +7,7 @@ import ArgParse: ArgParseSettings, @add_arg_table!, add_arg_group!, parse_args
 import DataFrames: DataFrame
 import CSV
 import Random
-import ...Geometries.User.JSON: read_geometry
+import ...Geometries.User.LoadGeometry: read_geometry
 import ...Pulseq: read_pulseq
 import ...Simulations: Simulation
 import ...Spins: Snapshot, BoundingBox, longitudinal, transverse, phase, orientation, position
@@ -21,7 +21,7 @@ function add_simulation_definition!(parser)
     @add_arg_table! parser begin
         "geometry"
             required = true
-            help = "JSON file describing the spatial configuration of any obstructions as well as biophysical properties associated with those obstructions. Can be generated using `mcmr geometry`. Alternatively, a mesh file can be provided."
+            help = "Geometry input file. JSON files describe obstructions and their biophysical properties; PLY files provide meshes; SWC files are converted to overlapping spheres."
         "sequence"
             nargs = '*'
             help = "One of more pulseq .seq files describing the sequences to be run."
@@ -37,6 +37,9 @@ function add_simulation_definition!(parser)
             help = "Transverse relaxation in 1/ms. This relaxation rate will at the very least be applied to free, extra-cellular spins. It might be overriden in the 'geometry' for bound spins or spins inside any obstructions."
             arg_type = Float64
             default = 0.
+        "--swc-as-spheres"
+            help = "If set, SWC files will be read as overlapping spheres instead of as a graph of spheres and cylinders."
+            action = :store_true
     end
 end
 
@@ -144,7 +147,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     if "seed" in keys(args)
         Random.seed!(args["seed"])
     end
-    geometry = read_geometry(args["geometry"])
+    geometry = read_geometry(args["geometry"]; swc_as_spheres=args["swc_as_spheres"])
     sequences = read_pulseq.(args["sequence"])
 
     sequence_indices = eachindex(sequences)

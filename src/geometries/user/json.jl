@@ -3,7 +3,7 @@ Supports I/O to and from json
 
 Functions:
 - `write_geometry`
-- `read_geometry`
+- `read_geometry_json`
 """
 module JSON
 import JSON as JSON_pkg
@@ -51,28 +51,29 @@ function write_geometry(filename::AbstractString, geometry)
 end
 
 """
-    read_geometry(filename/io)
+    read_geometry_json(filename/io)
 
 Read geometry from a JSON file.
 """
-function read_geometry(io::IO)
+function read_geometry_json(io::IO)
     obj = JSON_pkg.parse(io)
     parse_geometry(obj)
 end
 
-function read_geometry(filename::AbstractString)
-    if startswith(filename, "  {\n") || startswith(filename, "[\n")
+function read_geometry_json(filename::AbstractString)
+    stripped = strip(filename)
+    if startswith(stripped, "{") || startswith(stripped, "[")
         obj = JSON_pkg.parse(filename)
         return parse_geometry(obj)
     end
-    open(read_geometry, filename; read=true)
+    open(read_geometry_json, filename; read=true)
 end
 
-function parse_geometry(v::Vector)
+function parse_geometry(v::AbstractVector)
     return parse_geometry.(v)
 end
 
-function parse_geometry(d::Dict)
+function parse_geometry(d::AbstractDict)
     type_name = Symbol(d["type"])
     constructor = getproperty(Obstructions, type_name)
     kwargs = Dict{Symbol, Any}()

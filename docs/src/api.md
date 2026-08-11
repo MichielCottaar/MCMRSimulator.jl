@@ -40,6 +40,10 @@ MCMRSimulator.Ring
 ### Geometry helper functions
 ```@docs
 load_mesh
+read_geometry
+read_geometry_json
+read_swc
+read_swc_as_spheres
 random_positions_radii
 ```
 

@@ -9,7 +9,7 @@ import Random
 import CSV
 import Tables
 import ...Geometries.User.Obstructions: Walls, Spheres, Cylinders, Annuli, BendyCylinder, fields, field_to_docs, Field, ObstructionGroup, FieldValue
-import ...Geometries.User.JSON: write_geometry, read_geometry
+import ...Geometries.User.JSON: write_geometry, read_geometry_json
 import ...Geometries.User.RandomDistribution: random_positions_radii
 import ...Methods: get_rotation
 
@@ -350,7 +350,7 @@ end
 function run_merge(args)
     res = ObstructionGroup[]
     for input_file in args["input_file"]
-        input_geom = read_geometry(input_file)
+        input_geom = read_geometry_json(input_file)
         if input_geom isa ObstructionGroup
             push!(res, input_geom)
         else
