@@ -253,6 +253,24 @@
             @test all(xfinal .>= 0.)
             @test all(xfinal .<= 1.)
         end
+        @testset "Two overlapping spheres" begin
+            Random.seed!(1234)
+            base_spheres = mr.Spheres(radius=1., position=[[0, 0, 0], [1.5, 0, 0]])
+            overlap_spheres = mr.Spheres(radius=1., position=[[0, 0, 0], [1.5, 0, 0]], overlapping=true)
+            snap = mr.Snapshot([mr.Spin(position=zeros(3)) for _ in 1:300])
+
+            base_final = mr.evolve(snap, mr.Simulation([], geometry=base_spheres, diffusivity=3.), 3.)
+            overlap_final = mr.evolve(snap, mr.Simulation([], geometry=overlap_spheres, diffusivity=3.), 3.)
+
+            @test all(length(isin) == 1 && (1, 1) in isin for isin in mr.isinside(mr.fix(base_spheres), base_final))
+
+            @test any(length(isin) == 2 for isin in mr.isinside(mr.fix(base_spheres), overlap_final))
+            @test any((1, 2) in isin for isin in mr.isinside(mr.fix(base_spheres), overlap_final))
+
+            @test maximum([pos[1] for pos in mr.position(base_final)]) < 1.
+            @test maximum([pos[1] for pos in mr.position(overlap_final)]) > 1.
+
+        end
     end
     if false
         @testset "Test spiral collision detection" begin
