@@ -49,13 +49,28 @@ function MRIProperties(full_geometry::FixedGeometry, inside_geometry::FixedGeome
     for group in inside_geometry
         props = group.volume
         indices = isinside(group, position, stuck_to)
-        for index in indices
-            res.R1 += get_value(Val(:R1), props, index)
-            res.R2 += get_value(Val(:R2), props, index)
-            res.off_resonance += get_value(Val(:off_resonance), props, index)
-        end
+        _add_R1!(res, group, indices)
+        _add_R2!(res, group, indices)
+        _add_off_resonance!(res, group, indices)
     end
     return res
+end
+
+for symbol in (:R1, :R2, :off_resonance)
+    add_symbol = Symbol("_add_", symbol, "!")
+    @eval begin
+        function $add_symbol(res::MRIProperties, group::FixedObstructionGroup, indices::Vector{<:Integer})
+            props = group.volume
+            if props.$symbol isa Vector
+                for index in indices
+                    res.$symbol += props.$symbol[index]
+                end
+            elseif length(indices) > 0
+                # For single group R1 value, add it once irrespective of the number of obstructions the spin is in
+                res.$symbol += props.$symbol
+            end
+        end
+    end
 end
 
 function get_value(::Val{S}, properties::NamedTuple, index::Integer) where {S}

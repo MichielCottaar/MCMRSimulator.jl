@@ -6,12 +6,14 @@ For example, one such flag is the `diffusivity`, which can be set as a keyword a
 MRI properties determine the spin evolution for free and stuck particles. They include:
 - the longitudinal relaxation rate `R1`
 - the transverse relaxation rate `R2`
-- the global `off_resonance` field (i.e., any off-resonance not caused by the sequence or the geometry)
+- the global `off_resonance` field (i.e., any off-resonance not caused by the sequence or the geometry magnetic susceptibility)
 At the [`Simulation`](@ref) level these parameters can be set by supplying the `R1`, `R2`, or `off_resonance` flags (see [`MCMRSimulator.GlobalProperties`](@ref)), such as:
 ```julia
 simulation = Simulation(sequences, R2=1/80)
 ```
 These MRI properties can be locally altered when defining the [geometry](@ref geometry). In the geometry they can be seperately set for spins stuck to the geometry surface or those spins that are inside specific objects in the geometry. The total relaxation rate (and off-resonance field) is set by the sum of the global value, the value set for any surface the spin is stuck to, and the value set for any obstruction that the spin is inside of. A single spin might be inside of multiple obstructions at once, if they overlap. In that case, all of the overlapping compartments will be considered. For the off-resonance field there might also be a contribution of the magnetic suscpetibility of any [`Cylinders`](@ref), [`Annuli`](@ref), or [`Mesh`](@ref).
+
+There is a subtle difference between setting these parameters for a whole group of spheres at once (`Spheres(..., R2_inside=0.1)`) or for each sphere individually (`Spherews(..., R2_inside=[0.1, 0.1, 0.1])`). The former will increase the `R2` within the whole `Spheres` object uniformly by 0.1. The latter will raise the `R2` within each sphere by 0.1. This means that in the latter case if the spin is within multiple sphere it will increase by 0.1 for each sphere it is in!
 
 If not set at the global or local level, there will be no longitudinal or transverse relaxation and there will be no off-resonance field.
 
