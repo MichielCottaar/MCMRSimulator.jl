@@ -19,12 +19,9 @@ import .Reflections: Reflection, direction, previous_hit, has_hit, has_intersect
 import .Intersections: Intersection, empty_intersection
 import .HitGrids: HitGrid, detect_intersection_grid, obstructions
 
-# Added `OverlappingSpheres` so the new internal geometry type is available
-# through the `Internal` module. This is required for substrates represented
-# as unions of overlapping spheres.
 import .Obstructions: 
     FixedObstruction, ObstructionIntersection, empty_obstruction_intersections,
-    Wall, Round, Cylinder, Sphere, OverlappingSpheres, Triangle, IndexTriangle, FullTriangle, Shift,
+    Wall, Round, Cylinder, Sphere, OverlappingSphere, Triangle, IndexTriangle, FullTriangle, Shift,
     has_inside, radius, obstruction_type, size_scale, get_quadrant, random_surface_positions
 
 import .BoundingBoxes: BoundingBox, could_intersect, lower, upper
