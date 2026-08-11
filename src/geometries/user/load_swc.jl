@@ -2,6 +2,7 @@
     SWCNode
     SWCFile
     read_swc
+    read_swc_as_spheres
 
 Representation and loading of files in the standard SWC neuron morphology
 format. Coordinates and radii retain the micrometre units used by SWC files.
@@ -9,6 +10,7 @@ format. Coordinates and radii retain the micrometre units used by SWC files.
 module LoadSWC
 
 import StaticArrays: SVector
+import ..Obstructions: Spheres
 
 """One row of an SWC file."""
 struct SWCNode
@@ -101,5 +103,22 @@ end
 function read_swc(filename::AbstractString)
     open(read_swc, filename; read=true)
 end
+
+
+"""
+    read_swc_as_spheres(swc_file; kwargs...)
+
+Read an SWC file and return a `Spheres` object with the node positions and radii.
+
+See [`Spheres`](@ref) for the available keyword arguments. 
+The `overlapping` keyword argument is set to `true` by default, as SWC files should allow spins to pass between overlapping spheres.
+"""
+function read_swc_as_spheres(swc_file::SWCFile; overlapping=true, kwargs...)
+    radii = [node.radius for node in swc_file.nodes]
+    positions = [node.position for node in swc_file.nodes]
+    return Spheres(; position=positions, radius=radii, overlapping=overlapping, kwargs...)
+end
+
+read_swc_as_spheres(in_file::Union{IO, AbstractString}; kwargs...) = read_swc_as_spheres(read_swc(in_file); kwargs...)
 
 end
