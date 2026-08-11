@@ -181,5 +181,24 @@ end
             end
         end
     end
+    @testset "Surface density of overlapping spheres" begin
+        for overlapping in (true, false)
+            @testset "Overlapping = $overlapping" begin
+                Random.seed!(1234)
+                geometry = mr.Spheres(radius=1., position=[[0, 0, 0], [0.5, 0, 0]], overlapping=overlapping, surface_density=1., dwell_time=1.)
+                s = mr.Simulation([], geometry=geometry)
+                snap = mr.Snapshot(100000, s, 1.5)
+
+                surface_area = if overlapping
+                    5π
+                else
+                    8π
+                end
+                fraction_stuck = surface_area / (surface_area + 3^3)
+                @show sum(mr.stuck.(snap)) / length(snap) fraction_stuck
+                @test sum(mr.stuck.(snap)) / length(snap) ≈ fraction_stuck rtol=0.02
+            end
+        end
+    end
 end
 end
