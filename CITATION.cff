@@ -11,6 +11,9 @@ identifiers:
   - description: "This is a collection of all archived snapshots of MCMRSimulator.jl"
     type: doi
     value: 10.5281/zenodo.7318656
+  - description: "This is the archived snapshot of version 1.0.0 of MCMRSimulator.jl"
+    type: doi
+    value: 10.5281/zenodo.21893005
   - description: "This is the archived snapshot of version 0.10.0 of MCMRSimulator.jl"
     type: doi
     value: 10.5281/zenodo.13235142
