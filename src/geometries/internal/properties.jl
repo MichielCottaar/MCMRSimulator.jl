@@ -114,7 +114,7 @@ for symbol in (:permeability, :surface_relaxation, :dwell_time, :surface_density
         end
 
         function $symbol(geometry::FixedGeometry, has_hit::Union{Intersection, Reflection})
-            if has_hit.hit_gap  
+            if has_hit isa Intersection && has_hit.hit_gap  
                 # This is a gap in the geometry, so return an appropriate value for a gap.
                 # By treating this as a purely permeable surface, we ensure that the transition between inside and outside is still detected.
                 return $gap_constant
