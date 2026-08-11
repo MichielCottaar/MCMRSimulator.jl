@@ -4,7 +4,10 @@ All notable changes to MCMRSimulator.jl will be documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+`v1.1.0` requires Julia 1.12 or later! This is a big change from `v1.0.0` which only supports Julia 1.11.
 ### Added
+- `Spheres` now has an `overlapping` property, which if set to `true` will freely allow spins to pass between overlapping spheres, even if the permeability is not 1.
+- `read_swc_as_spheres` has been added to read an SWC file as a sequence of overlapping spheres.
 - Pulseq support was expanded substantially: more complete parsing, timing validation, extension handling, and `write_pulseq` filename support.
 - `read_pulseq(...; TR=...)` now accepts an explicit TR override.
 - Plotting support was kept in-package and updated across geometry, snapshot, trajectory, off-resonance, and sequence diagrams.
@@ -12,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - This package no longer depends on MRIBuilder to load, run, or plot sequences and now uses a local `read_pulseq` / plotting APIs. MRIBuilder sequences are still supported.
 - The CLI app install workflow now follows the new Julia standard: `pkg> app add MCMRSimulator`. This will install the `mcmr` tool in `~/.julia/bin`. Please ensure that is in your PATH.
 - The CLI now uses the updated interface and no longer exposes `--bvec`/`--bvecs`.
+- The syntax `Spheres(..., R2_inside=0.1)` will now increase the `R2` within the spheres by 0.1 irrespective of how many spheres it is in. This is different from the old behaviour, where the `R2` was raised by 0.1 for each sphere you are in. Use `Spheres(..., R2_inside=fill(0.1, #number of spheres))` to get the old behaviour. The same is true for `R1_inside` and `off_resonance_inside`.
 
 ## [v1.0.0]
 ### Fixed
