@@ -91,12 +91,20 @@ end
 obstructions(g::FixedObstructionGroup) = obstructions(g.hit_grid)
 Base.length(g::FixedObstructionGroup) = length(obstructions(g))
 
+function geometry_mesh(g::FixedObstructionGroup)
+    vertices = g.args.vertices
+    triangles = [SVector{3, Int}(obstruction.indices) for obstruction in obstructions(g)]
+    return (vertices=vertices, triangles=triangles)
+end
+
 """
     FixedGeometry([obstruction_groups...])
 
 A collection of [`FixedObstructionGroup`](@ref) objects each reperesenting part of the geometry.
 """
 const FixedGeometry{N} = NTuple{N, FixedObstructionGroup}
+
+geometry_mesh(geometry::FixedGeometry) = geometry_mesh.(geometry)
 
 repeating(::FixedObstructionGroup{N, R}) where {N, R} = R <: SVector{N, Float64}
 repeating(::Type{<:FixedObstructionGroup{N, R}}) where {N, R} = R <: SVector{N, Float64}

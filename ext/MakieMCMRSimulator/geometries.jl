@@ -5,7 +5,7 @@ import LinearAlgebra: cross, ⋅, norm
 import Colors
 import GeometryBasics
 import MCMRSimulator.Plot: PlotPlane, GeometryLike, project_geometry, plot_geometry, plot_geometry!
-import MCMRSimulator.Geometries.Internal: FixedGeometry, FixedObstructionGroup, FixedObstruction, Wall, Cylinder, Sphere, obstructions
+import MCMRSimulator.Geometries.Internal: FixedGeometry, geometry_mesh
 import MCMRSimulator.Geometries: ObstructionGroup, fix, Mesh, Cylinders, Spheres, Walls
 
 @recipe Plot_Geometry (plot_plane::Union{Nothing, PlotPlane}, geometry::GeometryLike) begin
@@ -58,16 +58,17 @@ fix_and_mesh(geom::ObstructionGroup; height, nsamples) = fix(Mesh(geom))
 function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:Nothing, <:GeometryLike}})
     Makie.register_computation!(scene.attributes, [:geometry, :color, :height, :nsamples], [:vertices, :triangles, :mesh_color]) do inputs, changed, cached
         mesh = fix_and_mesh(inputs[:geometry]; height=inputs[:height], nsamples=inputs[:nsamples])
-        mesh_color_arr = Colors.distinguishable_colors(length(mesh))
+        mesh_data = geometry_mesh(mesh)
+        mesh_color_arr = Colors.distinguishable_colors(length(mesh_data))
         vertices = GeometryBasics.Point{3, Float64}[]
         triangles = GeometryBasics.TriangleFace{Int}[]
         colors = Any[]
 
-        for (index, group) in enumerate(mesh)
-            append!(triangles, [GeometryBasics.TriangleFace{Int}(o.indices .+ length(vertices)) for o in obstructions(group)])
-            append!(vertices, GeometryBasics.Point{3, Float64}.(group.args.vertices))
+        for (index, group) in enumerate(mesh_data)
+            append!(triangles, [GeometryBasics.TriangleFace{Int}(t .+ length(vertices)) for t in group.triangles])
+            append!(vertices, GeometryBasics.Point{3, Float64}.(group.vertices))
             patch_color = inputs[:color] == Makie.automatic ? mesh_color_arr[index] : inputs[:color]
-            append!(colors, [patch_color for _ in group.args.vertices])
+            append!(colors, [patch_color for _ in group.vertices])
         end
         return (vertices, triangles, colors)
     end

@@ -37,6 +37,16 @@ function box_mesh(;center=[0, 0, 0], size=[1, 1, 1], kwargs...)
     return mr.Mesh(; vertices=map(v->((v .* size) .+ c2), vertices), triangles=triangles, kwargs...)
 end
 
+@testset "Extract renderable geometry mesh" begin
+    geometry = mr.fix(box_mesh())
+    mesh = mr.Geometries.Internal.geometry_mesh(geometry)
+
+    @test length(mesh) == 1
+    @test length(mesh[1].vertices) == 8
+    @test length(mesh[1].triangles) == 12
+    @test sort(mesh[1].triangles[1]) == [1, 2, 3]
+end
+
 @testset "Computing normals" begin
     normal = mr.Geometries.Internal.Obstructions.Triangles.normal
     @test normal([0, 0, 0], [1, 0, 0], [0, 1, 0]) ≈ [0, 0, 1]
