@@ -23,6 +23,16 @@ struct InternalCenteredBoundingRect{N} <: InternalBoundingBox{N}
     half_size::SVector{N, Float64}
 end
 
+_is_centered(::InternalCenteredBoundingCube) = true
+_is_centered(::InternalBoundingCube) = false
+_is_centered(::InternalCenteredBoundingRect) = true
+_is_centered(::InternalBoundingRect) = false
+
+_is_cube(::InternalCenteredBoundingCube) = true
+_is_cube(::InternalBoundingCube) = true
+_is_cube(::InternalCenteredBoundingRect) = false
+_is_cube(::InternalBoundingRect) = false
+
 InternalBoundingCube(center::AbstractVector{<:Real}, half_size::Real) =
     InternalBoundingCube{length(center)}(SVector{length(center), Float64}(center), Float64(half_size))
 
@@ -31,6 +41,21 @@ InternalBoundingRect(center::AbstractVector{<:Real}, half_size::AbstractVector{<
         SVector{length(center), Float64}(center),
         SVector{length(center), Float64}(half_size),
     )
+
+shift(box::InternalCenteredBoundingCube{N}, displacement::SVector{N, Float64}) where {N} =
+    InternalBoundingCube{N}(displacement, box.half_size)
+
+shift(box::InternalBoundingCube{N}, displacement::SVector{N, Float64}) where {N} =
+    InternalBoundingCube{N}(box.center + displacement, box.half_size)
+
+shift(box::InternalCenteredBoundingRect{N}, displacement::SVector{N, Float64}) where {N} =
+    InternalBoundingRect{N}(displacement, box.half_size)
+
+shift(box::InternalBoundingRect{N}, displacement::SVector{N, Float64}) where {N} =
+    InternalBoundingRect{N}(box.center + displacement, box.half_size)
+
+shift(box::InternalBoundingBox{N}, displacement::AbstractVector{<:Real}) where {N} =
+    shift(box, SVector{N, Float64}(displacement))
 
 function InternalBoundingBox(half_size::Real, center=nothing)
     if isnothing(center)
@@ -51,15 +76,14 @@ end
 lower(box::InternalBoundingBox) = _center(box) - _half_size(box)
 upper(box::InternalBoundingBox) = _center(box) + _half_size(box)
 
-_center(box::InternalBoundingCube) = box.center
-_center(::InternalCenteredBoundingCube{N}) where {N} = zero(SVector{N, Float64})
-_center(box::InternalBoundingRect) = box.center
-_center(::InternalCenteredBoundingRect{N}) where {N} = zero(SVector{N, Float64})
+_center(box::InternalBoundingBox{N}) where {N} = _is_centered(box) ?
+    zero(SVector{N, Float64}) : _stored_center(box)
 
-_half_size(box::InternalBoundingCube{N}) where {N} = SVector{N, Float64}(fill(box.half_size, N))
-_half_size(box::InternalCenteredBoundingCube{N}) where {N} = SVector{N, Float64}(fill(box.half_size, N))
-_half_size(box::InternalBoundingRect) = box.half_size
-_half_size(box::InternalCenteredBoundingRect) = box.half_size
+_stored_center(box::InternalBoundingCube) = box.center
+_stored_center(box::InternalBoundingRect) = box.center
+
+_half_size(box::InternalBoundingBox{N}) where {N} = _is_cube(box) ?
+    SVector{N, Float64}(fill(box.half_size, N)) : box.half_size
 
 isinside(box::InternalBoundingBox, position::AbstractVector) =
     all(position .>= lower(box)) && all(position .<= upper(box))

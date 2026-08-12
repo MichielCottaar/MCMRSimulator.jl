@@ -79,6 +79,18 @@ const BoundingBoxes = GI.InternalBoundingBoxes
         @test BoundingBoxes.could_intersect(box, BoundingBoxes.lower(box), BoundingBoxes.upper(box))
         @test BoundingBoxes.does_intersect(box, BoundingBoxes.lower(box), BoundingBoxes.upper(box))
     end
+    @test BoundingBoxes._is_centered(centered_cube)
+    @test !BoundingBoxes._is_centered(cube)
+    @test BoundingBoxes._is_centered(centered_rect)
+    @test !BoundingBoxes._is_centered(rect)
+    @test BoundingBoxes._is_cube(centered_cube)
+    @test BoundingBoxes._is_cube(cube)
+    @test !BoundingBoxes._is_cube(centered_rect)
+    @test !BoundingBoxes._is_cube(rect)
+    @test BoundingBoxes._center(centered_cube) == zero(SVector{3, Float64})
+    @test BoundingBoxes._center(cube) == SVector(1.0, 2.0, 3.0)
+    @test BoundingBoxes._center(centered_rect) == zero(SVector{3, Float64})
+    @test BoundingBoxes._center(rect) == SVector(1.0, 2.0, 3.0)
     @test BoundingBoxes.lower(cube) == SVector(-1.0, 0.0, 1.0)
     @test BoundingBoxes.upper(cube) == SVector(3.0, 4.0, 5.0)
     @test BoundingBoxes.lower(centered_cube) == SVector(-2.0, -2.0, -2.0)
@@ -103,4 +115,19 @@ const BoundingBoxes = GI.InternalBoundingBoxes
     @test BoundingBoxes.InternalBoundingBox(2.0, [1.0, 2.0, 3.0]) isa BoundingBoxes.InternalBoundingCube{3}
     @test BoundingBoxes.InternalBoundingBox([1.0, 2.0, 3.0]) isa BoundingBoxes.InternalCenteredBoundingRect{3}
     @test BoundingBoxes.InternalBoundingBox([1.0, 2.0, 3.0], [4.0, 5.0, 6.0]) isa BoundingBoxes.InternalBoundingRect{3}
+
+    displacement = SVector(4.0, 5.0, 6.0)
+    shifted_centered_cube = BoundingBoxes.shift(centered_cube, displacement)
+    shifted_cube = BoundingBoxes.shift(cube, displacement)
+    shifted_centered_rect = BoundingBoxes.shift(centered_rect, displacement)
+    shifted_rect = BoundingBoxes.shift(rect, displacement)
+    @test shifted_centered_cube isa BoundingBoxes.InternalBoundingCube{3}
+    @test shifted_cube isa BoundingBoxes.InternalBoundingCube{3}
+    @test shifted_centered_rect isa BoundingBoxes.InternalBoundingRect{3}
+    @test shifted_rect isa BoundingBoxes.InternalBoundingRect{3}
+    @test BoundingBoxes.lower(shifted_centered_cube) == SVector(2.0, 3.0, 4.0)
+    @test BoundingBoxes.lower(shifted_cube) == SVector(3.0, 5.0, 7.0)
+    @test BoundingBoxes.lower(shifted_centered_rect) == SVector(3.0, 3.0, 3.0)
+    @test BoundingBoxes.lower(shifted_rect) == SVector(4.0, 5.0, 6.0)
+    @test typeof(BoundingBoxes.shift(centered_cube, [4.0, 5.0, 6.0])) === typeof(shifted_centered_cube)
 end
