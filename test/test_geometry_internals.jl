@@ -6,6 +6,7 @@ const Transformations = GI.PhysicalGeometries.Transformations
 const Shift = Transformations.Shift
 const Rotate = Transformations.Rotate
 const Project = Transformations.Project
+const BoundingBoxes = GI.InternalBoundingBoxes
 
 @testset "Geometry internals" begin
     struct TestGeometry{N} <: PhysicalGeometry{N}
@@ -65,4 +66,41 @@ const Project = Transformations.Project
     projection_z = Project{3, 1}()
     @test Transformations.forward_position(projection_z, SVector(1.0, 2.0, 3.0)) == SVector(3.0)
     @test_throws ArgumentError Project{2, 1}()
+
+    cube = BoundingBoxes.InternalBoundingCube([1.0, 2.0, 3.0], 2.0)
+    centered_cube = BoundingBoxes.InternalCenteredBoundingCube{3}(2.0)
+    rect = BoundingBoxes.InternalBoundingRect([1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
+    centered_rect = BoundingBoxes.InternalCenteredBoundingRect{3}([1.0, 2.0, 3.0])
+
+    for box in (cube, centered_cube, rect, centered_rect)
+        @test box isa BoundingBoxes.InternalBoundingBox{3}
+        @test length(BoundingBoxes.corners(box)) == 8
+        @test all(BoundingBoxes.isinside(box, corner) for corner in BoundingBoxes.corners(box))
+        @test BoundingBoxes.could_intersect(box, BoundingBoxes.lower(box), BoundingBoxes.upper(box))
+        @test BoundingBoxes.does_intersect(box, BoundingBoxes.lower(box), BoundingBoxes.upper(box))
+    end
+    @test BoundingBoxes.lower(cube) == SVector(-1.0, 0.0, 1.0)
+    @test BoundingBoxes.upper(cube) == SVector(3.0, 4.0, 5.0)
+    @test BoundingBoxes.lower(centered_cube) == SVector(-2.0, -2.0, -2.0)
+    @test BoundingBoxes.upper(centered_cube) == SVector(2.0, 2.0, 2.0)
+    @test BoundingBoxes.lower(rect) == SVector(0.0, 0.0, 0.0)
+    @test BoundingBoxes.upper(rect) == SVector(2.0, 4.0, 6.0)
+    @test BoundingBoxes.lower(centered_rect) == SVector(-1.0, -2.0, -3.0)
+    @test BoundingBoxes.upper(centered_rect) == SVector(1.0, 2.0, 3.0)
+    @test !BoundingBoxes.could_intersect(centered_cube, SVector(3.0, 3.0, 3.0), SVector(4.0, 4.0, 4.0))
+    @test BoundingBoxes.could_intersect(
+        centered_cube,
+        SVector(-3.0, 3.0, 0.0),
+        SVector(3.0, -100.0, 0.0),
+    )
+    @test !BoundingBoxes.does_intersect(
+        centered_cube,
+        SVector(-3.0, 3.0, 0.0),
+        SVector(3.0, -100.0, 0.0),
+    )
+
+    @test BoundingBoxes.InternalBoundingBox(2.0) isa BoundingBoxes.InternalCenteredBoundingCube{3}
+    @test BoundingBoxes.InternalBoundingBox(2.0, [1.0, 2.0, 3.0]) isa BoundingBoxes.InternalBoundingCube{3}
+    @test BoundingBoxes.InternalBoundingBox([1.0, 2.0, 3.0]) isa BoundingBoxes.InternalCenteredBoundingRect{3}
+    @test BoundingBoxes.InternalBoundingBox([1.0, 2.0, 3.0], [4.0, 5.0, 6.0]) isa BoundingBoxes.InternalBoundingRect{3}
 end
