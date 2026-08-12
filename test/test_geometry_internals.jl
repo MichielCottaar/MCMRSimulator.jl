@@ -45,26 +45,25 @@ const BoundingBoxes = GI.InternalBoundingBoxes
     position = SVector(4.0, 5.0, 6.0)
     normal = SVector(0.0, 1.0, 0.0)
     @test shift isa Transformations.Transformation{3, 3}
-    @test Transformations.forward_position(shift, position) == SVector(5.0, 7.0, 9.0)
-    @test Transformations.backward_position(shift, position) == SVector(3.0, 3.0, 3.0)
+    @test Transformations.forward(shift, position) == SVector(5.0, 7.0, 9.0)
+    @test Transformations.backward(shift, position) == SVector(3.0, 3.0, 3.0)
     @test Transformations.forward_normal(shift, normal) == normal
     @test Transformations.backward_normal(shift, normal) == normal
-
     rotation = Rotate(SMatrix{2, 2, Float64}([0.0 -1.0; 1.0 0.0]))
     position_2d = SVector(1.0, 2.0)
-    @test Transformations.forward_position(rotation, position_2d) == SVector(-2.0, 1.0)
-    @test Transformations.backward_position(rotation, SVector(-2.0, 1.0)) == position_2d
+    @test Transformations.forward(rotation, position_2d) == SVector(-2.0, 1.0)
+    @test Transformations.backward(rotation, SVector(-2.0, 1.0)) == position_2d
     @test Transformations.forward_normal(rotation, position_2d) == SVector(-2.0, 1.0)
 
     projection = Project{3, 2}()
     @test projection isa Transformations.Transformation{3, 2}
-    @test Transformations.forward_position(projection, SVector(1.0, 2.0, 3.0)) == SVector(1.0, 2.0)
-    @test_throws ArgumentError Transformations.backward_position(projection, SVector(1.0, 2.0))
+    @test Transformations.forward(projection, SVector(1.0, 2.0, 3.0)) == SVector(1.0, 2.0)
+    @test_throws ArgumentError Transformations.backward(projection, SVector(1.0, 2.0))
     @test_throws ArgumentError Transformations.forward_normal(projection, SVector(1.0, 2.0, 3.0))
     @test_throws ArgumentError Transformations.backward_normal(projection, SVector(1.0, 2.0))
 
     projection_z = Project{3, 1}()
-    @test Transformations.forward_position(projection_z, SVector(1.0, 2.0, 3.0)) == SVector(3.0)
+    @test Transformations.forward(projection_z, SVector(1.0, 2.0, 3.0)) == SVector(3.0)
     @test_throws ArgumentError Project{2, 1}()
 
     cube = BoundingBoxes.InternalBoundingCube([1.0, 2.0, 3.0], 2.0)
@@ -121,6 +120,11 @@ const BoundingBoxes = GI.InternalBoundingBoxes
     shifted_cube = BoundingBoxes.shift(cube, displacement)
     shifted_centered_rect = BoundingBoxes.shift(centered_rect, displacement)
     shifted_rect = BoundingBoxes.shift(rect, displacement)
+    @test Transformations.forward(shift, centered_cube) isa BoundingBoxes.InternalBoundingCube{3}
+    transformed_centered_cube = Transformations.forward(shift, centered_cube)
+    recovered_centered_cube = Transformations.backward(shift, transformed_centered_cube)
+    @test BoundingBoxes.lower(recovered_centered_cube) == BoundingBoxes.lower(centered_cube)
+    @test BoundingBoxes.upper(recovered_centered_cube) == BoundingBoxes.upper(centered_cube)
     @test shifted_centered_cube isa BoundingBoxes.InternalBoundingCube{3}
     @test shifted_cube isa BoundingBoxes.InternalBoundingCube{3}
     @test shifted_centered_rect isa BoundingBoxes.InternalBoundingRect{3}
@@ -130,4 +134,13 @@ const BoundingBoxes = GI.InternalBoundingBoxes
     @test BoundingBoxes.lower(shifted_centered_rect) == SVector(3.0, 3.0, 3.0)
     @test BoundingBoxes.lower(shifted_rect) == SVector(4.0, 5.0, 6.0)
     @test typeof(BoundingBoxes.shift(centered_cube, [4.0, 5.0, 6.0])) === typeof(shifted_centered_cube)
+    @test Transformations.forward(projection, centered_cube) isa BoundingBoxes.InternalCenteredBoundingCube{2}
+    @test Transformations.forward(projection_z, centered_cube) isa BoundingBoxes.InternalCenteredBoundingCube{1}
+    @test_throws ArgumentError Transformations.backward(projection, centered_cube)
+
+    rotation_3d = Rotate(SMatrix{3, 3, Float64}(I))
+    rotated_box = Transformations.forward(rotation_3d, centered_cube)
+    @test rotated_box isa BoundingBoxes.InternalCenteredBoundingRect{3}
+    @test all(BoundingBoxes.isinside(rotated_box, Transformations.forward(rotation_3d, corner)) for corner in BoundingBoxes.corners(centered_cube))
+    @test Transformations.backward(rotation_3d, rotated_box) isa BoundingBoxes.InternalCenteredBoundingRect{3}
 end
