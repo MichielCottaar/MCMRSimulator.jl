@@ -24,6 +24,25 @@ end
 Shift(shift::AbstractVector{<:Real}) = Shift(SVector{length(shift), Float64}(shift))
 
 """
+    Scale{N}(scale)
+
+Uniformly scale positions by `scale` in `N` dimensions. The inverse scale is
+stored to avoid divisions during backward transformations.
+"""
+struct Scale{N} <: Transformation{N, N}
+    scale::Float64
+    inverse_scale::Float64
+
+    function Scale{N}(scale::Real) where {N}
+        scale == 0 && throw(ArgumentError("a Scale transformation requires a nonzero scale"))
+        scale = Float64(scale)
+        return new{N}(scale, inv(scale))
+    end
+end
+
+Scale(scale::Real, ::Val{N}) where {N} = Scale{N}(scale)
+
+"""
     Rotate{N}(matrix)
 
 Apply the orthogonal `N`-dimensional transformation represented by `matrix`.
@@ -71,11 +90,37 @@ backward(transformation::Shift, position) = position - transformation.shift
 forward_normal(::Shift, normal) = normal
 backward_normal(::Shift, normal) = normal
 
+forward(transformation::Scale, position) = transformation.scale * position
+backward(transformation::Scale, position) = transformation.inverse_scale * position
+forward_normal(::Scale, normal) = normal
+backward_normal(::Scale, normal) = normal
+
 forward(transformation::Shift, box::InternalBoundingBoxes.InternalBoundingBox) =
     InternalBoundingBoxes.shift(box, transformation.shift)
 
 backward(transformation::Shift, box::InternalBoundingBoxes.InternalBoundingBox) =
     InternalBoundingBoxes.shift(box, -transformation.shift)
+
+function _scale_box(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N}
+    half_size = abs(transformation.scale) * InternalBoundingBoxes._half_size(box)
+    if InternalBoundingBoxes._is_centered(box)
+        if InternalBoundingBoxes._is_cube(box)
+            return InternalBoundingBoxes.InternalCenteredBoundingCube{N}(half_size[1])
+        end
+        return InternalBoundingBoxes.InternalCenteredBoundingRect{N}(half_size)
+    end
+    center = transformation.scale * InternalBoundingBoxes._center(box)
+    if InternalBoundingBoxes._is_cube(box)
+        return InternalBoundingBoxes.InternalBoundingCube{N}(center, half_size[1])
+    end
+    return InternalBoundingBoxes.InternalBoundingRect{N}(center, half_size)
+end
+
+forward(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox) =
+    _scale_box(transformation, box)
+
+backward(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox) =
+    _scale_box(Scale{typeof(transformation).parameters[1]}(transformation.inverse_scale), box)
 
 forward(transformation::Rotate, position) = transformation.matrix * position
 backward(transformation::Rotate, position) = transformation.matrix' * position

@@ -4,6 +4,7 @@ const GeometryVector = GI.PhysicalGeometries.Groups.GeometryVector
 const GeometryTuple = GI.PhysicalGeometries.Groups.GeometryTuple
 const Transformations = GI.PhysicalGeometries.Transformations
 const Shift = Transformations.Shift
+const Scale = Transformations.Scale
 const Rotate = Transformations.Rotate
 const Project = Transformations.Project
 const BoundingBoxes = GI.InternalBoundingBoxes
@@ -49,6 +50,16 @@ const BoundingBoxes = GI.InternalBoundingBoxes
     @test Transformations.backward(shift, position) == SVector(3.0, 3.0, 3.0)
     @test Transformations.forward_normal(shift, normal) == normal
     @test Transformations.backward_normal(shift, normal) == normal
+
+    scale = Scale{3}(2.0)
+    @test scale isa Transformations.Transformation{3, 3}
+    @test scale.scale == 2.0
+    @test scale.inverse_scale == 0.5
+    @test Transformations.forward(scale, position) == SVector(8.0, 10.0, 12.0)
+    @test Transformations.backward(scale, SVector(8.0, 10.0, 12.0)) == position
+    @test Transformations.forward_normal(scale, normal) == normal
+    @test Transformations.backward_normal(scale, normal) == normal
+    @test_throws ArgumentError Scale{3}(0.0)
     rotation = Rotate(SMatrix{2, 2, Float64}([0.0 -1.0; 1.0 0.0]))
     position_2d = SVector(1.0, 2.0)
     @test Transformations.forward(rotation, position_2d) == SVector(-2.0, 1.0)
@@ -120,6 +131,14 @@ const BoundingBoxes = GI.InternalBoundingBoxes
     shifted_cube = BoundingBoxes.shift(cube, displacement)
     shifted_centered_rect = BoundingBoxes.shift(centered_rect, displacement)
     shifted_rect = BoundingBoxes.shift(rect, displacement)
+    scaled_centered_cube = Transformations.forward(scale, centered_cube)
+    scaled_rect = Transformations.forward(scale, rect)
+    @test scaled_centered_cube isa BoundingBoxes.InternalCenteredBoundingCube{3}
+    @test scaled_rect isa BoundingBoxes.InternalBoundingRect{3}
+    @test BoundingBoxes.lower(scaled_centered_cube) == SVector(-4.0, -4.0, -4.0)
+    @test BoundingBoxes.upper(scaled_centered_cube) == SVector(4.0, 4.0, 4.0)
+    @test BoundingBoxes.lower(scaled_rect) == SVector(0.0, 0.0, 0.0)
+    @test BoundingBoxes.upper(scaled_rect) == SVector(4.0, 8.0, 12.0)
     @test Transformations.forward(shift, centered_cube) isa BoundingBoxes.InternalBoundingCube{3}
     transformed_centered_cube = Transformations.forward(shift, centered_cube)
     recovered_centered_cube = Transformations.backward(shift, transformed_centered_cube)
