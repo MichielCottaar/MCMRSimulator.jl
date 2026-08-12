@@ -8,5 +8,6 @@ Represents a physical geometry in N-dimensional space. This is an abstract type 
 abstract type PhysicalGeometry{N} end
 
 include("groups.jl")
+include("transformations.jl")
 
 end
