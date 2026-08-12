@@ -3,6 +3,7 @@ module Transformations
 
 import StaticArrays: SMatrix, SVector
 import ...InternalBoundingBoxes
+import ..PhysicalGeometries: PhysicalGeometry
 
 """
     Transformation{N, M}
@@ -10,18 +11,20 @@ import ...InternalBoundingBoxes
 Abstract transformation from an `N`-dimensional coordinate system to an
 `M`-dimensional coordinate system.
 """
-abstract type Transformation{N, M} end
+abstract type Transformation{N, M} <: PhysicalGeometry{N} end
 
 """
     Shift{N}(shift)
 
 Translate positions by `shift` in `N` dimensions. Normals are unchanged.
 """
-struct Shift{N} <: Transformation{N, N}
+struct Shift{N, P<:PhysicalGeometry{N}} <: Transformation{N, N}
+    geometry::P
     shift::SVector{N, Float64}
 end
 
-Shift(shift::AbstractVector{<:Real}) = Shift(SVector{length(shift), Float64}(shift))
+Shift(geometry::P, shift::AbstractVector{<:Real}) where {N, P<:PhysicalGeometry{N}} =
+    Shift{N, P}(geometry, SVector{N, Float64}(shift))
 
 """
     Scale{N}(scale)
@@ -29,33 +32,35 @@ Shift(shift::AbstractVector{<:Real}) = Shift(SVector{length(shift), Float64}(shi
 Uniformly scale positions by `scale` in `N` dimensions. The inverse scale is
 stored to avoid divisions during backward transformations.
 """
-struct Scale{N} <: Transformation{N, N}
+struct Scale{N, P<:PhysicalGeometry{N}} <: Transformation{N, N}
+    geometry::P
     scale::Float64
     inverse_scale::Float64
 
-    function Scale{N}(scale::Real) where {N}
+    function Scale{N, P}(geometry::P, scale::Real) where {N, P<:PhysicalGeometry{N}}
         scale == 0 && throw(ArgumentError("a Scale transformation requires a nonzero scale"))
         scale = Float64(scale)
-        return new{N}(scale, inv(scale))
+        return new{N, P}(geometry, scale, inv(scale))
     end
 end
 
-Scale(scale::Real, ::Val{N}) where {N} = Scale{N}(scale)
+Scale(geometry::P, scale::Real) where {N, P<:PhysicalGeometry{N}} = Scale{N, P}(geometry, scale)
 
 """
     Rotate{N}(matrix)
 
 Apply the orthogonal `N`-dimensional transformation represented by `matrix`.
 """
-struct Rotate{N} <: Transformation{N, N}
+struct Rotate{N, P<:PhysicalGeometry{N}} <: Transformation{N, N}
+    geometry::P
     matrix::SMatrix{N, N, Float64}
 end
 
-function Rotate(matrix::AbstractMatrix{<:Real})
+function Rotate(geometry::P, matrix::AbstractMatrix{<:Real}) where {N, P<:PhysicalGeometry{N}}
     size(matrix, 1) == size(matrix, 2) ||
         throw(ArgumentError("a Rotate transformation requires a square matrix"))
-    N = size(matrix, 1)
-    return Rotate{N}(SMatrix{N, N, Float64}(matrix))
+    size(matrix, 1) == N || throw(ArgumentError("rotation dimension must match geometry dimension"))
+    return Rotate{N, P}(geometry, SMatrix{N, N, Float64}(matrix))
 end
 
 """
@@ -65,13 +70,17 @@ Project positions from `N` dimensions to `M` dimensions onto the supported
 coordinate axes. Currently, only `3 -> 2` onto the x-y plane and `3 -> 1`
 onto the z-axis are supported.
 """
-struct Project{N, M} <: Transformation{N, M}
-    function Project{N, M}() where {N, M}
+struct Project{N, M, P<:PhysicalGeometry{M}} <: Transformation{N, M}
+    geometry::P
+
+    function Project{N, M, P}(geometry::P) where {N, M, P<:PhysicalGeometry{M}}
         (N, M) in ((3, 2), (3, 1)) ||
             throw(ArgumentError("unsupported Project transformation; only 3 -> 2 and 3 -> 1 are supported"))
-        return new{N, M}()
+        return new{N, M, P}(geometry)
     end
 end
+
+Project{N, M}(geometry::P) where {N, M, P<:PhysicalGeometry{M}} = Project{N, M, P}(geometry)
 
 """Transform a value from the source to the destination coordinate system."""
 function forward end
@@ -120,7 +129,7 @@ forward(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox) =
     _scale_box(transformation, box)
 
 backward(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox) =
-    _scale_box(Scale{typeof(transformation).parameters[1]}(transformation.inverse_scale), box)
+    _scale_box(Scale(transformation.geometry, transformation.inverse_scale), box)
 
 forward(transformation::Rotate, position) = transformation.matrix * position
 backward(transformation::Rotate, position) = transformation.matrix' * position
@@ -140,7 +149,7 @@ forward(transformation::Rotate, box::InternalBoundingBoxes.InternalBoundingBox) 
     _rotate_box(transformation, box)
 
 backward(transformation::Rotate, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N} =
-    _rotate_box(Rotate(transformation.matrix'), box)
+    _rotate_box(Rotate(transformation.geometry, transformation.matrix'), box)
 
 forward(::Project{3, 2}, position) = SVector(position[1], position[2])
 forward(::Project{3, 1}, position) = SVector(position[3])

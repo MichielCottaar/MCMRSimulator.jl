@@ -42,7 +42,9 @@ const BoundingBoxes = GI.InternalBoundingBoxes
     @test length(GeometryTuple{3}(())) == 0
     @test_throws MethodError GeometryVector{3}([TestGeometry{2}(1)])
 
-    shift = Shift([1.0, 2.0, 3.0])
+    geometry_3d = TestGeometry{3}(0)
+    geometry_2d = TestGeometry{2}(0)
+    shift = Shift(geometry_3d, [1.0, 2.0, 3.0])
     position = SVector(4.0, 5.0, 6.0)
     normal = SVector(0.0, 1.0, 0.0)
     @test shift isa Transformations.Transformation{3, 3}
@@ -51,7 +53,7 @@ const BoundingBoxes = GI.InternalBoundingBoxes
     @test Transformations.forward_normal(shift, normal) == normal
     @test Transformations.backward_normal(shift, normal) == normal
 
-    scale = Scale{3}(2.0)
+    scale = Scale(geometry_3d, 2.0)
     @test scale isa Transformations.Transformation{3, 3}
     @test scale.scale == 2.0
     @test scale.inverse_scale == 0.5
@@ -59,23 +61,24 @@ const BoundingBoxes = GI.InternalBoundingBoxes
     @test Transformations.backward(scale, SVector(8.0, 10.0, 12.0)) == position
     @test Transformations.forward_normal(scale, normal) == normal
     @test Transformations.backward_normal(scale, normal) == normal
-    @test_throws ArgumentError Scale{3}(0.0)
-    rotation = Rotate(SMatrix{2, 2, Float64}([0.0 -1.0; 1.0 0.0]))
+    @test_throws ArgumentError Scale(geometry_3d, 0.0)
+    rotation = Rotate(geometry_2d, SMatrix{2, 2, Float64}([0.0 -1.0; 1.0 0.0]))
     position_2d = SVector(1.0, 2.0)
     @test Transformations.forward(rotation, position_2d) == SVector(-2.0, 1.0)
     @test Transformations.backward(rotation, SVector(-2.0, 1.0)) == position_2d
     @test Transformations.forward_normal(rotation, position_2d) == SVector(-2.0, 1.0)
 
-    projection = Project{3, 2}()
+    projection = Project{3, 2}(geometry_2d)
     @test projection isa Transformations.Transformation{3, 2}
     @test Transformations.forward(projection, SVector(1.0, 2.0, 3.0)) == SVector(1.0, 2.0)
     @test_throws ArgumentError Transformations.backward(projection, SVector(1.0, 2.0))
     @test_throws ArgumentError Transformations.forward_normal(projection, SVector(1.0, 2.0, 3.0))
     @test_throws ArgumentError Transformations.backward_normal(projection, SVector(1.0, 2.0))
 
-    projection_z = Project{3, 1}()
+    geometry_1d = TestGeometry{1}(0)
+    projection_z = Project{3, 1}(geometry_1d)
     @test Transformations.forward(projection_z, SVector(1.0, 2.0, 3.0)) == SVector(3.0)
-    @test_throws ArgumentError Project{2, 1}()
+    @test_throws ArgumentError Project{2, 1}(geometry_1d)
 
     cube = BoundingBoxes.InternalBoundingCube([1.0, 2.0, 3.0], 2.0)
     centered_cube = BoundingBoxes.InternalCenteredBoundingCube{3}(2.0)
@@ -157,7 +160,7 @@ const BoundingBoxes = GI.InternalBoundingBoxes
     @test Transformations.forward(projection_z, centered_cube) isa BoundingBoxes.InternalCenteredBoundingCube{1}
     @test_throws ArgumentError Transformations.backward(projection, centered_cube)
 
-    rotation_3d = Rotate(SMatrix{3, 3, Float64}(I))
+    rotation_3d = Rotate(geometry_3d, SMatrix{3, 3, Float64}(I))
     rotated_box = Transformations.forward(rotation_3d, centered_cube)
     @test rotated_box isa BoundingBoxes.InternalCenteredBoundingRect{3}
     @test all(BoundingBoxes.isinside(rotated_box, Transformations.forward(rotation_3d, corner)) for corner in BoundingBoxes.corners(centered_cube))
