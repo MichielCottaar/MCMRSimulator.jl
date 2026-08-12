@@ -195,7 +195,6 @@ end
                     8π
                 end
                 fraction_stuck = surface_area / (surface_area + 3^3)
-                @show sum(mr.stuck.(snap)) / length(snap) fraction_stuck
                 @test sum(mr.stuck.(snap)) / length(snap) ≈ fraction_stuck rtol=0.02
             end
         end
