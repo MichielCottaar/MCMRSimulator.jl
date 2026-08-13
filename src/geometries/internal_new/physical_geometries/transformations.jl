@@ -38,7 +38,6 @@ stored to avoid divisions during backward transformations.
 struct Scale{N, P<:PhysicalGeometry{N}} <: Transformation{N, N}
     geometry::P
     scale::Float64
-    inverse_scale::Float64
 
     function Scale{N, P}(geometry::P, scale::Real) where {N, P<:PhysicalGeometry{N}}
         scale == 0 && throw(ArgumentError("a Scale transformation requires a nonzero scale"))
@@ -103,7 +102,7 @@ forward_normal(::Shift, normal) = normal
 backward_normal(::Shift, normal) = normal
 
 forward(transformation::Scale, position) = transformation.scale * position
-backward(transformation::Scale, position) = transformation.inverse_scale * position
+backward(transformation::Scale, position) = position / transformation.scale
 forward_normal(::Scale, normal) = normal
 backward_normal(::Scale, normal) = normal
 
