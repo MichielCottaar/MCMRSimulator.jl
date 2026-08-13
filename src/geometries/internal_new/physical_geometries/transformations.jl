@@ -32,15 +32,14 @@ Shift(geometry::P, shift::AbstractVector{<:Real}) where {N, P<:PhysicalGeometry{
 """
     Scale{N}(scale)
 
-Uniformly scale positions by `scale` in `N` dimensions. The inverse scale is
-stored to avoid divisions during backward transformations.
+Uniformly scale positions by a positive `scale` in `N` dimensions.
 """
 struct Scale{N, P<:PhysicalGeometry{N}} <: Transformation{N, N}
     geometry::P
     scale::Float64
 
     function Scale{N, P}(geometry::P, scale::Real) where {N, P<:PhysicalGeometry{N}}
-        scale == 0 && throw(ArgumentError("a Scale transformation requires a nonzero scale"))
+        scale > 0 || throw(ArgumentError("a Scale transformation requires a positive scale"))
         scale = Float64(scale)
         return new{N, P}(geometry, scale)
     end
@@ -112,26 +111,28 @@ forward(transformation::Shift, box::InternalBoundingBoxes.InternalBoundingBox) =
 backward(transformation::Shift, box::InternalBoundingBoxes.InternalBoundingBox) =
     InternalBoundingBoxes.shift(box, -transformation.shift)
 
+function _box_center(box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N}
+    return InternalBoundingBoxes.center(box)
+end
+
+function _box_half_size(box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N}
+    return InternalBoundingBoxes.half_size(box)
+end
+
 function _scale_box(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N}
-    half_size = abs(transformation.scale) * InternalBoundingBoxes._half_size(box)
-    if InternalBoundingBoxes._is_centered(box)
-        if InternalBoundingBoxes._is_cube(box)
-            return InternalBoundingBoxes.InternalCenteredBoundingCube{N}(half_size[1])
-        end
-        return InternalBoundingBoxes.InternalCenteredBoundingRect{N}(half_size)
-    end
-    center = transformation.scale * InternalBoundingBoxes._center(box)
-    if InternalBoundingBoxes._is_cube(box)
-        return InternalBoundingBoxes.InternalBoundingCube{N}(center, half_size[1])
-    end
-    return InternalBoundingBoxes.InternalBoundingRect{N}(center, half_size)
+    half_size = transformation.scale .* _box_half_size(box)
+    center = transformation.scale .* _box_center(box)
+    return InternalBoundingBoxes.InternalBoundingBox{N}(
+        half_size,
+        center,
+    )
 end
 
 forward(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox) =
     _scale_box(transformation, box)
 
 backward(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox) =
-    _scale_box(Scale(transformation.geometry, transformation.inverse_scale), box)
+    _scale_box(Scale(transformation.geometry, inv(transformation.scale)), box)
 
 forward(transformation::Rotate, position) = transformation.matrix * position
 backward(transformation::Rotate, position) = transformation.matrix' * position
@@ -139,12 +140,9 @@ forward_normal(transformation::Rotate, normal) = transformation.matrix * normal
 backward_normal(transformation::Rotate, normal) = transformation.matrix' * normal
 
 function _rotate_box(transformation::Rotate, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N}
-    center = transformation.matrix * InternalBoundingBoxes._center(box)
-    half_size = abs.(transformation.matrix) * InternalBoundingBoxes._half_size(box)
-    if InternalBoundingBoxes._is_centered(box)
-        return InternalBoundingBoxes.InternalCenteredBoundingRect{N}(half_size)
-    end
-    return InternalBoundingBoxes.InternalBoundingRect{N}(center, half_size)
+    center = transformation.matrix * _box_center(box)
+    half_size = abs.(transformation.matrix) * _box_half_size(box)
+    return InternalBoundingBoxes.InternalBoundingBox{N}(half_size, center)
 end
 
 forward(transformation::Rotate, box::InternalBoundingBoxes.InternalBoundingBox) =
@@ -157,39 +155,19 @@ forward(::Project{3, 2}, position) = SVector(position[1], position[2])
 forward(::Project{3, 1}, position) = SVector(position[3])
 
 function forward(::Project{3, 2}, box::InternalBoundingBoxes.InternalBoundingBox)
-    half_size = InternalBoundingBoxes._half_size(box)
-    if InternalBoundingBoxes._is_cube(box)
-        projected_half_size = half_size[1]
-    else
-        projected_half_size = SVector(half_size[1], half_size[2])
-    end
-    if InternalBoundingBoxes._is_centered(box)
-        if InternalBoundingBoxes._is_cube(box)
-            return InternalBoundingBoxes.InternalCenteredBoundingCube{2}(projected_half_size)
-        end
-        return InternalBoundingBoxes.InternalCenteredBoundingRect{2}(projected_half_size)
-    end
-    center = InternalBoundingBoxes._center(box)
-    if InternalBoundingBoxes._is_cube(box)
-        return InternalBoundingBoxes.InternalBoundingCube{2}(SVector(center[1], center[2]), projected_half_size)
-    end
-    return InternalBoundingBoxes.InternalBoundingRect{2}(SVector(center[1], center[2]), projected_half_size)
+    half_size = _box_half_size(box)
+    projected_half_size = SVector(half_size[1], half_size[2])
+    center = _box_center(box)
+    projected_center = SVector(center[1], center[2])
+    return InternalBoundingBoxes.InternalBoundingBox{2}(projected_half_size, projected_center)
 end
 
 function forward(::Project{3, 1}, box::InternalBoundingBoxes.InternalBoundingBox)
-    half_size = InternalBoundingBoxes._half_size(box)
-    projected_half_size = InternalBoundingBoxes._is_cube(box) ? half_size[1] : SVector(half_size[3])
-    if InternalBoundingBoxes._is_centered(box)
-        if InternalBoundingBoxes._is_cube(box)
-            return InternalBoundingBoxes.InternalCenteredBoundingCube{1}(projected_half_size)
-        end
-        return InternalBoundingBoxes.InternalCenteredBoundingRect{1}(projected_half_size)
-    end
-    center = InternalBoundingBoxes._center(box)
-    if InternalBoundingBoxes._is_cube(box)
-        return InternalBoundingBoxes.InternalBoundingCube{1}(SVector(center[3]), projected_half_size)
-    end
-    return InternalBoundingBoxes.InternalBoundingRect{1}(SVector(center[3]), projected_half_size)
+    half_size = _box_half_size(box)
+    projected_half_size = SVector(half_size[3])
+    center = _box_center(box)
+    projected_center = SVector(center[3])
+    return InternalBoundingBoxes.InternalBoundingBox{1}(projected_half_size, projected_center)
 end
 
 function backward(::Project, position)
