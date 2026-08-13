@@ -82,6 +82,8 @@ const get_value = Properties.get_value
     @test !has_inside(typeof(GeometryTuple{3}(())))
     repeated_sphere = Repeat(BaseObstructions.Sphere(1.0), [4.0, 4.0, 4.0])
     @test has_inside(typeof(repeated_sphere))
+    @test repeated_sphere.lower_overlap == SVector(0.0, 0.0, 0.0)
+    @test repeated_sphere.upper_overlap == SVector(0.0, 0.0, 0.0)
     @test inside_indices(repeated_sphere, SVector(4.5, 0.0, 0.0)) == [ObstructionIndex()]
     @test inside_indices(repeated_sphere, SVector(2.0, 0.0, 0.0)) == ObstructionIndex[]
     @test_throws ArgumentError Repeat(BaseObstructions.Sphere(1.0), [0.0, 4.0, 4.0])
@@ -98,6 +100,16 @@ const get_value = Properties.get_value
     )
     @test repeated_hit.distance ≈ 0.4
     @test repeated_hit.normal ≈ SVector(-1.0, 0.0, 0.0)
+    overlapping_repeat = Repeat(BaseObstructions.Sphere(1.5), [2.0, 4.0, 4.0])
+    @test overlapping_repeat.lower_overlap == SVector(0.5, 0.0, 0.0)
+    @test overlapping_repeat.upper_overlap == SVector(0.5, 0.0, 0.0)
+    @test inside_indices(overlapping_repeat, SVector(1.4, 0.0, 0.0)) == [ObstructionIndex()]
+    overlapping_hit = GI.PhysicalGeometries.detect_intersection(
+        overlapping_repeat,
+        SVector(1.4, 0.0, 0.0),
+        SVector(1.9, 0.0, 0.0),
+    )
+    @test overlapping_hit.distance ≈ 0.2
 
     @test get_value(3.0, ObstructionIndex(SVector(1, 2))) == 3.0
     vector_properties = Properties.GeometryVectorProperties([10.0, 20.0])

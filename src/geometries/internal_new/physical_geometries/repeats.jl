@@ -2,6 +2,7 @@
 module Repeats
 
 import StaticArrays: SVector
+import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
@@ -9,6 +10,8 @@ import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection
 struct Repeat{N, P<:PhysicalGeometry{N}} <: PhysicalGeometry{N}
     geometry::P
     repeats::SVector{N, Float64}
+    lower_overlap::SVector{N, Float64}
+    upper_overlap::SVector{N, Float64}
 
     function Repeat{N, P}(geometry::P, repeats::SVector{N, Float64}) where {N, P<:PhysicalGeometry{N}}
         all(repeats .> 0) || throw(ArgumentError("repeat distances must be positive"))
@@ -17,7 +20,9 @@ struct Repeat{N, P<:PhysicalGeometry{N}} <: PhysicalGeometry{N}
             throw(ArgumentError("geometry extends too far below its repeat bounds"))
         all(InternalBoundingBoxes.upper(box) .<= 1.5 .* repeats) ||
             throw(ArgumentError("geometry extends too far above its repeat bounds"))
-        new{N, P}(geometry, repeats)
+        lower_overlap = max.(0.0, -repeats / 2 - InternalBoundingBoxes.lower(box))
+        upper_overlap = max.(0.0, InternalBoundingBoxes.upper(box) - repeats / 2)
+        new{N, P}(geometry, repeats, lower_overlap, upper_overlap)
     end
 end
 
@@ -28,8 +33,39 @@ has_inside(::Type{<:Repeat{N, P}}) where {N, P} = has_inside(P)
 
 _wrap(repeat::Repeat, position) = mod.(position .+ repeat.repeats / 2, repeat.repeats) .- repeat.repeats / 2
 
-inside_indices(repeat::Repeat{N}, position::SVector{N, Float64}) where {N} =
-    inside_indices(repeat.geometry, _wrap(repeat, position))
+function _candidate_shifts(repeat::Repeat{N}, start, destination=start) where {N}
+    local_start = _wrap(repeat, start)
+    local_destination = _wrap(repeat, destination)
+    choices = ntuple(N) do dimension
+        lower = repeat.lower_overlap[dimension] > 0 &&
+            min(local_start[dimension], local_destination[dimension]) <=
+                -repeat.repeats[dimension] / 2 + repeat.lower_overlap[dimension] &&
+            max(local_start[dimension], local_destination[dimension]) >= -repeat.repeats[dimension] / 2
+        upper = repeat.upper_overlap[dimension] > 0 &&
+            min(local_start[dimension], local_destination[dimension]) <=
+                repeat.repeats[dimension] / 2 &&
+            max(local_start[dimension], local_destination[dimension]) >=
+                repeat.repeats[dimension] / 2 - repeat.upper_overlap[dimension]
+        values = [0]
+        lower && push!(values, 1)
+        upper && push!(values, -1)
+        values
+    end
+    shifts = SVector{N, Int}[]
+    for shift in Iterators.product(choices...)
+        push!(shifts, SVector{N, Int}(shift))
+    end
+    shifts
+end
+
+function inside_indices(repeat::Repeat{N}, position::SVector{N, Float64}) where {N}
+    local_position = _wrap(repeat, position)
+    indices = ObstructionIndex[]
+    for shift in _candidate_shifts(repeat, local_position)
+        append!(indices, inside_indices(repeat.geometry, local_position .+ shift .* repeat.repeats))
+    end
+    sort!(unique!(indices), by=index -> Tuple(index.indices))
+end
 
 InternalBoundingBox(::Repeat) = throw(ArgumentError("repeated geometries do not have a finite bounding box"))
 
@@ -50,23 +86,25 @@ function detect_intersection(
         segment_destination = start + exit_time .* displacement
         local_start = _wrap(repeat, segment_start)
         local_destination = local_start + (segment_destination - segment_start)
-        local_intersection = detect_intersection(
-            repeat.geometry,
-            local_start,
-            local_destination,
-            previous,
-        )
-        previous = Intersection{3}()
-        Base.isempty(local_intersection) && continue
-        distance = entry_time + local_intersection.distance * (exit_time - entry_time)
-        if distance < closest.distance
-            closest = Intersection(
-                distance,
-                local_intersection.normal,
-                local_intersection.inside,
-                local_intersection.obstruction_index,
-                local_intersection.hit_gap,
+        for shift in _candidate_shifts(repeat, local_start, local_destination)
+            local_intersection = detect_intersection(
+                repeat.geometry,
+                local_start .+ shift .* repeat.repeats,
+                local_destination .+ shift .* repeat.repeats,
+                previous,
             )
+            previous = Intersection{3}()
+            Base.isempty(local_intersection) && continue
+            distance = entry_time + local_intersection.distance * (exit_time - entry_time)
+            if distance < closest.distance
+                closest = Intersection(
+                    distance,
+                    local_intersection.normal,
+                    local_intersection.inside,
+                    local_intersection.obstruction_index,
+                    local_intersection.hit_gap,
+                )
+            end
         end
     end
     closest
