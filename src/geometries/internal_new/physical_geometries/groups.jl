@@ -3,7 +3,7 @@ module Groups
 
 import StaticArrays: SVector
 import ...Indices: ObstructionIndex
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices
 
 abstract type GroupGeometry{N} <: PhysicalGeometry{N} end
 
@@ -25,6 +25,31 @@ end
 
 has_inside(::Type{<:GeometryVector{N, P}}) where {N, P} = has_inside(P)
 has_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = any(has_inside, P.parameters)
+
+function _prepend_index(obstruction_index::ObstructionIndex, index::Int)
+    ObstructionIndex(SVector(index, obstruction_index.indices...))
+end
+
+function inside_indices(geometry::GeometryVector{N}, position::SVector{N, Float64}) where {N}
+    has_inside(typeof(geometry)) || return ObstructionIndex[]
+    indices = ObstructionIndex[]
+    for (child_index, child) in enumerate(geometry)
+        for obstruction_index in inside_indices(child, position)
+            push!(indices, _prepend_index(obstruction_index, child_index))
+        end
+    end
+    indices
+end
+
+function inside_indices(geometry::GeometryTuple{N}, position::SVector{N, Float64}) where {N}
+    indices = ObstructionIndex[]
+    for (child_index, child) in enumerate(geometry)
+        for obstruction_index in inside_indices(child, position)
+            push!(indices, _prepend_index(obstruction_index, child_index))
+        end
+    end
+    indices
+end
 
 GeometryVector{N}(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}} =
     GeometryVector{N, P}(geometries)

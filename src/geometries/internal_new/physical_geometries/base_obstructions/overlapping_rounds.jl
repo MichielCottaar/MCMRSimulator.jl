@@ -5,6 +5,10 @@ end
 
 has_inside(::Type{<:OverlappingRound}) = true
 
+function inside_indices(round::OverlappingRound{N}, position::SVector{N, Float64}) where {N}
+    isinside(round, position) ? [ObstructionIndex()] : ObstructionIndex[]
+end
+
 const OverlappingInfiniteCylinder = OverlappingRound{2}
 const OverlappingSphere = OverlappingRound{3}
 

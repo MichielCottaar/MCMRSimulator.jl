@@ -3,7 +3,7 @@ module Transformations
 
 import StaticArrays: SMatrix, SVector
 import ...InternalBoundingBoxes
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices
 
 """
     Transformation{N, M, P} <: PhysicalGeometry{N}
@@ -17,6 +17,9 @@ Transformation of a geometry from an `N`-dimensional coordinate system to an
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
 
 has_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_inside(P)
+
+inside_indices(transformation::Transformation, position) =
+    inside_indices(transformation.geometry, forward(transformation, position))
 
 """
     Shift{N}(shift)

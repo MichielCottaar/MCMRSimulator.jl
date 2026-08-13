@@ -7,6 +7,7 @@ struct FullTriangle <: BaseObstruction{3}
 end
 
 has_inside(::Type{FullTriangle}) = false
+inside_indices(::FullTriangle, ::SVector{3, Float64}) = ObstructionIndex[]
 
 Base.getindex(triangle::FullTriangle, index::Int) = (triangle.a, triangle.b, triangle.c)[index]
 

@@ -4,6 +4,10 @@ end
 
 has_inside(::Type{<:Round}) = true
 
+function inside_indices(round::Round{N}, position::SVector{N, Float64}) where {N}
+    isinside(round, position) ? [ObstructionIndex()] : ObstructionIndex[]
+end
+
 const InfiniteCylinder = Round{2}
 const Sphere = Round{3}
 

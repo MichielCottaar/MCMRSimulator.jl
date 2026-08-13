@@ -1,6 +1,7 @@
 struct InfiniteWall <: BaseObstruction{1} end
 
 has_inside(::Type{InfiniteWall}) = false
+inside_indices(::InfiniteWall, ::SVector{1, Float64}) = ObstructionIndex[]
 
 const _negative_wall_normal = SVector(-1.0)
 const _positive_wall_normal = SVector(1.0)

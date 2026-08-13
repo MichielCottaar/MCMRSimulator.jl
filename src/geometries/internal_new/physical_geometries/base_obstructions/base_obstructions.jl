@@ -1,7 +1,7 @@
 module BaseObstructions
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices
 import ...InternalBoundingBoxes: InternalBoundingBox
 import ...Indices: ObstructionIndex
 

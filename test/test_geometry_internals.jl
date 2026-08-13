@@ -11,6 +11,7 @@ const BoundingBoxes = GI.InternalBoundingBoxes
 const ObstructionIndex = GI.Indices.ObstructionIndex
 const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
 const has_inside = GI.PhysicalGeometries.has_inside
+const inside_indices = GI.PhysicalGeometries.inside_indices
 
 @testset "Geometry internals" begin
     struct TestGeometry{N} <: PhysicalGeometry{N}
@@ -69,6 +70,33 @@ const has_inside = GI.PhysicalGeometries.has_inside
         SVector(0.0, 1.0, 0.0),
     ),))))
     @test !has_inside(typeof(GeometryTuple{3}(())))
+
+    sphere = BaseObstructions.Sphere(1.0)
+    @test inside_indices(sphere, SVector(0.0, 0.0, 0.0)) == [ObstructionIndex()]
+    @test inside_indices(sphere, SVector(2.0, 0.0, 0.0)) == ObstructionIndex[]
+    @test inside_indices(BaseObstructions.InfiniteWall(), SVector(0.0)) == ObstructionIndex[]
+
+    shifted_inside = Shift(sphere, [2.0, 0.0, 0.0])
+    @test inside_indices(shifted_inside, SVector(-2.0, 0.0, 0.0)) == [ObstructionIndex()]
+    @test inside_indices(shifted_inside, SVector(0.0, 0.0, 0.0)) == ObstructionIndex[]
+
+    inside_spheres = GeometryVector{3}([
+        Shift(sphere, [-0.5, 0.0, 0.0]),
+        Shift(sphere, [0.5, 0.0, 0.0]),
+    ])
+    @test inside_indices(inside_spheres, SVector(0.0, 0.0, 0.0)) == [
+        ObstructionIndex(SVector(1)),
+        ObstructionIndex(SVector(2)),
+    ]
+    walls = GeometryVector{1}([BaseObstructions.InfiniteWall(), BaseObstructions.InfiniteWall()])
+    @test inside_indices(walls, SVector(0.0)) == ObstructionIndex[]
+
+    nested = GeometryTuple{3}((inside_spheres, sphere))
+    @test inside_indices(nested, SVector(0.0, 0.0, 0.0)) == [
+        ObstructionIndex(SVector(1, 1)),
+        ObstructionIndex(SVector(1, 2)),
+        ObstructionIndex(SVector(2)),
+    ]
     @test_throws MethodError GeometryVector{3}([TestGeometry{2}(1)])
     @test_throws ArgumentError GeometryVector{3, PhysicalGeometry{3}}(PhysicalGeometry{3}[])
     @test_throws ArgumentError GeometryVector{3, Shift{3, PhysicalGeometry{3}}}(

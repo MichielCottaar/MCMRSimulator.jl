@@ -35,6 +35,9 @@ function detect_intersection end
 """Return whether a geometry has an inside region."""
 function has_inside end
 
+"""Return the obstruction indices containing a position."""
+function inside_indices end
+
 include("groups.jl")
 include("transformations.jl")
 include("base_obstructions/base_obstructions.jl")
