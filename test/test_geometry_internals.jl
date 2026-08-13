@@ -12,6 +12,8 @@ const ObstructionIndex = GI.Indices.ObstructionIndex
 const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
 const has_inside = GI.PhysicalGeometries.has_inside
 const inside_indices = GI.PhysicalGeometries.inside_indices
+const Properties = GI.Properties
+const get_value = Properties.get_value
 
 @testset "Geometry internals" begin
     struct TestGeometry{N} <: PhysicalGeometry{N}
@@ -70,6 +72,17 @@ const inside_indices = GI.PhysicalGeometries.inside_indices
         SVector(0.0, 1.0, 0.0),
     ),))))
     @test !has_inside(typeof(GeometryTuple{3}(())))
+
+    @test get_value(3.0, ObstructionIndex(SVector(1, 2))) == 3.0
+    vector_properties = Properties.GeometryVectorProperties([10.0, 20.0])
+    @test get_value(vector_properties, ObstructionIndex(SVector(2, 1))) == 20.0
+    tuple_properties = Properties.GeometryTupleProperties((1.0, vector_properties))
+    @test get_value(tuple_properties, ObstructionIndex(SVector(2, 2))) == 20.0
+    @test get_value(tuple_properties, [
+        ObstructionIndex(SVector(1, 4)),
+        ObstructionIndex(SVector(2, 2)),
+    ]) == [1.0, 20.0]
+    @test_throws BoundsError get_value(vector_properties, ObstructionIndex(SVector(3)))
 
     sphere = BaseObstructions.Sphere(1.0)
     @test inside_indices(sphere, SVector(0.0, 0.0, 0.0)) == [ObstructionIndex()]
