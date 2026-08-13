@@ -1,7 +1,9 @@
 """Physical geometries that consist of groups of other physical geometries."""
 module Groups
 
-import ..PhysicalGeometries: PhysicalGeometry
+import StaticArrays: SVector
+import ...Indices: ObstructionIndex
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection
 
 abstract type GroupGeometry{N} <: PhysicalGeometry{N} end
 
@@ -18,6 +20,61 @@ GeometryVector{N}(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}} =
 
 GeometryTuple{N}(geometries::Tuple{Vararg{PhysicalGeometry{N}}}) where {N} =
     GeometryTuple{N, typeof(geometries)}(geometries)
+
+function _prepend_index(intersection::Intersection{N}, index::Int) where {N}
+    obstruction_index = intersection.obstruction_index
+    indices = SVector(index, obstruction_index.indices...)
+    return Intersection(
+        intersection.distance,
+        intersection.normal,
+        intersection.inside,
+        ObstructionIndex(indices),
+        intersection.hit_gap,
+    )
+end
+
+function _previous_hit_for_child(
+    geometry::GroupGeometry,
+    previous_hit::Intersection{3},
+    child_index::Int,
+)
+    Base.isempty(previous_hit) && return Intersection{3}()
+    indices = previous_hit.obstruction_index.indices
+    isempty(indices) && throw(ArgumentError("a non-empty previous hit must have an obstruction index"))
+    indices[1] == child_index || return Intersection{3}()
+    remaining_indices = SVector{length(indices) - 1, Int}(indices[2:end])
+    return Intersection(
+        previous_hit.distance,
+        previous_hit.normal,
+        previous_hit.inside,
+        ObstructionIndex(remaining_indices),
+        previous_hit.hit_gap,
+    )
+end
+
+function detect_intersection(
+    geometry::GroupGeometry{N},
+    start::SVector{N, Float64},
+    destination::SVector{N, Float64},
+    previous_hit::Intersection{3}=Intersection{3}(),
+) where {N}
+    if !Base.isempty(previous_hit)
+        indices = previous_hit.obstruction_index.indices
+        isempty(indices) && throw(ArgumentError("a non-empty previous hit must have an obstruction index"))
+        1 <= indices[1] <= length(geometry) ||
+            throw(ArgumentError("previous-hit obstruction index is not a child of this group"))
+    end
+
+    closest = Intersection{N}()
+    for (child_index, child) in enumerate(geometry)
+        child_previous_hit = _previous_hit_for_child(geometry, previous_hit, child_index)
+        intersection = detect_intersection(child, start, destination, child_previous_hit)
+        if intersection.distance < closest.distance
+            closest = _prepend_index(intersection, child_index)
+        end
+    end
+    return closest
+end
 
 Base.size(geometry::GeometryVector) = size(geometry.geometries)
 Base.axes(geometry::GeometryVector) = axes(geometry.geometries)

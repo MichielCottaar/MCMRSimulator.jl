@@ -132,6 +132,39 @@ const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
     @test shifted_hit.distance ≈ 1 / 6
     @test shifted_hit.normal == SVector(-1.0, 0.0, 0.0)
 
+    grouped_spheres = GeometryVector{3}([
+        Shift(BaseObstructions.Sphere(1.0), [-2.0, 0.0, 0.0]),
+        Shift(BaseObstructions.Sphere(1.0), [2.0, 0.0, 0.0]),
+    ])
+    grouped_hit = GI.PhysicalGeometries.detect_intersection(
+        grouped_spheres,
+        SVector(-5.0, 0.0, 0.0),
+        SVector(5.0, 0.0, 0.0),
+    )
+    @test grouped_hit.distance ≈ 1 / 5
+    @test grouped_hit.obstruction_index == ObstructionIndex(SVector(2))
+
+    next_grouped_hit = GI.PhysicalGeometries.detect_intersection(
+        grouped_spheres,
+        SVector(-5.0, 0.0, 0.0),
+        SVector(5.0, 0.0, 0.0),
+        grouped_hit,
+    )
+    @test next_grouped_hit.distance ≈ 3 / 5
+    @test next_grouped_hit.obstruction_index == ObstructionIndex(SVector(1))
+    @test_throws ArgumentError GI.PhysicalGeometries.detect_intersection(
+        grouped_spheres,
+        SVector(-5.0, 0.0, 0.0),
+        SVector(5.0, 0.0, 0.0),
+        GI.PhysicalGeometries.Intersection(0.5, normal, false, ObstructionIndex(), false),
+    )
+    @test_throws ArgumentError GI.PhysicalGeometries.detect_intersection(
+        grouped_spheres,
+        SVector(-5.0, 0.0, 0.0),
+        SVector(5.0, 0.0, 0.0),
+        GI.PhysicalGeometries.Intersection(0.5, normal, false, ObstructionIndex(SVector(3)), false),
+    )
+
     scaled_sphere = Scale(sphere, 2.0)
     scaled_hit = GI.PhysicalGeometries.detect_intersection(
         scaled_sphere,
