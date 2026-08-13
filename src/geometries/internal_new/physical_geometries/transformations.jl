@@ -6,10 +6,13 @@ import ...InternalBoundingBoxes
 import ..PhysicalGeometries: PhysicalGeometry
 
 """
-    Transformation{N, M}
+    Transformation{N, M} <: PhysicalGeoemtry{N}
 
-Abstract transformation from an `N`-dimensional coordinate system to an
+Transformation of a geometry from an `N`-dimensional coordinate system to an
 `M`-dimensional coordinate system.
+
+`forward` transforms map from the global N-dimensional space to the local geometry-specific M-dimensional space.
+`backward` are the inverse transformations.
 """
 abstract type Transformation{N, M} <: PhysicalGeometry{N} end
 
