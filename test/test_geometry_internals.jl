@@ -81,7 +81,22 @@ const get_value = Properties.get_value
     @test get_value(tuple_properties, [
         ObstructionIndex(SVector(1, 4)),
         ObstructionIndex(SVector(2, 2)),
-    ]) == [1.0, 20.0]
+    ]) == 21.0
+    aggregation_properties = Properties.GeometryTupleProperties((
+        Properties.GeometryVectorProperties([1.0, 2.0]),
+        10.0,
+    ))
+    @test get_value(aggregation_properties, [
+        ObstructionIndex(SVector(1, 1)),
+        ObstructionIndex(SVector(1, 2)),
+        ObstructionIndex(SVector(2, 1)),
+        ObstructionIndex(SVector(2, 2)),
+    ]) == 13.0
+    @test get_value(aggregation_properties, ObstructionIndex[]) == 0
+    @test_throws ArgumentError get_value(aggregation_properties, [
+        ObstructionIndex(SVector(2, 1)),
+        ObstructionIndex(SVector(1, 1)),
+    ])
     @test_throws BoundsError get_value(vector_properties, ObstructionIndex(SVector(3)))
 
     sphere = BaseObstructions.Sphere(1.0)
