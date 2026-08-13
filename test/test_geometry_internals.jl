@@ -91,6 +91,33 @@ const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
     @test sphere_hit.distance ≈ 1 / 6
     @test sphere_hit.normal == SVector(-1.0, 0.0, 0.0)
 
+    shifted_sphere = Shift(sphere, [1.0, 0.0, 0.0])
+    shifted_hit = GI.PhysicalGeometries.detect_intersection(
+        shifted_sphere,
+        SVector(-4.0, 0.0, 0.0),
+        SVector(2.0, 0.0, 0.0),
+    )
+    @test shifted_hit.distance ≈ 1 / 6
+    @test shifted_hit.normal == SVector(-1.0, 0.0, 0.0)
+
+    scaled_sphere = Scale(sphere, 2.0)
+    scaled_hit = GI.PhysicalGeometries.detect_intersection(
+        scaled_sphere,
+        SVector(-6.0, 0.0, 0.0),
+        SVector(6.0, 0.0, 0.0),
+    )
+    @test scaled_hit.distance ≈ 5 / 12
+    @test scaled_hit.normal ≈ SVector(-1.0, 0.0, 0.0)
+
+    projected_cylinder = Project{3, 2}(cylinder)
+    projected_hit = GI.PhysicalGeometries.detect_intersection(
+        projected_cylinder,
+        SVector(-3.0, 0.0, 4.0),
+        SVector(3.0, 0.0, 4.0),
+    )
+    @test projected_hit.distance ≈ 1 / 6
+    @test projected_hit.normal == SVector(-1.0, 0.0, 0.0)
+
     triangle = BaseObstructions.FullTriangle(
         SVector(0.0, 0.0, 0.0),
         SVector(1.0, 0.0, 0.0),
@@ -128,7 +155,7 @@ const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
     @test Transformations.forward(projection, SVector(1.0, 2.0, 3.0)) == SVector(1.0, 2.0)
     @test_throws ArgumentError Transformations.backward(projection, SVector(1.0, 2.0))
     @test_throws ArgumentError Transformations.forward_normal(projection, SVector(1.0, 2.0, 3.0))
-    @test_throws ArgumentError Transformations.backward_normal(projection, SVector(1.0, 2.0))
+    @test Transformations.backward_normal(projection, SVector(1.0, 2.0)) == SVector(1.0, 2.0, 0.0)
 
     geometry_1d = TestGeometry{1}(0)
     projection_z = Project{3, 1}(geometry_1d)

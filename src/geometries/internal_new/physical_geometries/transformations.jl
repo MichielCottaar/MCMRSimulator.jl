@@ -3,7 +3,8 @@ module Transformations
 
 import StaticArrays: SMatrix, SVector
 import ...InternalBoundingBoxes
-import ..PhysicalGeometries: PhysicalGeometry
+import ...Indices: ObstructionIndex
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection
 
 """
     Transformation{N, M} <: PhysicalGeoemtry{N}
@@ -184,6 +185,31 @@ end
 
 function backward_normal(::Project, normal)
     throw(ArgumentError("backward_normal is not defined for Project transformations"))
+end
+
+backward_normal(::Project{3, 2}, normal) = SVector(normal[1], normal[2], 0.0)
+backward_normal(::Project{3, 1}, normal) = SVector(0.0, 0.0, normal[1])
+
+function detect_intersection(
+    transformation::Transformation{N, M},
+    start::SVector{N, Float64},
+    destination::SVector{N, Float64},
+    obstruction_index::ObstructionIndex=ObstructionIndex(),
+) where {N, M}
+    child_intersection = detect_intersection(
+        transformation.geometry,
+        forward(transformation, start),
+        forward(transformation, destination),
+        obstruction_index,
+    )
+    Base.isempty(child_intersection) && return Intersection{N}()
+    return Intersection(
+        child_intersection.distance,
+        backward_normal(transformation, child_intersection.normal),
+        child_intersection.inside,
+        child_intersection.obstruction_index,
+        child_intersection.hit_gap,
+    )
 end
 
 end
