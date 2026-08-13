@@ -106,8 +106,11 @@ function detect_intersection(
                 )
             end
         end
+        if !isempty(closest)
+            return closest
+        end
     end
-    closest
+    return Intersection{N}()
 end
 
 end
