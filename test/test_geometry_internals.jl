@@ -2,6 +2,7 @@ const GI = mr.Geometries.InternalNew
 const PhysicalGeometry = GI.PhysicalGeometries.PhysicalGeometry
 const GeometryVector = GI.PhysicalGeometries.Groups.GeometryVector
 const GeometryVectorBoundingBox = GI.PhysicalGeometries.Groups.GeometryVectorBoundingBox
+const GeometryVectorGrid = GI.PhysicalGeometries.Groups.GeometryVectorGrid
 const GeometryTuple = GI.PhysicalGeometries.Groups.GeometryTuple
 const Transformations = GI.PhysicalGeometries.Transformations
 const Shift = Transformations.Shift
@@ -25,6 +26,8 @@ const get_value = Properties.get_value
     vector = GeometryVector{3}(geometries)
     @test GeometryVector(geometries) isa GeometryVector{3, TestGeometry{3}}
     @test GeometryVector([BaseObstructions.Sphere(1.0)]; bounding_box=true) isa GeometryVectorBoundingBox{3, BaseObstructions.Sphere}
+    @test GeometryVector([BaseObstructions.Sphere(1.0)]; grid=true) isa GeometryVectorGrid{3, BaseObstructions.Sphere}
+    @test_throws ArgumentError GeometryVector([BaseObstructions.Sphere(1.0)]; bounding_box=true, grid=true)
     @test vector isa GI.PhysicalGeometries.Groups.GroupGeometry{3}
     @test size(vector) == (2,)
     @test axes(vector) == (Base.OneTo(2),)
@@ -250,6 +253,27 @@ const get_value = Properties.get_value
     @test inside_indices(filtered_spheres, SVector(0.0, 0.0, 0.0)) == [
         ObstructionIndex(SVector(1)),
     ]
+    grid_spheres = GeometryVector([
+        Shift(sphere, [-3.0, 0.0, 0.0]),
+        Shift(sphere, [3.0, 0.0, 0.0]),
+    ]; grid=true, grid_resolution=2.0)
+    @test grid_spheres isa GeometryVectorGrid{3, Shift{3, BaseObstructions.Sphere}}
+    @test inside_indices(grid_spheres, SVector(3.0, 0.0, 0.0)) == [ObstructionIndex(SVector(1))]
+    regular_grid_hit = GI.PhysicalGeometries.detect_intersection(
+        GeometryVector([
+            Shift(sphere, [-3.0, 0.0, 0.0]),
+            Shift(sphere, [3.0, 0.0, 0.0]),
+        ]),
+        SVector(-5.0, 0.0, 0.0),
+        SVector(5.0, 0.0, 0.0),
+    )
+    grid_hit = GI.PhysicalGeometries.detect_intersection(
+        grid_spheres,
+        SVector(-5.0, 0.0, 0.0),
+        SVector(5.0, 0.0, 0.0),
+    )
+    @test grid_hit.distance == regular_grid_hit.distance
+    @test grid_hit.obstruction_index == regular_grid_hit.obstruction_index
     @test_throws ArgumentError GeometryVectorBoundingBox(
         [sphere],
         BoundingBoxes.InternalBoundingBox{3}[],
