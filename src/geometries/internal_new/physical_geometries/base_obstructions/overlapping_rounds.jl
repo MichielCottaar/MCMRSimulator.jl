@@ -3,6 +3,8 @@ struct OverlappingRound{N} <: BaseObstruction{N}
     overlaps_with::Vector{Tuple{SVector{N, Float64}, Float64}}
 end
 
+has_inside(::Type{<:OverlappingRound}) = true
+
 const OverlappingInfiniteCylinder = OverlappingRound{2}
 const OverlappingSphere = OverlappingRound{3}
 

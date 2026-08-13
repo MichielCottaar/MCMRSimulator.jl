@@ -2,6 +2,8 @@ struct Round{N} <: BaseObstruction{N}
     radius::Float64
 end
 
+has_inside(::Type{<:Round}) = true
+
 const InfiniteCylinder = Round{2}
 const Sphere = Round{3}
 

@@ -1,5 +1,7 @@
 struct InfiniteWall <: BaseObstruction{1} end
 
+has_inside(::Type{InfiniteWall}) = false
+
 const _negative_wall_normal = SVector(-1.0)
 const _positive_wall_normal = SVector(1.0)
 

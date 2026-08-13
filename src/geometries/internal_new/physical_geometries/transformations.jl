@@ -3,10 +3,10 @@ module Transformations
 
 import StaticArrays: SMatrix, SVector
 import ...InternalBoundingBoxes
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside
 
 """
-    Transformation{N, M} <: PhysicalGeoemtry{N}
+    Transformation{N, M, P} <: PhysicalGeometry{N}
 
 Transformation of a geometry from an `N`-dimensional coordinate system to an
 `M`-dimensional coordinate system.
@@ -14,14 +14,16 @@ Transformation of a geometry from an `N`-dimensional coordinate system to an
 `forward` transforms map from the global N-dimensional space to the local geometry-specific M-dimensional space.
 `backward` are the inverse transformations.
 """
-abstract type Transformation{N, M} <: PhysicalGeometry{N} end
+abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
+
+has_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_inside(P)
 
 """
     Shift{N}(shift)
 
 Translate positions by `shift` in `N` dimensions. Normals are unchanged.
 """
-struct Shift{N, P<:PhysicalGeometry{N}} <: Transformation{N, N}
+struct Shift{N, P<:PhysicalGeometry{N}} <: Transformation{N, N, P}
     geometry::P
     shift::SVector{N, Float64}
 end
@@ -34,7 +36,7 @@ Shift(geometry::P, shift::AbstractVector{<:Real}) where {N, P<:PhysicalGeometry{
 
 Uniformly scale positions by a positive `scale` in `N` dimensions.
 """
-struct Scale{N, P<:PhysicalGeometry{N}} <: Transformation{N, N}
+struct Scale{N, P<:PhysicalGeometry{N}} <: Transformation{N, N, P}
     geometry::P
     scale::Float64
 
@@ -52,7 +54,7 @@ Scale(geometry::P, scale::Real) where {N, P<:PhysicalGeometry{N}} = Scale{N, P}(
 
 Apply the orthogonal `N`-dimensional transformation represented by `matrix`.
 """
-struct Rotate{N, P<:PhysicalGeometry{N}} <: Transformation{N, N}
+struct Rotate{N, P<:PhysicalGeometry{N}} <: Transformation{N, N, P}
     geometry::P
     matrix::SMatrix{N, N, Float64}
 end
@@ -71,7 +73,7 @@ Project positions from `N` dimensions to `M` dimensions onto the supported
 coordinate axes. Currently, only `3 -> 2` onto the x-y plane and `3 -> 1`
 onto the z-axis are supported.
 """
-struct Project{N, M, P<:PhysicalGeometry{M}} <: Transformation{N, M}
+struct Project{N, M, P<:PhysicalGeometry{M}} <: Transformation{N, M, P}
     geometry::P
 
     function Project{N, M, P}(geometry::P) where {N, M, P<:PhysicalGeometry{M}}
@@ -190,11 +192,11 @@ backward_normal(::Project{3, 2}, normal) = SVector(normal[1], normal[2], 0.0)
 backward_normal(::Project{3, 1}, normal) = SVector(0.0, 0.0, normal[1])
 
 function detect_intersection(
-    transformation::Transformation{N, M},
+    transformation::Transformation{N, M, P},
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
     previous_hit::Intersection{3}=Intersection{3}(),
-) where {N, M}
+) where {N, M, P}
     child_intersection = detect_intersection(
         transformation.geometry,
         forward(transformation, start),

@@ -6,6 +6,8 @@ struct FullTriangle <: BaseObstruction{3}
     c::SVector{3, Float64}
 end
 
+has_inside(::Type{FullTriangle}) = false
+
 Base.getindex(triangle::FullTriangle, index::Int) = (triangle.a, triangle.b, triangle.c)[index]
 
 function FullTriangle(a::AbstractVector, b::AbstractVector, c::AbstractVector)

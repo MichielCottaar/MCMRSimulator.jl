@@ -10,6 +10,7 @@ const Project = Transformations.Project
 const BoundingBoxes = GI.InternalBoundingBoxes
 const ObstructionIndex = GI.Indices.ObstructionIndex
 const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
+const has_inside = GI.PhysicalGeometries.has_inside
 
 @testset "Geometry internals" begin
     struct TestGeometry{N} <: PhysicalGeometry{N}
@@ -42,6 +43,32 @@ const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
 
     @test length(GeometryVector{3}(TestGeometry{3}[])) == 0
     @test length(GeometryTuple{3}(())) == 0
+    @test has_inside(typeof(BaseObstructions.Sphere(1.0)))
+    @test has_inside(typeof(BaseObstructions.OverlappingSphere(1.0)))
+    @test !has_inside(typeof(BaseObstructions.InfiniteWall()))
+    @test !has_inside(typeof(BaseObstructions.FullTriangle(
+        SVector(0.0, 0.0, 0.0),
+        SVector(1.0, 0.0, 0.0),
+        SVector(0.0, 1.0, 0.0),
+    )))
+    @test has_inside(typeof(Shift(BaseObstructions.Sphere(1.0), [0.0, 0.0, 0.0])))
+    @test !has_inside(typeof(Scale(BaseObstructions.InfiniteWall(), 1.0)))
+    @test has_inside(typeof(GeometryVector{3}([BaseObstructions.Sphere(1.0)])))
+    @test !has_inside(typeof(GeometryVector{1}([BaseObstructions.InfiniteWall()])))
+    @test has_inside(typeof(GeometryTuple{3}((
+        BaseObstructions.FullTriangle(
+            SVector(0.0, 0.0, 0.0),
+            SVector(1.0, 0.0, 0.0),
+            SVector(0.0, 1.0, 0.0),
+        ),
+        BaseObstructions.Sphere(1.0),
+    ))))
+    @test !has_inside(typeof(GeometryTuple{3}((BaseObstructions.FullTriangle(
+        SVector(0.0, 0.0, 0.0),
+        SVector(1.0, 0.0, 0.0),
+        SVector(0.0, 1.0, 0.0),
+    ),))))
+    @test !has_inside(typeof(GeometryTuple{3}(())))
     @test_throws MethodError GeometryVector{3}([TestGeometry{2}(1)])
     @test_throws ArgumentError GeometryVector{3, PhysicalGeometry{3}}(PhysicalGeometry{3}[])
     @test_throws ArgumentError GeometryVector{3, Shift{3, PhysicalGeometry{3}}}(
@@ -53,7 +80,7 @@ const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
     shift = Shift(geometry_3d, [1.0, 2.0, 3.0])
     position = SVector(4.0, 5.0, 6.0)
     normal = SVector(0.0, 1.0, 0.0)
-    @test shift isa Transformations.Transformation{3, 3}
+    @test shift isa Transformations.Transformation{3, 3, typeof(geometry_3d)}
     @test Transformations.forward(shift, position) == SVector(5.0, 7.0, 9.0)
     @test Transformations.backward(shift, position) == SVector(3.0, 3.0, 3.0)
     @test Transformations.forward_normal(shift, normal) == normal
@@ -211,7 +238,7 @@ const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
     ))
 
     scale = Scale(geometry_3d, 2.0)
-    @test scale isa Transformations.Transformation{3, 3}
+    @test scale isa Transformations.Transformation{3, 3, typeof(geometry_3d)}
     @test scale.scale == 2.0
     @test Transformations.forward(scale, position) == SVector(8.0, 10.0, 12.0)
     @test Transformations.backward(scale, SVector(8.0, 10.0, 12.0)) == position
@@ -226,7 +253,7 @@ const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
     @test Transformations.forward_normal(rotation, position_2d) == SVector(-2.0, 1.0)
 
     projection = Project{3, 2}(geometry_2d)
-    @test projection isa Transformations.Transformation{3, 2}
+    @test projection isa Transformations.Transformation{3, 2, typeof(geometry_2d)}
     @test Transformations.forward(projection, SVector(1.0, 2.0, 3.0)) == SVector(1.0, 2.0)
     @test_throws ArgumentError Transformations.backward(projection, SVector(1.0, 2.0))
     @test_throws ArgumentError Transformations.forward_normal(projection, SVector(1.0, 2.0, 3.0))

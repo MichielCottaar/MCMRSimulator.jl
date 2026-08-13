@@ -32,6 +32,9 @@ end
 """Find the first intersection of a path with `geometry`."""
 function detect_intersection end
 
+"""Return whether a geometry has an inside region."""
+function has_inside end
+
 include("groups.jl")
 include("transformations.jl")
 include("base_obstructions/base_obstructions.jl")

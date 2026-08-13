@@ -3,7 +3,7 @@ module Groups
 
 import StaticArrays: SVector
 import ...Indices: ObstructionIndex
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside
 
 abstract type GroupGeometry{N} <: PhysicalGeometry{N} end
 
@@ -22,6 +22,9 @@ end
 struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} <: GroupGeometry{N}
     geometries::P
 end
+
+has_inside(::Type{<:GeometryVector{N, P}}) where {N, P} = has_inside(P)
+has_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = any(has_inside, P.parameters)
 
 GeometryVector{N}(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}} =
     GeometryVector{N, P}(geometries)
