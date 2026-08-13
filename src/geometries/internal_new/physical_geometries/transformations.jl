@@ -42,7 +42,7 @@ struct Scale{N, P<:PhysicalGeometry{N}} <: Transformation{N, N}
     function Scale{N, P}(geometry::P, scale::Real) where {N, P<:PhysicalGeometry{N}}
         scale == 0 && throw(ArgumentError("a Scale transformation requires a nonzero scale"))
         scale = Float64(scale)
-        return new{N, P}(geometry, scale, inv(scale))
+        return new{N, P}(geometry, scale)
     end
 end
 
