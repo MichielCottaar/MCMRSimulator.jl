@@ -43,6 +43,10 @@ const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
     @test length(GeometryVector{3}(TestGeometry{3}[])) == 0
     @test length(GeometryTuple{3}(())) == 0
     @test_throws MethodError GeometryVector{3}([TestGeometry{2}(1)])
+    @test_throws ArgumentError GeometryVector{3, PhysicalGeometry{3}}(PhysicalGeometry{3}[])
+    @test_throws ArgumentError GeometryVector{3, Shift{3, PhysicalGeometry{3}}}(
+        Shift{3, PhysicalGeometry{3}}[],
+    )
 
     geometry_3d = TestGeometry{3}(0)
     geometry_2d = TestGeometry{2}(0)

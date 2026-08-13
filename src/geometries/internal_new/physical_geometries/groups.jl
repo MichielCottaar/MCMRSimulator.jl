@@ -7,8 +7,16 @@ import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection
 
 abstract type GroupGeometry{N} <: PhysicalGeometry{N} end
 
+_is_fully_concrete(::Type{T}) where {T} =
+    isconcretetype(T) && all(parameter -> !(parameter isa Type) || _is_fully_concrete(parameter), T.parameters)
+
 struct GeometryVector{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N}
     geometries::Vector{P}
+
+    function GeometryVector{N, P}(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}}
+        _is_fully_concrete(P) || throw(ArgumentError("GeometryVector element types must be fully concrete"))
+        new{N, P}(geometries)
+    end
 end
 
 struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} <: GroupGeometry{N}
