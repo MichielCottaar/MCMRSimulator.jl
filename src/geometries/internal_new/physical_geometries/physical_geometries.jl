@@ -1,6 +1,7 @@
 module PhysicalGeometries
 import StaticArrays: SVector
 import ..Indices: ObstructionIndex
+import ..InternalBoundingBoxes: InternalBoundingBox
 
 """
     PhysicalGeometry{N}
@@ -37,6 +38,9 @@ function has_inside end
 
 """Return the obstruction indices containing a position."""
 function inside_indices end
+
+"""Return the axis-aligned bounding box containing a physical geometry."""
+function InternalBoundingBox end
 
 include("groups.jl")
 include("transformations.jl")

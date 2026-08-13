@@ -181,6 +181,9 @@ const get_value = Properties.get_value
     sphere = BaseObstructions.Sphere(2.0)
     @test BoundingBoxes.InternalBoundingBox(cylinder) isa BoundingBoxes.InternalBoundingBox{2}
     @test BoundingBoxes.InternalBoundingBox(sphere) isa BoundingBoxes.InternalBoundingBox{3}
+    sphere_box = BoundingBoxes.InternalBoundingBox(sphere)
+    @test BoundingBoxes.lower(sphere_box) == SVector(-2.0, -2.0, -2.0)
+    @test BoundingBoxes.upper(sphere_box) == SVector(2.0, 2.0, 2.0)
     sphere_hit = GI.PhysicalGeometries.detect_intersection(
         sphere,
         SVector(-3.0, 0.0, 0.0),
@@ -211,6 +214,9 @@ const get_value = Properties.get_value
     @test inside_sphere_hit.normal == SVector(-1.0, 0.0, 0.0)
 
     shifted_sphere = Shift(sphere, [1.0, 0.0, 0.0])
+    shifted_sphere_box = BoundingBoxes.InternalBoundingBox(shifted_sphere)
+    @test BoundingBoxes.lower(shifted_sphere_box) == SVector(-3.0, -2.0, -2.0)
+    @test BoundingBoxes.upper(shifted_sphere_box) == SVector(1.0, 2.0, 2.0)
     shifted_hit = GI.PhysicalGeometries.detect_intersection(
         shifted_sphere,
         SVector(-4.0, 0.0, 0.0),
@@ -223,6 +229,11 @@ const get_value = Properties.get_value
         Shift(BaseObstructions.Sphere(1.0), [-2.0, 0.0, 0.0]),
         Shift(BaseObstructions.Sphere(1.0), [2.0, 0.0, 0.0]),
     ])
+    grouped_box = BoundingBoxes.InternalBoundingBox(grouped_spheres)
+    @test BoundingBoxes.lower(grouped_box) == SVector(-3.0, -1.0, -1.0)
+    @test BoundingBoxes.upper(grouped_box) == SVector(3.0, 1.0, 1.0)
+    @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(GeometryVector{3}(TestGeometry{3}[]))
+    @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(GeometryTuple{3}(()))
     grouped_hit = GI.PhysicalGeometries.detect_intersection(
         grouped_spheres,
         SVector(-5.0, 0.0, 0.0),
@@ -314,6 +325,7 @@ const get_value = Properties.get_value
     @test_throws ArgumentError Transformations.backward(projection, SVector(1.0, 2.0))
     @test_throws ArgumentError Transformations.forward_normal(projection, SVector(1.0, 2.0, 3.0))
     @test Transformations.backward_normal(projection, SVector(1.0, 2.0)) == SVector(1.0, 2.0, 0.0)
+    @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(projection)
 
     geometry_1d = TestGeometry{1}(0)
     projection_z = Project{3, 1}(geometry_1d)

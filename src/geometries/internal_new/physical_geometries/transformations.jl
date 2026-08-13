@@ -3,7 +3,7 @@ module Transformations
 
 import StaticArrays: SMatrix, SVector
 import ...InternalBoundingBoxes
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
 
 """
     Transformation{N, M, P} <: PhysicalGeometry{N}
@@ -17,6 +17,9 @@ Transformation of a geometry from an `N`-dimensional coordinate system to an
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
 
 has_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_inside(P)
+
+InternalBoundingBox(transformation::Transformation) =
+    backward(transformation, InternalBoundingBox(transformation.geometry))
 
 inside_indices(transformation::Transformation, position) =
     inside_indices(transformation.geometry, forward(transformation, position))
@@ -87,6 +90,8 @@ struct Project{N, M, P<:PhysicalGeometry{M}} <: Transformation{N, M, P}
 end
 
 Project{N, M}(geometry::P) where {N, M, P<:PhysicalGeometry{M}} = Project{N, M, P}(geometry)
+
+InternalBoundingBox(::Project) = throw(ArgumentError("Project transformations do not have a finite backward bounding box"))
 
 """Transform a value from the source to the destination coordinate system."""
 function forward end

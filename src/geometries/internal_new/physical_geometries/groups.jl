@@ -3,7 +3,8 @@ module Groups
 
 import StaticArrays: SVector
 import ...Indices: ObstructionIndex
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices
+import ...InternalBoundingBoxes
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
 
 abstract type GroupGeometry{N} <: PhysicalGeometry{N} end
 
@@ -25,6 +26,17 @@ end
 
 has_inside(::Type{<:GeometryVector{N, P}}) where {N, P} = has_inside(P)
 has_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = any(has_inside, P.parameters)
+
+function InternalBoundingBox(geometry::GroupGeometry{N}) where {N}
+    isempty(geometry) && throw(ArgumentError("cannot construct a bounding box for an empty geometry group"))
+    boxes = [InternalBoundingBoxes.InternalBoundingBox(child) for child in geometry]
+    lower_bound = reduce((a, b) -> min.(a, b), (InternalBoundingBoxes.lower(box) for box in boxes))
+    upper_bound = reduce((a, b) -> max.(a, b), (InternalBoundingBoxes.upper(box) for box in boxes))
+    InternalBoundingBoxes.InternalBoundingBox(
+        (upper_bound - lower_bound) / 2,
+        (upper_bound + lower_bound) / 2,
+    )
+end
 
 function _prepend_index(obstruction_index::ObstructionIndex, index::Int)
     ObstructionIndex(SVector(index, obstruction_index.indices...))
