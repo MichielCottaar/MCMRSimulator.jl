@@ -8,7 +8,7 @@ export FixedGeometry, CollisionState, BoundingBox,
     permeability, surface_relaxation, surface_density, dwell_time,
     mri_properties, R1, R2, off_resonance,
     susceptibility_off_resonance, off_resonance_gradient,
-    has_intersection, previous_hit,
+    previous_hit,
     direction, reflect
 
 """
@@ -122,9 +122,6 @@ function susceptibility_off_resonance end
 
 """Return the maximum susceptibility off-resonance gradient for `geometry`."""
 function off_resonance_gradient end
-
-"""Return whether a `CollisionState` represents a real collision."""
-function has_intersection end
 
 """Return the previous-hit information needed by `detect_intersection`."""
 function previous_hit end

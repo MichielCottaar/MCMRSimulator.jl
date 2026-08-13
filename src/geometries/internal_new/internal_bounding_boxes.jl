@@ -15,7 +15,7 @@ struct InternalBoundingBox{N}
     upper::SVector{N, Float64}
 
     function InternalBoundingBox{N}(half_size::SVector{N, Float64}, center::SVector{N, Float64}) where {N}
-        all(half_size .> 0) || throw(ArgumentError("bounding-box lower bounds must not exceed upper bounds"))
+        all(half_size .>= 0) || throw(ArgumentError("bounding-box half-sizes must be nonnegative"))
         new{N}(center - half_size, center + half_size)
     end
 end

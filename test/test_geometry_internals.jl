@@ -8,6 +8,8 @@ const Scale = Transformations.Scale
 const Rotate = Transformations.Rotate
 const Project = Transformations.Project
 const BoundingBoxes = GI.InternalBoundingBoxes
+const ObstructionIndex = GI.Indices.ObstructionIndex
+const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
 
 @testset "Geometry internals" begin
     struct TestGeometry{N} <: PhysicalGeometry{N}
@@ -52,6 +54,59 @@ const BoundingBoxes = GI.InternalBoundingBoxes
     @test Transformations.backward(shift, position) == SVector(3.0, 3.0, 3.0)
     @test Transformations.forward_normal(shift, normal) == normal
     @test Transformations.backward_normal(shift, normal) == normal
+
+    intersection = GI.PhysicalGeometries.Intersection(
+        0.5,
+        normal,
+        true,
+        ObstructionIndex(SVector(1, 2)),
+        false,
+    )
+    @test intersection.obstruction_index == ObstructionIndex(SVector(1, 2))
+    @test !Base.isempty(intersection)
+    @test Base.isempty(GI.PhysicalGeometries.Intersection{3}())
+
+    infinite_wall = BaseObstructions.InfiniteWall()
+    @test infinite_wall isa PhysicalGeometry{1}
+    @test BoundingBoxes.InternalBoundingBox(infinite_wall) isa BoundingBoxes.InternalBoundingBox{1}
+    wall_hit = GI.PhysicalGeometries.detect_intersection(
+        infinite_wall,
+        SVector(-1.0),
+        SVector(1.0),
+        ObstructionIndex(SVector(4)),
+    )
+    @test wall_hit.distance == 0.5
+    @test wall_hit.normal == SVector(-1.0)
+    @test wall_hit.obstruction_index == ObstructionIndex(SVector(4))
+
+    cylinder = BaseObstructions.InfiniteCylinder(2.0)
+    sphere = BaseObstructions.Sphere(2.0)
+    @test BoundingBoxes.InternalBoundingBox(cylinder) isa BoundingBoxes.InternalBoundingBox{2}
+    @test BoundingBoxes.InternalBoundingBox(sphere) isa BoundingBoxes.InternalBoundingBox{3}
+    sphere_hit = GI.PhysicalGeometries.detect_intersection(
+        sphere,
+        SVector(-3.0, 0.0, 0.0),
+        SVector(3.0, 0.0, 0.0),
+    )
+    @test sphere_hit.distance ≈ 1 / 6
+    @test sphere_hit.normal == SVector(-1.0, 0.0, 0.0)
+
+    triangle = BaseObstructions.FullTriangle(
+        SVector(0.0, 0.0, 0.0),
+        SVector(1.0, 0.0, 0.0),
+        SVector(0.0, 1.0, 0.0),
+    )
+    triangle_box = BoundingBoxes.InternalBoundingBox(triangle)
+    @test triangle_box isa BoundingBoxes.InternalBoundingBox{3}
+    @test BoundingBoxes.lower(triangle_box) == SVector(0.0, 0.0, 0.0)
+    @test BoundingBoxes.upper(triangle_box) == SVector(1.0, 1.0, 0.0)
+    triangle_hit = GI.PhysicalGeometries.detect_intersection(
+        triangle,
+        SVector(0.25, 0.25, 1.0),
+        SVector(0.25, 0.25, -1.0),
+    )
+    @test triangle_hit.distance == 0.5
+    @test triangle_hit.normal == SVector(0.0, 0.0, 1.0)
 
     scale = Scale(geometry_3d, 2.0)
     @test scale isa Transformations.Transformation{3, 3}
