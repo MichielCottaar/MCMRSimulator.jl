@@ -7,11 +7,12 @@ import ...InternalBoundingBoxes
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
 
 abstract type GroupGeometry{N} <: PhysicalGeometry{N} end
+abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N} end
 
 _is_fully_concrete(::Type{T}) where {T} =
     isconcretetype(T) && all(parameter -> !(parameter isa Type) || _is_fully_concrete(parameter), T.parameters)
 
-struct GeometryVector{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N}
+struct GeometryVector{N, P<:PhysicalGeometry{N}} <: GeometryVectorLike{N, P}
     geometries::Vector{P}
 
     function GeometryVector{N, P}(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}}
@@ -20,11 +21,27 @@ struct GeometryVector{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N}
     end
 end
 
+struct GeometryVectorBoundingBox{N, P<:PhysicalGeometry{N}} <: GeometryVectorLike{N, P}
+    geometries::Vector{P}
+    bounding_boxes::Vector{InternalBoundingBoxes.InternalBoundingBox{N}}
+
+    function GeometryVectorBoundingBox{N, P}(
+        geometries::Vector{P},
+        bounding_boxes::Vector{InternalBoundingBoxes.InternalBoundingBox{N}},
+    ) where {N, P<:PhysicalGeometry{N}}
+        length(geometries) == length(bounding_boxes) ||
+            throw(ArgumentError("geometries and bounding_boxes must have the same length"))
+        _is_fully_concrete(P) || throw(ArgumentError("GeometryVector element types must be fully concrete"))
+        new{N, P}(geometries, bounding_boxes)
+    end
+end
+
 struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} <: GroupGeometry{N}
     geometries::P
 end
 
 has_inside(::Type{<:GeometryVector{N, P}}) where {N, P} = has_inside(P)
+has_inside(::Type{<:GeometryVectorBoundingBox{N, P}}) where {N, P} = has_inside(P)
 has_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = any(has_inside, P.parameters)
 
 function InternalBoundingBox(geometry::GroupGeometry{N}) where {N}
@@ -42,10 +59,12 @@ function _prepend_index(obstruction_index::ObstructionIndex, index::Int)
     ObstructionIndex(SVector(index, obstruction_index.indices...))
 end
 
-function inside_indices(geometry::GeometryVector{N}, position::SVector{N, Float64}) where {N}
+function inside_indices(geometry::GeometryVectorLike{N}, position::SVector{N, Float64}) where {N}
     has_inside(typeof(geometry)) || return ObstructionIndex[]
     indices = ObstructionIndex[]
     for (child_index, child) in enumerate(geometry)
+        geometry isa GeometryVectorBoundingBox &&
+            !InternalBoundingBoxes.isinside(geometry.bounding_boxes[child_index], position) && continue
         for obstruction_index in inside_indices(child, position)
             push!(indices, _prepend_index(obstruction_index, child_index))
         end
@@ -65,6 +84,15 @@ end
 
 GeometryVector{N}(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}} =
     GeometryVector{N, P}(geometries)
+
+GeometryVectorBoundingBox(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}} =
+    GeometryVectorBoundingBox{N, P}(geometries, InternalBoundingBox.(geometries))
+
+GeometryVectorBoundingBox(
+    geometries::Vector{P},
+    bounding_boxes::Vector{InternalBoundingBoxes.InternalBoundingBox{N}},
+) where {N, P<:PhysicalGeometry{N}} =
+    GeometryVectorBoundingBox{N, P}(geometries, bounding_boxes)
 
 GeometryTuple{N}(geometries::Tuple{Vararg{PhysicalGeometry{N}}}) where {N} =
     GeometryTuple{N, typeof(geometries)}(geometries)
@@ -100,6 +128,26 @@ function _previous_hit_for_child(
     )
 end
 
+function _could_intersect(
+    ::GroupGeometry,
+    ::Int,
+    ::SVector,
+    ::SVector,
+)
+    true
+end
+
+function _could_intersect(
+    geometry::GeometryVectorBoundingBox{N},
+    child_index::Int,
+    start::SVector{N, Float64},
+    destination::SVector{N, Float64},
+) where {N}
+    box = geometry.bounding_boxes[child_index]
+    InternalBoundingBoxes.could_intersect(box, start, destination) &&
+        InternalBoundingBoxes.does_intersect(box, start, destination)
+end
+
 function detect_intersection(
     geometry::GroupGeometry{N},
     start::SVector{N, Float64},
@@ -115,6 +163,7 @@ function detect_intersection(
 
     closest = Intersection{N}()
     for (child_index, child) in enumerate(geometry)
+        _could_intersect(geometry, child_index, start, destination) || continue
         child_previous_hit = _previous_hit_for_child(geometry, previous_hit, child_index)
         intersection = detect_intersection(child, start, destination, child_previous_hit)
         if intersection.distance < closest.distance
@@ -124,15 +173,15 @@ function detect_intersection(
     return closest
 end
 
-Base.size(geometry::GeometryVector) = size(geometry.geometries)
-Base.axes(geometry::GeometryVector) = axes(geometry.geometries)
-Base.length(geometry::GeometryVector) = length(geometry.geometries)
-Base.firstindex(geometry::GeometryVector) = firstindex(geometry.geometries)
-Base.lastindex(geometry::GeometryVector) = lastindex(geometry.geometries)
-Base.getindex(geometry::GeometryVector, index...) = getindex(geometry.geometries, index...)
-Base.setindex!(geometry::GeometryVector, value, index...) = setindex!(geometry.geometries, value, index...)
-Base.iterate(geometry::GeometryVector, state...) = iterate(geometry.geometries, state...)
-Base.eltype(::Type{GeometryVector{N, P}}) where {N, P} = P
+Base.size(geometry::GeometryVectorLike) = size(geometry.geometries)
+Base.axes(geometry::GeometryVectorLike) = axes(geometry.geometries)
+Base.length(geometry::GeometryVectorLike) = length(geometry.geometries)
+Base.firstindex(geometry::GeometryVectorLike) = firstindex(geometry.geometries)
+Base.lastindex(geometry::GeometryVectorLike) = lastindex(geometry.geometries)
+Base.getindex(geometry::GeometryVectorLike, index...) = getindex(geometry.geometries, index...)
+Base.setindex!(geometry::GeometryVectorLike, value, index...) = setindex!(geometry.geometries, value, index...)
+Base.iterate(geometry::GeometryVectorLike, state...) = iterate(geometry.geometries, state...)
+Base.eltype(::Type{<:GeometryVectorLike{N, P}}) where {N, P} = P
 
 Base.length(geometry::GeometryTuple) = length(geometry.geometries)
 Base.firstindex(geometry::GeometryTuple) = firstindex(geometry.geometries)

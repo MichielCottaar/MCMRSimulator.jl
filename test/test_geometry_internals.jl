@@ -1,6 +1,7 @@
 const GI = mr.Geometries.InternalNew
 const PhysicalGeometry = GI.PhysicalGeometries.PhysicalGeometry
 const GeometryVector = GI.PhysicalGeometries.Groups.GeometryVector
+const GeometryVectorBoundingBox = GI.PhysicalGeometries.Groups.GeometryVectorBoundingBox
 const GeometryTuple = GI.PhysicalGeometries.Groups.GeometryTuple
 const Transformations = GI.PhysicalGeometries.Transformations
 const Shift = Transformations.Shift
@@ -232,6 +233,25 @@ const get_value = Properties.get_value
     grouped_box = BoundingBoxes.InternalBoundingBox(grouped_spheres)
     @test BoundingBoxes.lower(grouped_box) == SVector(-3.0, -1.0, -1.0)
     @test BoundingBoxes.upper(grouped_box) == SVector(3.0, 1.0, 1.0)
+    filtered_spheres = GeometryVectorBoundingBox([
+        Shift(sphere, [-0.5, 0.0, 0.0]),
+        Shift(sphere, [5.0, 0.0, 0.0]),
+    ])
+    @test filtered_spheres isa GI.PhysicalGeometries.Groups.GeometryVectorLike{3}
+    @test length(filtered_spheres.bounding_boxes) == 2
+    filtered_hit = GI.PhysicalGeometries.detect_intersection(
+        filtered_spheres,
+        SVector(-2.0, 0.0, 0.0),
+        SVector(2.0, 0.0, 0.0),
+    )
+    @test filtered_hit.obstruction_index == ObstructionIndex(SVector(1))
+    @test inside_indices(filtered_spheres, SVector(0.0, 0.0, 0.0)) == [
+        ObstructionIndex(SVector(1)),
+    ]
+    @test_throws ArgumentError GeometryVectorBoundingBox(
+        [sphere],
+        BoundingBoxes.InternalBoundingBox{3}[],
+    )
     @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(GeometryVector{3}(TestGeometry{3}[]))
     @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(GeometryTuple{3}(()))
     grouped_hit = GI.PhysicalGeometries.detect_intersection(
