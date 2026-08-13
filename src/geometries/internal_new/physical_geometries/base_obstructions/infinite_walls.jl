@@ -9,8 +9,9 @@ function detect_intersection(
     ::InfiniteWall,
     start::SVector{1, Float64},
     destination::SVector{1, Float64},
-    obstruction_index::ObstructionIndex=ObstructionIndex(),
+    previous_hit::Intersection{3}=Intersection{3}(),
 )
+    !Base.isempty(previous_hit) && return Intersection{1}()
     origin = start[1]
     destination_position = destination[1]
     origin * destination_position > 0 && return Intersection{1}()
@@ -19,7 +20,7 @@ function detect_intersection(
         abs(origin) / abs(origin - destination_position),
         inside ? _positive_wall_normal : _negative_wall_normal,
         inside,
-        obstruction_index,
+        ObstructionIndex(),
         false,
     )
 end

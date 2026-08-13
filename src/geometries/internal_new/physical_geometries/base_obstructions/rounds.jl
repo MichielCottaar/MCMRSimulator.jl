@@ -14,9 +14,11 @@ function detect_intersection(
     round::Round{N},
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
-    obstruction_index::ObstructionIndex=ObstructionIndex(),
+    previous_hit::Intersection{3}=Intersection{3}(),
 ) where {N}
-    inside = isinside(round, start)
+    previous = !Base.isempty(previous_hit)
+    inside = previous ? previous_hit.inside : isinside(round, start)
+    !inside && previous && return Intersection{N}()
     difference = destination - start
     a = sum(difference .* difference)
     b = sum(2 .* start .* difference)
@@ -28,5 +30,5 @@ function detect_intersection(
     (solution <= 0 || solution > 1) && return Intersection{N}()
 
     normal = (solution .* destination .+ (1 - solution) .* start) ./ round.radius
-    return Intersection(solution, inside ? -normal : normal, inside, obstruction_index, false)
+    return Intersection(solution, inside ? -normal : normal, inside, ObstructionIndex(), false)
 end

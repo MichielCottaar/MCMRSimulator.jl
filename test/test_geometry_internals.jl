@@ -73,11 +73,22 @@ const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
         infinite_wall,
         SVector(-1.0),
         SVector(1.0),
-        ObstructionIndex(SVector(4)),
     )
     @test wall_hit.distance == 0.5
     @test wall_hit.normal == SVector(-1.0)
-    @test wall_hit.obstruction_index == ObstructionIndex(SVector(4))
+    previous_wall_hit = GI.PhysicalGeometries.Intersection(
+        0.5,
+        SVector(1.0, 0.0, 0.0),
+        false,
+        ObstructionIndex(),
+        false,
+    )
+    @test Base.isempty(GI.PhysicalGeometries.detect_intersection(
+        infinite_wall,
+        SVector(-1.0),
+        SVector(1.0),
+        previous_wall_hit,
+    ))
 
     cylinder = BaseObstructions.InfiniteCylinder(2.0)
     sphere = BaseObstructions.Sphere(2.0)
@@ -90,6 +101,27 @@ const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
     )
     @test sphere_hit.distance ≈ 1 / 6
     @test sphere_hit.normal == SVector(-1.0, 0.0, 0.0)
+    @test Base.isempty(GI.PhysicalGeometries.detect_intersection(
+        sphere,
+        SVector(-3.0, 0.0, 0.0),
+        SVector(3.0, 0.0, 0.0),
+        sphere_hit,
+    ))
+    previous_inside_sphere = GI.PhysicalGeometries.Intersection(
+        0.5,
+        SVector(1.0, 0.0, 0.0),
+        true,
+        ObstructionIndex(),
+        false,
+    )
+    inside_sphere_hit = GI.PhysicalGeometries.detect_intersection(
+        sphere,
+        SVector(-1.0, 0.0, 0.0),
+        SVector(3.0, 0.0, 0.0),
+        previous_inside_sphere,
+    )
+    @test inside_sphere_hit.distance ≈ 3 / 4
+    @test inside_sphere_hit.normal == SVector(-1.0, 0.0, 0.0)
 
     shifted_sphere = Shift(sphere, [1.0, 0.0, 0.0])
     shifted_hit = GI.PhysicalGeometries.detect_intersection(
@@ -134,6 +166,12 @@ const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
     )
     @test triangle_hit.distance == 0.5
     @test triangle_hit.normal == SVector(0.0, 0.0, 1.0)
+    @test Base.isempty(GI.PhysicalGeometries.detect_intersection(
+        triangle,
+        SVector(0.25, 0.25, 1.0),
+        SVector(0.25, 0.25, -1.0),
+        triangle_hit,
+    ))
 
     scale = Scale(geometry_3d, 2.0)
     @test scale isa Transformations.Transformation{3, 3}

@@ -36,8 +36,9 @@ function detect_intersection(
     triangle::FullTriangle,
     start::SVector{3, Float64},
     destination::SVector{3, Float64},
-    obstruction_index::ObstructionIndex=ObstructionIndex(),
+    previous_hit::Intersection{3}=Intersection{3}(),
 )
+    !Base.isempty(previous_hit) && return Intersection{3}()
     triangle_normal = normal(triangle)
     plane_distance = triangle_normal ⋅ triangle.a
     start_distance = triangle_normal ⋅ start
@@ -55,5 +56,5 @@ function detect_intersection(
     end
 
     inside = destination_distance > start_distance
-    return Intersection(distance, inside ? -triangle_normal : triangle_normal, inside, obstruction_index, false)
+    return Intersection(distance, inside ? -triangle_normal : triangle_normal, inside, ObstructionIndex(), false)
 end

@@ -25,16 +25,16 @@ function detect_intersection(
     round::OverlappingRound{N},
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
-    obstruction_index::ObstructionIndex=ObstructionIndex(),
+    previous_hit::Intersection{3}=Intersection{3}(),
 ) where {N}
-    candidate = detect_intersection(Round{N}(round.radius), start, destination, obstruction_index)
+    candidate = detect_intersection(Round{N}(round.radius), start, destination, previous_hit)
     Base.isempty(candidate) && return candidate
     position = start + candidate.distance .* (destination - start)
     return Intersection(
         candidate.distance,
         candidate.normal,
         candidate.inside,
-        candidate.obstruction_index,
+        ObstructionIndex(),
         _inside_other_rounds(round, position),
     )
 end

@@ -3,7 +3,6 @@ module Transformations
 
 import StaticArrays: SMatrix, SVector
 import ...InternalBoundingBoxes
-import ...Indices: ObstructionIndex
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection
 
 """
@@ -194,13 +193,13 @@ function detect_intersection(
     transformation::Transformation{N, M},
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
-    obstruction_index::ObstructionIndex=ObstructionIndex(),
+    previous_hit::Intersection{3}=Intersection{3}(),
 ) where {N, M}
     child_intersection = detect_intersection(
         transformation.geometry,
         forward(transformation, start),
         forward(transformation, destination),
-        obstruction_index,
+        previous_hit,
     )
     Base.isempty(child_intersection) && return Intersection{N}()
     return Intersection(
