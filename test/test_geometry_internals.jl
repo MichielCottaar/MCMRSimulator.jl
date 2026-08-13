@@ -23,6 +23,8 @@ const get_value = Properties.get_value
 
     geometries = [TestGeometry{3}(1), TestGeometry{3}(2)]
     vector = GeometryVector{3}(geometries)
+    @test GeometryVector(geometries) isa GeometryVector{3, TestGeometry{3}}
+    @test GeometryVector([BaseObstructions.Sphere(1.0)]; bounding_box=true) isa GeometryVectorBoundingBox{3, BaseObstructions.Sphere}
     @test vector isa GI.PhysicalGeometries.Groups.GroupGeometry{3}
     @test size(vector) == (2,)
     @test axes(vector) == (Base.OneTo(2),)

@@ -85,6 +85,10 @@ end
 GeometryVector{N}(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}} =
     GeometryVector{N, P}(geometries)
 
+function GeometryVector(geometries::Vector{P}; bounding_box::Bool=false) where {N, P<:PhysicalGeometry{N}}
+    bounding_box ? GeometryVectorBoundingBox(geometries) : GeometryVector{N, P}(geometries)
+end
+
 GeometryVectorBoundingBox(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}} =
     GeometryVectorBoundingBox{N, P}(geometries, InternalBoundingBox.(geometries))
 
