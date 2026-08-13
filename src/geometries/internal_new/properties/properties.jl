@@ -4,19 +4,60 @@ module Properties
 import StaticArrays: SVector
 import ..Indices: ObstructionIndex
 
-struct GeometryVectorProperties{P}
-    properties::Vector{P}
+"""
+MRI properties assigned to obstructions or groups of obstructions of type `S`.
+"""
+abstract type GeometryProperties{S} end
+
+Base.eltype(::GeometryProperties{S}) where {S} = S
+
+struct GeometryLeafProperties{S} <: GeometryProperties{S}
+    value :: S
 end
 
-struct GeometryTupleProperties{P<:Tuple}
+struct GeometryVectorProperties{S, G<:GeometryProperties{S}} <: GeometryProperties{S}
+    properties::Vector{G}
+end
+
+struct GeometryTupleProperties{S, P<:Tuple} <: GeometryProperties{S}
     properties::P
+end
+
+function _as_properties(value)
+    value isa GeometryProperties && return value
+    GeometryLeafProperties(value)
+end
+
+function GeometryVectorProperties(properties::AbstractVector)
+    children = [_as_properties(property) for property in properties]
+    isempty(children) && throw(ArgumentError("cannot infer a property type from an empty vector"))
+    G = typeof(children[1])
+    S = eltype(children[1])
+    isconcretetype(S) || throw(ArgumentError("property type must be concrete"))
+    all(typeof(property) === G for property in children) ||
+        throw(ArgumentError("all vector children must have the same concrete type"))
+    all(eltype(property) === S for property in children) ||
+        throw(ArgumentError("all property children must have the same concrete type"))
+    GeometryVectorProperties{S, G}(G[children...])
+end
+
+function GeometryTupleProperties(properties::Tuple)
+    children = map(_as_properties, properties)
+    isempty(children) && throw(ArgumentError("cannot infer a property type from an empty tuple"))
+    S = eltype(children[1])
+    isconcretetype(S) || throw(ArgumentError("property type must be concrete"))
+    all(eltype(property) === S for property in children) ||
+        throw(ArgumentError("all property children must have the same concrete type"))
+    properties = Tuple(children)
+    GeometryTupleProperties{S, typeof(properties)}(properties)
 end
 
 function get_value(property, ::ObstructionIndex)
     property
 end
 
-function get_value(properties::Union{GeometryVectorProperties, GeometryTupleProperties}, index::ObstructionIndex)
+function get_value(properties::GeometryProperties, index::ObstructionIndex)
+    properties isa GeometryLeafProperties && return properties.value
     child_index = index.indices[1]
     1 <= child_index <= length(properties.properties) ||
         throw(BoundsError(properties.properties, child_index))
@@ -33,11 +74,9 @@ function get_value(property, indices::AbstractVector{<:ObstructionIndex})
     property
 end
 
-function get_value(
-    properties::Union{GeometryVectorProperties, GeometryTupleProperties},
-    indices::AbstractVector{<:ObstructionIndex},
-)
+function get_value(properties::GeometryProperties, indices::AbstractVector{<:ObstructionIndex})
     isempty(indices) && return 0
+    properties isa GeometryLeafProperties && return properties.value
 
     total = nothing
     child_index = nothing

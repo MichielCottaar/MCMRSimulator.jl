@@ -112,9 +112,16 @@ const get_value = Properties.get_value
     @test overlapping_hit.distance ≈ 0.2
 
     @test get_value(3.0, ObstructionIndex(SVector(1, 2))) == 3.0
+    leaf_properties = Properties.GeometryLeafProperties(3.0)
+    @test leaf_properties isa Properties.GeometryProperties{Float64}
+    @test eltype(leaf_properties) === Float64
     vector_properties = Properties.GeometryVectorProperties([10.0, 20.0])
+    @test vector_properties isa Properties.GeometryProperties{Float64}
+    @test eltype(vector_properties) === Float64
     @test get_value(vector_properties, ObstructionIndex(SVector(2, 1))) == 20.0
     tuple_properties = Properties.GeometryTupleProperties((1.0, vector_properties))
+    @test tuple_properties isa Properties.GeometryProperties{Float64}
+    @test eltype(tuple_properties) === Float64
     @test get_value(tuple_properties, ObstructionIndex(SVector(2, 2))) == 20.0
     @test get_value(tuple_properties, [
         ObstructionIndex(SVector(1, 4)),
@@ -136,6 +143,14 @@ const get_value = Properties.get_value
         ObstructionIndex(SVector(1, 1)),
     ])
     @test_throws BoundsError get_value(vector_properties, ObstructionIndex(SVector(3)))
+    @test_throws ArgumentError Properties.GeometryVectorProperties([
+        Properties.GeometryLeafProperties(1.0),
+        Properties.GeometryLeafProperties(2),
+    ])
+    @test_throws ArgumentError Properties.GeometryTupleProperties((
+        Properties.GeometryLeafProperties(1.0),
+        Properties.GeometryLeafProperties(2),
+    ))
 
     sphere = BaseObstructions.Sphere(1.0)
     @test inside_indices(sphere, SVector(0.0, 0.0, 0.0)) == [ObstructionIndex()]
