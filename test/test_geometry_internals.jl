@@ -9,6 +9,8 @@ const Shift = Transformations.Shift
 const Scale = Transformations.Scale
 const Rotate = Transformations.Rotate
 const Project = Transformations.Project
+const Repeats = GI.PhysicalGeometries.Repeats
+const Repeat = Repeats.Repeat
 const BoundingBoxes = GI.InternalBoundingBoxes
 const ObstructionIndex = GI.Indices.ObstructionIndex
 const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
@@ -78,6 +80,24 @@ const get_value = Properties.get_value
         SVector(0.0, 1.0, 0.0),
     ),))))
     @test !has_inside(typeof(GeometryTuple{3}(())))
+    repeated_sphere = Repeat(BaseObstructions.Sphere(1.0), [4.0, 4.0, 4.0])
+    @test has_inside(typeof(repeated_sphere))
+    @test inside_indices(repeated_sphere, SVector(4.5, 0.0, 0.0)) == [ObstructionIndex()]
+    @test inside_indices(repeated_sphere, SVector(2.0, 0.0, 0.0)) == ObstructionIndex[]
+    @test_throws ArgumentError Repeat(BaseObstructions.Sphere(1.0), [0.0, 4.0, 4.0])
+    @test_throws ArgumentError Repeat(BaseObstructions.Sphere(2.0), [1.0, 4.0, 4.0])
+    @test_throws ArgumentError Repeat(
+        Shift(BaseObstructions.Sphere(1.0), [3.0, 0.0, 0.0]),
+        [2.0, 4.0, 4.0],
+    )
+    @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(repeated_sphere)
+    repeated_hit = GI.PhysicalGeometries.detect_intersection(
+        repeated_sphere,
+        SVector(-5.0, 0.0, 0.0),
+        SVector(5.0, 0.0, 0.0),
+    )
+    @test repeated_hit.distance ≈ 0.4
+    @test repeated_hit.normal ≈ SVector(-1.0, 0.0, 0.0)
 
     @test get_value(3.0, ObstructionIndex(SVector(1, 2))) == 3.0
     vector_properties = Properties.GeometryVectorProperties([10.0, 20.0])
