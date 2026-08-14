@@ -8,8 +8,8 @@ module Grid
 
 import StaticArrays: SVector, SMatrix
 import LinearAlgebra: norm
-import ......Constants: gyromagnetic_ratio
-import ....InternalBoundingBoxes: InternalBoundingBox, lower
+import .....Constants: gyromagnetic_ratio
+import ...InternalBoundingBoxes: InternalBoundingBox, lower
 import ..Base: BaseSusceptibility, single_susceptibility, single_susceptibility_gradient
 
 

@@ -7,7 +7,7 @@ import StaticArrays: SVector
 import LinearAlgebra: norm, cross, ⋅, inv, I
 import Rotations: MRP, Angle2d, RotMatrix2
 import ..Base: BaseSusceptibility, single_susceptibility, single_susceptibility_gradient
-import ....PhysicalGeometries.BaseObstructions: FullTriangle, normal
+import ...PhysicalGeometries.BaseObstructions: FullTriangle, normal
 
 """
 Parent type for each triangle in a mesh with susceptibility.

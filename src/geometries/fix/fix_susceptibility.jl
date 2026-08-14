@@ -4,7 +4,7 @@ Defines susceptibility state construction for the fixed geometry engine.
 module FixSusceptibility
 import StaticArrays: SVector
 import LinearAlgebra: transpose, norm, ⋅, I
-import ...InternalNew.PhysicalGeometries.Susceptibility: FixedSusceptibility, SusceptibilityGrid, SusceptibilityGridNoRepeat, SusceptibilityGridRepeat, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, SusceptibilityGridElement, dipole_approximation_repeat, dipole_approximation, IsotropicSusceptibilityGridElement, AnisotropicSusceptibilityGridElement
+import ...InternalNew.Susceptibility: FixedSusceptibility, SusceptibilityGrid, SusceptibilityGridNoRepeat, SusceptibilityGridRepeat, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, SusceptibilityGridElement, dipole_approximation_repeat, dipole_approximation, IsotropicSusceptibilityGridElement, AnisotropicSusceptibilityGridElement
 import ...InternalNew.InternalBoundingBoxes: InternalBoundingBox, lower, upper, grid_indices, grid_indices_repeating
 import ...User.Obstructions: ObstructionGroup, Cylinders, Annuli, isglobal
 import ...User.SizeScales: grid_resolution
