@@ -3,8 +3,8 @@ Defines the main [`Simulation`](@ref) object.
 """
 module Simulations
 import StaticArrays: SVector, SizedVector
-import ..Geometries: ObstructionGroup, fix, fix_susceptibility
-import ..Geometries.Internal: FixedGeometry, FixedObstruction, FixedSusceptibility, susceptibility_off_resonance, prepare_isinside!
+import ..Geometries: ObstructionGroup, fix
+import ..Geometries.Internal: FixedGeometry, susceptibility_off_resonance
 import ..Spins: Spin, Snapshot, SpinOrientation, stuck
 import ..Methods: get_time
 import ..Properties: GlobalProperties, R1, R2, off_resonance
@@ -56,14 +56,12 @@ To run a [`Snapshot`](@ref) of spins through the simulations you can use one of 
 - `evolve`: evolves the spins in the snapshot until a single given time and returns that state in a new [`Snapshot`](@ref).
 - `readout`: evolves the spins to particular times in each TR and return the total signal at that time (or a [`Snapshot`](@ref)).
 """
-struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, O<:FixedSusceptibility}
+struct Simulation{N, NG, G<:FixedGeometry}
     # N sequences, datatype T
     sequences :: Vector
     diffusivity :: Float64
     properties :: GlobalProperties
     geometry :: G
-    inside_geometry :: IG
-    susceptibility :: O
     timestep :: TimeStep
     flatten::Bool
     verbose::Bool
@@ -72,20 +70,16 @@ struct Simulation{N, NG, G<:FixedGeometry{NG}, IG<:FixedGeometry, O<:FixedSuscep
         diffusivity::Float64,
         properties::GlobalProperties,
         geometry::FixedGeometry,
-        inside_geometry::FixedGeometry,
-        susceptibility::FixedSusceptibility,
         timestep::TimeStep,
         flatten::Bool,
         verbose::Bool
     )
         nseq = length(sequences)
-        new{nseq, length(geometry), typeof(geometry), typeof(inside_geometry), typeof(susceptibility)}(
+        new{nseq, length(geometry), typeof(geometry)}(
             collect(sequences),
             diffusivity,
             properties,
             geometry,
-            inside_geometry,
-            susceptibility,
             timestep,
             flatten,
             verbose,
@@ -111,27 +105,19 @@ function Simulation(
     if flatten
         sequences = [sequences]
     end
-    susceptibility = fix_susceptibility(geometry)
     geometry = fix(geometry; permeability=permeability, density=surface_density, dwell_time=dwell_time, relaxation=surface_relaxation)
-
-    inside_geometry = filter(geometry) do obstruction
-        ~all(all(iszero.(getproperty(obstruction.volume, s))) for s in (:R1, :R2, :off_resonance))
-    end
-    prepare_isinside!.(inside_geometry)
 
     default_properties = GlobalProperties(; R1=R1, R2=R2, off_resonance=off_resonance)
     if iszero(diffusivity) && length(geometry) > 0
         @warn "Restrictive geometry will have no effect, because the diffusivity is set at zero"
     end
-    timestep = timestep isa Number ? TimeStep(timestep, Inf) : TimeStep(; verbose=verbose, diffusivity=diffusivity, geometry=geometry, timestep...),
+    timestep = timestep isa Number ? TimeStep(timestep, Inf) : TimeStep(; verbose=verbose, diffusivity=diffusivity, geometry=geometry, timestep...)
     return Simulation(
         sequences, 
         Float64(diffusivity),
         default_properties,
         geometry,
-        inside_geometry,
-        susceptibility,
-        timestep isa Number ? TimeStep(timestep, Inf) : TimeStep(; verbose=verbose, diffusivity=diffusivity, geometry=geometry, timestep...),
+        timestep,
         flatten,
         verbose,
     )
@@ -202,13 +188,10 @@ Computes the susceptibility off-resonance caused by all susceptibility sources i
 The field is computed in ppm. Knowledge of the scanner `B0` is needed to convert it into KHz.
 """
 susceptibility_off_resonance(simulation::Simulation, spin::Spin) = susceptibility_off_resonance(simulation, spin.position, stuck(spin) ? spin.reflection.inside : nothing)
-susceptibility_off_resonance(simulation::Simulation, position::AbstractVector, inside::Union{Nothing, Bool}=nothing) = susceptibility_off_resonance(simulation.susceptibility, SVector{3, Float64}(position), inside)
+susceptibility_off_resonance(simulation::Simulation, position::AbstractVector, inside::Union{Nothing, Bool}=nothing) = susceptibility_off_resonance(simulation.geometry, SVector{3, Float64}(position), inside)
 function susceptibility_off_resonance(simulation::Simulation, old_pos::AbstractVector, new_pos::AbstractVector) 
-    if iszero(length(simulation.susceptibility))
-        return 0.
-    end
     along_tract = rand()
-    susceptibility_off_resonance(simulation.susceptibility, along_tract * old_pos .+ (1 - along_tract) .* new_pos, nothing)
+    susceptibility_off_resonance(simulation.geometry, along_tract * old_pos .+ (1 - along_tract) .* new_pos, nothing)
 end
 
 

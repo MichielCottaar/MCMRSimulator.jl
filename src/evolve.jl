@@ -346,7 +346,7 @@ function readout_internal(snapshot::Snapshot{0}, simulation::Simulation{0}, new_
     if :readouts in keys(kwargs)
         error("readout timings should be set as the 3rd positional argument, not a keyword argument.")
     end
-    sim_1 = Simulation([empty_sequence()], simulation.diffusivity, simulation.properties, simulation.geometry, simulation.inside_geometry, simulation.susceptibility, simulation.timestep, true, simulation.verbose)
+    sim_1 = Simulation([empty_sequence()], simulation.diffusivity, simulation.properties, simulation.geometry, simulation.timestep, true, simulation.verbose)
     return Snapshot(readout_internal(Snapshot(snapshot, 1), sim_1, new_readout_times; kwargs...), 0)
 end
 
@@ -361,7 +361,7 @@ function readout(spins::Integer, simulation::Simulation{N}, new_readout_times=no
         if !return_snapshot
             error("`return_snapshot` should be set to true when running a simulation with 0 sequences")
         end
-        result = readout(spins, Simulation([empty_sequence()], simulation.diffusivity, simulation.properties, simulation.geometry, simulation.inside_geometry, simulation.susceptibility, simulation.timestep, true, simulation.verbose), new_readout_times; bounding_box=bounding_box, return_snapshot=return_snapshot, kwargs...)
+        result = readout(spins, Simulation([empty_sequence()], simulation.diffusivity, simulation.properties, simulation.geometry, simulation.timestep, true, simulation.verbose), new_readout_times; bounding_box=bounding_box, return_snapshot=return_snapshot, kwargs...)
         return Snapshot(result, 0)
     else
         total_magnetisations = spins * N
