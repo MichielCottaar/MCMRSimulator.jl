@@ -1,16 +1,16 @@
 const FixBaseGeometry = mr.Geometries.Fix.FixBaseGeometry
 const FixTransformations = mr.Geometries.Fix.FixTransformations
 const FixProperties = mr.Geometries.Fix.FixProperties
-const BaseObstructions = mr.Geometries.InternalNew.PhysicalGeometries.BaseObstructions
-const Groups = mr.Geometries.InternalNew.PhysicalGeometries.Groups
-const Meshes = mr.Geometries.InternalNew.PhysicalGeometries.Meshes
-const Repeats = mr.Geometries.InternalNew.PhysicalGeometries.Repeats
-const Transparent = mr.Geometries.InternalNew.PhysicalGeometries.Transparent
-const SizeScaleOverride = mr.Geometries.InternalNew.SizeScales.SizeScaleOverride
-const Transformations = mr.Geometries.InternalNew.PhysicalGeometries.Transformations
-const Properties = mr.Geometries.InternalNew.Properties
-const ObstructionIndex = mr.Geometries.InternalNew.Indices.ObstructionIndex
-const size_scale = mr.Geometries.InternalNew.size_scale
+const BaseObstructions = mr.Geometries.Internal.PhysicalGeometries.BaseObstructions
+const Groups = mr.Geometries.Internal.PhysicalGeometries.Groups
+const Meshes = mr.Geometries.Internal.PhysicalGeometries.Meshes
+const Repeats = mr.Geometries.Internal.PhysicalGeometries.Repeats
+const Transparent = mr.Geometries.Internal.PhysicalGeometries.Transparent
+const SizeScaleOverride = mr.Geometries.Internal.SizeScales.SizeScaleOverride
+const Transformations = mr.Geometries.Internal.PhysicalGeometries.Transformations
+const Properties = mr.Geometries.Internal.Properties
+const ObstructionIndex = mr.Geometries.Internal.Indices.ObstructionIndex
+const size_scale = mr.Geometries.Internal.size_scale
 const get_value = Properties.get_value
 const fix = mr.Geometries.Fix.fix
 
@@ -162,11 +162,11 @@ end
     @test fix(fixed) === fixed
 
     combined = fix([mr.Walls(position=0.0), group])
-    @test combined.geometry isa mr.Geometries.InternalNew.PhysicalGeometries.Groups.GeometryTuple
+    @test combined.geometry isa mr.Geometries.Internal.PhysicalGeometries.Groups.GeometryTuple
     @test combined.volume.R1 isa Properties.GeometryTupleProperties
     @test combined.surface.density isa Properties.GeometryTupleProperties
 
-    @test fix([]).geometry isa mr.Geometries.InternalNew.PhysicalGeometries.Groups.GeometryTuple
+    @test fix([]).geometry isa mr.Geometries.Internal.PhysicalGeometries.Groups.GeometryTuple
     @test_throws MethodError fix(group; R1=1.0)
     @test_throws MethodError fix(group; R2=1.0)
     @test_throws MethodError fix(group; off_resonance=1.0)

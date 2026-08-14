@@ -1,4 +1,4 @@
-const GI = mr.Geometries.InternalNew
+const GI = mr.Geometries.Internal
 const PhysicalGeometry = GI.PhysicalGeometries.PhysicalGeometry
 const GeometryVector = GI.PhysicalGeometries.Groups.GeometryVector
 const GeometryVectorBoundingBox = GI.PhysicalGeometries.Groups.GeometryVectorBoundingBox
