@@ -578,6 +578,35 @@ const get_value = Properties.get_value
     @test repeating_grid[2] == [(Int32(1), Int32(0)), (Int32(1), Int32(2))]
     @test repeating_grid[3] == [(Int32(1), Int32(1)), (Int32(1), Int32(0))]
     @test repeating_grid[4] == [(Int32(1), Int32(1)), (Int32(1), Int32(0))]
+    repeating_zero_boundary = BoundingBoxes.grid_indices_repeating(
+        BoundingBoxes.InternalBoundingBox([2.0]),
+        [4],
+        [4.0],
+        [BoundingBoxes.InternalBoundingBox([0.0], [-1.0])],
+    )
+    @test repeating_zero_boundary[1] == SVector{1, Float64}[]
+    @test repeating_zero_boundary[2][1] == [(Int32(1), Int32(0))]
+    @test repeating_zero_boundary[2][2] == [(Int32(1), Int32(0))]
+    @test repeating_zero_boundary[2][3] == Tuple{Int32, Int32}[]
+    @test repeating_zero_boundary[2][4] == Tuple{Int32, Int32}[]
+
+    repeating_zero_lower_edge = BoundingBoxes.grid_indices_repeating(
+        BoundingBoxes.InternalBoundingBox([2.0]),
+        [4],
+        [4.0],
+        [BoundingBoxes.InternalBoundingBox([0.0], [-2.0])],
+    )
+    @test repeating_zero_lower_edge[2][1] == [(Int32(1), Int32(0))]
+    @test all(isempty, repeating_zero_lower_edge[2][2:end])
+
+    repeating_zero_upper_edge = BoundingBoxes.grid_indices_repeating(
+        BoundingBoxes.InternalBoundingBox([2.0]),
+        [4],
+        [4.0],
+        [BoundingBoxes.InternalBoundingBox([0.0], [2.0])],
+    )
+    @test repeating_zero_upper_edge[2][end] == [(Int32(1), Int32(0))]
+    @test all(isempty, repeating_zero_upper_edge[2][1:end-1])
     @test_throws ArgumentError BoundingBoxes.grid_indices_repeating(
         BoundingBoxes.InternalBoundingBox([2.0]),
         [4],
