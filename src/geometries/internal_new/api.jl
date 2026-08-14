@@ -2,12 +2,13 @@
 
 import StaticArrays: SVector
 import .Indices: ObstructionIndex
-import .PhysicalGeometries: PhysicalGeometry, Intersection, surface_sampling, inside_indices
+import .InternalBoundingBoxes: InternalBoundingBox
+import .PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, surface_sampling, inside_indices
 import .Properties: all_property_values
 import ...Properties: stick_probability
 
 export FixedGeometry, Intersection, IsInside,
-    isinside, detect_intersection, random_surface_positions, surface_sampling, geometry_mesh,
+    isinside, detect_intersection, surface_sampling, geometry_mesh,
     size_scale, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
     permeability, surface_relaxation, surface_density, dwell_time,
@@ -55,14 +56,29 @@ isinside(geometry::FixedGeometry, position::SVector{3, Float64}, intersection::I
 Return the first intersection between the path from `start` to `destination`
 and `geometry`.
 """
-function detect_intersection end
+function detect_intersection(
+    geometry::FixedGeometry,
+    start::SVector{3, Float64},
+    destination::SVector{3, Float64},
+    previous_intersection::Intersection=Intersection{3}(),
+)
+    detect_intersection(geometry.geometry, start, destination, previous_intersection)
+end
 
 """
-    random_surface_positions(geometry, bounding_box, volume_density)
+    surface_sampling(geometry, bounding_box, volume_density)
 
-Sample surface positions in `bounding_box` at the requested volume density.
+Sample surface positions and normals in `bounding_box` at the requested
+volume density.
 """
-function random_surface_positions end
+function surface_sampling(
+    geometry::FixedGeometry,
+    bounding_box::InternalBoundingBox{3},
+    volume_density::Number,
+)
+    isnothing(geometry.surface) && return SVector{3, Float64}[], SVector{3, Float64}[]
+    surface_sampling(geometry.geometry, geometry.surface.density, bounding_box, volume_density)
+end
 
 """
     geometry_mesh(geometry)

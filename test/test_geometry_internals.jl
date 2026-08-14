@@ -98,6 +98,23 @@ const all_property_values = Properties.all_property_values
     @test all(position[1]^2 + position[2]^2 ≈ 1.0 for position in projected_positions)
     @test all(norm(normal) ≈ 1.0 for normal in projected_normals)
 
+    fixed_sample_geometry = mr.fix(mr.Spheres(radius=1.0); density=1.0)
+    fixed_sample_positions, fixed_sample_normals = GI.surface_sampling(
+        fixed_sample_geometry,
+        BoundingBoxes.InternalBoundingBox{3}(2.0),
+        100.0,
+    )
+    @test length(fixed_sample_positions) == length(fixed_sample_normals)
+    @test all(norm(position) ≈ 1.0 for position in fixed_sample_positions)
+    @test all(norm(normal) ≈ 1.0 for normal in fixed_sample_normals)
+    empty_sample_positions, empty_sample_normals = GI.surface_sampling(
+        mr.fix([]),
+        BoundingBoxes.InternalBoundingBox{3}(2.0),
+        100.0,
+    )
+    @test isempty(empty_sample_positions)
+    @test isempty(empty_sample_normals)
+
     struct TestGeometry{N} <: PhysicalGeometry{N}
         value::Int
     end
@@ -452,6 +469,18 @@ const all_property_values = Properties.all_property_values
     )
     @test inside_sphere_hit.distance ≈ 3 / 4
     @test inside_sphere_hit.normal == SVector(-1.0, 0.0, 0.0)
+
+    fixed_sphere_hit = GI.detect_intersection(
+        fixed_sphere,
+        SVector(-3.0, 0.0, 0.0),
+        SVector(3.0, 0.0, 0.0),
+    )
+    underlying_sphere_hit = GI.PhysicalGeometries.detect_intersection(
+        fixed_sphere.geometry,
+        SVector(-3.0, 0.0, 0.0),
+        SVector(3.0, 0.0, 0.0),
+    )
+    @test fixed_sphere_hit == underlying_sphere_hit
 
     shifted_sphere = Shift(sphere, [1.0, 0.0, 0.0])
     shifted_sphere_box = BoundingBoxes.InternalBoundingBox(shifted_sphere)
