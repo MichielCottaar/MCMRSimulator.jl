@@ -29,15 +29,22 @@ function _volume_properties(group, category::Symbol)
     NamedTuple{_volume_fields}(Tuple(values))
 end
 
-function _surface_properties(group, category::Symbol; kwargs...)
+function _surface_properties(
+    group,
+    category::Symbol;
+    permeability=0.,
+    dwell_time=0.,
+    surface_relaxation=0.,
+    density=0.,
+)
     defaults = (
         R1 = Float64(0.),
         R2 = Float64(0.),
         off_resonance = Float64(0.),
-        permeability = Float64(get(kwargs, :permeability, 0.0)),
-        dwell_time = Float64(get(kwargs, :dwell_time, 0.0)),
-        surface_relaxation = Float64(get(kwargs, :relaxation, 0.0)),
-        density = Float64(get(kwargs, :density, 0.0)),
+        permeability = Float64(permeability),
+        dwell_time = Float64(dwell_time),
+        surface_relaxation = Float64(surface_relaxation),
+        density = Float64(density),
     )
     values = map(_surface_fields) do field_name
         _property_node(group, field_name, category, getproperty(defaults, field_name))
@@ -53,25 +60,71 @@ function _zero_volume()
     )
 end
 
-function fix_properties(group::Union{Cylinders, Spheres}; kwargs...)
+function fix_properties(
+    group::Union{Cylinders, Spheres};
+    permeability=0.,
+    dwell_time=0.,
+    surface_relaxation=0.,
+    density=0.,
+)
     (
         volume = _volume_properties(group, :inside),
-        surface = _surface_properties(group, :surface; kwargs...),
+        surface = _surface_properties(
+            group,
+            :surface;
+            permeability,
+            dwell_time,
+            surface_relaxation,
+            density,
+        ),
     )
 end
 
-function fix_properties(group::Walls; kwargs...)
+function fix_properties(
+    group::Walls;
+    permeability=0.,
+    dwell_time=0.,
+    surface_relaxation=0.,
+    density=0.,
+)
     (
         volume = _zero_volume(),
-        surface = _surface_properties(group, :surface; kwargs...),
+        surface = _surface_properties(
+            group,
+            :surface;
+            permeability,
+            dwell_time,
+            surface_relaxation,
+            density,
+        ),
     )
 end
 
-function fix_properties(group::Annuli; kwargs...)
+function fix_properties(
+    group::Annuli;
+    permeability=0.,
+    dwell_time=0.,
+    surface_relaxation=0.,
+    density=0.,
+)
     inner_volume = _volume_properties(group, :inner_volume)
     outer_volume = _volume_properties(group, :outer_volume)
-    inner_surface = _surface_properties(group, :inner_surface; kwargs...)
-    outer_surface = _surface_properties(group, :outer_surface; kwargs...)
+    inner_surface = _surface_properties(
+        group,
+        :inner_surface;
+        permeability,
+        dwell_time,
+        surface_relaxation,
+        density,
+    )
+    outer_surface = _surface_properties(
+        group,
+        :outer_surface;
+        permeability,
+        dwell_time,
+        surface_relaxation,
+        density,
+    )
 
     volume = NamedTuple{_volume_fields}(
         Tuple(GeometryTupleProperties((getproperty(inner_volume, field), getproperty(outer_volume, field)))

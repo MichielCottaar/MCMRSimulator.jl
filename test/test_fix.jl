@@ -90,7 +90,7 @@ const get_value = Properties.get_value
     cylinder_properties = FixProperties.fix_properties(
         cylinders;
         dwell_time=8.0,
-        relaxation=9.0,
+        surface_relaxation=9.0,
         density=10.0,
     )
     @test cylinder_properties.volume.R1 isa Properties.GeometryVectorProperties
@@ -118,4 +118,31 @@ const get_value = Properties.get_value
     @test get_value(annulus_properties.volume.R1, ObstructionIndex(SVector(2, 1))) == 2.0
     @test get_value(annulus_properties.surface.permeability, ObstructionIndex(SVector(1, 1))) == 3.0
     @test get_value(annulus_properties.surface.permeability, ObstructionIndex(SVector(2, 1))) == 4.0
+end
+
+@testset "Fix dispatcher" begin
+    group = mr.Spheres(
+        radius=1.0,
+        R1_inside=2.0,
+        permeability_surface=3.0,
+    )
+    fixed = mr.fix(group; dwell_time=4.0, surface_relaxation=5.0, density=6.0)
+    @test fixed isa mr.Geometries.Fix.FixedGeometry
+    @test fixed.volume.R1.value == 2.0
+    @test fixed.surface.permeability.value == 3.0
+    @test fixed.surface.dwell_time.value == 4.0
+    @test fixed.surface.surface_relaxation.value == 5.0
+    @test fixed.surface.density.value == 6.0
+    @test mr.fix(fixed) === fixed
+
+    combined = mr.fix([mr.Walls(position=0.0), group])
+    @test combined.geometry isa mr.Geometries.InternalNew.PhysicalGeometries.Groups.GeometryTuple
+    @test combined.volume.R1 isa Properties.GeometryTupleProperties
+    @test combined.surface.density isa Properties.GeometryTupleProperties
+
+    @test mr.fix([]).geometry isa mr.Geometries.InternalNew.PhysicalGeometries.Groups.GeometryTuple
+    @test_throws MethodError mr.fix(group; R1=1.0)
+    @test_throws MethodError mr.fix(group; R2=1.0)
+    @test_throws MethodError mr.fix(group; off_resonance=1.0)
+    @test_throws MethodError mr.fix(group; relaxation=1.0)
 end
