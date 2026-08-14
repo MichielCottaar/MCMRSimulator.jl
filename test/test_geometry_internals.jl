@@ -253,6 +253,14 @@ const all_property_values = Properties.all_property_values
     @test mesh.vertices[2] == SVector(1.0, 0.0, 0.0)
     @test mesh.first_index_of_gap == 4
     @test length(mesh.indices) == 4
+    render_mesh = GI.geometry_mesh(mesh)
+    @test length(render_mesh) == 1
+    @test render_mesh[1].vertices == mesh.vertices
+    @test render_mesh[1].triangles == mesh.indices[1:(mesh.first_index_of_gap - 1)]
+    shifted_render_mesh = GI.geometry_mesh(Shift(mesh, [1.0, 2.0, 3.0]))
+    @test shifted_render_mesh[1].vertices == [vertex - SVector(1.0, 2.0, 3.0) for vertex in mesh.vertices]
+    grouped_render_mesh = GI.geometry_mesh(GeometryTuple{3}((mesh, mesh)))
+    @test length(grouped_render_mesh) == 2
     @test inside_indices(mesh, SVector(0.2, 0.2, 0.2)) == [ObstructionIndex()]
     @test inside_indices(mesh, SVector(1.2, 0.2, 0.2)) == ObstructionIndex[]
     @test mesh.indices[mesh.first_index_of_gap] == SVector(4, 2, 3)
