@@ -146,6 +146,51 @@ const all_property_values = Properties.all_property_values
     @test GI.surface_relaxation(property_geometry, gap_intersection) == 0.0
     @test GI.surface_density(property_geometry, gap_intersection) == 0.0
     @test GI.dwell_time(property_geometry, gap_intersection) == 0.0
+    empty_intersection = GI.PhysicalGeometries.Intersection{3}()
+    @test_throws AssertionError GI.permeability(property_geometry, empty_intersection)
+    @test_throws AssertionError GI.surface_relaxation(property_geometry, empty_intersection)
+    @test_throws AssertionError GI.surface_density(property_geometry, empty_intersection)
+    @test_throws AssertionError GI.dwell_time(property_geometry, empty_intersection)
+
+    mri_geometry = mr.fix(mr.Spheres(
+        radius=[1.0, 2.0],
+        R1_inside=[1.0, 2.0],
+        R2_inside=[3.0, 4.0],
+        off_resonance_inside=[5.0, 6.0],
+        R1_surface=[10.0, 20.0],
+        R2_surface=[30.0, 40.0],
+        off_resonance_surface=[50.0, 60.0],
+    ))
+    inside_second = GI.IsInside([ObstructionIndex(SVector(2))])
+    mri_intersection = GI.PhysicalGeometries.Intersection(
+        0.5,
+        SVector(1.0, 0.0, 0.0),
+        false,
+        ObstructionIndex(SVector(2)),
+        false,
+    )
+    @test GI.R1(mri_geometry, inside_second) == 2.0
+    @test GI.R2(mri_geometry, inside_second) == 4.0
+    @test GI.off_resonance(mri_geometry, inside_second) == 6.0
+    @test GI.R1(mri_geometry, inside_second, mri_intersection) == 22.0
+    @test GI.R2(mri_geometry, inside_second, mri_intersection) == 44.0
+    @test GI.off_resonance(mri_geometry, inside_second, mri_intersection) == 66.0
+
+    scalar_mri_geometry = mr.fix(mr.Spheres(
+        radius=[1.0, 2.0],
+        R1_inside=3.0,
+        R2_inside=4.0,
+        off_resonance_inside=5.0,
+    ))
+    inside_both = GI.IsInside([
+        ObstructionIndex(SVector(1)),
+        ObstructionIndex(SVector(2)),
+    ])
+    @test GI.R1(scalar_mri_geometry, inside_both) == 3.0
+    @test GI.R2(scalar_mri_geometry, inside_both) == 4.0
+    @test GI.off_resonance(scalar_mri_geometry, inside_both) == 5.0
+
+    @test GI.R1(mri_geometry, SVector(0.0, 0.0, 0.0)) == 3.0
 
     struct TestGeometry{N} <: PhysicalGeometry{N}
         value::Int

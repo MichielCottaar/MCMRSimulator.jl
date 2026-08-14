@@ -12,7 +12,7 @@ export FixedGeometry, Intersection, IsInside,
     size_scale, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
     permeability, surface_relaxation, surface_density, dwell_time,
-    mri_properties, R1, R2, off_resonance,
+    R1, R2, off_resonance,
     susceptibility_off_resonance, off_resonance_gradient,
     direction, reflect
 
@@ -136,44 +136,56 @@ end
 
 """Return the permeability associated with a collision state."""
 function permeability(geometry::FixedGeometry, intersection::Intersection)
+    @assert !Base.isempty(intersection) "permeability requires a non-empty intersection"
     intersection.hit_gap && return Inf
     get_value(geometry.surface.permeability, intersection.obstruction_index)
 end
 
 """Return the surface-relaxation value associated with a collision state."""
 function surface_relaxation(geometry::FixedGeometry, intersection::Intersection)
+    @assert !Base.isempty(intersection) "surface_relaxation requires a non-empty intersection"
     intersection.hit_gap && return 0.
     get_value(geometry.surface.surface_relaxation, intersection.obstruction_index)
 end
 
 """Return the surface-density value associated with a collision state."""
 function surface_density(geometry::FixedGeometry, intersection::Intersection)
+    @assert !Base.isempty(intersection) "surface_density requires a non-empty intersection"
     intersection.hit_gap && return 0.
     get_value(geometry.surface.density, intersection.obstruction_index)
 end
 
 """Return the dwell-time value associated with a collision state."""
 function dwell_time(geometry::FixedGeometry, intersection::Intersection)
+    @assert !Base.isempty(intersection) "dwell_time requires a non-empty intersection"
     intersection.hit_gap && return 0.
     get_value(geometry.surface.dwell_time, intersection.obstruction_index)
 end
 
-"""
-    mri_properties(geometry, global_properties, position, reflection)
+# Generate the shared volume-plus-surface lookup for MRI properties.
+for symbol in (:R1, :R2, :off_resonance)
+    @eval begin
+        function $symbol(
+            geometry::FixedGeometry,
+            inside::IsInside,
+            intersection::Intersection=Intersection{3}(),
+        )
+            volume = get_value(geometry.volume.$symbol, inside.inside_of)
+            surface = Base.isempty(intersection) ?
+                0.0 :
+                get_value(geometry.surface.$symbol, intersection.obstruction_index)
+            volume + surface
+        end
 
-Return the `R1`, `R2`, and off-resonance values at `position`, optionally taking
-a surface reflection into account.
-"""
-function mri_properties end
-
-"""Return longitudinal relaxation at `position` in `geometry`."""
-function R1 end
-
-"""Return transverse relaxation at `position` in `geometry`."""
-function R2 end
-
-"""Return non-susceptibility off-resonance at `position` in `geometry`."""
-function off_resonance end
+        function $symbol(
+            geometry::FixedGeometry,
+            position::SVector{3, Float64},
+            intersection::Intersection=Intersection{3}(),
+        )
+            $symbol(geometry, isinside(geometry, position, intersection), intersection)
+        end
+    end
+end
 
 """Return susceptibility-induced off-resonance for `geometry`."""
 function susceptibility_off_resonance end
