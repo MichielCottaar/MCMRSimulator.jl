@@ -40,6 +40,39 @@ end
 const get_value = Properties.get_value
 const all_property_values = Properties.all_property_values
 
+@testset "reflections" begin
+    Reflections = mr.Reflections
+    index = ObstructionIndex(SVector{2, Int}(1, 2))
+    collision = GI.Intersection(0.5, SVector(1.0, 0.0, 0.0), false, index, false)
+
+    free = Reflections.Reflection(1.0)
+    @test !Reflections.has_intersection(free)
+    @test isempty(Reflections.previous_hit(free).obstruction_index.indices)
+
+    reflection = Reflections.Reflection(
+        collision,
+        SVector(-1.0, 0.0, 0.0),
+        1.0,
+        0.0,
+        0.0,
+    )
+    @test Reflections.has_intersection(reflection)
+    @test Reflections.has_hit(reflection) == index
+    @test Reflections.previous_hit(reflection).obstruction_index == index
+    @test reflection.direction == SVector(1.0, 0.0, 0.0)
+
+    permeable = Reflections.Reflection(
+        collision,
+        SVector(-1.0, 0.0, 0.0),
+        1.0,
+        0.0,
+        0.0,
+        true,
+    )
+    @test permeable.inside
+    @test permeable.direction == SVector(-1.0, 0.0, 0.0)
+end
+
 @testset "Geometry internals" begin
     @test collect(all_property_values(Properties.GeometryLeafProperties(1.0))) == [1.0]
     @test collect(all_property_values(Properties.GeometryVectorProperties([1.0, 2.0]))) == [1.0, 2.0]

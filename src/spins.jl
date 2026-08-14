@@ -21,11 +21,11 @@ import Random
 import StaticArrays: SVector
 import LinearAlgebra: ⋅, norm
 import ..Geometries.BoundingBoxes: BoundingBox, lower, upper
-import ..Geometries.Internal: 
-    Reflection, empty_reflection, has_intersection,
+import ..Reflections: Reflection, empty_reflection, has_intersection, has_hit
+import ..Geometries.Internal:
     random_surface_positions,
-    FixedGeometry, FixedObstruction, FixedObstructionGroup, FixedSusceptibility,
-    isinside, R1, R2, off_resonance, has_hit, previous_hit, susceptibility_off_resonance
+    FixedGeometry,
+    isinside, R1, R2, off_resonance, susceptibility_off_resonance
 import ..Methods: get_time, norm_angle
 import ..Properties: GlobalProperties
 import ..Geometries: fix, fix_susceptibility
@@ -194,11 +194,11 @@ Return the internal representation of the obstruction the spin is stuck to.
 Raises an error if the spin is free.
 """
 function stuck_to(spin::Spin, geometry)
-    (outer_index, inner_index) = has_hit(spin)
-    if iszero(outer_index)
+    obstruction_index = stuck_to(spin)
+    if isempty(obstruction_index.indices)
         error("Free spin is not stuck to any obstructions.")
     end
-    return geometry[outer_index][inner_index]
+    return obstruction_index
 end
 
 

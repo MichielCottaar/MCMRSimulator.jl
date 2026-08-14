@@ -17,7 +17,8 @@ import ..Simulations: Simulation, _to_snapshot
 import ..Relax: relax!
 import ..Properties: GlobalProperties, stick_probability
 import ..Subsets: Subset, get_subset
-import ..Geometries.Internal: Reflection, detect_intersection, empty_intersection, has_intersection, surface_relaxation, permeability, surface_density, direction, previous_hit, dwell_time, empty_reflection, FixedGeometry
+import ..Reflections: Reflection, empty_reflection, previous_hit, direction
+import ..Geometries.Internal: Intersection, detect_intersection, surface_relaxation, permeability, surface_density, dwell_time, FixedGeometry
 
 """
 Supertype for any Readout accumulator.
@@ -506,7 +507,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 new_pos = SVector{3, Float64}(test_new_pos)
             end
             reflection = Reflection(norm(new_pos - current_pos) / sqrt(2 * simulation.diffusivity * timestep))
-            phit = (0, 0, false)
+            phit = Intersection{3}()
         end
         for _ in 1:1000000
             if is_stuck
@@ -534,8 +535,8 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 phit,
             )
 
-            use_distance = collision === empty_intersection ? 1. : max(prevfloat(collision.distance), 0.)
-            if collision === empty_intersection
+            use_distance = Base.isempty(collision) ? 1. : max(prevfloat(collision.distance), 0.)
+            if Base.isempty(collision)
                 next_fraction_timestep = 1.
                 collision_pos = new_pos
             else
@@ -546,7 +547,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
             # spin relaxation
             relax!(spin, collision_pos, simulation, parts, fraction_timestep, next_fraction_timestep, B0s)
 
-            if ~has_intersection(collision)
+            if Base.isempty(collision)
                 spin.position = new_pos
                 found_solution = true
                 break
