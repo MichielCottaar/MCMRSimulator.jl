@@ -40,6 +40,46 @@ center(box::InternalBoundingBox) = (box.lower + box.upper) / 2
 half_size(box::InternalBoundingBox) = (box.upper - box.lower) / 2
 
 
+"""
+    grid_indices(box, dimensions, bounding_boxes)
+
+Return the indices of the grid cells intersected by each bounding box. The grid
+does not contain periodic copies of the bounding boxes.
+"""
+function grid_indices(
+    box::InternalBoundingBox{N},
+    dimensions::AbstractVector{<:Integer},
+    bounding_boxes::AbstractVector{<:InternalBoundingBox{N}},
+) where N
+    dimensions = SVector{N, Int}(dimensions)
+    all(dimensions .> 0) || throw(ArgumentError("grid dimensions must be positive"))
+
+    cell_size = (upper(box) - lower(box)) ./ dimensions
+    indices = Array{Vector{Int}, N}(undef, Tuple(dimensions))
+    for coordinate in CartesianIndices(indices)
+        indices[coordinate] = Int[]
+    end
+
+    for (box_index, child_box) in enumerate(bounding_boxes)
+        lower_coordinate = max.(
+            Int.(floor.((lower(child_box) - lower(box)) ./ cell_size)) .+ 1,
+            1,
+        )
+        upper_coordinate = min.(
+            Int.(ceil.((upper(child_box) - lower(box)) ./ cell_size)),
+            dimensions,
+        )
+        all(lower_coordinate .<= upper_coordinate) || continue
+        for coordinate in Iterators.product(
+            (lower_coordinate[i]:upper_coordinate[i] for i in 1:N)...,
+        )
+            push!(indices[coordinate...], box_index)
+        end
+    end
+    indices
+end
+
+
 shift(box::InternalBoundingBox, displacement::AbstractVector{<:Real}) = begin
     displacement_int = SVector{length(box.lower), Float64}(displacement)
     InternalBoundingBox{length(box.lower)}(half_size(box), center(box) + displacement_int)

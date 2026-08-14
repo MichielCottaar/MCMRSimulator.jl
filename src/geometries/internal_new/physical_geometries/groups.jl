@@ -174,20 +174,7 @@ function GeometryVectorGrid(
         lower_bound + cell_size .* dimensions / 2,
     )
     inv_resolution = SVector{N, Float64}(1 ./ cell_size)
-    indices = Array{Vector{Int}, N}(undef, Tuple(dimensions))
-    for coordinate in CartesianIndices(indices)
-        indices[coordinate] = Int[]
-    end
-    actual_lower = InternalBoundingBoxes.lower(actual_box)
-    for (child_index, child_box) in enumerate(boxes)
-        lower_coordinate = max.(Int.(floor.((InternalBoundingBoxes.lower(child_box) - actual_lower) .* inv_resolution)) .+ 1, 1)
-        upper_coordinate = min.(Int.(ceil.((InternalBoundingBoxes.upper(child_box) - actual_lower) .* inv_resolution)), dimensions)
-        for coordinate in Iterators.product(
-            (lower_coordinate[i]:upper_coordinate[i] for i in 1:N)...,
-        )
-            push!(indices[coordinate...], child_index)
-        end
-    end
+    indices = InternalBoundingBoxes.grid_indices(actual_box, dimensions, boxes)
     GeometryVectorGrid{N, P}(geometries, actual_box, inv_resolution, indices)
 end
 

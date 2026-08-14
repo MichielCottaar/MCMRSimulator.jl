@@ -467,6 +467,24 @@ const get_value = Properties.get_value
     @test BoundingBoxes.InternalBoundingBox{3}([1.0, 2.0, 3.0]) isa BoundingBoxes.InternalBoundingBox{3}
     @test BoundingBoxes.InternalBoundingBox([1.0, 2.0, 3.0], [4.0, 5.0, 6.0]) isa BoundingBoxes.InternalBoundingBox{3}
 
+    grid_box = BoundingBoxes.InternalBoundingBox([2.0, 2.0])
+    grid = BoundingBoxes.grid_indices(
+        grid_box,
+        [4, 4],
+        [
+            BoundingBoxes.InternalBoundingBox([0.5, 0.5], [-1.5, -1.5]),
+            BoundingBoxes.InternalBoundingBox([1.0, 0.5], [0.0, 0.0]),
+        ],
+    )
+    @test grid[1, 1] == [1]
+    @test grid[2, 2] == [2]
+    @test grid[2, 3] == [2]
+    @test grid[3, 2] == [2]
+    @test grid[3, 3] == [2]
+    @test grid[4, 4] == Int[]
+    @test_throws ArgumentError BoundingBoxes.grid_indices(grid_box, [0, 4], BoundingBoxes.InternalBoundingBox{2}[])
+    @test_throws DimensionMismatch BoundingBoxes.grid_indices(grid_box, [4], BoundingBoxes.InternalBoundingBox{2}[])
+
     displacement = SVector(4.0, 5.0, 6.0)
     shifted_centered_cube = BoundingBoxes.shift(centered_cube, displacement)
     shifted_cube = BoundingBoxes.shift(cube, displacement)
