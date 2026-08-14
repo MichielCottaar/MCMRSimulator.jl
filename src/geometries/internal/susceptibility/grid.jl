@@ -9,7 +9,7 @@ module Grid
 import StaticArrays: SVector, SMatrix
 import LinearAlgebra: norm
 import .....Constants: gyromagnetic_ratio
-import ...BoundingBoxes: BoundingBox, lower
+import ...InternalBoundingBoxes: InternalBoundingBox, lower
 import ..Base: BaseSusceptibility, single_susceptibility, single_susceptibility_gradient
 
 
@@ -50,9 +50,9 @@ struct AnisotropicSusceptibilityGridElement{N} <: SusceptibilityGridElement{N}
 end
 
 
-BoundingBox(element::SusceptibilityGridElement{N}) where {N} = BoundingBox{N}(
-    element.position .- radius,
-    element.position .+ radius,
+InternalBoundingBox(element::SusceptibilityGridElement{N}) where {N} = InternalBoundingBox{N}(
+    element.position .- element.radius,
+    element.position .+ element.radius,
 )
 
 """
@@ -94,11 +94,11 @@ struct SusceptibilityGridNoRepeat{N, O, E, K} <: SusceptibilityGrid
     inv_resolution :: SVector{N, Float64}
     rotation :: SMatrix{N, 3, Float64, K}
 
-    bounding_box_off_resonance :: BoundingBox{N}
+    bounding_box_off_resonance :: InternalBoundingBox{N}
     off_resonance :: Array{Float64, N}
     off_resonance_super_resolution :: Int64
 
-    bounding_box_indices :: BoundingBox{N}
+    bounding_box_indices :: InternalBoundingBox{N}
     indices :: Array{Vector{Tuple{E, IndexNoRepeat}}, N}
     sources :: Vector{O}
     shifts :: Vector{SVector{N, Float64}}
