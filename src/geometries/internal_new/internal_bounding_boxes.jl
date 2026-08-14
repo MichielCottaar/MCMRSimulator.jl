@@ -61,12 +61,29 @@ function grid_indices(
     end
 
     for (box_index, child_box) in enumerate(bounding_boxes)
+        relative_lower = (lower(child_box) - lower(box)) ./ cell_size
+        relative_upper = (upper(child_box) - lower(box)) ./ cell_size
+        zero_extent = upper(child_box) .== lower(child_box)
         lower_coordinate = max.(
-            Int.(floor.((lower(child_box) - lower(box)) ./ cell_size)) .+ 1,
+            SVector{N, Int}(
+                ntuple(
+                    dimension -> zero_extent[dimension] ?
+                        floor(Int, relative_lower[dimension]) :
+                        floor(Int, relative_lower[dimension]) + 1,
+                    N,
+                ),
+            ),
             1,
         )
         upper_coordinate = min.(
-            Int.(ceil.((upper(child_box) - lower(box)) ./ cell_size)),
+            SVector{N, Int}(
+                ntuple(
+                    dimension -> zero_extent[dimension] ?
+                        ceil(Int, relative_upper[dimension]) + 1 :
+                        ceil(Int, relative_upper[dimension]),
+                    N,
+                ),
+            ),
             dimensions,
         )
         all(lower_coordinate .<= upper_coordinate) || continue
