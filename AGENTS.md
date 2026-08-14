@@ -5,6 +5,7 @@
 - This is a single Julia package with `test` and `docs` subprojects in the root Julia 1.12 workspace; use the root `Project.toml` for package work and the subproject environments for tests/docs.
 - The package entrypoint is `src/MCMRSimulator.jl`; it wires together simulation, geometry, Pulseq, plotting, and CLI modules. Geometry code is split between user-facing definitions under `src/geometries/user/` and internal collision/field implementations under `src/geometries/internal/`.
 - The CLI entrypoint is `MCMRSimulator.CLI.@main`, with `run` and `geometry` subcommands. The `mcmr` app is declared in `Project.toml` and installed through `Pkg.Apps.add`/`pkg> app add`.
+- Each file is its own module. Please keep this design for any new files you create. If the module name conflicts with a struct contained within the module, make the module name plural. Make sure that the final module name is CamelCase and matches the filename, which should be lower_snake_case.
 
 ## Commands
 
