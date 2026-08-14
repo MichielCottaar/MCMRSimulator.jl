@@ -1,11 +1,12 @@
 """Public operations supported by the internal geometry engine."""
 
+import StaticArrays: SVector
 import .Indices: ObstructionIndex
-import .PhysicalGeometries: PhysicalGeometry, Intersection, surface_sampling
+import .PhysicalGeometries: PhysicalGeometry, Intersection, surface_sampling, inside_indices
 import .Properties: all_property_values
 import ...Properties: stick_probability
 
-export FixedGeometry, Intersection, ObstructionIndex,
+export FixedGeometry, Intersection, IsInside,
     isinside, detect_intersection, random_surface_positions, surface_sampling, geometry_mesh,
     size_scale, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
@@ -28,12 +29,25 @@ struct FixedGeometry{G <: PhysicalGeometry{3}, V, S, O}
 end
 
 """
-    isinside(geometry, position[, reflection])
+    IsInside
 
-Return the obstruction indices containing `position`. A reflection may be
-provided when the particle is already attached to a surface.
+Identifies which obstructions this position/spin is inside of.
+Use `Base.length` to get the number of obstructions.
 """
-function isinside end
+struct IsInside
+    inside_of::Vector{ObstructionIndex}
+end
+
+Base.length(ii::IsInside) = length(ii.inside_of)
+
+"""
+    isinside(geometry, position[, intersection])
+
+Return the obstruction indices containing `position`. 
+
+An intersection may be provided when the particle is already attached or is currently hitting a surface.
+"""
+isinside(geometry::FixedGeometry, position::SVector{3, Float64}, intersection::Intersection=Intersection{3}()) = IsInside(inside_indices(geometry.geometry, position, intersection))
 
 """
     detect_intersection(geometry, start, destination, previous_intersection)

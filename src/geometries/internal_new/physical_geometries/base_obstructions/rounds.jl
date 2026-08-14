@@ -4,7 +4,12 @@ end
 
 has_inside(::Type{<:Round}) = true
 
-function inside_indices(round::Round{N}, position::SVector{N, Float64}) where {N}
+function inside_indices(
+    round::Round{N},
+    position::SVector{N, Float64},
+    intersection::Intersection{N}=Intersection{N}(),
+) where {N}
+    !Base.isempty(intersection) && return intersection.inside ? [ObstructionIndex()] : ObstructionIndex[]
     isinside(round, position) ? [ObstructionIndex()] : ObstructionIndex[]
 end
 

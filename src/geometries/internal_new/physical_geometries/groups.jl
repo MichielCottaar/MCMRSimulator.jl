@@ -80,13 +80,36 @@ function _prepend_index(obstruction_index::ObstructionIndex, index::Int)
     ObstructionIndex(SVector(index, obstruction_index.indices...))
 end
 
-function inside_indices(geometry::GeometryVectorLike{N}, position::SVector{N, Float64}) where {N}
+function _inside_child_intersection(
+    intersection::Intersection{N},
+    child_index::Int,
+) where {N}
+    Base.isempty(intersection) && return Intersection{N}()
+    indices = intersection.obstruction_index.indices
+    isempty(indices) && return Intersection{N}()
+    indices[1] == child_index || return Intersection{N}()
+    remaining = ObstructionIndex(SVector{length(indices) - 1, Int}(indices[2:end]))
+    Intersection(
+        intersection.distance,
+        intersection.normal,
+        intersection.inside,
+        remaining,
+        intersection.hit_gap,
+    )
+end
+
+function inside_indices(
+    geometry::GeometryVectorLike{N},
+    position::SVector{N, Float64},
+    intersection::Intersection{N}=Intersection{N}(),
+) where {N}
     has_inside(typeof(geometry)) || return ObstructionIndex[]
     indices = ObstructionIndex[]
     for (child_index, child) in enumerate(geometry)
         geometry isa GeometryVectorBoundingBox &&
             !InternalBoundingBoxes.isinside(geometry.bounding_boxes[child_index], position) && continue
-        for obstruction_index in inside_indices(child, position)
+        child_intersection = _inside_child_intersection(intersection, child_index)
+        for obstruction_index in inside_indices(child, position, child_intersection)
             push!(indices, _prepend_index(obstruction_index, child_index))
         end
     end
@@ -101,13 +124,18 @@ function _grid_coordinate(
     any(coordinate .< 1) || any(coordinate .> size(geometry.indices)) ? nothing : SVector{N, Int}(coordinate)
 end
 
-function inside_indices(geometry::GeometryVectorGrid{N}, position::SVector{N, Float64}) where {N}
+function inside_indices(
+    geometry::GeometryVectorGrid{N},
+    position::SVector{N, Float64},
+    intersection::Intersection{N}=Intersection{N}(),
+) where {N}
     has_inside(typeof(geometry)) || return ObstructionIndex[]
     coordinate = _grid_coordinate(geometry, position)
     isnothing(coordinate) && return ObstructionIndex[]
     indices = ObstructionIndex[]
     for child_index in geometry.indices[coordinate...]
-        for obstruction_index in inside_indices(geometry.geometries[child_index], position)
+        child_intersection = _inside_child_intersection(intersection, child_index)
+        for obstruction_index in inside_indices(geometry.geometries[child_index], position, child_intersection)
             push!(indices, _prepend_index(obstruction_index, child_index))
         end
     end
@@ -119,10 +147,15 @@ function _grid_candidates(geometry::GeometryVectorGrid, coordinate)
     geometry.indices[coordinate...]
 end
 
-function inside_indices(geometry::GeometryTuple{N}, position::SVector{N, Float64}) where {N}
+function inside_indices(
+    geometry::GeometryTuple{N},
+    position::SVector{N, Float64},
+    intersection::Intersection{N}=Intersection{N}(),
+) where {N}
     indices = ObstructionIndex[]
     for (child_index, child) in enumerate(geometry)
-        for obstruction_index in inside_indices(child, position)
+        child_intersection = _inside_child_intersection(intersection, child_index)
+        for obstruction_index in inside_indices(child, position, child_intersection)
             push!(indices, _prepend_index(obstruction_index, child_index))
         end
     end

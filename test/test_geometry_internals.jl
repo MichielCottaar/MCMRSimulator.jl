@@ -395,6 +395,42 @@ const all_property_values = Properties.all_property_values
     )
     @test sphere_hit.distance ≈ 1 / 6
     @test sphere_hit.normal == SVector(-1.0, 0.0, 0.0)
+    boundary = SVector(2.0, 0.0, 0.0)
+    boundary_inside = GI.PhysicalGeometries.Intersection(
+        0.5,
+        SVector(1.0, 0.0, 0.0),
+        true,
+        ObstructionIndex(),
+        false,
+    )
+    boundary_outside = GI.PhysicalGeometries.Intersection(
+        0.5,
+        SVector(1.0, 0.0, 0.0),
+        false,
+        ObstructionIndex(),
+        false,
+    )
+    @test inside_indices(sphere, boundary, boundary_inside) == [ObstructionIndex()]
+    @test inside_indices(sphere, boundary, boundary_outside) == ObstructionIndex[]
+
+    fixed_sphere = mr.fix(mr.Spheres(radius=2.0))
+    fixed_boundary_inside = GI.PhysicalGeometries.Intersection(
+        boundary_inside.distance,
+        boundary_inside.normal,
+        boundary_inside.inside,
+        ObstructionIndex(SVector(1)),
+        boundary_inside.hit_gap,
+    )
+    fixed_boundary_outside = GI.PhysicalGeometries.Intersection(
+        boundary_outside.distance,
+        boundary_outside.normal,
+        boundary_outside.inside,
+        ObstructionIndex(SVector(1)),
+        boundary_outside.hit_gap,
+    )
+    @test GI.isinside(fixed_sphere, boundary, fixed_boundary_inside).inside_of == [ObstructionIndex(SVector(1))]
+    @test GI.isinside(fixed_sphere, boundary, fixed_boundary_outside).inside_of == ObstructionIndex[]
+
     @test Base.isempty(GI.PhysicalGeometries.detect_intersection(
         sphere,
         SVector(-3.0, 0.0, 0.0),
@@ -485,6 +521,23 @@ const all_property_values = Properties.all_property_values
     )
     @test grouped_hit.distance ≈ 1 / 5
     @test grouped_hit.obstruction_index == ObstructionIndex(SVector(2))
+    grouped_boundary = SVector(3.0, 0.0, 0.0)
+    grouped_inside = GI.PhysicalGeometries.Intersection(
+        0.5,
+        SVector(1.0, 0.0, 0.0),
+        true,
+        ObstructionIndex(SVector(2)),
+        false,
+    )
+    grouped_outside = GI.PhysicalGeometries.Intersection(
+        0.5,
+        SVector(1.0, 0.0, 0.0),
+        false,
+        ObstructionIndex(SVector(2)),
+        false,
+    )
+    @test inside_indices(grouped_spheres, grouped_boundary, grouped_inside) == [ObstructionIndex(SVector(2))]
+    @test inside_indices(grouped_spheres, grouped_boundary, grouped_outside) == ObstructionIndex[]
 
     next_grouped_hit = GI.PhysicalGeometries.detect_intersection(
         grouped_spheres,

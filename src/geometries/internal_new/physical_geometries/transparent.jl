@@ -11,8 +11,11 @@ has_inside(::Type{<:Transparent{N, P}}) where {N, P} = has_inside(P)
 
 InternalBoundingBox(wrapper::Transparent) = InternalBoundingBox(transparent_geometry(wrapper))
 
-inside_indices(wrapper::Transparent, position) =
-    inside_indices(transparent_geometry(wrapper), position)
+inside_indices(
+    wrapper::Transparent{N},
+    position::SVector{N, Float64},
+    intersection::Intersection{N}=Intersection{N}(),
+) where {N} = inside_indices(transparent_geometry(wrapper), position, intersection)
 
 function detect_intersection(
     wrapper::Transparent{N},

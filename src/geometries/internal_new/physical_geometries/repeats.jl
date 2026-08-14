@@ -58,11 +58,19 @@ function _candidate_shifts(repeat::Repeat{N}, start, destination=start) where {N
     shifts
 end
 
-function inside_indices(repeat::Repeat{N}, position::SVector{N, Float64}) where {N}
+function inside_indices(
+    repeat::Repeat{N},
+    position::SVector{N, Float64},
+    intersection::Intersection{N}=Intersection{N}(),
+) where {N}
     local_position = _wrap(repeat, position)
     indices = ObstructionIndex[]
     for shift in _candidate_shifts(repeat, local_position)
-        append!(indices, inside_indices(repeat.geometry, local_position .+ shift .* repeat.repeats))
+        append!(indices, inside_indices(
+            repeat.geometry,
+            local_position .+ shift .* repeat.repeats,
+            intersection,
+        ))
     end
     sort!(unique!(indices), by=index -> Tuple(index.indices))
 end

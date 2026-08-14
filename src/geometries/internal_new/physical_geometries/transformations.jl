@@ -22,8 +22,24 @@ has_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_inside(P)
 InternalBoundingBox(transformation::Transformation) =
     backward(transformation, InternalBoundingBox(transformation.geometry))
 
-inside_indices(transformation::Transformation, position) =
-    inside_indices(transformation.geometry, forward(transformation, position))
+function inside_indices(
+    transformation::Transformation{N, M},
+    position::SVector{N, Float64},
+    intersection::Intersection{N}=Intersection{N}(),
+) where {N, M}
+    child_intersection = if Base.isempty(intersection)
+        Intersection{M}()
+    else
+        Intersection(
+            intersection.distance,
+            zero(SVector{M, Float64}),
+            intersection.inside,
+            intersection.obstruction_index,
+            intersection.hit_gap,
+        )
+    end
+    inside_indices(transformation.geometry, forward(transformation, position), child_intersection)
+end
 
 """
     Shift{N}(shift)

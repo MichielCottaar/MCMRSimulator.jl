@@ -272,7 +272,11 @@ function _mesh_grid_coordinate(mesh::Mesh, position)
     any(coordinate .< 1) || any(coordinate .> size(mesh.indices_grid)) ? nothing : SVector{3, Int}(coordinate)
 end
 
-function inside_indices(mesh::Mesh, position::SVector{3, Float64})
+function inside_indices(
+    mesh::Mesh,
+    position::SVector{3, Float64},
+    intersection::Intersection{3}=Intersection{3}(),
+)
     coordinate = _mesh_grid_coordinate(mesh, position)
     isnothing(coordinate) && return ObstructionIndex[]
 
@@ -292,7 +296,11 @@ function inside_indices(mesh::Mesh, position::SVector{3, Float64})
                 push!(intersection_points, point)
         end
     end
-    isodd(length(intersection_points)) && (inside = !inside)
+    if Base.isempty(intersection)
+        isodd(length(intersection_points)) && (inside = !inside)
+    else
+        inside = intersection.inside
+    end
     inside ? [ObstructionIndex()] : ObstructionIndex[]
 end
 
