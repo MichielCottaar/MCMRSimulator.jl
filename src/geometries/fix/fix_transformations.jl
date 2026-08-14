@@ -5,10 +5,10 @@ import StaticArrays: SMatrix, SVector
 
 import ...User.Obstructions: Walls, Cylinders, Spheres, Annuli, Mesh
 import ...User.Obstructions: isglobal
-import ...InternalNew.PhysicalGeometries: PhysicalGeometry
-import ...InternalNew.PhysicalGeometries.Groups: GeometryVector, GeometryTuple
-import ...InternalNew.PhysicalGeometries.Transformations: Shift, Rotate
-import ...InternalNew.PhysicalGeometries.Repeats: Repeat
+import ...Internal.PhysicalGeometries: PhysicalGeometry
+import ...Internal.PhysicalGeometries.Groups: GeometryVector, GeometryTuple
+import ...Internal.PhysicalGeometries.Transformations: Shift, Rotate
+import ...Internal.PhysicalGeometries.Repeats: Repeat
 
 function _values(field_value, number)
     isglobal(field_value) ? fill(field_value.value, number) : collect(field_value.value)

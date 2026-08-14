@@ -4,10 +4,20 @@ Defines susceptibility state construction for the fixed geometry engine.
 module FixSusceptibility
 import StaticArrays: SVector
 import LinearAlgebra: transpose, norm, ⋅, I
-import ...InternalNew.Susceptibility: FixedSusceptibility, SusceptibilityGrid, SusceptibilityGridNoRepeat, SusceptibilityGridRepeat, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, SusceptibilityGridElement, dipole_approximation_repeat, dipole_approximation, IsotropicSusceptibilityGridElement, AnisotropicSusceptibilityGridElement
-import ...InternalNew.InternalBoundingBoxes: InternalBoundingBox, lower, upper, grid_indices, grid_indices_repeating
+import ...Internal.Susceptibility: FixedSusceptibility, SusceptibilityGrid, SusceptibilityGridNoRepeat, SusceptibilityGridRepeat, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, SusceptibilityGridElement, dipole_approximation_repeat, dipole_approximation, IsotropicSusceptibilityGridElement, AnisotropicSusceptibilityGridElement
+import ...Internal.InternalBoundingBoxes: InternalBoundingBox, lower, upper, grid_indices, grid_indices_repeating
 import ...User.Obstructions: ObstructionGroup, Cylinders, Annuli, isglobal
-import ...User.SizeScales: grid_resolution
+
+function grid_resolution(obstruction::ObstructionGroup, bounding_box::InternalBoundingBox)
+    if !isnothing(obstruction.grid_resolution.value)
+        return obstruction.grid_resolution.value
+    end
+    size = isnothing(obstruction.repeats.value) ?
+        upper(bounding_box) - lower(bounding_box) : obstruction.repeats.value
+    all(iszero.(size)) && return 1.
+    nvoxels = Int(div(min(max(obstruction.n_obstructions, 1000), Int(1e6)), 10, RoundDown))
+    (prod(size) / nvoxels)^(1 / length(size))
+end
 
 """
     fix_susceptibility(geometry)

@@ -5,8 +5,8 @@ import StaticArrays: SVector
 import ...User.Obstructions: Walls, Cylinders, Spheres, Annuli, Mesh
 import ...User.SplitMesh: components
 import ...User.Obstructions: isglobal
-import ...InternalNew.PhysicalGeometries.BaseObstructions: InfiniteWall, InfiniteCylinder, Sphere, OverlappingSphere
-import ...InternalNew.PhysicalGeometries: Meshes
+import ...Internal.PhysicalGeometries.BaseObstructions: InfiniteWall, InfiniteCylinder, Sphere, OverlappingSphere
+import ...Internal.PhysicalGeometries: Meshes
 
 function _values(field_value, number)
     isglobal(field_value) ? fill(field_value.value, number) : collect(field_value.value)

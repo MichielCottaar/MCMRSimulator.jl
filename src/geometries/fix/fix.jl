@@ -6,11 +6,11 @@ include("fix_properties.jl")
 include("fix_susceptibility.jl")
 
 import ..User.Obstructions: ObstructionGroup, Walls, Cylinders, Spheres, Annuli, BendyCylinder, Mesh
-import ..InternalNew.PhysicalGeometries: PhysicalGeometry
-import ..InternalNew.SizeScales: SizeScaleOverride
-import ..InternalNew.PhysicalGeometries.Groups: GeometryTuple
-import ..InternalNew.Properties: GeometryTupleProperties
-import ..InternalNew: FixedGeometry
+import ..Internal.PhysicalGeometries: PhysicalGeometry
+import ..Internal.SizeScales: SizeScaleOverride
+import ..Internal.PhysicalGeometries.Groups: GeometryTuple
+import ..Internal.Properties: GeometryTupleProperties
+import ..Internal: FixedGeometry
 
 import .FixBaseGeometry: fix_base_geometry
 import .FixTransformations: fix_transformations

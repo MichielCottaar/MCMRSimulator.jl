@@ -4,17 +4,12 @@ User interface for defining geometry.
 module User
 include("obstructions/obstructions.jl")
 include("split_mesh.jl")
-include("size_scales.jl")
-include("fix.jl")
-include("fix_susceptibility.jl")
 include("load_mesh.jl")
 include("load_swc.jl")
 include("random_distribution.jl")
 include("json.jl")
 include("load_geometry.jl")
 include("to_mesh.jl")
-import .Fix: fix
-import .FixSusceptibility: fix_susceptibility
 import .Obstructions: ObstructionGroup, IndexedObstruction, nvolumes,
     Wall, Walls,
     Cylinder, Cylinders,
@@ -22,7 +17,6 @@ import .Obstructions: ObstructionGroup, IndexedObstruction, nvolumes,
     Annulus, Annuli,
     Triangle, Mesh,
     Ring, BendyCylinder
-import .SizeScales: size_scale
 import .RandomDistribution: random_positions_radii
 import .LoadMesh: load_mesh
 import .LoadSWC: SWCFile, SWCNode, read_swc, read_swc_raw
