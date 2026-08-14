@@ -13,6 +13,8 @@ const Repeat = Repeats.Repeat
 const BoundingBoxes = GI.InternalBoundingBoxes
 const ObstructionIndex = GI.Indices.ObstructionIndex
 const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
+const Mesh = GI.PhysicalGeometries.Mesh
+const MeshPart = Mesh.MeshPart
 const has_inside = GI.PhysicalGeometries.has_inside
 const inside_indices = GI.PhysicalGeometries.inside_indices
 const Properties = GI.Properties
@@ -61,6 +63,42 @@ const get_value = Properties.get_value
         SVector(1.0, 0.0, 0.0),
         SVector(0.0, 1.0, 0.0),
     )))
+    mesh = MeshPart(
+        [
+            SVector(0.0, 0.0, 0.0),
+            SVector(1.0, 0.0, 0.0),
+            SVector(0.0, 1.0, 0.0),
+            SVector(0.0, 0.0, 1.0),
+        ],
+        [
+            SVector(1, 2, 3),
+            SVector(1, 4, 2),
+            SVector(1, 3, 4),
+        ];
+        first_index_of_gap=3,
+        grid_resolution=0.5,
+    )
+    @test mesh isa PhysicalGeometry{3}
+    @test has_inside(typeof(mesh))
+    @test mesh.vertices[2] == SVector(1.0, 0.0, 0.0)
+    @test mesh.first_index_of_gap == 3
+    @test mesh.indices == [SVector(1, 2, 3), SVector(1, 4, 2), SVector(1, 3, 4)]
+    @test BoundingBoxes.lower(mesh.bounding_box) == SVector(0.0, 0.0, 0.0)
+    @test BoundingBoxes.upper(mesh.bounding_box) == SVector(1.0, 1.0, 1.0)
+    @test Mesh.triangle(mesh, 1) == BaseObstructions.FullTriangle(
+        SVector(0.0, 0.0, 0.0),
+        SVector(1.0, 0.0, 0.0),
+        SVector(0.0, 1.0, 0.0),
+    )
+    @test Mesh.triangle(mesh, 3) == BaseObstructions.FullTriangle(
+        SVector(0.0, 0.0, 0.0),
+        SVector(0.0, 1.0, 0.0),
+        SVector(0.0, 0.0, 1.0),
+    )
+    @test_throws ArgumentError MeshPart(
+        [SVector(0.0, 0.0, 0.0)],
+        [SVector(1, 2, 3)],
+    )
     @test has_inside(typeof(Shift(BaseObstructions.Sphere(1.0), [0.0, 0.0, 0.0])))
     @test !has_inside(typeof(Scale(BaseObstructions.InfiniteWall(), 1.0)))
     @test has_inside(typeof(GeometryVector{3}([BaseObstructions.Sphere(1.0)])))
