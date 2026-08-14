@@ -295,7 +295,10 @@ function surface_sampling(
     bounding_box::InternalBoundingBox{3},
     scale_density,
 )
-    draws = (_triangle_sampling(Meshes.triangle(mesh, index), density.value, scale_density) for index in eachindex(mesh.indices))
+    draws = (
+        _triangle_sampling(Meshes.triangle(mesh, index), density.value, scale_density)
+        for index in 1:(mesh.first_index_of_gap - 1)
+    )
     _filter_to_box(_combine(draws, Val(3))..., bounding_box)
 end
 
