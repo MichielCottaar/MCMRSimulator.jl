@@ -4,7 +4,9 @@ import StaticArrays: SVector, MVector
 import LinearAlgebra: cross, norm, svd, ⋅
 import DelaunayTriangulation: triangulate, get_triangles
 
-import ..PhysicalGeometries: PhysicalGeometry, has_inside, InternalBoundingBox
+import ...Indices: ObstructionIndex
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, InternalBoundingBox
+import ..GridDispatch: detect_intersection_grid
 import ...InternalBoundingBoxes
 import ...InternalBoundingBoxes: grid_indices
 import ..BaseObstructions: FullTriangle, normal
@@ -20,6 +22,7 @@ struct MeshPart <: PhysicalGeometry{3}
     indices::Vector{SVector{3, Int}}
     first_index_of_gap::Int
     bounding_box::InternalBoundingBox{3}
+    grid_bounding_box::InternalBoundingBox{3}
     inv_resolution::SVector{3, Float64}
     indices_grid::Array{Vector{Int}, 3}
 end
@@ -173,6 +176,7 @@ function MeshPart(
         fixed_indices,
         first_index_of_gap,
         bounding_box,
+        grid_box,
         inv_resolution,
         indices_grid,
     )
@@ -189,6 +193,48 @@ end
 triangle(mesh::MeshPart, index::Int) = _mesh_triangle(mesh, mesh.indices[index])
 
 InternalBoundingBox(mesh::MeshPart) = mesh.bounding_box
+
+function detect_intersection(
+    mesh::MeshPart,
+    start::SVector{3, Float64},
+    destination::SVector{3, Float64},
+    previous_hit::Intersection{3}=Intersection{3}(),
+)
+    previous_index = 0
+    if !Base.isempty(previous_hit)
+        previous_indices = previous_hit.obstruction_index.indices
+        length(previous_indices) == 1 ||
+            throw(ArgumentError("a non-empty mesh hit must have one triangle index"))
+        previous_index = previous_indices[1]
+        1 <= previous_index <= length(mesh.indices) ||
+            throw(ArgumentError("previous-hit triangle index is not part of the mesh"))
+    end
+
+    detect_intersection_grid(
+        mesh.grid_bounding_box,
+        mesh.inv_resolution,
+        mesh.indices_grid,
+        start,
+        destination,
+        previous_hit,
+    ) do triangle_index, previous
+        triangle_previous_hit = triangle_index == previous_index ? previous : Intersection{3}()
+        intersection = detect_intersection(
+            triangle(mesh, triangle_index),
+            start,
+            destination,
+            triangle_previous_hit,
+        )
+        Base.isempty(intersection) && return intersection
+        Intersection(
+            intersection.distance,
+            intersection.normal,
+            intersection.inside,
+            ObstructionIndex(SVector(triangle_index)),
+            triangle_index >= mesh.first_index_of_gap,
+        )
+    end
+end
 
 function _mesh_neighbours(indices)
     norm_edge(edge) = edge[1] > edge[2] ? (edge[2], edge[1]) : edge

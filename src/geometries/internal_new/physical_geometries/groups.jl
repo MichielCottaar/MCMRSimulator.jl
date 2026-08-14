@@ -4,7 +4,7 @@ module Groups
 import StaticArrays: SVector
 import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
-import ...RayGridIntersection: ray_grid_intersections
+import ..GridDispatch: detect_intersection_grid
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
 
 abstract type GroupGeometry{N} <: PhysicalGeometry{N} end
@@ -272,29 +272,18 @@ function detect_intersection(
     destination::SVector{N, Float64},
     previous_hit::Intersection{3}=Intersection{3}(),
 ) where {N}
-    box = geometry.bounding_box
-    InternalBoundingBoxes.could_intersect(box, start, destination) || return Intersection{N}()
-    InternalBoundingBoxes.does_intersect(box, start, destination) || return Intersection{N}()
-
-    candidates = Set{Int}()
-    lower_bound = InternalBoundingBoxes.lower(box)
-    scaled_start = (start - lower_bound) .* geometry.inv_resolution
-    scaled_destination = (destination - lower_bound) .* geometry.inv_resolution
-    for (voxel, _, _, _, _) in ray_grid_intersections(scaled_start, scaled_destination)
-        for child_index in _grid_candidates(geometry, voxel .+ 1)
-            push!(candidates, child_index)
-        end
-    end
-
-    closest = Intersection{N}()
-    for child_index in candidates
-        child_previous_hit = _previous_hit_for_child(geometry, previous_hit, child_index)
+    return detect_intersection_grid(
+        geometry.bounding_box,
+        geometry.inv_resolution,
+        geometry.indices,
+        start,
+        destination,
+        previous_hit,
+    ) do child_index, previous
+        child_previous_hit = _previous_hit_for_child(geometry, previous, child_index)
         intersection = detect_intersection(geometry.geometries[child_index], start, destination, child_previous_hit)
-        if intersection.distance < closest.distance
-            closest = _prepend_index(intersection, child_index)
-        end
+        _prepend_index(intersection, child_index)
     end
-    closest
 end
 
 Base.size(geometry::GeometryVectorLike) = size(geometry.geometries)

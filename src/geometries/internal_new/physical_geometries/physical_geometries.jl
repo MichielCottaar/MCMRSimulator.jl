@@ -42,6 +42,7 @@ function inside_indices end
 """Return the axis-aligned bounding box containing a physical geometry."""
 function InternalBoundingBox end
 
+include("grid_dispatch.jl")
 include("groups.jl")
 include("transformations.jl")
 include("repeats.jl")

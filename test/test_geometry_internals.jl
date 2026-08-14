@@ -103,6 +103,28 @@ const get_value = Properties.get_value
         mesh.indices,
         mesh.vertices,
     )
+    mesh_real_hit = GI.PhysicalGeometries.detect_intersection(
+        mesh,
+        SVector(0.2, 0.2, -1.0),
+        SVector(0.2, 0.2, 0.2),
+    )
+    @test mesh_real_hit.distance ≈ 5 / 6
+    @test mesh_real_hit.obstruction_index == ObstructionIndex(SVector(1))
+    @test !mesh_real_hit.hit_gap
+    mesh_gap_hit = GI.PhysicalGeometries.detect_intersection(
+        mesh,
+        SVector(0.2, 0.2, 0.2),
+        SVector(1.0, 1.0, 1.0),
+    )
+    @test mesh_gap_hit.distance ≈ 1 / 6
+    @test mesh_gap_hit.obstruction_index == ObstructionIndex(SVector(4))
+    @test mesh_gap_hit.hit_gap
+    @test Base.isempty(GI.PhysicalGeometries.detect_intersection(
+        mesh,
+        SVector(0.2, 0.2, 0.2),
+        SVector(1.0, 1.0, 1.0),
+        mesh_gap_hit,
+    ))
     @test_throws ArgumentError MeshPart(
         [SVector(0.0, 0.0, 0.0)],
         [SVector(1, 2, 3)],
@@ -528,6 +550,19 @@ const get_value = Properties.get_value
     @test grid[3, 2] == [2]
     @test grid[3, 3] == [2]
     @test grid[4, 4] == Int[]
+    edge_grid = BoundingBoxes.grid_indices(
+        BoundingBoxes.InternalBoundingBox([2.0]),
+        [4],
+        [
+            BoundingBoxes.InternalBoundingBox([0.0], [-2.0]),
+            BoundingBoxes.InternalBoundingBox([0.0], [-1.0]),
+            BoundingBoxes.InternalBoundingBox([0.0], [2.0]),
+        ],
+    )
+    @test edge_grid[1] == [1, 2]
+    @test edge_grid[2] == [2]
+    @test edge_grid[3] == Int[]
+    @test edge_grid[4] == [3]
     @test_throws ArgumentError BoundingBoxes.grid_indices(grid_box, [0, 4], BoundingBoxes.InternalBoundingBox{2}[])
     @test_throws DimensionMismatch BoundingBoxes.grid_indices(grid_box, [4], BoundingBoxes.InternalBoundingBox{2}[])
 
