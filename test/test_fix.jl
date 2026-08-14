@@ -1,9 +1,13 @@
 const FixBaseGeometry = mr.Geometries.Fix.FixBaseGeometry
 const FixTransformations = mr.Geometries.Fix.FixTransformations
+const FixProperties = mr.Geometries.Fix.FixProperties
 const BaseObstructions = mr.Geometries.InternalNew.PhysicalGeometries.BaseObstructions
 const Groups = mr.Geometries.InternalNew.PhysicalGeometries.Groups
 const Repeats = mr.Geometries.InternalNew.PhysicalGeometries.Repeats
 const Transformations = mr.Geometries.InternalNew.PhysicalGeometries.Transformations
+const Properties = mr.Geometries.InternalNew.Properties
+const ObstructionIndex = mr.Geometries.InternalNew.Indices.ObstructionIndex
+const get_value = Properties.get_value
 
 @testset "Fix base geometry" begin
     @test FixBaseGeometry.fix_base_geometry(mr.Walls(position=0.0)) == [BaseObstructions.InfiniteWall()]
@@ -74,4 +78,44 @@ const Transformations = mr.Geometries.InternalNew.PhysicalGeometries.Transformat
     @test annulus_transformed.geometry isa Transformations.Shift{2}
     @test annulus_transformed.geometry.geometry isa Groups.GeometryTuple
     @test annulus_transformed.geometry.shift == SVector(0.0, -1.0)
+
+    cylinders = mr.Cylinders(
+        radius=[1.0, 2.0],
+        R1_inside=[1.0, 2.0],
+        R2_inside=3.0,
+        off_resonance_inside=4.0,
+        R1_surface=5.0,
+        permeability_surface=[6.0, 7.0],
+    )
+    cylinder_properties = FixProperties.fix_properties(
+        cylinders;
+        dwell_time=8.0,
+        relaxation=9.0,
+        density=10.0,
+    )
+    @test cylinder_properties.volume.R1 isa Properties.GeometryVectorProperties
+    @test get_value(cylinder_properties.volume.R1, ObstructionIndex(SVector(2))) == 2.0
+    @test get_value(cylinder_properties.volume.R2, ObstructionIndex(SVector(1))) == 3.0
+    @test get_value(cylinder_properties.surface.permeability, ObstructionIndex(SVector(2))) == 7.0
+    @test get_value(cylinder_properties.surface.dwell_time, ObstructionIndex(SVector(1))) == 8.0
+    @test get_value(cylinder_properties.surface.surface_relaxation, ObstructionIndex(SVector(1))) == 9.0
+    @test get_value(cylinder_properties.surface.density, ObstructionIndex(SVector(1))) == 10.0
+
+    wall_properties = FixProperties.fix_properties(mr.Walls(position=0.0, R1_surface=2.0))
+    @test get_value(wall_properties.volume.R1, ObstructionIndex(SVector(1))) == 0.0
+    @test get_value(wall_properties.surface.R1, ObstructionIndex(SVector(1))) == 2.0
+
+    annulus_properties = FixProperties.fix_properties(mr.Annuli(
+        inner=1.0,
+        outer=2.0,
+        R1_inner_volume=1.0,
+        R1_outer_volume=2.0,
+        permeability_inner_surface=3.0,
+        permeability_outer_surface=4.0,
+    ))
+    @test annulus_properties.volume.R1 isa Properties.GeometryTupleProperties
+    @test get_value(annulus_properties.volume.R1, ObstructionIndex(SVector(1, 1))) == 1.0
+    @test get_value(annulus_properties.volume.R1, ObstructionIndex(SVector(2, 1))) == 2.0
+    @test get_value(annulus_properties.surface.permeability, ObstructionIndex(SVector(1, 1))) == 3.0
+    @test get_value(annulus_properties.surface.permeability, ObstructionIndex(SVector(2, 1))) == 4.0
 end
