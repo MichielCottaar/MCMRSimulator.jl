@@ -494,8 +494,8 @@ const get_value = Properties.get_value
     )
     @test shifts == [SVector(4.0), SVector(-4.0)]
     @test repeating_grid[1] == [(Int32(1), Int32(0)), (Int32(1), Int32(2))]
-    @test repeating_grid[2] == [(Int32(1), Int32(0))]
-    @test repeating_grid[3] == [(Int32(1), Int32(0))]
+    @test repeating_grid[2] == [(Int32(1), Int32(0)), (Int32(1), Int32(2))]
+    @test repeating_grid[3] == [(Int32(1), Int32(1)), (Int32(1), Int32(0))]
     @test repeating_grid[4] == [(Int32(1), Int32(1)), (Int32(1), Int32(0))]
     @test_throws ArgumentError BoundingBoxes.grid_indices_repeating(
         BoundingBoxes.InternalBoundingBox([2.0]),

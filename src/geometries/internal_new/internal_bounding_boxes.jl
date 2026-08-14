@@ -113,11 +113,11 @@ function grid_indices_repeating(
             shifted_lower = lower(child_box) .+ shift
             shifted_upper = upper(child_box) .+ shift
             lower_coordinate = max.(
-                Int.(floor.((shifted_lower - lower(box)) ./ cell_size)) .+ 1,
+                Int.(ceil.((shifted_lower - lower(box)) ./ cell_size)),
                 1,
             )
             upper_coordinate = min.(
-                Int.(ceil.((shifted_upper - lower(box)) ./ cell_size)),
+                Int.(floor.((shifted_upper - lower(box)) ./ cell_size)) .+ 1,
                 dimensions,
             )
             all(lower_coordinate .<= upper_coordinate) || continue
