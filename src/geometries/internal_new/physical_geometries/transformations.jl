@@ -2,6 +2,7 @@
 module Transformations
 
 import StaticArrays: SMatrix, SVector
+import LinearAlgebra: norm
 import ...InternalBoundingBoxes
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
 
@@ -56,42 +57,46 @@ end
 Scale(geometry::P, scale::Real) where {N, P<:PhysicalGeometry{N}} = Scale{N, P}(geometry, scale)
 
 """
-    Rotate{N}(matrix)
+    Rotate(geometry, matrix)
 
-Apply the orthogonal `N`-dimensional transformation represented by `matrix`.
+Map coordinates from the outer `N`-dimensional space to the child `M`-dimensional
+space using an orthonormal matrix. For `M == N` this is a rotation; for `M < N`
+it is a rotation followed by projection.
 """
-struct Rotate{N, P<:PhysicalGeometry{N}} <: Transformation{N, N, P}
+struct Rotate{N, M, P<:PhysicalGeometry{M}} <: Transformation{N, M, P}
     geometry::P
-    matrix::SMatrix{N, N, Float64}
-end
+    matrix::SMatrix{M, N, Float64}
 
-function Rotate(geometry::P, matrix::AbstractMatrix{<:Real}) where {N, P<:PhysicalGeometry{N}}
-    size(matrix, 1) == size(matrix, 2) ||
-        throw(ArgumentError("a Rotate transformation requires a square matrix"))
-    size(matrix, 1) == N || throw(ArgumentError("rotation dimension must match geometry dimension"))
-    return Rotate{N, P}(geometry, SMatrix{N, N, Float64}(matrix))
-end
-
-"""
-    Project{N, M}()
-
-Project positions from `N` dimensions to `M` dimensions onto the supported
-coordinate axes. Currently, only `3 -> 2` onto the x-y plane and `3 -> 1`
-onto the z-axis are supported.
-"""
-struct Project{N, M, P<:PhysicalGeometry{M}} <: Transformation{N, M, P}
-    geometry::P
-
-    function Project{N, M, P}(geometry::P) where {N, M, P<:PhysicalGeometry{M}}
-        (N, M) in ((3, 2), (3, 1)) ||
-            throw(ArgumentError("unsupported Project transformation; only 3 -> 2 and 3 -> 1 are supported"))
-        return new{N, M, P}(geometry)
+    function Rotate{N, M, P}(geometry::P, matrix::SMatrix{M, N, Float64}) where {N, M, P<:PhysicalGeometry{M}}
+        _validate_rotate_matrix(matrix, N, M)
+        new{N, M, P}(geometry, matrix)
     end
 end
 
-Project{N, M}(geometry::P) where {N, M, P<:PhysicalGeometry{M}} = Project{N, M, P}(geometry)
+function _validate_rotate_matrix(matrix, N, M)
+    M <= N || throw(ArgumentError("a Rotate transformation cannot increase dimension"))
+    all(
+        isapprox(
+            sum(matrix[i, k] * matrix[j, k] for k in 1:N),
+            i == j ? 1.0 : 0.0;
+            atol=1e-10,
+            rtol=1e-10,
+        )
+        for i in 1:M, j in 1:M
+    ) || throw(ArgumentError("Rotate matrix rows must be orthonormal"))
+    nothing
+end
 
-InternalBoundingBox(::Project) = throw(ArgumentError("Project transformations do not have a finite backward bounding box"))
+function Rotate(geometry::P, matrix::AbstractMatrix{<:Real}) where {M, P<:PhysicalGeometry{M}}
+    N = size(matrix, 2)
+    size(matrix, 1) == M || throw(ArgumentError("rotation matrix rows must match geometry dimension"))
+    matrix = SMatrix{M, N, Float64}(matrix)
+    Rotate{N, M, P}(geometry, matrix)
+end
+
+InternalBoundingBox(transformation::Rotate{N, M}) where {N, M} =
+    N == M ? backward(transformation, InternalBoundingBox(transformation.geometry)) :
+    throw(ArgumentError("dimension-reducing Rotate transformations do not have a finite bounding box"))
 
 """Transform a value from the source to the destination coordinate system."""
 function forward end
@@ -145,59 +150,29 @@ backward(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox) 
     _scale_box(Scale(transformation.geometry, inv(transformation.scale)), box)
 
 forward(transformation::Rotate, position) = transformation.matrix * position
-backward(transformation::Rotate, position) = transformation.matrix' * position
-forward_normal(transformation::Rotate, normal) = transformation.matrix * normal
-backward_normal(transformation::Rotate, normal) = transformation.matrix' * normal
+backward(transformation::Rotate{N, M}, position) where {N, M} =
+    N == M ? transformation.matrix' * position : throw(ArgumentError("backward is not defined for dimension-reducing Rotate transformations"))
+forward_normal(transformation::Rotate{N, M}, normal) where {N, M} =
+    N == M ? transformation.matrix * normal : throw(ArgumentError("forward_normal is not defined for dimension-reducing Rotate transformations"))
+backward_normal(transformation::Rotate, normal) = begin
+    result = transformation.matrix' * normal
+    result ./ norm(result)
+end
 
-function _rotate_box(transformation::Rotate, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N}
+function _rotate_box(transformation::Rotate{N, M}, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N, M}
     center = transformation.matrix * _box_center(box)
     half_size = abs.(transformation.matrix) * _box_half_size(box)
-    return InternalBoundingBoxes.InternalBoundingBox{N}(half_size, center)
+    return InternalBoundingBoxes.InternalBoundingBox{M}(half_size, center)
 end
 
 forward(transformation::Rotate, box::InternalBoundingBoxes.InternalBoundingBox) =
     _rotate_box(transformation, box)
 
-backward(transformation::Rotate, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N} =
-    _rotate_box(Rotate(transformation.geometry, transformation.matrix'), box)
-
-forward(::Project{3, 2}, position) = SVector(position[1], position[2])
-forward(::Project{3, 1}, position) = SVector(position[3])
-
-function forward(::Project{3, 2}, box::InternalBoundingBoxes.InternalBoundingBox)
-    half_size = _box_half_size(box)
-    projected_half_size = SVector(half_size[1], half_size[2])
-    center = _box_center(box)
-    projected_center = SVector(center[1], center[2])
-    return InternalBoundingBoxes.InternalBoundingBox{2}(projected_half_size, projected_center)
-end
-
-function forward(::Project{3, 1}, box::InternalBoundingBoxes.InternalBoundingBox)
-    half_size = _box_half_size(box)
-    projected_half_size = SVector(half_size[3])
-    center = _box_center(box)
-    projected_center = SVector(center[3])
-    return InternalBoundingBoxes.InternalBoundingBox{1}(projected_half_size, projected_center)
-end
-
-function backward(::Project, position)
-    throw(ArgumentError("backward is not defined for Project transformations"))
-end
-
-function backward(::Project, ::InternalBoundingBoxes.InternalBoundingBox)
-    throw(ArgumentError("backward is not defined for Project transformations"))
-end
-
-function forward_normal(::Project, normal)
-    throw(ArgumentError("forward_normal is not defined for Project transformations"))
-end
-
-function backward_normal(::Project, normal)
-    throw(ArgumentError("backward_normal is not defined for Project transformations"))
-end
-
-backward_normal(::Project{3, 2}, normal) = SVector(normal[1], normal[2], 0.0)
-backward_normal(::Project{3, 1}, normal) = SVector(0.0, 0.0, normal[1])
+backward(transformation::Rotate{N, M}, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N, M} =
+    N == M ? InternalBoundingBoxes.InternalBoundingBox{N}(
+        abs.(transformation.matrix') * _box_half_size(box),
+        transformation.matrix' * _box_center(box),
+    ) : throw(ArgumentError("backward is not defined for dimension-reducing Rotate transformations"))
 
 function detect_intersection(
     transformation::Transformation{N, M, P},

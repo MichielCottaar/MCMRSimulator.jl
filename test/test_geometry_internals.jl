@@ -8,7 +8,6 @@ const Transformations = GI.PhysicalGeometries.Transformations
 const Shift = Transformations.Shift
 const Scale = Transformations.Scale
 const Rotate = Transformations.Rotate
-const Project = Transformations.Project
 const Repeats = GI.PhysicalGeometries.Repeats
 const Repeat = Repeats.Repeat
 const BoundingBoxes = GI.InternalBoundingBoxes
@@ -365,7 +364,7 @@ const get_value = Properties.get_value
     @test scaled_hit.distance ≈ 5 / 12
     @test scaled_hit.normal ≈ SVector(-1.0, 0.0, 0.0)
 
-    projected_cylinder = Project{3, 2}(cylinder)
+    projected_cylinder = Rotate(cylinder, SMatrix{2, 3, Float64}([1.0 0.0 0.0; 0.0 1.0 0.0]))
     projected_hit = GI.PhysicalGeometries.detect_intersection(
         projected_cylinder,
         SVector(-3.0, 0.0, 4.0),
@@ -411,19 +410,21 @@ const get_value = Properties.get_value
     @test Transformations.forward(rotation, position_2d) == SVector(-2.0, 1.0)
     @test Transformations.backward(rotation, SVector(-2.0, 1.0)) == position_2d
     @test Transformations.forward_normal(rotation, position_2d) == SVector(-2.0, 1.0)
+    reflection = Rotate(geometry_2d, SMatrix{2, 2, Float64}([-1.0 0.0; 0.0 1.0]))
+    @test Transformations.forward(reflection, position_2d) == SVector(-1.0, 2.0)
 
-    projection = Project{3, 2}(geometry_2d)
+    projection = Rotate(geometry_2d, SMatrix{2, 3, Float64}([1.0 0.0 0.0; 0.0 1.0 0.0]))
     @test projection isa Transformations.Transformation{3, 2, typeof(geometry_2d)}
     @test Transformations.forward(projection, SVector(1.0, 2.0, 3.0)) == SVector(1.0, 2.0)
     @test_throws ArgumentError Transformations.backward(projection, SVector(1.0, 2.0))
     @test_throws ArgumentError Transformations.forward_normal(projection, SVector(1.0, 2.0, 3.0))
-    @test Transformations.backward_normal(projection, SVector(1.0, 2.0)) == SVector(1.0, 2.0, 0.0)
+    @test Transformations.backward_normal(projection, SVector(1.0, 2.0)) ≈ SVector(1.0, 2.0, 0.0) / sqrt(5)
     @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(projection)
 
     geometry_1d = TestGeometry{1}(0)
-    projection_z = Project{3, 1}(geometry_1d)
+    projection_z = Rotate(geometry_1d, SMatrix{1, 3, Float64}([0.0 0.0 1.0]))
     @test Transformations.forward(projection_z, SVector(1.0, 2.0, 3.0)) == SVector(3.0)
-    @test_throws ArgumentError Project{2, 1}(geometry_1d)
+    @test_throws ArgumentError Rotate(geometry_1d, SMatrix{1, 2, Float64}([2.0 0.0]))
 
     cube = BoundingBoxes.InternalBoundingBox(2.0, [1.0, 2.0, 3.0])
     centered_cube = BoundingBoxes.InternalBoundingBox{3}(2.0)
