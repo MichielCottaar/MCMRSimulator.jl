@@ -668,7 +668,7 @@ end
     @test fixed_cylinder.susceptibility isa Tuple
     @test length(fixed_cylinder.susceptibility) == 1
     @test fixed_cylinder.susceptibility[1] isa
-        GI.PhysicalGeometries.Susceptibility.Grid.SusceptibilityGridNoRepeat
+        GI.Susceptibility.Grid.SusceptibilityGridNoRepeat
 
     annulus = mr.Annuli(
         inner=0.7,
@@ -681,12 +681,12 @@ end
     )
     fixed_annulus = mr.fix(annulus)
     @test fixed_annulus.susceptibility[1] isa
-        GI.PhysicalGeometries.Susceptibility.Grid.SusceptibilityGridRepeat
+        GI.Susceptibility.Grid.SusceptibilityGridRepeat
 
     combined = mr.fix([cylinder, cylinder])
     @test length(combined.susceptibility) == 2
     @test all(
-        susceptibility isa GI.PhysicalGeometries.Susceptibility.Grid.SusceptibilityGridNoRepeat
+        susceptibility isa GI.Susceptibility.Grid.SusceptibilityGridNoRepeat
         for susceptibility in combined.susceptibility
     )
 end
