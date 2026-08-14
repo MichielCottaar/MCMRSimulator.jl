@@ -6,8 +6,10 @@ include("internal/internal.jl")
 include("internal_new/internal_new.jl")
 include("user/user.jl")
 include("fix/fix.jl")
-import .User: 
-    fix, fix_susceptibility,
+import .Fix:
+    fix, fix_susceptibility
+import .InternalNew: FixedGeometry, Intersection, ObstructionIndex, 
+import .User:
     ObstructionGroup, IndexedObstruction,
     Wall, Walls,
     Cylinder, Cylinders,

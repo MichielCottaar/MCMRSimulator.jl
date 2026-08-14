@@ -3,6 +3,7 @@ module Fix
 include("fix_base_geometry.jl")
 include("fix_transformations.jl")
 include("fix_properties.jl")
+include("fix_susceptibility.jl")
 
 import ..User.Obstructions: ObstructionGroup, Walls, Cylinders, Spheres, Annuli
 import ..InternalNew.PhysicalGeometries: PhysicalGeometry
@@ -13,6 +14,7 @@ import ..InternalNew: FixedGeometry
 import .FixBaseGeometry: fix_base_geometry
 import .FixTransformations: fix_transformations
 import .FixProperties: fix_properties
+import .FixSusceptibility: fix_susceptibility
 
 function fix(
     geometry::FixedGeometry;
@@ -42,10 +44,12 @@ function fix(
         surface_relaxation,
         density,
     )
-    FixedGeometry{typeof(physical_geometry), typeof(properties.volume), typeof(properties.surface)}(
+    susceptibility = fix_susceptibility(group)
+    FixedGeometry{typeof(physical_geometry), typeof(properties.volume), typeof(properties.surface), typeof(susceptibility)}(
         physical_geometry,
         properties.volume,
         properties.surface,
+        susceptibility,
     )
 end
 
@@ -67,10 +71,11 @@ function fix(
     surface_relaxation=0.,
     density=0.,
 )
-    isempty(geometries) && return FixedGeometry{typeof(GeometryTuple{3}(())), Nothing, Nothing}(
+    isempty(geometries) && return FixedGeometry{typeof(GeometryTuple{3}(())), Nothing, Nothing, Tuple{}}(
         GeometryTuple{3}(()),
         nothing,
         nothing,
+        (),
     )
 
     fixed = [
@@ -86,10 +91,12 @@ function fix(
     physical_geometry = GeometryTuple(Tuple(geometry.geometry for geometry in fixed))
     volume = _merge_properties(fixed, :volume)
     surface = _merge_properties(fixed, :surface)
-    FixedGeometry{typeof(physical_geometry), typeof(volume), typeof(surface)}(
+    susceptibility = fix_susceptibility(geometries)
+    FixedGeometry{typeof(physical_geometry), typeof(volume), typeof(surface), typeof(susceptibility)}(
         physical_geometry,
         volume,
         surface,
+        susceptibility,
     )
 end
 

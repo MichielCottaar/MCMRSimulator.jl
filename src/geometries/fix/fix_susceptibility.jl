@@ -1,15 +1,13 @@
 """
-Defines [`MCMRSimulator.fix_susceptibility`](@ref MCMRSimulator.Geometries.User.FixSusceptibility.fix_susceptibility).
+Defines susceptibility state construction for the fixed geometry engine.
 """
 module FixSusceptibility
 import StaticArrays: SVector
 import LinearAlgebra: transpose, norm, ⋅, I
-import ...Internal.Susceptibility: FixedSusceptibility, SusceptibilityGrid, SusceptibilityGridNoRepeat, SusceptibilityGridRepeat, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, TriangleSusceptibility, SusceptibilityGridElement, dipole_approximation_repeat, dipole_approximation, IsotropicSusceptibilityGridElement, AnisotropicSusceptibilityGridElement, IsotropicTriangleSusceptibility, AnisotropicTriangleSusceptibility, triangle_magnetisation
-import ...Internal.Obstructions.Triangles: FullTriangle, normal, triangle_size
-import ...Internal: BoundingBox, radius, lower, upper
-import ...Internal.HitGrids: find_hits
-import ..Obstructions: ObstructionType, ObstructionGroup, Walls, Cylinders, Spheres, Annuli, Mesh, fields, isglobal, BendyCylinder
-import ..SizeScales: grid_resolution
+import ...InternalNew.PhysicalGeometries.Susceptibility: FixedSusceptibility, SusceptibilityGrid, SusceptibilityGridNoRepeat, SusceptibilityGridRepeat, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, SusceptibilityGridElement, dipole_approximation_repeat, dipole_approximation, IsotropicSusceptibilityGridElement, AnisotropicSusceptibilityGridElement
+import ...InternalNew.InternalBoundingBoxes: InternalBoundingBox, lower, upper, grid_indices, grid_indices_repeating
+import ...User.Obstructions: ObstructionGroup, Cylinders, Annuli, isglobal
+import ...User.SizeScales: grid_resolution
 
 """
     fix_susceptibility(geometry)
@@ -69,50 +67,6 @@ function total_susceptibility(group::Annuli, B0_field::SVector{2, Float64})
     return @. ts * (group.outer.value^2 - group.inner.value^2) * π
 end
 
-for func in (:fix_susceptibility_type, :total_susceptibility)
-    @eval $(func)(group::BendyCylinder, args...; kwargs...) = $(func)(Mesh(group), args...; kwargs...)
-end
-
-function fix_susceptibility_type(group::Mesh)
-    if ~any(group.myelin.value)
-        return nothing
-    end
-    isotropic = all(iszero.(group.susceptibility_aniso.value))
-    triangle_type = isotropic ? IsotropicTriangleSusceptibility : AnisotropicTriangleSusceptibility
-
-    b0_field = group.rotation.value[3, :]
-    res = triangle_type[]
-    radii = Float64[]
-    positions = SVector{3, Float64}[]
-    for (index, (i1, i2, i3)) in enumerate(group.triangles.value)
-        ft = FullTriangle(group.vertices.value[i1], group.vertices.value[i2], group.vertices.value[i3])
-        push!(radii, radius(ft) * 4)
-        push!(positions, (ft.a + ft.b + ft.c) / 3)
-        if isotropic
-            push!(res, IsotropicTriangleSusceptibility(ft, group[index].susceptibility_iso))
-        else
-            push!(res, AnisotropicTriangleSusceptibility(ft, group[index].susceptibility_iso, group[index].susceptibility_aniso, b0_field))
-        end
-    end
-    return add_parent(group, res; positions=positions, radii=radii)
-end
-
-function total_susceptibility(mesh::Mesh, B0_field::SVector{3, Float64})
-    if all(iszero.(mesh.susceptibility_aniso.value))
-        function compute_iso(triangle_index, iso)
-            triangle = FullTriangle(mesh.vertices.value[triangle_index]...)
-            return iso * triangle_size(triangle)
-        end
-        return compute_iso.(mesh.triangles.value, mesh.susceptibility_iso.value)
-    else
-        function compute_aniso(triangle_index, iso, aniso)
-            triangle = FullTriangle(mesh.vertices.value[triangle_index]...)
-            return triangle_magnetisation(triangle, iso, aniso, B0_field) * triangle_size(triangle)
-        end
-        return compute_aniso.(mesh.triangles.value, mesh.susceptibility_iso.value, mesh.susceptibility_aniso.value)
-    end
-end
-
 function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusceptibility{N}}; positions=nothing, radii=nothing, radius_symbol=:radius) where {N}
     if isnothing(positions)
         positions = isglobal(user.position) ? fill(SVector{N}(user.position.value), length(internal)) : SVector{N}.(user.position.value)
@@ -131,14 +85,16 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     end
 
     individual_bbs = map(positions, radii) do p, r
-        BoundingBox(p .- r, p .+ r)
+        InternalBoundingBox(r, p)
     end
     if isnothing(user.repeats.value)
         half_repeats = nothing
-        bb_indices = BoundingBox(individual_bbs)
+        lower_bound = reduce((a, b) -> min.(a, b), (lower(bb) for bb in individual_bbs))
+        upper_bound = reduce((a, b) -> max.(a, b), (upper(bb) for bb in individual_bbs))
+        bb_indices = InternalBoundingBox((upper_bound - lower_bound) / 2, (upper_bound + lower_bound) / 2)
     else
         half_repeats = SVector{N}(user.repeats.value) ./ 2
-        bb_indices = BoundingBox(-half_repeats, half_repeats)
+        bb_indices = InternalBoundingBox(half_repeats)
         bb_off_resonance = bb_indices
     end
     resolution_guess = grid_resolution(user, bb_indices)
@@ -150,16 +106,16 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     resolution = (upper(bb_indices) .- lower(bb_indices)) ./ orig_size_grid
     if isnothing(user.repeats.value)
         size_grid_indices = orig_size_grid .+ 2
-        bb_indices = BoundingBox(
-            lower(bb_indices) .- resolution,
-            upper(bb_indices) .+ resolution,
+        bb_indices = InternalBoundingBox(
+            (upper(bb_indices) - lower(bb_indices)) / 2 + resolution,
+            (upper(bb_indices) + lower(bb_indices)) / 2,
         )
         size_bb = upper(bb_indices) .- lower(bb_indices)
         size_off_resonance = maximum(size_bb) * 2
         nvoxels_add = @. Int(div((size_off_resonance - size_bb), 2 * resolution, RoundUp))
-        bb_off_resonance = BoundingBox(
-            lower(bb_indices) .- nvoxels_add .* resolution,
-            upper(bb_indices) .+ nvoxels_add .* resolution,
+        bb_off_resonance = InternalBoundingBox(
+            (upper(bb_indices) - lower(bb_indices)) / 2 + nvoxels_add .* resolution,
+            (upper(bb_indices) + lower(bb_indices)) / 2,
         )
     else
         size_grid_indices = orig_size_grid
@@ -167,13 +123,19 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
 
     has_hit_bbs = map(positions, radii) do p, r
         half_size = @. max(resolution * 3, r) + 0.5 * resolution
-        BoundingBox(p .- half_size, p .+ half_size)
+        InternalBoundingBox(half_size, p)
     end
 
-    shifts, grid = find_hits(bb_indices, size_grid_indices, user.repeats.value, has_hit_bbs)
+    if isnothing(user.repeats.value)
+        shifts = SVector{N, Float64}[]
+        grid = grid_indices(bb_indices, size_grid_indices, has_hit_bbs)
+    else
+        shifts, grid = grid_indices_repeating(bb_indices, size_grid_indices, user.repeats.value, has_hit_bbs)
+    end
 
     element_grid = map(grid) do index_arr
-        map(index_arr) do (index_obstruction, index_shift)
+        map(index_arr) do entry
+            index_obstruction, index_shift = isnothing(user.repeats.value) ? (entry, Int32(0)) : entry
             (
                 SusceptibilityGridElement{N}(
                     positions[index_obstruction],

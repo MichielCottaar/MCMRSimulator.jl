@@ -1,6 +1,6 @@
 import .PhysicalGeometries: PhysicalGeometry
 
-export FixedGeometry, CollisionState, BoundingBox,
+export FixedGeometry, Intersection, ObstructionIndex,
     fix, isinside, detect_intersection, random_surface_positions, geometry_mesh,
     size_scale, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
@@ -17,20 +17,12 @@ Opaque fixed geometry state used by the simulator. Implementations may store
 collision, MRI-property, susceptibility, and plotting data in any way they
 choose. Callers should use only the functions defined in this module.
 """
-struct FixedGeometry{G <: PhysicalGeometry{3}, V, S}
+struct FixedGeometry{G <: PhysicalGeometry{3}, V, S, O}
     geometry::G
     volume::V
     surface::S
+    susceptibility::O
 end
-
-"""
-    CollisionState
-
-Opaque result of an intersection query or state describing a reflected or
-surface-bound spin. Use `Base.isempty` to determine whether the state contains
-an intersection; an empty state represents no collision.
-"""
-abstract type CollisionState end
 
 """
     fix(geometry; kwargs...)

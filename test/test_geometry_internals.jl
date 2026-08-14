@@ -542,3 +542,41 @@ const get_value = Properties.get_value
     @test all(BoundingBoxes.isinside(rotated_box, Transformations.forward(rotation_3d, point)) for point in transformed_bounds)
     @test Transformations.backward(rotation_3d, rotated_box) isa BoundingBoxes.InternalBoundingBox{3}
 end
+
+@testset "Fixed geometry susceptibility state" begin
+    walls = mr.fix(mr.Walls(position=0.0))
+    @test walls.susceptibility == ()
+
+    cylinder = mr.Cylinders(
+        radius=1.0,
+        g_ratio=0.8,
+        susceptibility_iso=1.0,
+        susceptibility_aniso=0.0,
+        grid_resolution=Inf,
+    )
+    fixed_cylinder = mr.fix(cylinder)
+    @test fixed_cylinder.susceptibility isa Tuple
+    @test length(fixed_cylinder.susceptibility) == 1
+    @test fixed_cylinder.susceptibility[1] isa
+        GI.PhysicalGeometries.Susceptibility.Grid.SusceptibilityGridNoRepeat
+
+    annulus = mr.Annuli(
+        inner=0.7,
+        outer=1.0,
+        myelin=true,
+        susceptibility_iso=1.0,
+        susceptibility_aniso=0.0,
+        repeats=[4.0, 4.0],
+        grid_resolution=Inf,
+    )
+    fixed_annulus = mr.fix(annulus)
+    @test fixed_annulus.susceptibility[1] isa
+        GI.PhysicalGeometries.Susceptibility.Grid.SusceptibilityGridRepeat
+
+    combined = mr.fix([cylinder, cylinder])
+    @test length(combined.susceptibility) == 2
+    @test all(
+        susceptibility isa GI.PhysicalGeometries.Susceptibility.Grid.SusceptibilityGridNoRepeat
+        for susceptibility in combined.susceptibility
+    )
+end

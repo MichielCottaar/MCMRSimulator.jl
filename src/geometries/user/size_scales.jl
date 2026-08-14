@@ -5,6 +5,7 @@ module SizeScales
 import ..Obstructions: ObstructionGroup, Walls, Cylinders, Annuli, Spheres, Mesh, isglobal
 import ...Internal.Obstructions.Triangles: normal, curvature
 import ...Internal.BoundingBoxes: BoundingBox, lower, upper
+import ...InternalNew.InternalBoundingBoxes: InternalBoundingBox
 
 """
     size_scale(obstruction; ignore_user_value=false)
@@ -59,6 +60,22 @@ function grid_resolution(obstruction::ObstructionGroup, bb::BoundingBox)
         return obstruction.grid_resolution.value
     end
     return compute_grid_resolution(obstruction, bb)
+end
+
+function grid_resolution(obstruction::ObstructionGroup, bb::InternalBoundingBox)
+    if ~isnothing(obstruction.grid_resolution.value)
+        return obstruction.grid_resolution.value
+    end
+    if isnothing(obstruction.repeats.value)
+        sz = upper(bb) - lower(bb)
+    else
+        sz = obstruction.repeats.value
+    end
+    if all(iszero.(sz))
+        return 1.
+    end
+    nvoxels = Int(div(min(max(obstruction.n_obstructions, 1000), Int(1e6)), 10, RoundDown))
+    return (prod(sz) / nvoxels) ^ (1 / length(sz))
 end
 
 
