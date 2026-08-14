@@ -1,6 +1,6 @@
 module FixProperties
 
-import ...User.Obstructions: Walls, Cylinders, Spheres, Annuli, isglobal
+import ...User.Obstructions: Walls, Cylinders, Spheres, Annuli, Mesh, isglobal
 import ...InternalNew.Properties: GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 
 const _volume_fields = (:R1, :R2, :off_resonance)
@@ -61,7 +61,7 @@ function _zero_volume()
 end
 
 function fix_properties(
-    group::Union{Cylinders, Spheres};
+    group::Union{Cylinders, Spheres, Mesh};
     permeability=0.,
     dwell_time=0.,
     surface_relaxation=0.,

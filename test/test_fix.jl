@@ -3,6 +3,7 @@ const FixTransformations = mr.Geometries.Fix.FixTransformations
 const FixProperties = mr.Geometries.Fix.FixProperties
 const BaseObstructions = mr.Geometries.InternalNew.PhysicalGeometries.BaseObstructions
 const Groups = mr.Geometries.InternalNew.PhysicalGeometries.Groups
+const Meshes = mr.Geometries.InternalNew.PhysicalGeometries.Meshes
 const Repeats = mr.Geometries.InternalNew.PhysicalGeometries.Repeats
 const Transformations = mr.Geometries.InternalNew.PhysicalGeometries.Transformations
 const Properties = mr.Geometries.InternalNew.Properties
@@ -32,6 +33,27 @@ const fix = mr.Geometries.Fix.fix
     ))
     @test length(overlapping[1].overlaps_with) == 1
     @test length(overlapping[2].overlaps_with) == 1
+
+    mesh = mr.Mesh(
+        vertices=[
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [3.0, 0.0, 0.0],
+            [4.0, 0.0, 0.0],
+            [3.0, 1.0, 0.0],
+            [3.0, 0.0, 1.0],
+        ],
+        triangles=[
+            [1, 2, 3], [1, 2, 4], [1, 3, 4],
+            [5, 6, 7], [5, 6, 8], [5, 7, 8],
+        ],
+    )
+    mesh_geometry = FixBaseGeometry.fix_base_geometry(mesh)
+    @test length(mesh_geometry) == 2
+    @test all(mesh_part isa Meshes.Mesh for mesh_part in mesh_geometry)
+    @test all(length(mesh_part.indices) == 4 for mesh_part in mesh_geometry)
 
     positioned = FixTransformations.fix_transformations(
         mr.Cylinders(radius=[1.0, 1.0], position=[[0.0, 0.0], [2.0, 0.0]]),
@@ -146,4 +168,36 @@ end
     @test_throws MethodError fix(group; R2=1.0)
     @test_throws MethodError fix(group; off_resonance=1.0)
     @test_throws MethodError fix(group; relaxation=1.0)
+
+    mesh = mr.Mesh(
+        vertices=[
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ],
+        triangles=[[1, 2, 3], [1, 2, 4], [1, 3, 4]],
+        R1_inside=2.0,
+        permeability_surface=3.0,
+    )
+    fixed_mesh = fix(mesh; dwell_time=4.0, surface_relaxation=5.0, density=6.0)
+    @test fixed_mesh.geometry isa Groups.GeometryVectorBoundingBox
+    @test first(fixed_mesh.geometry.geometries) isa Meshes.Mesh
+    @test fixed_mesh.volume.R1.value == 2.0
+    @test fixed_mesh.surface.permeability.value == 3.0
+    @test fixed_mesh.surface.dwell_time.value == 4.0
+    @test fixed_mesh.surface.surface_relaxation.value == 5.0
+    @test fixed_mesh.surface.density.value == 6.0
+
+    bendy_cylinder = mr.BendyCylinder(
+        control_point=[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+        radius=[1.0, 1.0],
+        repeats=[2.0, 2.0, 2.0],
+        closed=[0, 0, 1],
+        spline_order=2,
+        nsamples=8,
+    )
+    fixed_bendy_cylinder = fix(bendy_cylinder)
+    @test fixed_bendy_cylinder.geometry isa Groups.GeometryVectorBoundingBox
+    @test first(fixed_bendy_cylinder.geometry.geometries) isa Meshes.Mesh
 end

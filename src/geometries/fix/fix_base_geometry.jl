@@ -2,9 +2,11 @@ module FixBaseGeometry
 
 import StaticArrays: SVector
 
-import ...User.Obstructions: Walls, Cylinders, Spheres, Annuli
+import ...User.Obstructions: Walls, Cylinders, Spheres, Annuli, Mesh
+import ...User.SplitMesh: components
 import ...User.Obstructions: isglobal
 import ...InternalNew.PhysicalGeometries.BaseObstructions: InfiniteWall, InfiniteCylinder, Sphere, OverlappingSphere
+import ...InternalNew.PhysicalGeometries: Meshes
 
 function _values(field_value, number)
     isglobal(field_value) ? fill(field_value.value, number) : collect(field_value.value)
@@ -39,6 +41,21 @@ function fix_base_geometry(group::Annuli)
     inner = [InfiniteCylinder(radius) for radius in _values(group.inner, length(group))]
     outer = [InfiniteCylinder(radius) for radius in _values(group.outer, length(group))]
     (inner, outer)
+end
+
+function fix_base_geometry(group::Mesh)
+    triangle_components = components(group)
+    vertices = group.vertices.value
+    triangles = group.triangles.value
+    unique_components = unique(triangle_components)
+    [
+        Meshes.Mesh(
+            vertices,
+            triangles[triangle_components .== component];
+            grid_resolution=group.grid_resolution.value,
+        )
+        for component in unique_components
+    ]
 end
 
 end

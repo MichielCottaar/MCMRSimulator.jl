@@ -5,7 +5,7 @@ include("fix_transformations.jl")
 include("fix_properties.jl")
 include("fix_susceptibility.jl")
 
-import ..User.Obstructions: ObstructionGroup, Walls, Cylinders, Spheres, Annuli
+import ..User.Obstructions: ObstructionGroup, Walls, Cylinders, Spheres, Annuli, BendyCylinder, Mesh
 import ..InternalNew.PhysicalGeometries: PhysicalGeometry
 import ..InternalNew.PhysicalGeometries.Groups: GeometryTuple
 import ..InternalNew.Properties: GeometryTupleProperties
@@ -26,6 +26,10 @@ function fix(
     (permeability == 0. && dwell_time == 0. && surface_relaxation == 0. && density == 0.) ||
         throw(ArgumentError("cannot apply fix keywords to an already fixed geometry"))
     geometry
+end
+
+function fix(group::BendyCylinder; kwargs...)
+    fix(Mesh(group); kwargs...)
 end
 
 function fix(

@@ -3,7 +3,7 @@ module FixTransformations
 import LinearAlgebra: I, isapprox
 import StaticArrays: SMatrix, SVector
 
-import ...User.Obstructions: Walls, Cylinders, Spheres, Annuli
+import ...User.Obstructions: Walls, Cylinders, Spheres, Annuli, Mesh
 import ...User.Obstructions: isglobal
 import ...InternalNew.PhysicalGeometries: PhysicalGeometry
 import ...InternalNew.PhysicalGeometries.Groups: GeometryVector, GeometryTuple
@@ -63,7 +63,7 @@ function _apply_global_shift(group, geometry)
     Shift(geometry, -position)
 end
 
-function fix_transformations(group::Union{Walls, Cylinders, Spheres}, geometry::Vector)
+function fix_transformations(group::Union{Walls, Cylinders, Spheres, Mesh}, geometry::Vector)
     geometry = _apply_local_transformations(group, geometry)
     geometry = _apply_global_shift(group, geometry)
     _apply_rotation(group, geometry)
