@@ -1,4 +1,4 @@
-module Mesh
+module Meshes
 
 import StaticArrays: SVector, MVector
 import LinearAlgebra: cross, norm, svd, ⋅
@@ -18,7 +18,7 @@ import ..BaseObstructions: FullTriangle, normal
 mesh gap. `first_index_of_gap` marks the first gap triangle. All indices use
 one-based indices into `vertices`.
 """
-struct MeshPart <: PhysicalGeometry{3}
+struct Mesh <: PhysicalGeometry{3}
     vertices::Vector{SVector{3, Float64}}
     indices::Vector{SVector{3, Int}}
     first_index_of_gap::Int
@@ -29,7 +29,7 @@ struct MeshPart <: PhysicalGeometry{3}
     inside_mask::BitArray{3}
 end
 
-has_inside(::Type{MeshPart}) = true
+has_inside(::Type{Mesh}) = true
 
 function _mesh_indices(indices, nvertices)
     result = [SVector{3, Int}(triangle) for triangle in indices]
@@ -125,13 +125,13 @@ function _mesh_gap_indices(vertices, indices)
     gap_indices
 end
 
-function MeshPart(
+function Mesh(
     vertices,
     indices;
     grid_resolution=nothing,
 )
     fixed_vertices = [SVector{3, Float64}(vertex) for vertex in vertices]
-    isempty(indices) && throw(ArgumentError("cannot construct a MeshPart without triangles"))
+    isempty(indices) && throw(ArgumentError("cannot construct a Mesh without triangles"))
     fixed_indices = [MVector{3, Int}(triangle) for triangle in _mesh_indices(indices, length(fixed_vertices))]
     make_normals_consistent!(fixed_indices)
     gap_indices = _mesh_gap_indices(fixed_vertices, fixed_indices)
@@ -181,7 +181,7 @@ function MeshPart(
         inv_resolution,
         indices_grid,
     )
-    MeshPart(
+    Mesh(
         fixed_vertices,
         fixed_indices,
         first_index_of_gap,
@@ -193,7 +193,7 @@ function MeshPart(
     )
 end
 
-function _mesh_triangle(mesh::MeshPart, triangle::SVector{3, Int})
+function _mesh_triangle(mesh::Mesh, triangle::SVector{3, Int})
     FullTriangle(
         mesh.vertices[triangle[1]],
         mesh.vertices[triangle[2]],
@@ -201,9 +201,9 @@ function _mesh_triangle(mesh::MeshPart, triangle::SVector{3, Int})
     )
 end
 
-triangle(mesh::MeshPart, index::Int) = _mesh_triangle(mesh, mesh.indices[index])
+triangle(mesh::Mesh, index::Int) = _mesh_triangle(mesh, mesh.indices[index])
 
-InternalBoundingBox(mesh::MeshPart) = mesh.bounding_box
+InternalBoundingBox(mesh::Mesh) = mesh.bounding_box
 
 function _mesh_inside_mask(
     vertices,
@@ -258,12 +258,12 @@ function _mesh_triangle(vertices, triangle::SVector{3, Int})
     FullTriangle(vertices[triangle[1]], vertices[triangle[2]], vertices[triangle[3]])
 end
 
-function _mesh_grid_coordinate(mesh::MeshPart, position)
+function _mesh_grid_coordinate(mesh::Mesh, position)
     coordinate = Int.(floor.((position - InternalBoundingBoxes.lower(mesh.grid_bounding_box)) .* mesh.inv_resolution)) .+ 1
     any(coordinate .< 1) || any(coordinate .> size(mesh.indices_grid)) ? nothing : SVector{3, Int}(coordinate)
 end
 
-function inside_indices(mesh::MeshPart, position::SVector{3, Float64})
+function inside_indices(mesh::Mesh, position::SVector{3, Float64})
     coordinate = _mesh_grid_coordinate(mesh, position)
     isnothing(coordinate) && return ObstructionIndex[]
 
@@ -288,7 +288,7 @@ function inside_indices(mesh::MeshPart, position::SVector{3, Float64})
 end
 
 function detect_intersection(
-    mesh::MeshPart,
+    mesh::Mesh,
     start::SVector{3, Float64},
     destination::SVector{3, Float64},
     previous_hit::Intersection{3}=Intersection{3}(),
@@ -388,7 +388,7 @@ function curvature(
     sum(weight * value for (weight, value) in valid) / sum(weight for (weight, _) in valid)
 end
 
-curvature(mesh::MeshPart; include_gap_triangles=false) = curvature(
+curvature(mesh::Mesh; include_gap_triangles=false) = curvature(
     mesh.indices,
     mesh.vertices;
     first_index_of_gap=mesh.first_index_of_gap,

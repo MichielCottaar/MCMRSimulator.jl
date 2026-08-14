@@ -13,8 +13,8 @@ const Repeat = Repeats.Repeat
 const BoundingBoxes = GI.InternalBoundingBoxes
 const ObstructionIndex = GI.Indices.ObstructionIndex
 const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
-const Mesh = GI.PhysicalGeometries.Mesh
-const MeshPart = Mesh.MeshPart
+const Meshes = GI.PhysicalGeometries.Meshes
+const Mesh = Meshes.Mesh
 const has_inside = GI.PhysicalGeometries.has_inside
 const inside_indices = GI.PhysicalGeometries.inside_indices
 const Properties = GI.Properties
@@ -63,7 +63,7 @@ const get_value = Properties.get_value
         SVector(1.0, 0.0, 0.0),
         SVector(0.0, 1.0, 0.0),
     )))
-    mesh = MeshPart(
+    mesh = Mesh(
         [
             SVector(0.0, 0.0, 0.0),
             SVector(1.0, 0.0, 0.0),
@@ -87,21 +87,21 @@ const get_value = Properties.get_value
     @test mesh.indices[mesh.first_index_of_gap] == SVector(4, 2, 3)
     @test BoundingBoxes.lower(mesh.bounding_box) == SVector(0.0, 0.0, 0.0)
     @test BoundingBoxes.upper(mesh.bounding_box) == SVector(1.0, 1.0, 1.0)
-    @test Mesh.triangle(mesh, 1) == BaseObstructions.FullTriangle(
+    @test Meshes.triangle(mesh, 1) == BaseObstructions.FullTriangle(
         SVector(1.0, 0.0, 0.0),
         SVector(0.0, 0.0, 0.0),
         SVector(0.0, 1.0, 0.0),
     )
-    @test Mesh.triangle(mesh, 3) == BaseObstructions.FullTriangle(
+    @test Meshes.triangle(mesh, 3) == BaseObstructions.FullTriangle(
         SVector(0.0, 1.0, 0.0),
         SVector(0.0, 0.0, 0.0),
         SVector(0.0, 0.0, 1.0),
     )
-    @test Mesh.curvature(mesh) == Mesh.curvature(
+    @test Meshes.curvature(mesh) == Meshes.curvature(
         mesh.indices[1:(mesh.first_index_of_gap - 1)],
         mesh.vertices,
     )
-    @test Mesh.curvature(mesh; include_gap_triangles=true) == Mesh.curvature(
+    @test Meshes.curvature(mesh; include_gap_triangles=true) == Meshes.curvature(
         mesh.indices,
         mesh.vertices,
     )
@@ -127,7 +127,7 @@ const get_value = Properties.get_value
         SVector(1.0, 1.0, 1.0),
         mesh_gap_hit,
     ))
-    @test_throws ArgumentError MeshPart(
+    @test_throws ArgumentError Mesh(
         [SVector(0.0, 0.0, 0.0)],
         [SVector(1, 2, 3)],
     )
