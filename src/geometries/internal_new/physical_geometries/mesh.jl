@@ -1,6 +1,6 @@
 module Mesh
 
-import StaticArrays: SVector
+import StaticArrays: SVector, MVector
 
 import ..PhysicalGeometries: PhysicalGeometry, has_inside, InternalBoundingBox
 import ...InternalBoundingBoxes
@@ -60,9 +60,11 @@ function MeshPart(
 )
     fixed_vertices = [SVector{3, Float64}(vertex) for vertex in vertices]
     isempty(indices) && throw(ArgumentError("cannot construct a MeshPart without triangles"))
-    fixed_indices = _mesh_indices(indices, length(fixed_vertices))
+    fixed_indices = [MVector{3, Int}(triangle) for triangle in _mesh_indices(indices, length(fixed_vertices))]
     1 <= first_index_of_gap <= length(fixed_indices) + 1 ||
         throw(ArgumentError("first_index_of_gap must identify an index or the position after the final index"))
+    make_normals_consistent!(fixed_indices)
+    fixed_indices = [SVector{3, Int}(triangle) for triangle in fixed_indices]
 
     triangle_boxes = [
         InternalBoundingBox(FullTriangle(fixed_vertices[triangle[1]], fixed_vertices[triangle[2]], fixed_vertices[triangle[3]]))
@@ -109,5 +111,66 @@ end
 triangle(mesh::MeshPart, index::Int) = _mesh_triangle(mesh, mesh.indices[index])
 
 InternalBoundingBox(mesh::MeshPart) = mesh.bounding_box
+
+
+"""
+    make_normals_consistent!(triangles)
+
+Adjust the triangles to all point outwards or all point inwards.
+Assumes that all the triangles are connected (can be enforced using [`connected_components`](@ref)).
+"""
+function make_normals_consistent!(triangles::AbstractVector)
+    edges(t) = ((t[1], t[2]), (t[2], t[3]), (t[3], t[1]))
+    counter = Dict{Tuple{Int, Int}, Int}()
+    for triangle in triangles
+        for (index1, index2) in edges(triangle)
+            edge = index2 > index1 ? (index1, index2) : (index2, index1)
+            if edge in keys(counter)
+                counter[edge] += 1
+            else
+                counter[edge] = 1
+            end
+        end
+    end
+    triangles_seen = fill(false, length(triangles))
+    edges_seen = Set{Tuple{Int, Int}}()
+    while ~all(triangles_seen)
+        starting_triangle = findfirst(.~triangles_seen)
+        triangles_seen[starting_triangle] = true
+        nseen = 0
+        while sum(triangles_seen) > nseen
+            nseen = sum(triangles_seen)
+            union!(edges_seen, edges(triangles[starting_triangle]))
+            for (i, triangle) in enumerate(triangles)
+                if triangles_seen[i]
+                    continue
+                end
+                flip_required = -1
+                for (index1, index2) in edges(triangle)
+                    norm_edge = index2 > index1 ? (index1, index2) : (index2, index1)
+                    if counter[norm_edge] != 2
+                        continue
+                    end
+                    if (index1, index2) in edges_seen
+                        @assert flip_required in (-1, 1)
+                        flip_required = 1
+                    elseif (index2, index1) in edges_seen
+                        @assert flip_required in (-1, 0)
+                        flip_required = 0
+                    end
+                end
+                if flip_required == -1
+                    continue
+                elseif flip_required == 1
+                    v = triangle[1]
+                    triangle[1] = triangle[2]
+                    triangle[2] = v
+                end
+                triangles_seen[i] = true
+                union!(edges_seen, edges(triangle))
+            end
+        end
+    end
+end
 
 end
