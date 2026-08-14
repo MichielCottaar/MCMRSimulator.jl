@@ -3,9 +3,10 @@ module Mesh
 import StaticArrays: SVector, MVector
 import LinearAlgebra: cross, norm, svd, ⋅
 import DelaunayTriangulation: triangulate, get_triangles
+import NearestNeighbors: KDTree, nn
 
 import ...Indices: ObstructionIndex
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
 import ..GridDispatch: detect_intersection_grid
 import ...InternalBoundingBoxes
 import ...InternalBoundingBoxes: grid_indices
@@ -25,6 +26,7 @@ struct MeshPart <: PhysicalGeometry{3}
     grid_bounding_box::InternalBoundingBox{3}
     inv_resolution::SVector{3, Float64}
     indices_grid::Array{Vector{Int}, 3}
+    inside_mask::BitArray{3}
 end
 
 has_inside(::Type{MeshPart}) = true
@@ -135,6 +137,7 @@ function MeshPart(
     gap_indices = _mesh_gap_indices(fixed_vertices, fixed_indices)
     append!(fixed_indices, MVector{3, Int}.(gap_indices))
     first_index_of_gap = length(fixed_indices) - length(gap_indices) + 1
+    make_normals_consistent!(fixed_indices)
     if curvature(
         fixed_indices,
         fixed_vertices;
@@ -171,6 +174,13 @@ function MeshPart(
         dimensions,
         triangle_boxes,
     )
+    inside_mask = _mesh_inside_mask(
+        fixed_vertices,
+        fixed_indices,
+        grid_box,
+        inv_resolution,
+        indices_grid,
+    )
     MeshPart(
         fixed_vertices,
         fixed_indices,
@@ -179,6 +189,7 @@ function MeshPart(
         grid_box,
         inv_resolution,
         indices_grid,
+        inside_mask,
     )
 end
 
@@ -193,6 +204,88 @@ end
 triangle(mesh::MeshPart, index::Int) = _mesh_triangle(mesh, mesh.indices[index])
 
 InternalBoundingBox(mesh::MeshPart) = mesh.bounding_box
+
+function _mesh_inside_mask(
+    vertices,
+    indices,
+    grid_box,
+    inv_resolution,
+    indices_grid,
+)
+    centroids = [
+        sum((vertices[vertex] for vertex in triangle)) / 3
+        for triangle in indices
+    ]
+    tree = KDTree(centroids)
+    mask = falses(size(indices_grid))
+    lower_bound = InternalBoundingBoxes.lower(grid_box)
+    for coordinate in CartesianIndices(mask)
+        grid_coordinate = SVector{3, Float64}(Tuple(coordinate)) .- 0.5
+        centre = lower_bound .+ grid_coordinate ./ inv_resolution
+        triangle_index = nn(tree, centre)[1]
+        destination = centroids[triangle_index]
+        intersection = detect_intersection_grid(
+            grid_box,
+            inv_resolution,
+            indices_grid,
+            centre,
+            destination,
+            Intersection{3}(),
+        ) do candidate_index, _
+            hit = detect_intersection(
+                _mesh_triangle(vertices, indices[candidate_index]),
+                centre,
+                destination,
+            )
+            Base.isempty(hit) && return hit
+            Intersection(
+                hit.distance,
+                hit.normal,
+                hit.inside,
+                ObstructionIndex(SVector(candidate_index)),
+                false,
+            )
+        end
+        Base.isempty(intersection) && continue
+        hit_index = intersection.obstruction_index.indices[1]
+        hit_triangle = _mesh_triangle(vertices, indices[hit_index])
+        mask[coordinate] = (centre - centroids[hit_index]) ⋅ normal(hit_triangle) < 0
+    end
+    mask
+end
+
+function _mesh_triangle(vertices, triangle::SVector{3, Int})
+    FullTriangle(vertices[triangle[1]], vertices[triangle[2]], vertices[triangle[3]])
+end
+
+function _mesh_grid_coordinate(mesh::MeshPart, position)
+    coordinate = Int.(floor.((position - InternalBoundingBoxes.lower(mesh.grid_bounding_box)) .* mesh.inv_resolution)) .+ 1
+    any(coordinate .< 1) || any(coordinate .> size(mesh.indices_grid)) ? nothing : SVector{3, Int}(coordinate)
+end
+
+function inside_indices(mesh::MeshPart, position::SVector{3, Float64})
+    coordinate = _mesh_grid_coordinate(mesh, position)
+    isnothing(coordinate) && return ObstructionIndex[]
+
+    lower_bound = InternalBoundingBoxes.lower(mesh.grid_bounding_box)
+    centre = lower_bound .+ (SVector{3, Float64}(coordinate) .- 0.5) ./ mesh.inv_resolution
+    inside = mesh.inside_mask[coordinate...]
+    intersection_points = SVector{3, Float64}[]
+    for triangle_index in mesh.indices_grid[coordinate...]
+        intersection = detect_intersection(
+            triangle(mesh, triangle_index),
+            centre,
+            position,
+        )
+        if !Base.isempty(intersection) && 0 <= intersection.distance < 1
+            point = centre + intersection.distance .* (position - centre)
+            any(norm(point - existing) < 1e-8 for existing in intersection_points) ||
+                push!(intersection_points, point)
+        end
+    end
+    isodd(length(intersection_points)) && (inside = !inside)
+    inside ? [ObstructionIndex()] : ObstructionIndex[]
+end
 
 function detect_intersection(
     mesh::MeshPart,

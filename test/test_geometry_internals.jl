@@ -82,7 +82,9 @@ const get_value = Properties.get_value
     @test mesh.vertices[2] == SVector(1.0, 0.0, 0.0)
     @test mesh.first_index_of_gap == 4
     @test length(mesh.indices) == 4
-    @test mesh.indices[mesh.first_index_of_gap] == SVector(2, 4, 3)
+    @test inside_indices(mesh, SVector(0.2, 0.2, 0.2)) == [ObstructionIndex()]
+    @test inside_indices(mesh, SVector(1.2, 0.2, 0.2)) == ObstructionIndex[]
+    @test mesh.indices[mesh.first_index_of_gap] == SVector(4, 2, 3)
     @test BoundingBoxes.lower(mesh.bounding_box) == SVector(0.0, 0.0, 0.0)
     @test BoundingBoxes.upper(mesh.bounding_box) == SVector(1.0, 1.0, 1.0)
     @test Mesh.triangle(mesh, 1) == BaseObstructions.FullTriangle(
