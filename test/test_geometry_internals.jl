@@ -15,6 +15,10 @@ const ObstructionIndex = GI.Indices.ObstructionIndex
 const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
 const Meshes = GI.PhysicalGeometries.Meshes
 const Mesh = Meshes.Mesh
+const Transparents = GI.PhysicalGeometries.Transparents
+const Transparent = GI.PhysicalGeometries.Transparent
+const SizeScaleOverride = GI.SizeScales.SizeScaleOverride
+const size_scale = GI.size_scale
 const has_inside = GI.PhysicalGeometries.has_inside
 const inside_indices = GI.PhysicalGeometries.inside_indices
 const Properties = GI.Properties
@@ -87,6 +91,11 @@ const get_value = Properties.get_value
     @test mesh.indices[mesh.first_index_of_gap] == SVector(4, 2, 3)
     @test BoundingBoxes.lower(mesh.bounding_box) == SVector(0.0, 0.0, 0.0)
     @test BoundingBoxes.upper(mesh.bounding_box) == SVector(1.0, 1.0, 1.0)
+    @test size_scale(mesh) == 1 / (2 * Meshes.curvature(mesh))
+    @test size_scale(SizeScaleOverride(mesh, 0.25)) == 0.25
+    @test SizeScaleOverride(mesh, 0.25) isa Transparent
+    @test size_scale(Transformations.Scale(mesh, 2.0)) == 2 * size_scale(mesh)
+    @test size_scale(Repeats.Repeat(mesh, [4.0, 4.0, 4.0])) == size_scale(mesh)
     @test Meshes.triangle(mesh, 1) == BaseObstructions.FullTriangle(
         SVector(1.0, 0.0, 0.0),
         SVector(0.0, 0.0, 0.0),

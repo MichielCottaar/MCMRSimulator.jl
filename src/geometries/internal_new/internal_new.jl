@@ -6,5 +6,6 @@ include("properties/properties.jl")
 include("physical_geometries/physical_geometries.jl")
 include("susceptibility/susceptibility.jl")
 include("api.jl")
+include("size_scale.jl")
 
 end

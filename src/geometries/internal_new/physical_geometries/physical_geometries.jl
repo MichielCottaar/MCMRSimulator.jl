@@ -46,7 +46,9 @@ include("grid_dispatch.jl")
 include("groups.jl")
 include("transformations.jl")
 include("repeats.jl")
+include("transparent.jl")
 include("base_obstructions/base_obstructions.jl")
 include("meshes.jl")
+import .Transparents: Transparent, transparent_geometry
 
 end

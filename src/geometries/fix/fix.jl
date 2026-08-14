@@ -7,6 +7,7 @@ include("fix_susceptibility.jl")
 
 import ..User.Obstructions: ObstructionGroup, Walls, Cylinders, Spheres, Annuli, BendyCylinder, Mesh
 import ..InternalNew.PhysicalGeometries: PhysicalGeometry
+import ..InternalNew.SizeScales: SizeScaleOverride
 import ..InternalNew.PhysicalGeometries.Groups: GeometryTuple
 import ..InternalNew.Properties: GeometryTupleProperties
 import ..InternalNew: FixedGeometry
@@ -41,6 +42,9 @@ function fix(
 )
     base_geometry = fix_base_geometry(group)
     physical_geometry = fix_transformations(group, base_geometry)
+    if !isnothing(group.size_scale.value)
+        physical_geometry = SizeScaleOverride(physical_geometry, group.size_scale.value)
+    end
     properties = fix_properties(
         group;
         permeability,

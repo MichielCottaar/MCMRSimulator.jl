@@ -5,9 +5,12 @@ const BaseObstructions = mr.Geometries.InternalNew.PhysicalGeometries.BaseObstru
 const Groups = mr.Geometries.InternalNew.PhysicalGeometries.Groups
 const Meshes = mr.Geometries.InternalNew.PhysicalGeometries.Meshes
 const Repeats = mr.Geometries.InternalNew.PhysicalGeometries.Repeats
+const Transparent = mr.Geometries.InternalNew.PhysicalGeometries.Transparent
+const SizeScaleOverride = mr.Geometries.InternalNew.SizeScales.SizeScaleOverride
 const Transformations = mr.Geometries.InternalNew.PhysicalGeometries.Transformations
 const Properties = mr.Geometries.InternalNew.Properties
 const ObstructionIndex = mr.Geometries.InternalNew.Indices.ObstructionIndex
+const size_scale = mr.Geometries.InternalNew.size_scale
 const get_value = Properties.get_value
 const fix = mr.Geometries.Fix.fix
 
@@ -189,6 +192,11 @@ end
     @test fixed_mesh.surface.surface_relaxation.value == 5.0
     @test fixed_mesh.surface.density.value == 6.0
 
+    mesh.size_scale = 0.25
+    fixed_mesh_override = fix(mesh)
+    @test fixed_mesh_override.geometry isa SizeScaleOverride
+    @test size_scale(fixed_mesh_override) == 0.25
+
     bendy_cylinder = mr.BendyCylinder(
         control_point=[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
         radius=[1.0, 1.0],
@@ -198,6 +206,6 @@ end
         nsamples=8,
     )
     fixed_bendy_cylinder = fix(bendy_cylinder)
-    @test fixed_bendy_cylinder.geometry isa Groups.GeometryVectorBoundingBox
-    @test first(fixed_bendy_cylinder.geometry.geometries) isa Meshes.Mesh
+    @test fixed_bendy_cylinder.geometry isa Repeats.Repeat
+    @test first(fixed_bendy_cylinder.geometry.geometry.geometries) isa Meshes.Mesh
 end
