@@ -1,7 +1,7 @@
 module FixProperties
 
 import ...User.Obstructions: Walls, Cylinders, Spheres, Annuli, Mesh, isglobal
-import ...InternalNew.Properties: GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
+import ...Internal.Properties: GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 
 const _volume_fields = (:R1, :R2, :off_resonance)
 const _surface_fields = (:R1, :R2, :off_resonance, :permeability, :dwell_time, :surface_relaxation, :density)

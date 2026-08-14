@@ -2,7 +2,7 @@ module SizeScales
 
 """Dynamic size-scale calculation for fixed physical geometries."""
 
-import ..InternalNew: size_scale, FixedGeometry
+import ..Internal: size_scale, FixedGeometry
 import ..PhysicalGeometries
 import ..PhysicalGeometries: PhysicalGeometry, Transparent, transparent_geometry
 import ..PhysicalGeometries.BaseObstructions: InfiniteWall, Round
