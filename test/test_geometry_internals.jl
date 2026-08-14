@@ -23,8 +23,44 @@ const has_inside = GI.PhysicalGeometries.has_inside
 const inside_indices = GI.PhysicalGeometries.inside_indices
 const Properties = GI.Properties
 const get_value = Properties.get_value
+const all_property_values = Properties.all_property_values
 
 @testset "Geometry internals" begin
+    @test collect(all_property_values(Properties.GeometryLeafProperties(1.0))) == [1.0]
+    @test collect(all_property_values(Properties.GeometryVectorProperties([1.0, 2.0]))) == [1.0, 2.0]
+    @test collect(all_property_values(
+        Properties.GeometryVectorProperties([1.0, 2.0]),
+        Properties.GeometryVectorProperties([3.0, 4.0]),
+    )) == [(1.0, 3.0), (2.0, 4.0)]
+    @test collect(all_property_values(
+        Properties.GeometryTupleProperties((1.0, 2.0)),
+        Properties.GeometryLeafProperties(3.0),
+    )) == [(1.0, 3.0), (2.0, 3.0)]
+    nested_properties = Properties.GeometryVectorProperties([
+        Properties.GeometryTupleProperties((1.0, 2.0)),
+        Properties.GeometryTupleProperties((3.0, 4.0)),
+    ])
+    @test collect(all_property_values(nested_properties)) == [1.0, 2.0, 3.0, 4.0]
+    @test_throws ArgumentError collect(all_property_values(
+        Properties.GeometryVectorProperties([1.0, 2.0]),
+        Properties.GeometryTupleProperties((3.0, 4.0)),
+    ))
+
+    fixed = mr.fix([
+        mr.Walls(position=0.0, permeability_surface=Inf, surface_density=0.0, dwell_time_surface=2.0),
+        mr.Walls(position=1.0, permeability_surface=3.0, surface_density=2.0, dwell_time_surface=4.0),
+    ]; surface_relaxation=5.0)
+    @test GI.max_permeability_non_inf(fixed) == 3.0
+    @test GI.max_surface_relaxation(fixed) == 5.0
+    @test GI.min_dwell_time(fixed) == 4.0
+    @test GI.max_timestep_sticking(fixed, 1.0, 0.1) ==
+        0.1 * log(exp(-sqrt(π) * 2.0 / 4.0 / 2))^(-2)
+    empty_fixed = mr.fix([])
+    @test GI.max_permeability_non_inf(empty_fixed) == 0.0
+    @test GI.max_surface_relaxation(empty_fixed) == 0.0
+    @test GI.min_dwell_time(empty_fixed) == Inf
+    @test GI.max_timestep_sticking(empty_fixed, 1.0, 0.1) == Inf
+
     struct TestGeometry{N} <: PhysicalGeometry{N}
         value::Int
     end

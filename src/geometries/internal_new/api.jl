@@ -2,6 +2,8 @@
 
 import .Indices: ObstructionIndex
 import .PhysicalGeometries: PhysicalGeometry, Intersection
+import .Properties: all_property_values
+import ...Properties: stick_probability
 
 export FixedGeometry, Intersection, ObstructionIndex,
     isinside, detect_intersection, random_surface_positions, geometry_mesh,
@@ -59,16 +61,48 @@ function geometry_mesh end
 function size_scale end
 
 """Return the largest timestep permitted by surface-sticking constraints."""
-function max_timestep_sticking end
+function max_timestep_sticking(geometry::FixedGeometry, diffusivity::Number, scaling)
+    isnothing(geometry.surface) && return Inf
+
+    log_probabilities = [
+        log(1 - stick_probability(density, dwell, diffusivity, 1))
+        for (density, dwell) in all_property_values(
+            geometry.surface.density,
+            geometry.surface.dwell_time,
+        )
+        if !iszero(density)
+    ]
+    isempty(log_probabilities) && return Inf
+    scaling * maximum(log_probabilities)^(-2)
+end
 
 """Return the largest finite permeability in `geometry`, or zero if absent."""
-function max_permeability_non_inf end
+function max_permeability_non_inf(geometry::FixedGeometry)
+    isnothing(geometry.surface) && return 0.
+    values = (value for value in all_property_values(geometry.surface.permeability) if !isinf(value))
+    maximum(values; init=0.)
+end
 
 """Return the largest surface-relaxation value in `geometry`."""
-function max_surface_relaxation end
+function max_surface_relaxation(geometry::FixedGeometry)
+    isnothing(geometry.surface) && return 0.
+    maximum(all_property_values(geometry.surface.surface_relaxation); init=0.)
+end
 
 """Return the smallest dwell time in `geometry` when a bound pool exists."""
-function min_dwell_time end
+function min_dwell_time(geometry::FixedGeometry)
+    isnothing(geometry.surface) && return Inf
+
+    dwell_times = (
+        dwell
+        for (density, dwell) in all_property_values(
+            geometry.surface.density,
+            geometry.surface.dwell_time,
+        )
+        if !iszero(density)
+    )
+    minimum(dwell_times; init=Inf)
+end
 
 """Return the permeability associated with a collision state."""
 function permeability end

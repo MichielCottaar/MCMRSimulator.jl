@@ -107,4 +107,56 @@ function get_value(properties::GeometryProperties, indices::AbstractVector{<:Obs
     total === nothing ? value : total + value
 end
 
+function _all_property_values(properties::Tuple)
+    all(property -> property isa GeometryLeafProperties, properties) && return (
+        length(properties) == 1 ? properties[1].value : Tuple(property.value for property in properties)
+        for _ in 1:1
+    )
+
+    if all(property -> property isa GeometryVectorProperties || property isa GeometryLeafProperties, properties)
+        vector_properties = filter(property -> property isa GeometryVectorProperties, properties)
+        length_properties = length(first(vector_properties).properties)
+        all(length(property.properties) == length_properties for property in vector_properties) ||
+            throw(ArgumentError("property vector structures must have matching lengths"))
+        return Iterators.flatten(
+            (
+                _all_property_values(Tuple(
+                    property isa GeometryLeafProperties ? property : property.properties[index]
+                    for property in properties
+                ))
+                for index in 1:length_properties
+            ),
+        )
+    end
+
+    if all(property -> property isa GeometryTupleProperties || property isa GeometryLeafProperties, properties)
+        tuple_properties = filter(property -> property isa GeometryTupleProperties, properties)
+        length_properties = length(first(tuple_properties).properties)
+        all(length(property.properties) == length_properties for property in tuple_properties) ||
+            throw(ArgumentError("property tuple structures must have matching lengths"))
+        return Iterators.flatten(
+            (
+                _all_property_values(Tuple(
+                    property isa GeometryLeafProperties ? property : property.properties[index]
+                    for property in properties
+                ))
+                for index in 1:length_properties
+            ),
+        )
+    end
+
+    throw(ArgumentError("property structures must match, apart from scalar leaves"))
+end
+
+"""
+    all_property_values(properties...)
+
+Iterate over all scalar values in one or more nested geometry properties. Scalar
+leaves broadcast over nested properties, while non-leaf structures must match.
+"""
+function all_property_values(properties::GeometryProperties...)
+    isempty(properties) && throw(ArgumentError("at least one property is required"))
+    _all_property_values(properties)
+end
+
 end
