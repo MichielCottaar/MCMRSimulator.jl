@@ -899,6 +899,10 @@ end
 @testset "Fixed geometry susceptibility state" begin
     walls = mr.fix(mr.Walls(position=0.0))
     @test walls.susceptibility == ()
+    susceptibility_position = SVector(0.0, 0.0, 0.0)
+    @test GI.susceptibility_off_resonance(walls, susceptibility_position) == 0.0
+    @test GI.susceptibility_off_resonance(walls, susceptibility_position, true) == 0.0
+    @test GI.off_resonance_gradient(walls, 1.0) == 0.0
 
     cylinder = mr.Cylinders(
         radius=1.0,
@@ -912,6 +916,19 @@ end
     @test length(fixed_cylinder.susceptibility) == 1
     @test fixed_cylinder.susceptibility[1] isa
         GI.Susceptibility.Grid.SusceptibilityGridNoRepeat
+    @test GI.susceptibility_off_resonance(fixed_cylinder, susceptibility_position) ==
+        GI.Susceptibility.susceptibility_off_resonance(
+            fixed_cylinder.susceptibility,
+            susceptibility_position,
+        )
+    @test GI.susceptibility_off_resonance(fixed_cylinder, susceptibility_position, true) ==
+        GI.Susceptibility.susceptibility_off_resonance(
+            fixed_cylinder.susceptibility,
+            susceptibility_position,
+            true,
+        )
+    @test GI.off_resonance_gradient(fixed_cylinder, 1.0) ==
+        GI.Susceptibility.off_resonance_gradient(fixed_cylinder.susceptibility, 1.0)
 
     annulus = mr.Annuli(
         inner=0.7,

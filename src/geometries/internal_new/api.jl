@@ -5,16 +5,16 @@ import .Indices: ObstructionIndex
 import .InternalBoundingBoxes: InternalBoundingBox
 import .PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, surface_sampling, inside_indices
 import .Properties: all_property_values, get_value
+import .Susceptibility: susceptibility_off_resonance, off_resonance_gradient
 import ...Properties: stick_probability
 
-export FixedGeometry, Intersection, IsInside,
+export FixedGeometry, Intersection, IsInside, collision_normal,
     isinside, detect_intersection, surface_sampling, geometry_mesh,
     size_scale, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
     permeability, surface_relaxation, surface_density, dwell_time,
     R1, R2, off_resonance,
-    susceptibility_off_resonance, off_resonance_gradient,
-    direction, reflect
+    susceptibility_off_resonance, off_resonance_gradient
 
 """
     FixedGeometry
@@ -40,6 +40,14 @@ struct IsInside
 end
 
 Base.length(ii::IsInside) = length(ii.inside_of)
+
+
+"""
+    collision_normal(intersection)
+
+Returns the normal of the intersection.
+"""
+collision_normal(intersection::Intersection) = intersection.normal
 
 """
     isinside(geometry, position[, intersection])
@@ -188,18 +196,15 @@ for symbol in (:R1, :R2, :off_resonance)
 end
 
 """Return susceptibility-induced off-resonance for `geometry`."""
-function susceptibility_off_resonance end
+function susceptibility_off_resonance(
+    geometry::FixedGeometry,
+    position::SVector{3, Float64},
+    inside::Union{Nothing, Bool}=nothing,
+)
+    susceptibility_off_resonance(geometry.susceptibility, position, inside)
+end
 
 """Return the maximum susceptibility off-resonance gradient in `geometry`."""
-function off_resonance_gradient end
-
-"""Return the remaining displacement associated with a collision state."""
-function direction end
-
-"""
-    reflect(collision, direction, ratio_displaced, time_moved, distance_moved;
-            permeable=false)
-
-Return the collision state after reflecting or passing through a surface.
-"""
-function reflect end
+function off_resonance_gradient(geometry::FixedGeometry, B0)
+    off_resonance_gradient(geometry.susceptibility, B0)
+end
