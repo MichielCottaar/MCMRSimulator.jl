@@ -11,6 +11,7 @@ const Rotate = Transformations.Rotate
 const Repeats = GI.PhysicalGeometries.Repeats
 const Repeat = Repeats.Repeat
 const BoundingBoxes = GI.InternalBoundingBoxes
+const PublicBoundingBoxes = mr.Geometries.BoundingBoxes
 const ObstructionIndex = GI.Indices.ObstructionIndex
 const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
 const Meshes = GI.PhysicalGeometries.Meshes
@@ -23,6 +24,19 @@ const has_inside = GI.PhysicalGeometries.has_inside
 const inside_indices = GI.PhysicalGeometries.inside_indices
 const surface_sampling = GI.surface_sampling
 const Properties = GI.Properties
+
+@testset "public bounding boxes" begin
+    box = PublicBoundingBoxes.BoundingBox([-1, -2, -3], [1, 2, 3])
+    @test PublicBoundingBoxes.lower(box) == SVector(-1.0, -2.0, -3.0)
+    @test PublicBoundingBoxes.upper(box) == SVector(1.0, 2.0, 3.0)
+    @test PublicBoundingBoxes.BoundingBox(2.0) == PublicBoundingBoxes.BoundingBox(-2 .* ones(3), 2 .* ones(3))
+    @test PublicBoundingBoxes.BoundingBox([1, 2, 3], 2.0) == PublicBoundingBoxes.BoundingBox([-1, 0, 1], [3, 4, 5])
+    @test BoundingBoxes.InternalBoundingBox(box) isa BoundingBoxes.InternalBoundingBox{3}
+    @test BoundingBoxes.lower(BoundingBoxes.InternalBoundingBox(box)) == PublicBoundingBoxes.lower(box)
+    @test BoundingBoxes.upper(BoundingBoxes.InternalBoundingBox(box)) == PublicBoundingBoxes.upper(box)
+    @test_throws DimensionMismatch PublicBoundingBoxes.BoundingBox([0, 0], [1, 1])
+    @test_throws ArgumentError PublicBoundingBoxes.BoundingBox(-1.0)
+end
 const get_value = Properties.get_value
 const all_property_values = Properties.all_property_values
 

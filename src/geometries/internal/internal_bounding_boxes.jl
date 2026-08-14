@@ -2,6 +2,7 @@
 module InternalBoundingBoxes
 
 import StaticArrays: SVector
+import ...BoundingBoxes: BoundingBox
 
 
 """
@@ -32,6 +33,11 @@ end
 
 InternalBoundingBox(half_size::AbstractVector) = InternalBoundingBox{length(half_size)}(half_size)
 InternalBoundingBox(half_size, center::AbstractVector) = InternalBoundingBox{length(center)}(half_size, center)
+
+InternalBoundingBox(box::BoundingBox) = InternalBoundingBox{3}(
+    (upper(box) - lower(box)) / 2,
+    (upper(box) + lower(box)) / 2,
+)
 
 
 lower(box::InternalBoundingBox) = box.lower

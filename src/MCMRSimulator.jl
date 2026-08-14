@@ -81,7 +81,8 @@ import .Geometries:
 export Annuli, Cylinders, Walls, Spheres, Mesh, load_mesh, read_swc, read_swc_raw, random_positions_radii, BendyCylinder, write_geometry, read_geometry_json, read_geometry
 @compat public ObstructionGroup, IndexedObstruction, Annulus, Cylinder, Wall, Sphere, Ring, Triangle, nvolumes, fix_susceptibility, fix, SWCFile, SWCNode 
 
-import .Geometries.Internal: BoundingBox, FixedGeometry, surface_relaxation, surface_density, dwell_time, permeability, FixedObstructionGroup
+import .Geometries: BoundingBox
+import .Geometries.Internal: FixedGeometry, surface_relaxation, surface_density, dwell_time, permeability, FixedObstructionGroup
 export BoundingBox 
 @compat public FixedGeometry, surface_relaxation, surface_density, dwell_time, permeability, FixedObstructionGroup
 

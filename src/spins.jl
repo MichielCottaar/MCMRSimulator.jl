@@ -20,9 +20,10 @@ module Spins
 import Random
 import StaticArrays: SVector
 import LinearAlgebra: ⋅, norm
+import ..Geometries.BoundingBoxes: BoundingBox, lower, upper
 import ..Geometries.Internal: 
     Reflection, empty_reflection, has_intersection,
-    BoundingBox, lower, upper, random_surface_positions,
+    random_surface_positions,
     FixedGeometry, FixedObstruction, FixedObstructionGroup, FixedSusceptibility,
     isinside, R1, R2, off_resonance, has_hit, previous_hit, susceptibility_off_resonance
 import ..Methods: get_time, norm_angle
@@ -364,7 +365,7 @@ Base.show(io::IO, snap::Snapshot{1}) = print(io, "Snapshot($(length(snap)) spins
 Base.show(io::IO, snap::Snapshot{N}) where {N} = print(io, "Snapshot($(length(snap)) spins with magnetisations for $N sequences at t=$(get_time(snap))ms)")
 
 
-function random_surface_spins(geometry::FixedGeometry, bounding_box::BoundingBox{3}, volume_density::Number; nsequences=1, kwargs...)
+function random_surface_spins(geometry::FixedGeometry, bounding_box::BoundingBox, volume_density::Number; nsequences=1, kwargs...)
     spins = Spin{nsequences, static_vector_type(nsequences){SpinOrientation}}[]
     for (position, normal, geometry_index, obstruction_index) in random_surface_positions(geometry, bounding_box, volume_density)
         inside = Random.rand() > 0.5

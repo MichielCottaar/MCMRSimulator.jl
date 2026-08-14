@@ -1,6 +1,7 @@
 """Public operations supported by the internal geometry engine."""
 
 import StaticArrays: SVector
+import ..BoundingBoxes: BoundingBox
 import .Indices: ObstructionIndex
 import .InternalBoundingBoxes: InternalBoundingBox
 import .PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, surface_sampling, inside_indices
@@ -86,6 +87,14 @@ function surface_sampling(
 )
     isnothing(geometry.surface) && return SVector{3, Float64}[], SVector{3, Float64}[]
     surface_sampling(geometry.geometry, geometry.surface.density, bounding_box, volume_density)
+end
+
+function surface_sampling(
+    geometry::FixedGeometry,
+    bounding_box::BoundingBox,
+    volume_density::Number,
+)
+    surface_sampling(geometry, InternalBoundingBox(bounding_box), volume_density)
 end
 
 """
