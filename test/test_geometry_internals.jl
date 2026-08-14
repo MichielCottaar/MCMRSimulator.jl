@@ -74,26 +74,34 @@ const get_value = Properties.get_value
             SVector(1, 2, 3),
             SVector(1, 2, 4),
             SVector(1, 3, 4),
-        ];
-        first_index_of_gap=3,
+        ],
         grid_resolution=0.5,
     )
     @test mesh isa PhysicalGeometry{3}
     @test has_inside(typeof(mesh))
     @test mesh.vertices[2] == SVector(1.0, 0.0, 0.0)
-    @test mesh.first_index_of_gap == 3
-    @test mesh.indices == [SVector(1, 2, 3), SVector(2, 1, 4), SVector(1, 3, 4)]
+    @test mesh.first_index_of_gap == 4
+    @test length(mesh.indices) == 4
+    @test mesh.indices[mesh.first_index_of_gap] == SVector(2, 4, 3)
     @test BoundingBoxes.lower(mesh.bounding_box) == SVector(0.0, 0.0, 0.0)
     @test BoundingBoxes.upper(mesh.bounding_box) == SVector(1.0, 1.0, 1.0)
     @test Mesh.triangle(mesh, 1) == BaseObstructions.FullTriangle(
-        SVector(0.0, 0.0, 0.0),
         SVector(1.0, 0.0, 0.0),
+        SVector(0.0, 0.0, 0.0),
         SVector(0.0, 1.0, 0.0),
     )
     @test Mesh.triangle(mesh, 3) == BaseObstructions.FullTriangle(
-        SVector(0.0, 0.0, 0.0),
         SVector(0.0, 1.0, 0.0),
+        SVector(0.0, 0.0, 0.0),
         SVector(0.0, 0.0, 1.0),
+    )
+    @test Mesh.curvature(mesh) == Mesh.curvature(
+        mesh.indices[1:(mesh.first_index_of_gap - 1)],
+        mesh.vertices,
+    )
+    @test Mesh.curvature(mesh; include_gap_triangles=true) == Mesh.curvature(
+        mesh.indices,
+        mesh.vertices,
     )
     @test_throws ArgumentError MeshPart(
         [SVector(0.0, 0.0, 0.0)],

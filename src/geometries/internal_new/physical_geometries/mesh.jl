@@ -1,11 +1,13 @@
 module Mesh
 
 import StaticArrays: SVector, MVector
+import LinearAlgebra: cross, norm, svd, ⋅
+import DelaunayTriangulation: triangulate, get_triangles
 
 import ..PhysicalGeometries: PhysicalGeometry, has_inside, InternalBoundingBox
 import ...InternalBoundingBoxes
 import ...InternalBoundingBoxes: grid_indices
-import ..BaseObstructions: FullTriangle
+import ..BaseObstructions: FullTriangle, normal
 
 """A connected mesh component backed by lazily materialized triangles.
 
@@ -52,18 +54,94 @@ function _mesh_grid_resolution(extent, number, resolution)
     Float64(resolution)
 end
 
+function _mesh_boundary_edges(indices)
+    edge_occurrences = Dict{Tuple{Int, Int}, Vector{Tuple{Int, Int}}}()
+    for triangle in indices
+        for edge in ((triangle[1], triangle[2]), (triangle[2], triangle[3]), (triangle[3], triangle[1]))
+            key = edge[1] < edge[2] ? edge : (edge[2], edge[1])
+            push!(get!(edge_occurrences, key, Tuple{Int, Int}[]), edge)
+        end
+    end
+    [occurrences[1] for occurrences in values(edge_occurrences) if length(occurrences) == 1]
+end
+
+function _mesh_boundary_loops(indices)
+    boundary_edges = _mesh_boundary_edges(indices)
+    outgoing = Dict{Int, Vector{Tuple{Int, Int}}}()
+    for edge in boundary_edges
+        push!(get!(outgoing, edge[1], Tuple{Int, Int}[]), edge)
+    end
+    unvisited = Set(boundary_edges)
+    loops = Vector{Vector{Int}}()
+    while !isempty(unvisited)
+        starting_edge = first(unvisited)
+        loop = [starting_edge[1]]
+        current_edge = starting_edge
+        while true
+            delete!(unvisited, current_edge)
+            push!(loop, current_edge[2])
+            current_edge[2] == starting_edge[1] && break
+            candidates = get(outgoing, current_edge[2], Tuple{Int, Int}[])
+            next_edge = findfirst(edge -> edge in unvisited, candidates)
+            isnothing(next_edge) &&
+                throw(ArgumentError("mesh boundary edges do not form closed loops"))
+            current_edge = candidates[next_edge]
+            current_edge[2] in loop[2:end-1] &&
+                throw(ArgumentError("mesh boundary edges form a self-intersecting loop"))
+        end
+        pop!(loop)
+        length(loop) >= 3 || throw(ArgumentError("mesh boundary loop must contain at least three vertices"))
+        push!(loops, loop)
+    end
+    loops
+end
+
+function _mesh_gap_indices(vertices, indices)
+    gap_indices = SVector{3, Int}[]
+    for loop in _mesh_boundary_loops(indices)
+        positions = vertices[loop]
+        centroid = sum(positions) / length(positions)
+        centered_positions = hcat((position - centroid for position in positions)...)
+        decomposition = svd(centered_positions)
+        plane_basis = decomposition.U[:, 1:2]
+        projected_positions = [Tuple(plane_basis' * (position - centroid)) for position in positions]
+        boundary = [collect(1:length(loop)); 1]
+        triangulation = triangulate(
+            projected_positions;
+            boundary_nodes=[boundary],
+            delete_ghosts=true,
+            randomise=false,
+        )
+        for triangle in get_triangles(triangulation)
+            all(triangle .> 0) || continue
+            push!(gap_indices, SVector{3, Int}(loop[triangle[1]], loop[triangle[2]], loop[triangle[3]]))
+        end
+    end
+    gap_indices
+end
+
 function MeshPart(
     vertices,
     indices;
-    first_index_of_gap=length(indices) + 1,
     grid_resolution=nothing,
 )
     fixed_vertices = [SVector{3, Float64}(vertex) for vertex in vertices]
     isempty(indices) && throw(ArgumentError("cannot construct a MeshPart without triangles"))
     fixed_indices = [MVector{3, Int}(triangle) for triangle in _mesh_indices(indices, length(fixed_vertices))]
-    1 <= first_index_of_gap <= length(fixed_indices) + 1 ||
-        throw(ArgumentError("first_index_of_gap must identify an index or the position after the final index"))
     make_normals_consistent!(fixed_indices)
+    gap_indices = _mesh_gap_indices(fixed_vertices, fixed_indices)
+    append!(fixed_indices, MVector{3, Int}.(gap_indices))
+    first_index_of_gap = length(fixed_indices) - length(gap_indices) + 1
+    if curvature(
+        fixed_indices,
+        fixed_vertices;
+        first_index_of_gap,
+        include_gap_triangles=true,
+    ) < 0
+        for triangle in fixed_indices
+            triangle[1], triangle[2] = triangle[2], triangle[1]
+        end
+    end
     fixed_indices = [SVector{3, Int}(triangle) for triangle in fixed_indices]
 
     triangle_boxes = [
@@ -111,6 +189,72 @@ end
 triangle(mesh::MeshPart, index::Int) = _mesh_triangle(mesh, mesh.indices[index])
 
 InternalBoundingBox(mesh::MeshPart) = mesh.bounding_box
+
+function _mesh_neighbours(indices)
+    norm_edge(edge) = edge[1] > edge[2] ? (edge[2], edge[1]) : edge
+    edges(triangle) = norm_edge.(((triangle[1], triangle[2]), (triangle[2], triangle[3]), (triangle[3], triangle[1])))
+    edges_to_triangle = Dict{Tuple{Int, Int}, Int}()
+    neighbours = Tuple{Int, Int}[]
+    for (index, triangle) in enumerate(indices)
+        for edge in edges(triangle)
+            if haskey(edges_to_triangle, edge)
+                push!(neighbours, (edges_to_triangle[edge], index))
+            else
+                edges_to_triangle[edge] = index
+            end
+        end
+    end
+    neighbours
+end
+
+function _mesh_curvature_pair(indices, vertices, index1, index2)
+    triangle1 = indices[index1]
+    triangle2 = indices[index2]
+    positions1 = map(index -> vertices[index], triangle1)
+    positions2 = map(index -> vertices[index], triangle2)
+    position_offset = @. (
+        positions1[1] + positions1[2] + positions1[3] -
+        positions2[1] - positions2[2] - positions2[3]
+    ) / 3
+    normal_offset = normal(positions1...) - normal(positions2...)
+    (position_offset ⋅ normal_offset) / norm(position_offset)^2
+end
+
+function _mesh_triangle_area(indices, vertices, index)
+    triangle = indices[index]
+    a, b, c = (vertices[vertex] for vertex in triangle)
+    norm(cross(b - a, c - a)) / 2
+end
+
+"""Compute the area-weighted mean curvature of a triangle mesh."""
+function curvature(
+    indices,
+    vertices;
+    first_index_of_gap=length(indices) + 1,
+    include_gap_triangles=false,
+)
+    selected_indices = include_gap_triangles ? indices : indices[1:(first_index_of_gap - 1)]
+    neighbours = _mesh_neighbours(selected_indices)
+    isempty(neighbours) && return 0.
+    weighted_curvatures = [
+        (
+            _mesh_triangle_area(selected_indices, vertices, index1) +
+            _mesh_triangle_area(selected_indices, vertices, index2),
+            _mesh_curvature_pair(selected_indices, vertices, index1, index2),
+        )
+        for (index1, index2) in neighbours
+    ]
+    valid = filter(pair -> !isnan(pair[2]), weighted_curvatures)
+    isempty(valid) && return 0.
+    sum(weight * value for (weight, value) in valid) / sum(weight for (weight, _) in valid)
+end
+
+curvature(mesh::MeshPart; include_gap_triangles=false) = curvature(
+    mesh.indices,
+    mesh.vertices;
+    first_index_of_gap=mesh.first_index_of_gap,
+    include_gap_triangles,
+)
 
 
 """
