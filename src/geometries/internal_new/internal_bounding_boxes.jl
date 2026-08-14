@@ -80,6 +80,66 @@ function grid_indices(
 end
 
 
+"""
+    grid_indices_repeating(box, dimensions, repeats, bounding_boxes)
+
+Return the indices of the grid cells intersected by each bounding box and its
+periodic copies. The result is `(shifts, indices)`, where `shifts` contains the
+nonzero copy displacements and each grid entry contains `(box_index, shift_index)`.
+The shift index `0` refers to the original bounding box.
+"""
+function grid_indices_repeating(
+    box::InternalBoundingBox{N},
+    dimensions::AbstractVector{<:Integer},
+    repeats::AbstractVector{<:Real},
+    bounding_boxes::AbstractVector{<:InternalBoundingBox{N}},
+) where N
+    dimensions = SVector{N, Int}(dimensions)
+    all(dimensions .> 0) || throw(ArgumentError("grid dimensions must be positive"))
+    repeats = SVector{N, Float64}(repeats)
+    all(repeats .> 0) || throw(ArgumentError("repeat distances must be positive"))
+
+    cell_size = (upper(box) - lower(box)) ./ dimensions
+    shifts = SVector{N, Float64}[]
+    indices = [Tuple{Int32, Int32}[] for _ in Iterators.product(UnitRange.(1, dimensions)...)]
+
+    for (box_index, child_box) in enumerate(bounding_boxes)
+        repeat_ranges = UnitRange.(
+            Int.(round.(lower(child_box) ./ repeats)),
+            Int.(round.(upper(child_box) ./ repeats)),
+        )
+        for repeat_indices in Iterators.product(repeat_ranges...)
+            shift = -SVector{N, Float64}(repeat_indices .* repeats)
+            shifted_lower = lower(child_box) .+ shift
+            shifted_upper = upper(child_box) .+ shift
+            lower_coordinate = max.(
+                Int.(floor.((shifted_lower - lower(box)) ./ cell_size)) .+ 1,
+                1,
+            )
+            upper_coordinate = min.(
+                Int.(ceil.((shifted_upper - lower(box)) ./ cell_size)),
+                dimensions,
+            )
+            all(lower_coordinate .<= upper_coordinate) || continue
+
+            shift_index = if all(iszero, shift)
+                Int32(0)
+            else
+                index = findfirst(existing -> existing == shift, shifts)
+                isnothing(index) && (push!(shifts, shift); index = length(shifts))
+                Int32(index)
+            end
+            for coordinate in Iterators.product(
+                (lower_coordinate[i]:upper_coordinate[i] for i in 1:N)...,
+            )
+                push!(indices[coordinate...], (Int32(box_index), shift_index))
+            end
+        end
+    end
+    shifts, indices
+end
+
+
 shift(box::InternalBoundingBox, displacement::AbstractVector{<:Real}) = begin
     displacement_int = SVector{length(box.lower), Float64}(displacement)
     InternalBoundingBox{length(box.lower)}(half_size(box), center(box) + displacement_int)

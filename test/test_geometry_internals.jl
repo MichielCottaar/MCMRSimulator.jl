@@ -485,6 +485,25 @@ const get_value = Properties.get_value
     @test_throws ArgumentError BoundingBoxes.grid_indices(grid_box, [0, 4], BoundingBoxes.InternalBoundingBox{2}[])
     @test_throws DimensionMismatch BoundingBoxes.grid_indices(grid_box, [4], BoundingBoxes.InternalBoundingBox{2}[])
 
+    repeating_box = BoundingBoxes.InternalBoundingBox([3.0])
+    shifts, repeating_grid = BoundingBoxes.grid_indices_repeating(
+        BoundingBoxes.InternalBoundingBox([2.0]),
+        [4],
+        [4.0],
+        [repeating_box],
+    )
+    @test shifts == [SVector(4.0), SVector(-4.0)]
+    @test repeating_grid[1] == [(Int32(1), Int32(0)), (Int32(1), Int32(2))]
+    @test repeating_grid[2] == [(Int32(1), Int32(0))]
+    @test repeating_grid[3] == [(Int32(1), Int32(0))]
+    @test repeating_grid[4] == [(Int32(1), Int32(1)), (Int32(1), Int32(0))]
+    @test_throws ArgumentError BoundingBoxes.grid_indices_repeating(
+        BoundingBoxes.InternalBoundingBox([2.0]),
+        [4],
+        [0.0],
+        BoundingBoxes.InternalBoundingBox{1}[],
+    )
+
     displacement = SVector(4.0, 5.0, 6.0)
     shifted_centered_cube = BoundingBoxes.shift(centered_cube, displacement)
     shifted_cube = BoundingBoxes.shift(cube, displacement)
