@@ -7,11 +7,12 @@ import StaticArrays: SVector
 import Rotations
 import LinearAlgebra: ⋅
 import ..Constants: gyromagnetic_ratio
-import ..Spins: Spin, SpinOrientation, stuck, R1, R2, off_resonance, stuck_to, orientation
-import ..Geometries.Internal: susceptibility_off_resonance, MRIProperties
+import ..Spins: Spin, SpinOrientation, orientation
+import ..Geometries: Internal
+import ..Reflections: previous_hit
 import ..Properties: GlobalProperties
 import ..SequenceParts: MultSequencePart, SequencePart, NoPulsePart, EmptyPart, ConstantPart, LinearPart, PulsePart, ConstantPulse
-import ..Simulations: Simulation
+import ..Simulations: Simulation, susceptibility_off_resonance
 
 
 const NewPosType = Union{SVector{3, Float64}, Nothing, Bool}
@@ -30,10 +31,22 @@ The effective RF pulse is determined by the sequence and any changes in the off-
 """
 function relax!(spin::Spin{N}, new_pos::NewPosType, simulation::Simulation{N}, parts::MultSequencePart{N}, t1::Float64, t2::Float64, B0s::AbstractVector{Float64}) where {N}
 
-    mean_pos = (spin.position .+ new_pos) ./ 2
-    props = MRIProperties(simulation.geometry, simulation.inside_geometry, simulation.properties, mean_pos, spin.reflection)
+    mean_pos = new_pos isa SVector ? (spin.position + new_pos) / 2 : spin.position
+    previous = previous_hit(spin.reflection)
+    inside = Internal.isinside(simulation.geometry, mean_pos, previous)
+    props = (
+        R1 = simulation.properties.R1 + Internal.R1(simulation.geometry, inside, previous),
+        R2 = simulation.properties.R2 + Internal.R2(simulation.geometry, inside, previous),
+        off_resonance = simulation.properties.off_resonance +
+            Internal.off_resonance(simulation.geometry, inside, previous),
+    )
 
-    off_resonance_unscaled = susceptibility_off_resonance(simulation, spin.position, new_pos) * 1e-6 * gyromagnetic_ratio
+    off_resonance_unscaled = if new_pos isa SVector
+        susceptibility_off_resonance(simulation, spin.position, new_pos)
+    else
+        inside = new_pos isa Bool ? new_pos : nothing
+        susceptibility_off_resonance(simulation, spin.position, inside)
+    end * 1e-6 * gyromagnetic_ratio
 
     # pre-compute the R1 and R2 attenuation.
     # This will be applied for any sequences for which there is no RF pulse active.
@@ -50,25 +63,25 @@ end
 
 
 # no active RF pulse
-function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, part::NoPulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, pre_comp::NamedTuple)
+function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, part::NoPulsePart, props::NamedTuple, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, pre_comp::NamedTuple)
     full_off_resonance = off_resonance + props.off_resonance + grad_off_resonance(part, old_pos, new_pos, t1, t2)
     timestep = (t2 - t1) * duration
     orient.phase += full_off_resonance * timestep * 360
     relax_single_step!(orient, props, pre_comp)
 end
 
-function relax_single_step!(orient::SpinOrientation, props::MRIProperties, pre_comp::NamedTuple)
+function relax_single_step!(orient::SpinOrientation, props::NamedTuple, pre_comp::NamedTuple)
     orient.longitudinal = (1 - (1 - orient.longitudinal) * pre_comp.R1_att) 
     orient.transverse *= pre_comp.R2_att
 end
 
-function relax_single_step!(orient::SpinOrientation, props::MRIProperties, timestep::Float64)
+function relax_single_step!(orient::SpinOrientation, props::NamedTuple, timestep::Float64)
     orient.longitudinal = (1 - (1 - orient.longitudinal) * exp(-props.R1 * timestep)) 
     orient.transverse *= exp(-props.R2 * timestep)
 end
 
 # with active RF pulse
-function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::PulsePart, props::MRIProperties, duration_ext::Float64, t1_ext::Float64, t2_ext::Float64, off_resonance::Float64, ::NamedTuple)
+function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::PulsePart, props::NamedTuple, duration_ext::Float64, t1_ext::Float64, t2_ext::Float64, off_resonance::Float64, ::NamedTuple)
     relax_time = 1 / max(props.R1, props.R2)
     internal_timestep = 1/length(pulse.pulse)
     if isinf(relax_time)
@@ -85,7 +98,7 @@ function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::
     relax!(orient, old_pos, new_pos, pulse, props, duration, t1, t2, off_resonance, nsplit_rotation)
 end
     
-function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::PulsePart, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, split_rotation::Val)
+function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::NewPosType, pulse::PulsePart, props::NamedTuple, duration::Float64, t1::Float64, t2::Float64, off_resonance::Float64, split_rotation::Val)
     started = iszero(t1)
     internal_timestep = 1/length(pulse.pulse)
     single_pulse_duration = duration * internal_timestep
@@ -118,7 +131,7 @@ function relax!(orient::SpinOrientation, old_pos::SVector{3, Float64}, new_pos::
     @assert isone(t2)
 end
 
-function apply_pulse!(orient::SpinOrientation, pulse::ConstantPulse, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, full_off_resonance::Float64, ::Val{1})
+function apply_pulse!(orient::SpinOrientation, pulse::ConstantPulse, props::NamedTuple, duration::Float64, t1::Float64, t2::Float64, full_off_resonance::Float64, ::Val{1})
     flip_angle = pulse.amplitude * 2π * duration * (t2 - t1)
 
     if iszero(t1)
@@ -141,7 +154,7 @@ function apply_pulse!(orient::SpinOrientation, pulse::ConstantPulse, props::MRIP
     relax_single_step!(orient, props, duration * (t2 - t1) / 2)
 end
 
-function apply_pulse!(orient::SpinOrientation, pulse::ConstantPulse, props::MRIProperties, duration::Float64, t1::Float64, t2::Float64, full_off_resonance::Float64, ::Val{N}) where {N}
+function apply_pulse!(orient::SpinOrientation, pulse::ConstantPulse, props::NamedTuple, duration::Float64, t1::Float64, t2::Float64, full_off_resonance::Float64, ::Val{N}) where {N}
     # relaxation times are short compared with rotation
     internal_stepsize = (t2 - t1) / N
     for i in 1:N
