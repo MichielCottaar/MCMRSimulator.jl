@@ -4,7 +4,7 @@ import StaticArrays: SVector
 import .Indices: ObstructionIndex
 import .InternalBoundingBoxes: InternalBoundingBox
 import .PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, surface_sampling, inside_indices
-import .Properties: all_property_values
+import .Properties: all_property_values, get_value
 import ...Properties: stick_probability
 
 export FixedGeometry, Intersection, IsInside,
@@ -135,16 +135,28 @@ function min_dwell_time(geometry::FixedGeometry)
 end
 
 """Return the permeability associated with a collision state."""
-function permeability end
+function permeability(geometry::FixedGeometry, intersection::Intersection)
+    intersection.hit_gap && return Inf
+    get_value(geometry.surface.permeability, intersection.obstruction_index)
+end
 
 """Return the surface-relaxation value associated with a collision state."""
-function surface_relaxation end
+function surface_relaxation(geometry::FixedGeometry, intersection::Intersection)
+    intersection.hit_gap && return 0.
+    get_value(geometry.surface.surface_relaxation, intersection.obstruction_index)
+end
 
 """Return the surface-density value associated with a collision state."""
-function surface_density end
+function surface_density(geometry::FixedGeometry, intersection::Intersection)
+    intersection.hit_gap && return 0.
+    get_value(geometry.surface.density, intersection.obstruction_index)
+end
 
 """Return the dwell-time value associated with a collision state."""
-function dwell_time end
+function dwell_time(geometry::FixedGeometry, intersection::Intersection)
+    intersection.hit_gap && return 0.
+    get_value(geometry.surface.dwell_time, intersection.obstruction_index)
+end
 
 """
     mri_properties(geometry, global_properties, position, reflection)

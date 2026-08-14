@@ -115,6 +115,38 @@ const all_property_values = Properties.all_property_values
     @test isempty(empty_sample_positions)
     @test isempty(empty_sample_normals)
 
+    property_geometry = mr.fix(
+        mr.Spheres(
+            radius=[1.0, 2.0],
+            permeability_surface=[3.0, 4.0],
+            density_surface=[5.0, 6.0],
+            dwell_time_surface=[7.0, 8.0],
+            relaxation_surface=[9.0, 10.0],
+        ),
+    )
+    property_intersection = GI.PhysicalGeometries.Intersection(
+        0.5,
+        SVector(1.0, 0.0, 0.0),
+        false,
+        ObstructionIndex(SVector(2, 1)),
+        false,
+    )
+    @test GI.permeability(property_geometry, property_intersection) == 4.0
+    @test GI.surface_relaxation(property_geometry, property_intersection) == 10.0
+    @test GI.surface_density(property_geometry, property_intersection) == 6.0
+    @test GI.dwell_time(property_geometry, property_intersection) == 8.0
+    gap_intersection = GI.PhysicalGeometries.Intersection(
+        property_intersection.distance,
+        property_intersection.normal,
+        property_intersection.inside,
+        property_intersection.obstruction_index,
+        true,
+    )
+    @test GI.permeability(property_geometry, gap_intersection) == Inf
+    @test GI.surface_relaxation(property_geometry, gap_intersection) == 0.0
+    @test GI.surface_density(property_geometry, gap_intersection) == 0.0
+    @test GI.dwell_time(property_geometry, gap_intersection) == 0.0
+
     struct TestGeometry{N} <: PhysicalGeometry{N}
         value::Int
     end
