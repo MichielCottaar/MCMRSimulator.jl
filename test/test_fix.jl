@@ -8,6 +8,7 @@ const Transformations = mr.Geometries.InternalNew.PhysicalGeometries.Transformat
 const Properties = mr.Geometries.InternalNew.Properties
 const ObstructionIndex = mr.Geometries.InternalNew.Indices.ObstructionIndex
 const get_value = Properties.get_value
+const fix = mr.Geometries.Fix.fix
 
 @testset "Fix base geometry" begin
     @test FixBaseGeometry.fix_base_geometry(mr.Walls(position=0.0)) == [BaseObstructions.InfiniteWall()]
@@ -126,23 +127,23 @@ end
         R1_inside=2.0,
         permeability_surface=3.0,
     )
-    fixed = mr.fix(group; dwell_time=4.0, surface_relaxation=5.0, density=6.0)
+    fixed = fix(group; dwell_time=4.0, surface_relaxation=5.0, density=6.0)
     @test fixed isa mr.Geometries.Fix.FixedGeometry
     @test fixed.volume.R1.value == 2.0
     @test fixed.surface.permeability.value == 3.0
     @test fixed.surface.dwell_time.value == 4.0
     @test fixed.surface.surface_relaxation.value == 5.0
     @test fixed.surface.density.value == 6.0
-    @test mr.fix(fixed) === fixed
+    @test fix(fixed) === fixed
 
-    combined = mr.fix([mr.Walls(position=0.0), group])
+    combined = fix([mr.Walls(position=0.0), group])
     @test combined.geometry isa mr.Geometries.InternalNew.PhysicalGeometries.Groups.GeometryTuple
     @test combined.volume.R1 isa Properties.GeometryTupleProperties
     @test combined.surface.density isa Properties.GeometryTupleProperties
 
-    @test mr.fix([]).geometry isa mr.Geometries.InternalNew.PhysicalGeometries.Groups.GeometryTuple
-    @test_throws MethodError mr.fix(group; R1=1.0)
-    @test_throws MethodError mr.fix(group; R2=1.0)
-    @test_throws MethodError mr.fix(group; off_resonance=1.0)
-    @test_throws MethodError mr.fix(group; relaxation=1.0)
+    @test fix([]).geometry isa mr.Geometries.InternalNew.PhysicalGeometries.Groups.GeometryTuple
+    @test_throws MethodError fix(group; R1=1.0)
+    @test_throws MethodError fix(group; R2=1.0)
+    @test_throws MethodError fix(group; off_resonance=1.0)
+    @test_throws MethodError fix(group; relaxation=1.0)
 end

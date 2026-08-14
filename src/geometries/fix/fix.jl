@@ -8,16 +8,11 @@ import ..User.Obstructions: ObstructionGroup, Walls, Cylinders, Spheres, Annuli
 import ..InternalNew.PhysicalGeometries: PhysicalGeometry
 import ..InternalNew.PhysicalGeometries.Groups: GeometryTuple
 import ..InternalNew.Properties: GeometryTupleProperties
+import ..InternalNew: FixedGeometry
 
 import .FixBaseGeometry: fix_base_geometry
 import .FixTransformations: fix_transformations
 import .FixProperties: fix_properties
-
-struct FixedGeometry{G <: PhysicalGeometry{3}, V, S}
-    geometry::G
-    volume::V
-    surface::S
-end
 
 function fix(
     geometry::FixedGeometry;

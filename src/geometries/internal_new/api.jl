@@ -1,5 +1,4 @@
-"""Methods and types implemented by the internal geometry engine."""
-module API
+import .PhysicalGeometries: PhysicalGeometry
 
 export FixedGeometry, CollisionState, BoundingBox,
     fix, isinside, detect_intersection, random_surface_positions, geometry_mesh,
@@ -18,7 +17,11 @@ Opaque fixed geometry state used by the simulator. Implementations may store
 collision, MRI-property, susceptibility, and plotting data in any way they
 choose. Callers should use only the functions defined in this module.
 """
-abstract type FixedGeometry end
+struct FixedGeometry{G <: PhysicalGeometry{3}, V, S}
+    geometry::G
+    volume::V
+    surface::S
+end
 
 """
     CollisionState
@@ -137,5 +140,3 @@ Create a `CollisionState` after a collision. A permeable collision continues
 through the surface; otherwise the direction is reflected.
 """
 function reflect end
-
-end
