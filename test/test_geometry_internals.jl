@@ -21,6 +21,7 @@ const SizeScaleOverride = GI.SizeScales.SizeScaleOverride
 const size_scale = GI.size_scale
 const has_inside = GI.PhysicalGeometries.has_inside
 const inside_indices = GI.PhysicalGeometries.inside_indices
+const surface_sampling = GI.surface_sampling
 const Properties = GI.Properties
 const get_value = Properties.get_value
 const all_property_values = Properties.all_property_values
@@ -60,6 +61,42 @@ const all_property_values = Properties.all_property_values
     @test GI.max_surface_relaxation(empty_fixed) == 0.0
     @test GI.min_dwell_time(empty_fixed) == Inf
     @test GI.max_timestep_sticking(empty_fixed, 1.0, 0.1) == Inf
+
+    density = Properties.GeometryLeafProperties(1.0)
+    empty_positions, empty_normals = surface_sampling(
+        BaseObstructions.Sphere(1.0),
+        Properties.GeometryLeafProperties(0.0),
+        BoundingBoxes.InternalBoundingBox{3}(2.0),
+        10.0,
+    )
+    @test isempty(empty_positions)
+    @test isempty(empty_normals)
+
+    sphere_positions, sphere_normals = surface_sampling(
+        BaseObstructions.Sphere(1.0),
+        density,
+        BoundingBoxes.InternalBoundingBox{3}(2.0),
+        1.0,
+    )
+    @test length(sphere_positions) == length(sphere_normals)
+    @test all(norm(position) ≈ 1.0 for position in sphere_positions)
+    @test all(norm(normal) ≈ 1.0 for normal in sphere_normals)
+
+    projected_cylinder = Transformations.Rotate(
+        BaseObstructions.InfiniteCylinder(1.0),
+        SMatrix{2, 3, Float64}([1.0 0.0 0.0; 0.0 1.0 0.0]),
+    )
+    projected_positions, projected_normals = surface_sampling(
+        projected_cylinder,
+        density,
+        BoundingBoxes.InternalBoundingBox{3}(2.0),
+        10.0,
+    )
+    @test length(projected_positions) == length(projected_normals)
+    @test all(all(-2.0 .<= position .<= 2.0) for position in projected_positions)
+    @test all(all(-2.0 .<= normal .<= 2.0) for normal in projected_normals)
+    @test all(position[1]^2 + position[2]^2 ≈ 1.0 for position in projected_positions)
+    @test all(norm(normal) ≈ 1.0 for normal in projected_normals)
 
     struct TestGeometry{N} <: PhysicalGeometry{N}
         value::Int

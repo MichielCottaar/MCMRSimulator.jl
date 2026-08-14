@@ -1,12 +1,12 @@
 """Public operations supported by the internal geometry engine."""
 
 import .Indices: ObstructionIndex
-import .PhysicalGeometries: PhysicalGeometry, Intersection
+import .PhysicalGeometries: PhysicalGeometry, Intersection, surface_sampling
 import .Properties: all_property_values
 import ...Properties: stick_probability
 
 export FixedGeometry, Intersection, ObstructionIndex,
-    isinside, detect_intersection, random_surface_positions, geometry_mesh,
+    isinside, detect_intersection, random_surface_positions, surface_sampling, geometry_mesh,
     size_scale, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
     permeability, surface_relaxation, surface_density, dwell_time,

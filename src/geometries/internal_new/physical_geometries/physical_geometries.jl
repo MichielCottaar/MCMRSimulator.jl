@@ -39,6 +39,9 @@ function has_inside end
 """Return the obstruction indices containing a position."""
 function inside_indices end
 
+"""Sample surface positions and inward normals within a bounding box."""
+function surface_sampling end
+
 """Return the axis-aligned bounding box containing a physical geometry."""
 function InternalBoundingBox end
 
@@ -49,6 +52,7 @@ include("repeats.jl")
 include("transparent.jl")
 include("base_obstructions/base_obstructions.jl")
 include("meshes.jl")
+include("surface_sampling.jl")
 import .Transparents: Transparent, transparent_geometry
 
 end
