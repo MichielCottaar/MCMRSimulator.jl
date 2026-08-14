@@ -1,21 +1,22 @@
-import .PhysicalGeometries: PhysicalGeometry
+"""Public operations supported by the internal geometry engine."""
+
+import .Indices: ObstructionIndex
+import .PhysicalGeometries: PhysicalGeometry, Intersection
 
 export FixedGeometry, Intersection, ObstructionIndex,
-    fix, isinside, detect_intersection, random_surface_positions, geometry_mesh,
+    isinside, detect_intersection, random_surface_positions, geometry_mesh,
     size_scale, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
     permeability, surface_relaxation, surface_density, dwell_time,
     mri_properties, R1, R2, off_resonance,
     susceptibility_off_resonance, off_resonance_gradient,
-    previous_hit,
     direction, reflect
 
 """
     FixedGeometry
 
-Opaque fixed geometry state used by the simulator. Implementations may store
-collision, MRI-property, susceptibility, and plotting data in any way they
-choose. Callers should use only the functions defined in this module.
+The fixed representation of a user-defined geometry used by the simulation.
+It contains the geometry and all fixed state needed for geometry queries.
 """
 struct FixedGeometry{G <: PhysicalGeometry{3}, V, S, O}
     geometry::G
@@ -25,29 +26,18 @@ struct FixedGeometry{G <: PhysicalGeometry{3}, V, S, O}
 end
 
 """
-    fix(geometry; kwargs...)
+    isinside(geometry, position[, reflection])
 
-Convert user-facing geometry into one `FixedGeometry`. The result must include
-all state needed by collision detection, MRI-property queries, susceptibility
-queries, timestep limits, and plotting.
-"""
-function fix end
-
-"""
-    isinside(geometry, position, reflection)
-
-Return the obstructions containing `position`. The result must identify each
-hit sufficiently for the simulator to apply volume properties. An omitted
-reflection is interpreted as an unbound spin by the implementation.
+Return the obstruction indices containing `position`. A reflection may be
+provided when the particle is already attached to a surface.
 """
 function isinside end
 
 """
-    detect_intersection(geometry, start, destination, previous_hit)
+    detect_intersection(geometry, start, destination, previous_intersection)
 
-Find the first intersection of the path from `start` to `destination`.
-Return a `CollisionState`. Use `Base.isempty` on the result to determine
-whether there was no hit.
+Return the first intersection between the path from `start` to `destination`
+and `geometry`.
 """
 function detect_intersection end
 
@@ -55,51 +45,48 @@ function detect_intersection end
     random_surface_positions(geometry, bounding_box, volume_density)
 
 Sample surface positions in `bounding_box` at the requested volume density.
-Each result contains a position, inward unit normal, geometry index, and
-obstruction index.
 """
 function random_surface_positions end
 
 """
     geometry_mesh(geometry)
 
-Return render-ready mesh data containing vertices and triangles. Plotting code
-must not inspect the internal geometry representation.
+Return render-ready mesh data for `geometry`.
 """
 function geometry_mesh end
 
-"""Return the smallest relevant obstruction size scale in `geometry`."""
+"""Return the smallest relevant obstruction size in `geometry`."""
 function size_scale end
 
-"""Return the maximum timestep allowed by surface sticking constraints."""
+"""Return the largest timestep permitted by surface-sticking constraints."""
 function max_timestep_sticking end
 
-"""Return the largest finite permeability in `geometry`, or zero if none exists."""
+"""Return the largest finite permeability in `geometry`, or zero if absent."""
 function max_permeability_non_inf end
 
 """Return the largest surface-relaxation value in `geometry`."""
 function max_surface_relaxation end
 
-"""Return the smallest dwell time for a geometry with a bound pool."""
+"""Return the smallest dwell time in `geometry` when a bound pool exists."""
 function min_dwell_time end
 
-"""Return the permeability at a `CollisionState`."""
+"""Return the permeability associated with a collision state."""
 function permeability end
 
-"""Return the surface-relaxation value at a `CollisionState`."""
+"""Return the surface-relaxation value associated with a collision state."""
 function surface_relaxation end
 
-"""Return the surface-density value at a `CollisionState`."""
+"""Return the surface-density value associated with a collision state."""
 function surface_density end
 
-"""Return the dwell-time value at a `CollisionState`."""
+"""Return the dwell-time value associated with a collision state."""
 function dwell_time end
 
 """
     mri_properties(geometry, global_properties, position, reflection)
 
-Return an object with `R1`, `R2`, and `off_resonance` properties for a position
-and optional surface reflection. Callers should not depend on its type.
+Return the `R1`, `R2`, and off-resonance values at `position`, optionally taking
+a surface reflection into account.
 """
 function mri_properties end
 
@@ -112,23 +99,19 @@ function R2 end
 """Return non-susceptibility off-resonance at `position` in `geometry`."""
 function off_resonance end
 
-"""Return susceptibility-induced off-resonance at a position or along a path."""
+"""Return susceptibility-induced off-resonance for `geometry`."""
 function susceptibility_off_resonance end
 
-"""Return the maximum susceptibility off-resonance gradient for `geometry`."""
+"""Return the maximum susceptibility off-resonance gradient in `geometry`."""
 function off_resonance_gradient end
 
-"""Return the previous-hit information needed by `detect_intersection`."""
-function previous_hit end
-
-"""Return the remaining displacement for a `CollisionState` over a time interval."""
+"""Return the remaining displacement associated with a collision state."""
 function direction end
 
 """
     reflect(collision, direction, ratio_displaced, time_moved, distance_moved;
             permeable=false)
 
-Create a `CollisionState` after a collision. A permeable collision continues
-through the surface; otherwise the direction is reflected.
+Return the collision state after reflecting or passing through a surface.
 """
 function reflect end
