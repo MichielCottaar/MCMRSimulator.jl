@@ -110,6 +110,15 @@ function _mesh_gap_indices(vertices, indices)
         decomposition = svd(centered_positions)
         plane_basis = decomposition.U[:, 1:2]
         projected_positions = [Tuple(plane_basis' * (position - centroid)) for position in positions]
+        signed_area = sum(
+            projected_positions[index][1] * projected_positions[mod1(index + 1, length(projected_positions))][2] -
+            projected_positions[mod1(index + 1, length(projected_positions))][1] * projected_positions[index][2]
+            for index in eachindex(projected_positions)
+        )
+        if signed_area < 0
+            reverse!(loop)
+            reverse!(projected_positions)
+        end
         boundary = [collect(1:length(loop)); 1]
         triangulation = triangulate(
             projected_positions;
