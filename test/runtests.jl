@@ -25,6 +25,7 @@ all_tests = [
     "various",
     "subsets",
     "geometry_internals",
+    "fix",
     "swc",
     "plots",
     "cli",

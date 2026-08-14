@@ -5,6 +5,7 @@ module Geometries
 include("internal/internal.jl")
 include("internal_new/internal_new.jl")
 include("user/user.jl")
+include("fix/fix.jl")
 import .User: 
     fix, fix_susceptibility,
     ObstructionGroup, IndexedObstruction,
