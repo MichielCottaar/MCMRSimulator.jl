@@ -3,7 +3,6 @@ Defines the microstructural environment with which the spins interact.
 """
 module Geometries
 include("internal/internal.jl")
-include("internal_new/internal_new.jl")
 include("user/user.jl")
 include("fix/fix.jl")
 import .Fix:
