@@ -5,7 +5,7 @@ module SizeScales
 import ..Internal: size_scale, FixedGeometry
 import ..PhysicalGeometries
 import ..PhysicalGeometries: PhysicalGeometry, Transparent, transparent_geometry
-import ..PhysicalGeometries.BaseObstructions: InfiniteWall, Round
+import ..PhysicalGeometries.BaseObstructions: InfiniteWall, Round, OverlappingRound
 import ..PhysicalGeometries.Groups: GeometryVectorLike, GeometryTuple
 import ..PhysicalGeometries.Transformations: Shift, Scale, Rotate
 import ..PhysicalGeometries.Repeats: Repeat
@@ -23,6 +23,7 @@ end
 
 size_scale(::InfiniteWall) = Inf
 size_scale(round::Round) = round.radius
+size_scale(round::OverlappingRound) = round.radius
 
 function size_scale(mesh::Mesh)
     ntriangles = mesh.first_index_of_gap - 1
