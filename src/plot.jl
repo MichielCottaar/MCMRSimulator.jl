@@ -14,8 +14,7 @@ import StaticArrays: SVector, MVector
 import ...Spins: Snapshot, orientation, SpinOrientation, position
 import ...Methods: get_rotation
 import ...Geometries: BoundingBox, ObstructionGroup, fix
-import ...Geometries.Internal: FixedGeometry, geometry_mesh
-import ...Geometries.Internal.RayGridIntersection: ray_grid_intersections
+import ...Geometries.Internal: FixedGeometry, geometry_mesh, ray_grid_intersection
 import ...SequenceParts: SequenceWaveform, SequenceEvent, GradientEvent, PulseEvent
 
 

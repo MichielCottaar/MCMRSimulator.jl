@@ -5,12 +5,15 @@ import ..BoundingBoxes: BoundingBox
 import .Indices: ObstructionIndex
 import .InternalBoundingBoxes: InternalBoundingBox
 import .PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, surface_sampling, inside_indices
+import .PhysicalGeometries.Groups: GeometryTuple
 import .Properties: all_property_values, get_value
 import .Susceptibility: susceptibility_off_resonance, off_resonance_gradient
 import ...Properties: stick_probability
+import .RayGridIntersection: ray_grid_intersections
 
 export FixedGeometry, Intersection, IsInside, collision_normal,
     isinside, detect_intersection, surface_sampling, geometry_mesh,
+    ray_grid_intersections,
     size_scale, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
     permeability, surface_relaxation, surface_density, dwell_time,
@@ -29,6 +32,10 @@ struct FixedGeometry{G <: PhysicalGeometry{3}, V, S, O}
     surface::S
     susceptibility::O
 end
+
+# A fixed geometry represents one user geometry unless it is a tuple of groups.
+Base.length(geometry::FixedGeometry) =
+    geometry.geometry isa GeometryTuple ? length(geometry.geometry) : 1
 
 """
     IsInside
