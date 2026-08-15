@@ -89,11 +89,12 @@ function detect_intersection(
     previous = previous_hit
     scaled_start = (start .+ repeat.repeats / 2) ./ repeat.repeats
     scaled_destination = (destination .+ repeat.repeats / 2) ./ repeat.repeats
-    for (_, entry_time, _, exit_time, _) in ray_grid_intersections(scaled_start, scaled_destination)
+    for (voxel, entry_time, _, exit_time, _) in ray_grid_intersections(scaled_start, scaled_destination)
         segment_start = start + entry_time .* displacement
         segment_destination = start + exit_time .* displacement
-        local_start = _wrap(repeat, segment_start)
-        local_destination = local_start + (segment_destination - segment_start)
+        cell_shift = voxel .* repeat.repeats
+        local_start = segment_start - cell_shift
+        local_destination = segment_destination - cell_shift
         for shift in _candidate_shifts(repeat, local_start, local_destination)
             local_intersection = detect_intersection(
                 repeat.geometry,
