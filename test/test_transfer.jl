@@ -159,7 +159,7 @@ end
                 @test sum(mr.stuck.(snap1)) ≈ fraction_stuck * nspins rtol=0.1
                 @test sum(mr.stuck.(snap2)) ≈ fraction_stuck * nspins rtol=0.1
 
-                @test all(mr.isinside(simulation.geometry, snap1) .== mr.isinside(simulation.geometry, snap2))
+                @test all(length.(mr.isinside(simulation.geometry, snap1)) .== length.(mr.isinside(simulation.geometry, snap2)))
             end
         end
     end
