@@ -308,6 +308,21 @@ end
     @test shifted_render_mesh[1].vertices == [vertex - SVector(1.0, 2.0, 3.0) for vertex in mesh.vertices]
     grouped_render_mesh = GI.geometry_mesh(GeometryTuple{3}((mesh, mesh)))
     @test length(grouped_render_mesh) == 2
+    repeated_mesh = Repeat(mesh, [2.0, 2.0, 2.0])
+    @test length(GI.geometry_mesh(repeated_mesh)) == 1
+    bounded_repeated_mesh = GI.geometry_mesh(
+        repeated_mesh,
+        PublicBoundingBoxes.BoundingBox([1.0, 0.0, 0.0], [2.0, 1.0, 1.0]),
+    )
+    @test length(bounded_repeated_mesh) == 2
+    @test sort([minimum(vertex[1] for vertex in render_mesh.vertices) for render_mesh in bounded_repeated_mesh]) == [0.0, 2.0]
+    @test all(length(render_mesh.triangles) == mesh.first_index_of_gap - 1 for render_mesh in bounded_repeated_mesh)
+    transformed_bounded_mesh = GI.geometry_mesh(
+        Shift(repeated_mesh, [1.0, 0.0, 0.0]),
+        PublicBoundingBoxes.BoundingBox([-1.0, 0.0, 0.0], [0.0, 1.0, 1.0]),
+    )
+    @test length(transformed_bounded_mesh) == 1
+    @test minimum(vertex[1] for vertex in transformed_bounded_mesh[1].vertices) == -1.0
     @test inside_indices(mesh, SVector(0.2, 0.2, 0.2)) == [ObstructionIndex()]
     @test inside_indices(mesh, SVector(1.2, 0.2, 0.2)) == ObstructionIndex[]
     @test mesh.indices[mesh.first_index_of_gap] == SVector(4, 2, 3)
