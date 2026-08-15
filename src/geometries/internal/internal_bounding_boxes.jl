@@ -35,8 +35,8 @@ InternalBoundingBox(half_size::AbstractVector) = InternalBoundingBox{length(half
 InternalBoundingBox(half_size, center::AbstractVector) = InternalBoundingBox{length(center)}(half_size, center)
 
 InternalBoundingBox(box::BoundingBox) = InternalBoundingBox{3}(
-    (upper(box) - lower(box)) / 2,
-    (upper(box) + lower(box)) / 2,
+    (box.upper - box.lower) / 2,
+    (box.upper + box.lower) / 2,
 )
 
 

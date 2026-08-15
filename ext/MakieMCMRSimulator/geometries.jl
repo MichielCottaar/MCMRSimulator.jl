@@ -6,7 +6,7 @@ import Colors
 import GeometryBasics
 import MCMRSimulator.Plot: PlotPlane, GeometryLike, project_geometry, plot_geometry, plot_geometry!
 import MCMRSimulator.Geometries.Internal: FixedGeometry, geometry_mesh
-import MCMRSimulator.Geometries: ObstructionGroup, fix, Mesh, Cylinders, Spheres, Walls
+import MCMRSimulator.Geometries: fix
 
 @recipe Plot_Geometry (plot_plane::Union{Nothing, PlotPlane}, geometry::GeometryLike) begin
     "Set the color of the lines (2D) or patches (3D). In 2D it is set to the :black by default. In 3D each individual obstruction is by default plotted in a different, distinguishable color."
@@ -22,7 +22,7 @@ import MCMRSimulator.Geometries: ObstructionGroup, fix, Mesh, Cylinders, Spheres
     "Number of samples in mesh used to plot cylinders (default: 100) and spheres (default: 1000) in 3D plot."
     nsamples=Makie.automatic
     "Size to plot in μm of infinite walls and cylinders in 3D plot."
-    height=1.
+    height=nothing
 
 
     Makie.mixin_generic_plot_attributes()...
@@ -35,8 +35,8 @@ function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:PlotPlane, <:GeometryLike}})
     map!(scene.attributes, [:color], :final_color) do color
         return color == Makie.automatic ? :black : color
     end
-    map!(scene.attributes, [:plot_plane, :geometry], :line) do plot_plane, geometry
-        return project_geometry(plot_plane, geometry)
+    map!(scene.attributes, [:plot_plane, :geometry, :height, :nsamples], :line) do plot_plane, geometry, height, nsamples
+        return project_geometry(plot_plane, geometry; height, nsamples)
     end
 
     Makie.lines!(scene, scene.attributes, scene.line; color=scene.final_color)
@@ -48,17 +48,15 @@ Makie.plottype(::PlotPlane, ::GeometryLike) = Plot_Geometry
 Makie.convert_arguments(::Type{Plot_Geometry}, geometry::GeometryLike) = (nothing, geometry)
 
 
-fix_and_mesh(geom::FixedGeometry; height, nsamples) = geom
-fix_and_mesh(geom::Mesh; height, nsamples) = fix(geom)
-fix_and_mesh(geom::Cylinders; height, nsamples) = fix(Mesh(geom; height=height, nsamples=nsamples == Makie.automatic ? 100 : nsamples))
-fix_and_mesh(geom::Spheres; height, nsamples) = fix(Mesh(geom; nsamples=nsamples == Makie.automatic ? 1000 : nsamples))
-fix_and_mesh(geom::Walls; height, nsamples) = fix(Mesh(geom; height=height))
-fix_and_mesh(geom::ObstructionGroup; height, nsamples) = fix(Mesh(geom))
-
 function Makie.plot!(scene::Plot_Geometry{<:Tuple{<:Nothing, <:GeometryLike}})
     Makie.register_computation!(scene.attributes, [:geometry, :color, :height, :nsamples], [:vertices, :triangles, :mesh_color]) do inputs, changed, cached
-        mesh = fix_and_mesh(inputs[:geometry]; height=inputs[:height], nsamples=inputs[:nsamples])
-        mesh_data = geometry_mesh(mesh)
+        geometry = inputs[:geometry]
+        fixed_geometry = geometry isa FixedGeometry ? geometry : fix(geometry)
+        mesh_data = geometry_mesh(
+            fixed_geometry;
+            height=inputs[:height],
+            nsamples=inputs[:nsamples],
+        )
         mesh_color_arr = Colors.distinguishable_colors(length(mesh_data))
         vertices = GeometryBasics.Point{3, Float64}[]
         triangles = GeometryBasics.TriangleFace{Int}[]

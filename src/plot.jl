@@ -13,12 +13,13 @@ import LinearAlgebra: cross, ⋅, norm
 import StaticArrays: SVector, MVector
 import ...Spins: Snapshot, orientation, SpinOrientation, position
 import ...Methods: get_rotation
-import ...Geometries.Internal: ray_grid_intersections, FixedGeometry, FixedObstructionGroup, Wall, Cylinder, Sphere, obstructions, Shift
-import ...Geometries.User: ObstructionGroup, fix
+import ...Geometries: BoundingBox, ObstructionGroup, fix
+import ...Geometries.Internal: FixedGeometry, geometry_mesh
+import ...Geometries.Internal.RayGridIntersection: ray_grid_intersections
 import ...SequenceParts: SequenceWaveform, SequenceEvent, GradientEvent, PulseEvent
 
 
-const GeometryLike = Union{FixedGeometry, FixedObstructionGroup, ObstructionGroup, Vector{<:ObstructionGroup}}
+const GeometryLike = Union{FixedGeometry, ObstructionGroup, Vector{<:ObstructionGroup}}
 const Projectable = Union{GeometryLike, Snapshot, Vector{<:Snapshot}}
 
 
@@ -186,6 +187,74 @@ function project(pp::PlotPlane, pos::SVector{3, Float64})
     mod.(base .+ correct, (sizex, sizey, Inf)) .- correct
 end
 
+const ProjectedPoint = SVector{2, Float64}
+const MeshPoint = SVector{3, Float64}
+
+function project_mesh_plane(
+    plot_plane::PlotPlane,
+    mesh_data;
+    atol=sqrt(eps(Float64)),
+)
+    projected = ProjectedPoint[]
+
+    for mesh in mesh_data
+        vertices = plot_plane.transformation.(mesh.vertices)
+        for face in mesh.triangles
+            triangle = ntuple(index -> vertices[face[index]], 3)
+            _append_triangle_plane_intersection!(projected, triangle; atol)
+        end
+    end
+
+    projected
+end
+
+function _append_triangle_plane_intersection!(
+    projected,
+    triangle::NTuple{3, MeshPoint};
+    atol,
+)
+    tolerance = atol * max(1.0, maximum(norm, triangle))
+    points = ProjectedPoint[]
+
+    add_point!(point) = begin
+        projected_point = ProjectedPoint(point[1], point[2])
+        any(existing -> norm(existing - projected_point) <= tolerance, points) ||
+            push!(points, projected_point)
+    end
+
+    for edge in ((1, 2), (2, 3), (3, 1))
+        first = triangle[edge[1]]
+        second = triangle[edge[2]]
+        first_distance = first[3]
+        second_distance = second[3]
+        first_on_plane = abs(first_distance) <= tolerance
+        second_on_plane = abs(second_distance) <= tolerance
+
+        if first_on_plane && second_on_plane
+            add_point!(first)
+            add_point!(second)
+        elseif first_on_plane
+            add_point!(first)
+        elseif second_on_plane
+            add_point!(second)
+        elseif signbit(first_distance) != signbit(second_distance)
+            fraction = first_distance / (first_distance - second_distance)
+            add_point!(first + fraction * (second - first))
+        end
+    end
+
+    if length(points) == 2
+        append!(projected, points)
+        push!(projected, ProjectedPoint(NaN, NaN))
+    elseif length(points) == 3
+        for edge in ((1, 2), (2, 3), (3, 1))
+            push!(projected, points[edge[1]])
+            push!(projected, points[edge[2]])
+            push!(projected, ProjectedPoint(NaN, NaN))
+        end
+    end
+end
+
 function project_trajectory(pp::PlotPlane, pos::AbstractVector{<:SVector{3, Float64}})
     transformed = pp.transformation.(pos)
     pos2D = map(p -> SVector{3, Float64}(
@@ -272,8 +341,40 @@ function project_on_grid(pp::PlotPlane, snap::Snapshot{1}, ngrid::Int)
 end
 
 
-project_geometry(plot_plane::PlotPlane, geometry::GeometryLike) = project_geometry(plot_plane, fix(geometry))
+function plot_bounding_box(plot_plane::PlotPlane)
+    isfinite(plot_plane.sizex) && isfinite(plot_plane.sizey) ||
+        throw(ArgumentError("2D geometry plotting requires finite plane dimensions"))
 
+    inverse = CoordinateTransformations.inv(plot_plane.transformation)
+    half_x = plot_plane.sizex / 2
+    half_y = plot_plane.sizey / 2
+    corners = [
+        inverse(SVector{3, Float64}(x, y, 0.))
+        for x in (-half_x, half_x), y in (-half_y, half_y)
+    ]
+    BoundingBox(
+        [minimum(corner[dimension] for corner in corners) for dimension in 1:3],
+        [maximum(corner[dimension] for corner in corners) for dimension in 1:3],
+    )
+end
+
+function project_geometry(
+    plot_plane::PlotPlane,
+    geometry::GeometryLike;
+    height=1.,
+    nsamples=100,
+)
+    fixed_geometry = geometry isa FixedGeometry ? geometry : fix(geometry)
+    mesh_data = geometry_mesh(
+        fixed_geometry,
+        plot_bounding_box(plot_plane);
+        height,
+        nsamples,
+    )
+    project_mesh_plane(plot_plane, mesh_data)
+end
+
+if false
 function project_geometry(plot_plane::PlotPlane, geometry::FixedGeometry)
     projections = []
     for t in geometry
@@ -498,6 +599,8 @@ function add_overlap!(new_line, prev_point, new_point, sizes)
             push!(new_line, new_point)
         end
     end
+end
+
 end
 
 

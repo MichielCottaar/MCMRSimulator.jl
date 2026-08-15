@@ -308,6 +308,59 @@ end
     @test shifted_render_mesh[1].vertices == [vertex - SVector(1.0, 2.0, 3.0) for vertex in mesh.vertices]
     grouped_render_mesh = GI.geometry_mesh(GeometryTuple{3}((mesh, mesh)))
     @test length(grouped_render_mesh) == 2
+
+    wall = BaseObstructions.InfiniteWall()
+    wall_rotation = Rotate(wall, reshape([1.0, 0.0, 0.0], 1, 3))
+    wall_mesh = GI.geometry_mesh(wall_rotation; height=2.0)
+    @test length(wall_mesh) == 1
+    @test length(wall_mesh[1].vertices) == 4
+    @test all(vertex[1] == 0.0 for vertex in wall_mesh[1].vertices)
+    wall_bounded_mesh = GI.geometry_mesh(
+        wall_rotation,
+        PublicBoundingBoxes.BoundingBox([-1.0, -2.0, -3.0], [1.0, 2.0, 3.0]),
+    )
+    wall_extents = [
+        maximum(vertex[dimension] for vertex in wall_bounded_mesh[1].vertices) -
+        minimum(vertex[dimension] for vertex in wall_bounded_mesh[1].vertices)
+        for dimension in 2:3
+    ]
+    @test sort(wall_extents) == [4.0, 6.0]
+
+    repeated_walls = Repeat(GeometryVector{1}([wall]), [4.0])
+    repeated_wall_mesh = GI.geometry_mesh(
+        Rotate(repeated_walls, reshape([1.0, 0.0, 0.0], 1, 3)),
+        PublicBoundingBoxes.BoundingBox([-5.0, -2.0, -2.0], [5.0, 2.0, 2.0]);
+        height=2.0,
+    )
+    @test length(repeated_wall_mesh) == 3
+
+    cylinder = BaseObstructions.InfiniteCylinder(1.0)
+    cylinder_rotation = Rotate(cylinder, [1.0 0.0 0.0; 0.0 1.0 0.0])
+    cylinder_mesh = GI.geometry_mesh(cylinder_rotation; nsamples=8, height=2.0)
+    @test length(cylinder_mesh) == 1
+    @test length(cylinder_mesh[1].vertices) == 16
+    @test length(cylinder_mesh[1].triangles) == 16
+    cylinder_bounded_mesh = GI.geometry_mesh(
+        cylinder_rotation,
+        PublicBoundingBoxes.BoundingBox([-1.0, -1.0, -3.0], [1.0, 1.0, 3.0]);
+        nsamples=8,
+    )
+    @test maximum(vertex[3] for vertex in cylinder_bounded_mesh[1].vertices) -
+        minimum(vertex[3] for vertex in cylinder_bounded_mesh[1].vertices) == 6.0
+
+    sphere_mesh = GI.geometry_mesh(BaseObstructions.Sphere(1.0); nsamples=20)
+    @test length(sphere_mesh) == 1
+    @test length(sphere_mesh[1].triangles) == 20
+
+    repeated_circles = Repeat(GeometryVector{2}([cylinder]), [4.0, 4.0])
+    repeated_cylinder_mesh = GI.geometry_mesh(
+        Rotate(repeated_circles, [1.0 0.0 0.0; 0.0 1.0 0.0]),
+        PublicBoundingBoxes.BoundingBox([-5.0, -5.0, -1.0], [5.0, 5.0, 1.0]);
+        nsamples=8,
+        height=2.0,
+    )
+    @test length(repeated_cylinder_mesh) == 9
+
     repeated_mesh = Repeat(mesh, [2.0, 2.0, 2.0])
     @test length(GI.geometry_mesh(repeated_mesh)) == 1
     bounded_repeated_mesh = GI.geometry_mesh(
