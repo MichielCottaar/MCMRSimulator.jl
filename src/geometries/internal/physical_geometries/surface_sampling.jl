@@ -471,7 +471,9 @@ function surface_sampling(
     bounding_box::InternalBoundingBox{N},
     scale_density,
 ) where {N}
-    surface_sampling(Round{N}(round.radius), density, bounding_box, scale_density)
+    positions, normals = surface_sampling(Round{N}(round.radius), density, bounding_box, scale_density)
+    keep = [!_inside_other_rounds(round, position) for position in positions]
+    positions[keep], normals[keep]
 end
 
 function surface_sampling(
