@@ -414,7 +414,7 @@ for symbol in (:R1, :R2)
             return $symbol(spins, fg, global_properties)
         end
         function $symbol(spins::AbstractVector{<:Spin}, geometry::FixedGeometry, global_properties::GlobalProperties=GlobalProperties())
-            [$symbol(sp.position, geometry, global_properties, sp.reflection) for sp in spins]
+            [$symbol(sp.position, geometry, global_properties, previous_hit(sp.reflection)) for sp in spins]
         end
     end
 end
@@ -444,7 +444,7 @@ function off_resonance(spins::AbstractVector{<:Spin}, geometry, global_propertie
             isinside = nothing
         end
         susc = susceptibility_off_resonance(sfg, spin.position, isinside)
-        other = off_resonance(spin.position, fg, global_properties, spin.reflection)
+        other = off_resonance(spin.position, fg, global_properties, previous_hit(spin.reflection))
         return (susc, other)
     end
     return get_both_offresonance.(spins)

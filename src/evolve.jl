@@ -511,7 +511,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
         end
         for _ in 1:1000000
             if is_stuck
-                td = dwell_time(simulation.geometry, spin.reflection)
+                td = dwell_time(simulation.geometry, previous_hit(spin.reflection))
                 fraction_stuck = -log(rand()) * td / timestep
                 relax!(spin, spin.reflection.inside, simulation, parts, fraction_timestep, min(one(Float64), fraction_timestep + fraction_stuck), B0s)
                 fraction_timestep += fraction_stuck
