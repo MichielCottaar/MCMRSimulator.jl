@@ -33,6 +33,38 @@ has_inside(::Type{<:Repeat{N, P}}) where {N, P} = has_inside(P)
 
 _wrap(repeat::Repeat, position) = mod.(position .+ repeat.repeats / 2, repeat.repeats) .- repeat.repeats / 2
 
+_child_image(repeat::Repeat, position, image) = position .- image .* repeat.repeats
+
+function _candidate_images(repeat::Repeat{N}, start, destination=start) where {N}
+    local_start = _wrap(repeat, start)
+    local_destination = _wrap(repeat, destination)
+    child_box = InternalBoundingBox(repeat.geometry)
+    child_lower = InternalBoundingBoxes.lower(child_box)
+    child_upper = InternalBoundingBoxes.upper(child_box)
+    images = SVector{N, Int}[]
+    for image in Iterators.product(((-1):1 for _ in 1:N)...)
+        image = SVector{N, Int}(image)
+        child_start = _child_image(repeat, local_start, image)
+        child_destination = _child_image(repeat, local_destination, image)
+        lower = min.(child_start, child_destination)
+        upper = max.(child_start, child_destination)
+        all(lower .<= child_upper) && all(upper .>= child_lower) && push!(images, image)
+    end
+    images
+end
+
+function _needs_image_search(repeat::Repeat)
+    child_box = InternalBoundingBox(repeat.geometry)
+    child_lower = InternalBoundingBoxes.lower(child_box)
+    child_upper = InternalBoundingBoxes.upper(child_box)
+    any(
+        ((repeat.lower_overlap .== 0) .& (repeat.upper_overlap .> 0) .&
+         (child_upper .<= repeat.repeats)) .|
+        ((repeat.lower_overlap .> 0) .& (repeat.upper_overlap .== 0) .&
+         (child_lower .>= -repeat.repeats))
+    )
+end
+
 function _candidate_shifts(repeat::Repeat{N}, start, destination=start) where {N}
     local_start = _wrap(repeat, start)
     local_destination = _wrap(repeat, destination)
@@ -65,10 +97,15 @@ function inside_indices(
 ) where {N}
     local_position = _wrap(repeat, position)
     indices = ObstructionIndex[]
-    for shift in _candidate_shifts(repeat, local_position)
+    candidates = if Base.isempty(intersection) && _needs_image_search(repeat)
+        ((_child_image(repeat, local_position, image), image) for image in _candidate_images(repeat, local_position))
+    else
+        ((local_position .+ shift .* repeat.repeats, shift) for shift in _candidate_shifts(repeat, local_position))
+    end
+    for (child_position, _) in candidates
         append!(indices, inside_indices(
             repeat.geometry,
-            local_position .+ shift .* repeat.repeats,
+            child_position,
             intersection,
         ))
     end

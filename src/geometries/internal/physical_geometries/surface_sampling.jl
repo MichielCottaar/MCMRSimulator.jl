@@ -15,6 +15,7 @@ import ..Transformations: Transformation, Shift, Scale, Rotate, forward, backwar
 import ..Repeats: Repeat
 import ..Transparents: Transparent, transparent_geometry
 import ..BaseObstructions: InfiniteWall, Round, OverlappingRound, FullTriangle, normal
+import ..BaseObstructions: _inside_other_rounds
 import ..Meshes
 import ..Meshes: Mesh
 import ...Indices: ObstructionIndex

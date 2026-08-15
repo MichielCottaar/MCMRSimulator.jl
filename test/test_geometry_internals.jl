@@ -454,6 +454,12 @@ end
     @test repeated_sphere.upper_overlap == SVector(0.0, 0.0, 0.0)
     @test inside_indices(repeated_sphere, SVector(4.5, 0.0, 0.0)) == [ObstructionIndex()]
     @test inside_indices(repeated_sphere, SVector(2.0, 0.0, 0.0)) == ObstructionIndex[]
+    shifted_repeated_sphere = Repeat(
+        Shift(BaseObstructions.Sphere(0.6), SVector(-1.0, 0.0, 0.0)),
+        [2.0, 4.0, 4.0],
+    )
+    shifted_position = SVector(-0.5, 0.0, 0.0)
+    @test inside_indices(shifted_repeated_sphere, shifted_position) == [ObstructionIndex()]
     @test_throws ArgumentError Repeat(BaseObstructions.Sphere(1.0), [0.0, 4.0, 4.0])
     @test_throws ArgumentError Repeat(BaseObstructions.Sphere(2.0), [1.0, 4.0, 4.0])
     @test_throws ArgumentError Repeat(
