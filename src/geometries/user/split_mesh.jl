@@ -50,7 +50,7 @@ function connected_indices(matrix::SparseMatrixCSC)
             end
         end
 
-        @assert all(!(unassigned[vertex] && !component[vertex]) for vertex in 1:nvertices)
+        @assert all(!component[vertex] || unassigned[vertex] for vertex in 1:nvertices)
         unassigned[component] .= false
         result[component] .= component_index
         component_index += 1
