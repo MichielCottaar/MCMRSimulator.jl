@@ -367,15 +367,15 @@ Base.show(io::IO, snap::Snapshot{N}) where {N} = print(io, "Snapshot($(length(sn
 
 function random_surface_spins(geometry::FixedGeometry, bounding_box::BoundingBox, volume_density::Number; nsequences=1, kwargs...)
     spins = Spin{nsequences, static_vector_type(nsequences){SpinOrientation}}[]
-    for (position, normal, geometry_index, obstruction_index) in random_surface_positions(geometry, bounding_box, volume_density)
-        inside = Random.rand() > 0.5
-        use_normal = inside ? normal : -normal
+    positions, intersections = random_surface_positions(geometry, bounding_box, volume_density)
+    for (position, intersection) in zip(positions, intersections)
+        use_normal = intersection.normal
         direction = Random.randn(SVector{3, Float64})
         if direction ⋅ use_normal < 0
             direction = - direction
         end
         displacement = norm(direction)
-        reflection = Reflection(geometry_index, obstruction_index, inside, direction ./ displacement, displacement, 0., 0.)
+        reflection = Reflection(intersection, -direction, displacement, 0., 0.)
         push!(spins, Spin(; position=position, reflection=reflection, nsequences=nsequences, kwargs...))
     end
     return spins
