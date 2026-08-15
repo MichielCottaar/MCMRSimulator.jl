@@ -108,4 +108,6 @@ function fix(
     )
 end
 
+fix(geometry::Tuple; kwargs...) = fix(collect(geometry); kwargs...)
+
 end
