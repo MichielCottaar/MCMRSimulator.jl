@@ -257,24 +257,25 @@
             Random.seed!(1234)
             base_spheres = mr.Spheres(radius=1., position=[[0, 0, 0], [1.5, 0, 0]])
             overlap_spheres = mr.Spheres(radius=1., position=[[0, 0, 0], [1.5, 0, 0]], overlapping=true)
+            first_sphere = base_spheres[1]
+            second_sphere = overlap_spheres[2]
             snap = mr.Snapshot([mr.Spin(position=zeros(3)) for _ in 1:3000])
 
             base_final = mr.evolve(snap, mr.Simulation([], geometry=base_spheres, diffusivity=3.), 3.)
             overlap_final = mr.evolve(snap, mr.Simulation([], geometry=overlap_spheres, diffusivity=3.), 3.)
 
-            @test all(length(isin) == 1 && (1, 1) in isin for isin in mr.isinside(mr.fix(base_spheres), base_final))
+            @test all(mr.isinside(first_sphere, base_final) .== 1)
+            @test all(mr.isinside(second_sphere, base_final) .== 0)
 
-            @test all(length(isin) >= 1 for isin in mr.isinside(mr.fix(overlap_spheres), overlap_final))
-            @test any(length(isin) == 2 for isin in mr.isinside(mr.fix(overlap_spheres), overlap_final))
-            @test any((1, 2) in isin for isin in mr.isinside(mr.fix(overlap_spheres), overlap_final))
             @test all(mr.isinside(overlap_spheres, overlap_final) .>= 1)
+            @test any(mr.isinside(overlap_spheres, overlap_final) .== 2)
+            @test any(mr.isinside(second_sphere, overlap_final) .== 1)
 
             @test maximum([pos[1] for pos in mr.position(base_final)]) < 1.
             @test maximum([pos[1] for pos in mr.position(overlap_final)]) > 1.
 
             outside_snap = mr.Snapshot([mr.Spin(position=[3., 0, 0]) for _ in 1:300])
             outside_final = mr.evolve(outside_snap, mr.Simulation([], geometry=overlap_spheres, diffusivity=3.), 3.)
-            @test all(length(isin) == 0 for isin in mr.isinside(mr.fix(overlap_spheres), outside_final))
             @test all(mr.isinside(overlap_spheres, outside_final) .== 0)
         end
     end

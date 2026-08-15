@@ -5,7 +5,7 @@ include("fix_transformations.jl")
 include("fix_properties.jl")
 include("fix_susceptibility.jl")
 
-import ..User.Obstructions: ObstructionGroup, Walls, Cylinders, Spheres, Annuli, BendyCylinder, Mesh
+import ..User.Obstructions: ObstructionGroup, IndexedObstruction, Walls, Cylinders, Spheres, Annuli, BendyCylinder, Mesh
 import ..Internal.PhysicalGeometries: PhysicalGeometry
 import ..Internal.SizeScales: SizeScaleOverride
 import ..Internal.PhysicalGeometries.Groups: GeometryTuple
@@ -31,6 +31,12 @@ end
 
 function fix(group::BendyCylinder; kwargs...)
     fix(Mesh(group); kwargs...)
+end
+
+function fix(obstruction::IndexedObstruction; kwargs...)
+    group = obstruction.group
+    values = (; (key => getproperty(obstruction, key) for key in propertynames(group))...)
+    fix(ObstructionGroup(group.type; number=1, values...); kwargs...)
 end
 
 function fix(
