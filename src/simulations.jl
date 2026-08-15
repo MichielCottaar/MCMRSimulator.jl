@@ -105,7 +105,7 @@ function Simulation(
     if flatten
         sequences = [sequences]
     end
-    geometry = fix(geometry; permeability=permeability, density=surface_density, dwell_time=dwell_time, relaxation=surface_relaxation)
+    geometry = fix(geometry; permeability=permeability, density=surface_density, dwell_time=dwell_time, surface_relaxation=surface_relaxation)
 
     default_properties = GlobalProperties(; R1=R1, R2=R2, off_resonance=off_resonance)
     if iszero(diffusivity) && length(geometry) > 0
