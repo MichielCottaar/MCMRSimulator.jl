@@ -209,18 +209,28 @@ function random_surface_positions(
     bounding_box::InternalBoundingBox{N},
     scale_density,
 ) where {N}
-    child_box = InternalBoundingBox(repeat.geometry)
-    lower = floor.(Int, (InternalBoundingBoxes.lower(bounding_box) - InternalBoundingBoxes.upper(child_box)) ./ repeat.repeats)
-    upper = ceil.(Int, (InternalBoundingBoxes.upper(bounding_box) - InternalBoundingBoxes.lower(child_box)) ./ repeat.repeats)
+    lower = floor.(Int, (InternalBoundingBoxes.lower(bounding_box) + repeat.repeats / 2) ./ repeat.repeats)
+    upper = ceil.(Int, (InternalBoundingBoxes.upper(bounding_box) + repeat.repeats / 2) ./ repeat.repeats) .- 1
     draws = (
-        let displacement = SVector{N, Float64}(indices) .* repeat.repeats
-            positions, intersections = random_surface_positions(
-                repeat.geometry,
-                density,
-                InternalBoundingBoxes.shift(bounding_box, -displacement),
-                scale_density,
-            )
-            [position + displacement for position in positions], intersections
+        let
+            displacement = SVector{N, Float64}(indices) .* repeat.repeats
+            local_lower = max.(-repeat.repeats / 2, InternalBoundingBoxes.lower(bounding_box) - displacement)
+            local_upper = min.(repeat.repeats / 2, InternalBoundingBoxes.upper(bounding_box) - displacement)
+            if any(local_lower .> local_upper)
+                SVector{N, Float64}[], Intersection{N}[]
+            else
+                local_box = InternalBoundingBox(
+                    (local_upper - local_lower) / 2,
+                    (local_upper + local_lower) / 2,
+                )
+                positions, intersections = random_surface_positions(
+                    repeat.geometry,
+                    density,
+                    local_box,
+                    scale_density,
+                )
+                [position + displacement for position in positions], intersections
+            end
         end
         for indices in Iterators.product((lower[index]:upper[index] for index in 1:N)...)
     )
