@@ -21,7 +21,7 @@ import Random
 import StaticArrays: SVector
 import LinearAlgebra: ⋅, norm
 import ..Geometries.BoundingBoxes: BoundingBox, lower, upper
-import ..Reflections: Reflection, empty_reflection, has_intersection, has_hit
+import ..Reflections: Reflection, empty_reflection, has_intersection, has_hit, previous_hit
 import ..Geometries.Internal:
     random_surface_positions,
     FixedGeometry,
@@ -290,7 +290,7 @@ If a non-fixed `geometry` is provided, will return the number of obstructions th
 isinside(geometry, position::AbstractVector) = isinside(geometry, Spin(nsequences=0, position=position))
 isinside(geometry, spin::Spin) = length(isinside(fix(geometry), spin))
 
-isinside(geometry::FixedGeometry, spin::Spin) = isinside(geometry, spin.position, spin.reflection)
+isinside(geometry::FixedGeometry, spin::Spin) = isinside(geometry, spin.position, previous_hit(spin.reflection))
 
 
 """
