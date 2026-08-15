@@ -42,6 +42,9 @@ function inside_indices end
 """Sample surface positions and inward normals within a bounding box."""
 function surface_sampling end
 
+"""Sample surface positions together with initialized collision states."""
+function random_surface_positions end
+
 """Return the axis-aligned bounding box containing a physical geometry."""
 function InternalBoundingBox end
 

@@ -4,7 +4,7 @@ import StaticArrays: SVector
 import ..BoundingBoxes: BoundingBox
 import .Indices: ObstructionIndex
 import .InternalBoundingBoxes: InternalBoundingBox
-import .PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, surface_sampling, inside_indices
+import .PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, surface_sampling, random_surface_positions, inside_indices
 import .PhysicalGeometries.Groups: GeometryTuple
 import .Properties: all_property_values, get_value
 import .Susceptibility: susceptibility_off_resonance, off_resonance_gradient
@@ -12,7 +12,7 @@ import ...Properties: stick_probability
 import .RayGridIntersection: ray_grid_intersections
 
 export FixedGeometry, Intersection, IsInside, collision_normal,
-    isinside, detect_intersection, surface_sampling, geometry_mesh,
+    isinside, detect_intersection, surface_sampling, random_surface_positions, geometry_mesh,
     ray_grid_intersections,
     size_scale, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
@@ -94,6 +94,23 @@ function surface_sampling(
 )
     isnothing(geometry.surface) && return SVector{3, Float64}[], SVector{3, Float64}[]
     surface_sampling(geometry.geometry, geometry.surface.density, bounding_box, volume_density)
+end
+
+function random_surface_positions(
+    geometry::FixedGeometry,
+    bounding_box::InternalBoundingBox{3},
+    volume_density::Number,
+)
+    isnothing(geometry.surface) && return SVector{3, Float64}[], Intersection{3}[]
+    random_surface_positions(geometry.geometry, geometry.surface.density, bounding_box, volume_density)
+end
+
+function random_surface_positions(
+    geometry::FixedGeometry,
+    bounding_box::BoundingBox,
+    volume_density::Number,
+)
+    random_surface_positions(geometry, InternalBoundingBox(bounding_box), volume_density)
 end
 
 function surface_sampling(
