@@ -6,7 +6,6 @@ function inside_indices(
     ::SVector{1, Float64},
     intersection::Intersection{1}=Intersection{1}(),
 )
-    !Base.isempty(intersection) && return intersection.inside ? [ObstructionIndex()] : ObstructionIndex[]
     ObstructionIndex[]
 end
 
