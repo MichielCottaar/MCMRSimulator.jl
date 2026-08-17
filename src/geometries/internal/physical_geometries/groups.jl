@@ -9,8 +9,8 @@ import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 
-abstract type GroupGeometry{N} <: PhysicalGeometry{N} end
-abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N} end
+abstract type GroupGeometry{N, P<:PhysicalGeometry{N}} <: PhysicalGeometry{N} end
+abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
 
 _is_fully_concrete(::Type{T}) where {T} =
     isconcretetype(T) && all(parameter -> !(parameter isa Type) || _is_fully_concrete(parameter), T.parameters)
@@ -60,10 +60,8 @@ struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} <: GroupGeometry{
     geometries::P
 end
 
-has_inside(::Type{<:GeometryVector{N, P}}) where {N, P} = has_inside(P)
-has_inside(::Type{<:GeometryVectorBoundingBox{N, P}}) where {N, P} = has_inside(P)
-has_inside(::Type{<:GeometryVectorGrid{N, P}}) where {N, P} = has_inside(P)
-has_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = any(has_inside, P.parameters)
+has_inside(::Type{<:GroupGeometry{N, P}}) where {N, P} = has_inside(P)
+has_single_inside(::Type{<:GroupGeometry}) = false
 
 function InternalBoundingBox(geometry::GroupGeometry{N}) where {N}
     isempty(geometry) && throw(ArgumentError("cannot construct a bounding box for an empty geometry group"))

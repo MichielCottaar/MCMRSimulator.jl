@@ -1,7 +1,7 @@
 module Transparents
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox, size_scale
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, inside_indices, InternalBoundingBox, size_scale
 import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ...Properties: GeometryProperties
 
@@ -20,6 +20,7 @@ end
 transparent_geometry(wrapper::Transparent) = getfield(wrapper, :geometry)
 
 has_inside(::Type{<:Transparent{N, P}}) where {N, P} = has_inside(P)
+has_single_inside(::Type{<:Transparent{N, P}}) where {N, P} = has_single_inside(P)
 
 InternalBoundingBox(wrapper::Transparent) = InternalBoundingBox(transparent_geometry(wrapper))
 

@@ -3,6 +3,7 @@ struct Round{N} <: BaseObstruction{N}
 end
 
 has_inside(::Type{<:Round}) = true
+has_single_inside(::Type{<:Round}) = true
 
 function inside_indices(
     round::Round{N},

@@ -1,6 +1,7 @@
 struct InfiniteWall <: BaseObstruction{1} end
 
 has_inside(::Type{InfiniteWall}) = false
+has_single_inside(::Type{InfiniteWall}) = false
 function inside_indices(
     ::InfiniteWall,
     ::SVector{1, Float64},

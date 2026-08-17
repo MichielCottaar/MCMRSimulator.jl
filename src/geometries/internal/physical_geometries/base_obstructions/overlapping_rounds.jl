@@ -4,6 +4,7 @@ struct OverlappingRound{N} <: BaseObstruction{N}
 end
 
 has_inside(::Type{<:OverlappingRound}) = true
+has_single_inside(::Type{<:OverlappingRound}) = true
 
 function inside_indices(
     round::OverlappingRound{N},

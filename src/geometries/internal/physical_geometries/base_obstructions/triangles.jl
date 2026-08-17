@@ -7,6 +7,7 @@ struct FullTriangle <: BaseObstruction{3}
 end
 
 has_inside(::Type{FullTriangle}) = false
+has_single_inside(::Type{FullTriangle}) = false
 function inside_indices(
     ::FullTriangle,
     ::SVector{3, Float64},

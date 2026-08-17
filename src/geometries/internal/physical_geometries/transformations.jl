@@ -5,7 +5,7 @@ import StaticArrays: SMatrix, SVector
 import LinearAlgebra: norm, nullspace, cross
 import Random: rand
 import ...InternalBoundingBoxes
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _mesh_result, _translate_native
 import ...Properties: GeometryProperties
 
@@ -21,6 +21,7 @@ Transformation of a geometry from an `N`-dimensional coordinate system to an
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
 
 has_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_inside(P)
+has_single_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_single_inside(P)
 
 InternalBoundingBox(transformation::Transformation) =
     backward(transformation, InternalBoundingBox(transformation.geometry))

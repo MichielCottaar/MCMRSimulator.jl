@@ -33,6 +33,7 @@ Repeat(geometry::P, repeats::AbstractVector{<:Real}) where {N, P<:PhysicalGeomet
     Repeat{N, P}(geometry, SVector{N, Float64}(repeats))
 
 has_inside(::Type{<:Repeat{N, P}}) where {N, P} = has_inside(P)
+has_single_inside(::Type{<:Repeat}) = false
 
 _wrap(repeat::Repeat, position) = mod.(position .+ repeat.repeats / 2, repeat.repeats) .- repeat.repeats / 2
 

@@ -21,8 +21,14 @@ function detect_intersection end
 """Return whether a geometry has an inside region."""
 function has_inside end
 
+"""Returns whether the geometry has a single inside region."""
+function has_single_inside end
+
 """Return the obstruction indices containing a position."""
 function inside_indices end
+
+"""Whether the geometry is within the single inside."""
+function is_in_single_inside end
 
 """Sample surface positions together with initialized collision states."""
 function random_surface_positions end

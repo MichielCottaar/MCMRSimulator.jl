@@ -33,6 +33,7 @@ struct Mesh <: PhysicalGeometry{3}
 end
 
 has_inside(::Type{Mesh}) = true
+has_single_inside(::Type{Mesh}) = true
 
 function _mesh_indices(indices, nvertices)
     result = [SVector{3, Int}(triangle) for triangle in indices]
