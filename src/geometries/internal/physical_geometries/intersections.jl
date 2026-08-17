@@ -39,6 +39,13 @@ function remove_index(intersection::Intersection)
     intersection.hit_gap
 ))
 
+"""
+    flip(intersection)
+
+Flips a collision of the spin with a surface to the other side.
+
+It returns a new collision. This should be called if a spin passes through to the other side of the surface due to permeability.
+"""
 flip(intersection::Intersection) = Intersection(
     intersection.distance,
     -intersection.normal,
