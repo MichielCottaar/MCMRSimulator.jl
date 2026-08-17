@@ -2,6 +2,7 @@
 Defines the microstructural environment with which the spins interact.
 """
 module Geometries
+include("utils.jl")
 include("bounding_box.jl")
 include("internal/internal.jl")
 include("user/user.jl")
