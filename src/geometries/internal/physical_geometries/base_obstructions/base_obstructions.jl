@@ -1,7 +1,7 @@
 module BaseObstructions
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, flip
 import ...InternalBoundingBoxes: InternalBoundingBox
 import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
@@ -25,9 +25,8 @@ function surface_samples_to_intersection(
 ) where {N}
     intersections = Intersection{N}[]
     for normal in normals
-        inside = rand(Bool)
-        push!(intersections, Intersection(0.0, inside ? normal : -normal, inside,
-            ObstructionIndex(), false))
+        intersection = Intersection(0.0, normal, true, ObstructionIndex(), false)
+        push!(intersections, rand(Bool) ? intersection : flip(intersection))
     end
     positions, intersections
 end

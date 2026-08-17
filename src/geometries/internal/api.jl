@@ -5,7 +5,7 @@ import ..BoundingBoxes: BoundingBox
 import .Indices: ObstructionIndex
 import .InternalBoundingBoxes: InternalBoundingBox
 import .InternalBoundingBoxes
-import .PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, random_surface_positions, inside_indices, size_scale, geometry_mesh
+import .PhysicalGeometries: PhysicalGeometry, Intersection, flip, detect_intersection, random_surface_positions, inside_indices, size_scale, geometry_mesh
 import .PhysicalGeometries.Groups: GeometryTuple
 import .PhysicalGeometries.Transparents: SizeScaleOverride
 import .Properties: all_property_values, get_value
@@ -13,7 +13,7 @@ import .Susceptibility: susceptibility_off_resonance, off_resonance_gradient
 import ...Properties: stick_probability
 import .RayGridIntersection: ray_grid_intersections
 
-export FixedGeometry, Intersection, IsInside, collision_normal,
+export FixedGeometry, Intersection, flip, IsInside, collision_normal,
     isinside, detect_intersection, random_surface_positions, geometry_mesh,
     ray_grid_intersections,
     size_scale, SizeScaleOverride, max_timestep_sticking, max_permeability_non_inf,

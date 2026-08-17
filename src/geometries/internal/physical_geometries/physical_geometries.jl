@@ -42,7 +42,7 @@ function geometry_mesh(geometry; height=nothing, nsamples=100, bounding_box=noth
 end
 
 include("intersections.jl")
-import .Intersections: Intersection
+import .Intersections: Intersection, flip
 include("grid_dispatch.jl")
 include("groups.jl")
 include("transformations.jl")

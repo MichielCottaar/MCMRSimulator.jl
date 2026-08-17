@@ -3,7 +3,7 @@ module Reflections
 
 import StaticArrays: SVector
 import LinearAlgebra: ⋅, norm
-import ..Geometries.Internal: Intersection, ObstructionIndex
+import ..Geometries.Internal: Intersection, ObstructionIndex, flip
 
 """State carried by a spin while it is reflecting from or bound to a surface."""
 struct Reflection
@@ -23,24 +23,18 @@ function Reflection(
     distance_moved,
     permeable=false,
 )
+    updated_collision = permeable ? flip(collision) : collision
     if permeable
         reflection_direction = direction
-        inside = !collision.inside
+        inside = updated_collision.inside
     else
         reflection_direction =
             -2 * (collision.normal ⋅ direction) * collision.normal /
             norm(collision.normal)^2 + direction
-        inside = collision.inside
+        inside = updated_collision.inside
     end
 
     normalized_direction = reflection_direction / norm(reflection_direction)
-    updated_collision = Intersection(
-        collision.distance,
-        collision.normal,
-        inside,
-        collision.obstruction_index,
-        collision.hit_gap,
-    )
     Reflection(
         updated_collision,
         inside,
