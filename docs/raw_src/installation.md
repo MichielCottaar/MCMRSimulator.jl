@@ -12,7 +12,7 @@ You can run simulations either directly from the Julia REPL, in a [Jupyter noteb
    - (Optional) If you want to use `MRIBuilder` to generate sequences, install it using `pkg> add https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl.git`.
    - Press "\[backspace\]" to leave the package manager.
 5. (Optional) To install the MCMRSimulator command line interface (CLI), run the following in the Julia package manager:
-   `pkg> app add MCMRSimulator`
+   `pkg> app add https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl.git{install_version}`
    This installs the `mcmr` app. Ensure that `~/.julia/bin` is in your `$PATH`.
 
 ## Running MCMRSimulator
