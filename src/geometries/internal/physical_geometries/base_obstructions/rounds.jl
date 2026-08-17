@@ -1,4 +1,4 @@
-import ....Utils.ToMesh: icosahedron
+import ....Utils: icosahedron
 
 struct Round{N} <: BaseObstruction{N}
     radius::Float64
