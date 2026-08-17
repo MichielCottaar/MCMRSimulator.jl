@@ -9,7 +9,6 @@ import ...Indices: ObstructionIndex
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryLeafProperties
-import ..BaseObstructions: surface_samples_to_intersection, _triangle_sampling
 import ..Groups
 import ..GridDispatch: detect_intersection_grid
 import ...InternalBoundingBoxes
@@ -63,6 +62,7 @@ function _mesh_grid_resolution(extent, number, resolution)
     Float64(resolution)
 end
 
+"Helper function to compute holes in meshes (`_mesh_gap_indices`)"
 function _mesh_boundary_edges(indices)
     edge_occurrences = Dict{Tuple{Int, Int}, Vector{Tuple{Int, Int}}}()
     for triangle in indices
@@ -74,6 +74,7 @@ function _mesh_boundary_edges(indices)
     [occurrences[1] for occurrences in values(edge_occurrences) if length(occurrences) == 1]
 end
 
+"Helper function to compute holes in meshes (`_mesh_gap_indices`)"
 function _mesh_boundary_loops(indices)
     boundary_edges = _mesh_boundary_edges(indices)
     outgoing = Dict{Int, Vector{Tuple{Int, Int}}}()
@@ -105,6 +106,7 @@ function _mesh_boundary_loops(indices)
     loops
 end
 
+"Filles holes in meshes"
 function _mesh_gap_indices(vertices, indices)
     gap_indices = SVector{3, Int}[]
     for loop in _mesh_boundary_loops(indices)
@@ -423,11 +425,12 @@ size_scale(mesh::Mesh) = begin
 end
 
 function random_surface_positions(mesh::Mesh, density::GeometryLeafProperties, bounding_box::InternalBoundingBox{3}, scale_density)
-    draws = (_triangle_sampling(triangle(mesh, index), density.value, scale_density)
-        for index in 1:(mesh.first_index_of_gap - 1))
-    positions = reduce(vcat, (draw[1] for draw in draws); init=SVector{3, Float64}[])
-    normals = reduce(vcat, (draw[2] for draw in draws); init=SVector{3, Float64}[])
-    surface_samples_to_intersection(positions, normals)
+    draws = (let
+        values = random_surface_positions(
+            triangle(mesh, index), density, bounding_box, scale_density)
+        values[1], [Groups._prepend_intersection(index, hit) for hit in values[2]]
+    end for index in 1:(mesh.first_index_of_gap - 1))
+    Groups._combine(draws, Val(3))
 end
 
 function _geometry_mesh(mesh::Mesh; kwargs...)
