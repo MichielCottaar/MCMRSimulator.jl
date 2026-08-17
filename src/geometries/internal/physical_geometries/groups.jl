@@ -2,7 +2,7 @@
 module Groups
 
 import StaticArrays: SVector
-import ...Indices: ObstructionIndex
+import ...Indices: ObstructionIndex, add_index, remove_index
 import ...InternalBoundingBoxes
 import ..GridDispatch: detect_intersection_grid
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
@@ -78,26 +78,14 @@ end
 
 InternalBoundingBox(geometry::GeometryVectorGrid) = geometry.bounding_box
 
-function _prepend_index(obstruction_index::ObstructionIndex, index::Int)
-    ObstructionIndex(SVector(index, obstruction_index.indices...))
-end
-
 function _inside_child_intersection(
     intersection::Intersection{N},
     child_index::Int,
 ) where {N}
     Base.isempty(intersection) && return Intersection{N}()
-    indices = intersection.obstruction_index.indices
-    isempty(indices) && return Intersection{N}()
-    indices[1] == child_index || return Intersection{N}()
-    remaining = ObstructionIndex(SVector{length(indices) - 1, Int}(indices[2:end]))
-    Intersection(
-        intersection.distance,
-        intersection.normal,
-        intersection.inside,
-        remaining,
-        intersection.hit_gap,
-    )
+    isempty(intersection.obstruction_index.indices) && return Intersection{N}()
+    index, child_intersection = remove_index(intersection)
+    index == child_index ? child_intersection : Intersection{N}()
 end
 
 function inside_indices(
@@ -112,7 +100,7 @@ function inside_indices(
             !InternalBoundingBoxes.isinside(geometry.bounding_boxes[child_index], position) && continue
         child_intersection = _inside_child_intersection(intersection, child_index)
         for obstruction_index in inside_indices(child, position, child_intersection)
-            push!(indices, _prepend_index(obstruction_index, child_index))
+            push!(indices, add_index(obstruction_index, child_index))
         end
     end
     indices
@@ -138,7 +126,7 @@ function inside_indices(
     for child_index in geometry.indices[coordinate...]
         child_intersection = _inside_child_intersection(intersection, child_index)
         for obstruction_index in inside_indices(geometry.geometries[child_index], position, child_intersection)
-            push!(indices, _prepend_index(obstruction_index, child_index))
+            push!(indices, add_index(obstruction_index, child_index))
         end
     end
     indices
@@ -158,7 +146,7 @@ function inside_indices(
     for (child_index, child) in enumerate(geometry)
         child_intersection = _inside_child_intersection(intersection, child_index)
         for obstruction_index in inside_indices(child, position, child_intersection)
-            push!(indices, _prepend_index(obstruction_index, child_index))
+            push!(indices, add_index(obstruction_index, child_index))
         end
     end
     indices
@@ -225,35 +213,16 @@ GeometryVectorBoundingBox(
 GeometryTuple{N}(geometries::Tuple{Vararg{PhysicalGeometry{N}}}) where {N} =
     GeometryTuple{N, typeof(geometries)}(geometries)
 
-function _prepend_index(intersection::Intersection{N}, index::Int) where {N}
-    obstruction_index = intersection.obstruction_index
-    indices = SVector(index, obstruction_index.indices...)
-    return Intersection(
-        intersection.distance,
-        intersection.normal,
-        intersection.inside,
-        ObstructionIndex(indices),
-        intersection.hit_gap,
-    )
-end
-
 function _previous_hit_for_child(
     geometry::GroupGeometry,
     previous_hit::Intersection{3},
     child_index::Int,
 )
     Base.isempty(previous_hit) && return Intersection{3}()
-    indices = previous_hit.obstruction_index.indices
-    isempty(indices) && throw(ArgumentError("a non-empty previous hit must have an obstruction index"))
-    indices[1] == child_index || return Intersection{3}()
-    remaining_indices = SVector{length(indices) - 1, Int}(indices[2:end])
-    return Intersection(
-        previous_hit.distance,
-        previous_hit.normal,
-        previous_hit.inside,
-        ObstructionIndex(remaining_indices),
-        previous_hit.hit_gap,
-    )
+    isempty(previous_hit.obstruction_index.indices) &&
+        throw(ArgumentError("a non-empty previous hit must have an obstruction index"))
+    index, child_previous_hit = remove_index(previous_hit)
+    index == child_index ? child_previous_hit : Intersection{3}()
 end
 
 function _could_intersect(
@@ -295,7 +264,7 @@ function detect_intersection(
         child_previous_hit = _previous_hit_for_child(geometry, previous_hit, child_index)
         intersection = detect_intersection(child, start, destination, child_previous_hit)
         if intersection.distance < closest.distance
-            closest = _prepend_index(intersection, child_index)
+            closest = add_index(intersection, child_index)
         end
     end
     return closest
@@ -317,7 +286,7 @@ function detect_intersection(
     ) do child_index, previous
         child_previous_hit = _previous_hit_for_child(geometry, previous, child_index)
         intersection = detect_intersection(geometry.geometries[child_index], start, destination, child_previous_hit)
-        _prepend_index(intersection, child_index)
+        add_index(intersection, child_index)
     end
 end
 
@@ -350,16 +319,11 @@ function _combine(draws, ::Val{N}) where {N}
     positions, intersections
 end
 
-function _prepend_intersection(index::Int, intersection::Intersection{N}) where {N}
-    Intersection(intersection.distance, intersection.normal, intersection.inside,
-        ObstructionIndex(SVector(index, intersection.obstruction_index.indices...)), intersection.hit_gap)
-end
-
 function random_surface_positions(geometry::Union{GeometryVectorLike{N}, GeometryTuple{N}}, density::GeometryProperties,
     bounding_box::InternalBoundingBox{N}, scale_density) where {N}
     _combine((let
         values = random_surface_positions(child, _density_child(density, index), bounding_box, scale_density)
-        (values[1], [_prepend_intersection(index, hit) for hit in values[2]])
+        (values[1], [add_index(hit, index) for hit in values[2]])
     end for (index, child) in enumerate(geometry)), Val(N))
 end
 

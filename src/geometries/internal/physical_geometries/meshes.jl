@@ -5,7 +5,7 @@ import LinearAlgebra: cross, norm, svd, ⋅
 import DelaunayTriangulation: triangulate, get_triangles
 import NearestNeighbors: KDTree, nn
 
-import ...Indices: ObstructionIndex
+import ...Indices: ObstructionIndex, add_index
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryLeafProperties
@@ -257,7 +257,7 @@ function _mesh_inside_mask(
                 hit.distance,
                 hit.normal,
                 hit.inside,
-                ObstructionIndex(SVector(candidate_index)),
+            add_index(ObstructionIndex(), candidate_index),
                 false,
             )
         end
@@ -346,7 +346,7 @@ function detect_intersection(
             intersection.distance,
             intersection.normal,
             intersection.inside,
-            ObstructionIndex(SVector(triangle_index)),
+            add_index(ObstructionIndex(), triangle_index),
             triangle_index >= mesh.first_index_of_gap,
         )
     end
@@ -428,7 +428,7 @@ function random_surface_positions(mesh::Mesh, density::GeometryLeafProperties, b
     draws = (let
         values = random_surface_positions(
             triangle(mesh, index), density, bounding_box, scale_density)
-        values[1], [Groups._prepend_intersection(index, hit) for hit in values[2]]
+        values[1], [add_index(hit, index) for hit in values[2]]
     end for index in 1:(mesh.first_index_of_gap - 1))
     Groups._combine(draws, Val(3))
 end
