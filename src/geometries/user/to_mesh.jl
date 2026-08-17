@@ -7,7 +7,7 @@ import BSplineKit: BSplineOrder, interpolate, Derivative
 import LinearAlgebra: cross, norm, ⋅
 import Statistics: mean
 import ....Methods: get_rotation
-import ...Utils.ToMesh: icosahedron
+import ...Utils: icosahedron
 import ..Obstructions: Mesh, value_as_vector, BendyCylinder, Cylinder, Cylinders, Wall, Walls, Sphere, Spheres
 
 """
