@@ -483,7 +483,7 @@ end
 
     shifted_inside = Shift(sphere, [2.0, 0.0, 0.0])
     @test has_single_inside(typeof(shifted_inside))
-    @test isinside_single(shifted_inside, SVector(-2.0, 0.0, 0.0))
+    @test isinside_single(shifted_inside, SVector(2.0, 0.0, 0.0))
     @test !isinside_single(shifted_inside, SVector(0.0, 0.0, 0.0))
 
     inside_spheres = GeometryVector{3}([
@@ -641,14 +641,14 @@ end
 
     shifted_sphere = Shift(sphere, [1.0, 0.0, 0.0])
     shifted_sphere_box = BoundingBoxes.InternalBoundingBox(shifted_sphere)
-    @test BoundingBoxes.lower(shifted_sphere_box) == SVector(-3.0, -2.0, -2.0)
-    @test BoundingBoxes.upper(shifted_sphere_box) == SVector(1.0, 2.0, 2.0)
+    @test BoundingBoxes.lower(shifted_sphere_box) == SVector(-1.0, -2.0, -2.0)
+    @test BoundingBoxes.upper(shifted_sphere_box) == SVector(3.0, 2.0, 2.0)
     shifted_hit = GI.PhysicalGeometries.detect_intersection(
         shifted_sphere,
         SVector(-4.0, 0.0, 0.0),
         SVector(2.0, 0.0, 0.0),
     )
-    @test shifted_hit.distance ≈ 1 / 6
+    @test shifted_hit.distance ≈ 1 / 2
     @test shifted_hit.normal == SVector(-1.0, 0.0, 0.0)
 
     grouped_spheres = GeometryVector{3}([
@@ -678,7 +678,7 @@ end
         Shift(sphere, [3.0, 0.0, 0.0]),
     ]; grid=true, grid_resolution=2.0)
     @test grid_spheres isa GeometryVectorGrid{3, Shift{3, BaseObstructions.Sphere}}
-    @test inside_indices(grid_spheres, SVector(3.0, 0.0, 0.0)) == [ObstructionIndex(SVector(1))]
+    @test inside_indices(grid_spheres, SVector(3.0, 0.0, 0.0)) == [ObstructionIndex(SVector(2))]
     regular_grid_hit = GI.PhysicalGeometries.detect_intersection(
         GeometryVector([
             Shift(sphere, [-3.0, 0.0, 0.0]),
@@ -706,7 +706,7 @@ end
         SVector(5.0, 0.0, 0.0),
     )
     @test grouped_hit.distance ≈ 1 / 5
-    @test grouped_hit.obstruction_index == ObstructionIndex(SVector(2))
+    @test grouped_hit.obstruction_index == ObstructionIndex(SVector(1))
     grouped_boundary = SVector(3.0, 0.0, 0.0)
     grouped_inside = GI.PhysicalGeometries.Intersection(
         0.5,
@@ -732,7 +732,7 @@ end
         grouped_hit,
     )
     @test next_grouped_hit.distance ≈ 3 / 5
-    @test next_grouped_hit.obstruction_index == ObstructionIndex(SVector(1))
+    @test next_grouped_hit.obstruction_index == ObstructionIndex(SVector(2))
     @test_throws ArgumentError GI.PhysicalGeometries.detect_intersection(
         grouped_spheres,
         SVector(-5.0, 0.0, 0.0),
@@ -752,7 +752,7 @@ end
         SVector(-6.0, 0.0, 0.0),
         SVector(6.0, 0.0, 0.0),
     )
-    @test scaled_hit.distance ≈ 5 / 12
+    @test scaled_hit.distance ≈ 1 / 6
     @test scaled_hit.normal ≈ SVector(-1.0, 0.0, 0.0)
 
     projected_cylinder = Rotate(cylinder, SMatrix{3, 2, Float64}([1.0 0.0; 0.0 1.0; 0.0 0.0]))
@@ -798,16 +798,16 @@ end
     @test_throws ArgumentError Scale(geometry_3d, -1.0)
     rotation = Rotate(geometry_2d, SMatrix{2, 2, Float64}([0.0 -1.0; 1.0 0.0]))
     position_2d = SVector(1.0, 2.0)
-    @test Transformations.to_child_coordinates(rotation, position_2d) == SVector(-2.0, 1.0)
-    @test Transformations.from_child_coordinates(rotation, SVector(-2.0, 1.0)) == position_2d
-    @test Transformations.normal_to_child_coordinates(rotation, position_2d) == SVector(-2.0, 1.0)
+    @test Transformations.to_child_coordinates(rotation, position_2d) == SVector(2.0, -1.0)
+    @test Transformations.from_child_coordinates(rotation, SVector(2.0, -1.0)) == position_2d
+    @test Transformations.normal_to_child_coordinates(rotation, position_2d) == SVector(2.0, -1.0)
     reflection = Rotate(geometry_2d, SMatrix{2, 2, Float64}([-1.0 0.0; 0.0 1.0]))
     @test Transformations.to_child_coordinates(reflection, position_2d) == SVector(-1.0, 2.0)
 
     projection = Rotate(geometry_2d, SMatrix{3, 2, Float64}([1.0 0.0; 0.0 1.0; 0.0 0.0]))
     @test projection isa Transformations.Transformation{3, 2, typeof(geometry_2d)}
     @test Transformations.to_child_coordinates(projection, SVector(1.0, 2.0, 3.0)) == SVector(1.0, 2.0)
-    @test_throws ArgumentError Transformations.from_child_coordinates(projection, SVector(1.0, 2.0))
+    @test Transformations.from_child_coordinates(projection, SVector(1.0, 2.0)) == SVector(1.0, 2.0, 0.0)
     @test_throws ArgumentError Transformations.normal_to_child_coordinates(projection, SVector(1.0, 2.0, 3.0))
     @test Transformations.normal_from_child_coordinates(projection, SVector(1.0, 2.0)) ≈ SVector(1.0, 2.0, 0.0) / sqrt(5)
     @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(projection)

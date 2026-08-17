@@ -193,11 +193,16 @@ end
 to_child_coordinates(transformation::Rotate, box::InternalBoundingBoxes.InternalBoundingBox) =
     _rotate_box(transformation, box)
 
-from_child_coordinates(transformation::Rotate{N, M}, box::InternalBoundingBoxes.InternalBoundingBox{M}) where {N, M} =
-    N == M ? InternalBoundingBoxes.InternalBoundingBox{N}(
+function from_child_coordinates(
+    transformation::Rotate{N, M},
+    box::InternalBoundingBoxes.InternalBoundingBox{K},
+) where {N, M, K}
+    N == M && K == M || throw(ArgumentError("from_child_coordinates is not defined for dimension-reducing Rotate transformations"))
+    InternalBoundingBoxes.InternalBoundingBox{N}(
         abs.(transformation.matrix) * _box_half_size(box),
         transformation.matrix * _box_center(box),
-    ) : throw(ArgumentError("from_child_coordinates is not defined for dimension-reducing Rotate transformations"))
+    )
+end
 
 function detect_intersection(
     transformation::Transformation{N, M, P},
@@ -291,7 +296,7 @@ function _geometry_mesh(transformation::Rotate{3, 1}, geometry; height=nothing, 
         2 * sum(abs.(axis) .* InternalBoundingBoxes.half_size(bounding_box))) : Float64(height)
     h1 = mesh_height(first)
     h2 = mesh_height(second)
-    [_mesh_result([transformation.matrix' * SVector{1, Float64}(position) + a * h1/2 * first + b * h2/2 * second
+    [_mesh_result([transformation.matrix * SVector{1, Float64}(position) + a * h1/2 * first + b * h2/2 * second
         for (a, b) in ((1,1),(-1,1),(1,-1),(-1,-1))], [SVector(1,2,3), SVector(4,3,2)]) for position in positions]
 end
 
@@ -312,8 +317,8 @@ function _geometry_mesh(transformation::Rotate{3, 2}, geometry; height=nothing, 
     axis = cross(first, second); axis = axis ./ norm(axis)
     extrusion = isnothing(height) ? (isnothing(bounding_box) ? 1. :
         2 * sum(abs.(axis) .* InternalBoundingBoxes.half_size(bounding_box))) : Float64(height)
-    [_mesh_result(vcat([transformation.matrix' * point for point in circle] .+ Ref(axis * extrusion/2),
-        [transformation.matrix' * point for point in circle] .- Ref(axis * extrusion/2)),
+    [_mesh_result(vcat([transformation.matrix * point for point in circle] .+ Ref(axis * extrusion/2),
+        [transformation.matrix * point for point in circle] .- Ref(axis * extrusion/2)),
         _circle_triangles(circle)) for circle in circles]
 end
 

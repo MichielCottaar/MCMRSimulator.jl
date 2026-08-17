@@ -1,5 +1,8 @@
 module Utils
 
+import LinearAlgebra: norm
+import StaticArrays: SVector
+
 """
     icosahedron(subdivision)
 
