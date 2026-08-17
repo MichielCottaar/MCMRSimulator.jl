@@ -327,6 +327,22 @@ end
     @test has_single_inside(typeof(mesh))
     @test isinside_single(mesh, SVector(0.2, 0.2, 0.2))
     @test !isinside_single(mesh, SVector(1.2, 0.2, 0.2))
+    stuck_inside_mesh = GI.PhysicalGeometries.Intersection(
+        0.5,
+        SVector(1.0, 0.0, 0.0),
+        true,
+        ObstructionIndex(SVector(1)),
+        false,
+    )
+    stuck_outside_mesh = GI.PhysicalGeometries.Intersection(
+        0.5,
+        SVector(1.0, 0.0, 0.0),
+        false,
+        ObstructionIndex(SVector(1)),
+        false,
+    )
+    @test isinside_single(mesh, SVector(1.2, 0.2, 0.2), stuck_inside_mesh)
+    @test !isinside_single(mesh, SVector(0.2, 0.2, 0.2), stuck_outside_mesh)
     @test mesh.indices[mesh.first_index_of_gap] == SVector(4, 2, 3)
     @test BoundingBoxes.lower(mesh.bounding_box) == SVector(0.0, 0.0, 0.0)
     @test BoundingBoxes.upper(mesh.bounding_box) == SVector(1.0, 1.0, 1.0)
