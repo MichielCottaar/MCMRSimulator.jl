@@ -25,6 +25,7 @@ add_index(oi::ObstructionIndex{N}, new_index::Int) where {N} = ObstructionIndex{
 Returns the first integer index and a new index/intersection with that index removed.
 """
 remove_index(oi::ObstructionIndex{N}) where {N} = (oi.indices[1], ObstructionIndex{N-1}(SVector{N-1, Int}([oi.indices[2:end]...])))
+remove_index(::ObstructionIndex{0}) = error("Cannot retreive index from empty `ObstructionIntersection`.")
 
 """
     get_obstruction(geometry, obstruction_index)
