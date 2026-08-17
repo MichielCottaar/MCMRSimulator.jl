@@ -39,8 +39,7 @@ function surface_sampling(
     bounding_box::InternalBoundingBox{1}, scale_density,
 )
     nspins = rand(Poisson(density.value * scale_density))
-    _filter_to_box(fill(zero(SVector{1, Float64}), nspins),
-        fill(SVector{1, Float64}(1.0), nspins), bounding_box)
+    fill(zero(SVector{1, Float64}), nspins), fill(SVector{1, Float64}(1.0), nspins)
 end
 
 _geometry_mesh(::InfiniteWall; kwargs...) = [0.]

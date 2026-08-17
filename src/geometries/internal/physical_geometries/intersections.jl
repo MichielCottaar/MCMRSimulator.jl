@@ -1,4 +1,5 @@
 module Intersections
+import StaticArrays: SVector
 import ...Indices: ObstructionIndex, add_index, remove_index
 
 """
@@ -29,7 +30,7 @@ add_index(intersection::Intersection, new_index::Int) = Intersection(
     intersection.hit_gap
 )
 function remove_index(intersection::Intersection)
-    index, obstruction_index = remove_index(intersection)
+    index, obstruction_index = remove_index(intersection.obstruction_index)
     return (index, Intersection(
     intersection.distance,
     intersection.normal,

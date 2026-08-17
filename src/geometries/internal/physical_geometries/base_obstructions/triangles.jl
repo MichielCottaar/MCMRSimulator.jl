@@ -90,5 +90,5 @@ function surface_sampling(
     triangle::FullTriangle, density::GeometryLeafProperties,
     bounding_box::InternalBoundingBox{3}, scale_density,
 )
-    _filter_to_box(_triangle_sampling(triangle, density.value, scale_density)..., bounding_box)
+    _triangle_sampling(triangle, density.value, scale_density)
 end

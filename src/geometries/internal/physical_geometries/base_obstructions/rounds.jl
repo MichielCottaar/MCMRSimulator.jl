@@ -64,7 +64,7 @@ function surface_sampling(
     round::Round{N}, density::GeometryLeafProperties,
     bounding_box::InternalBoundingBox{N}, scale_density,
 ) where {N}
-    _filter_to_box(_round_sampling(round, density.value, scale_density)..., bounding_box)
+    _round_sampling(round, density.value, scale_density)
 end
 
 function _geometry_mesh(cylinder::InfiniteCylinder; nsamples=100, kwargs...)

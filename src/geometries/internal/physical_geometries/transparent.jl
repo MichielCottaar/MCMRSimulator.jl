@@ -2,7 +2,7 @@ module Transparents
 
 import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox, size_scale
-import ..PhysicalGeometries: surface_sampling, random_surface_positions, _geometry_mesh
+import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ...Properties: GeometryProperties
 
 abstract type Transparent{N, P <: PhysicalGeometry{N}} <: PhysicalGeometry{N} end
@@ -41,9 +41,6 @@ end
 size_scale(wrapper::SizeScaleOverride) = wrapper.size_scale
 size_scale(wrapper::Transparent) = size_scale(transparent_geometry(wrapper))
 
-surface_sampling(wrapper::Transparent{N}, density::GeometryProperties,
-    bounding_box::InternalBoundingBox{N}, scale_density) where N =
-    surface_sampling(transparent_geometry(wrapper), density, bounding_box, scale_density)
 random_surface_positions(wrapper::Transparent{N}, density::GeometryProperties,
     bounding_box::InternalBoundingBox{N}, scale_density) where N =
     random_surface_positions(transparent_geometry(wrapper), density, bounding_box, scale_density)

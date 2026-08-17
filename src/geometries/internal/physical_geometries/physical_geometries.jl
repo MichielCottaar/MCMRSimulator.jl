@@ -24,9 +24,6 @@ function has_inside end
 """Return the obstruction indices containing a position."""
 function inside_indices end
 
-"""Sample surface positions and inward normals within a bounding box."""
-function surface_sampling end
-
 """Sample surface positions together with initialized collision states."""
 function random_surface_positions end
 
@@ -45,6 +42,7 @@ function geometry_mesh(geometry; height=nothing, nsamples=100, bounding_box=noth
 end
 
 include("intersections.jl")
+import .Intersections: Intersection
 include("grid_dispatch.jl")
 include("groups.jl")
 include("transformations.jl")

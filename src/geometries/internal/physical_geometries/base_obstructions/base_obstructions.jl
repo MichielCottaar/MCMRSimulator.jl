@@ -6,18 +6,20 @@ import ...InternalBoundingBoxes: InternalBoundingBox
 import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
 import ...Properties: GeometryLeafProperties
-import ..PhysicalGeometries: random_surface_positions, surface_sampling, size_scale, _geometry_mesh, _mesh_result
+import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _mesh_result
 import Distributions: Poisson
 import Random: rand
 
 abstract type BaseObstruction{N} <: PhysicalGeometry{N} end
+
+function surface_sampling end
 
 include("infinite_walls.jl")
 include("rounds.jl")
 include("overlapping_rounds.jl")
 include("triangles.jl")
 
-function _sample_intersections(
+function surface_samples_to_intersection(
     positions::AbstractVector{SVector{N, Float64}},
     normals::AbstractVector{SVector{N, Float64}},
 ) where {N}
@@ -34,14 +36,7 @@ function random_surface_positions(
     geometry::BaseObstruction{N}, density::GeometryLeafProperties,
     bounding_box::InternalBoundingBoxes.InternalBoundingBox{N}, scale_density,
 ) where {N}
-
-    _sample_intersections(surface_sampling(geometry, density, bounding_box, scale_density)...)
-end
-
-function _filter_to_box(positions, normals, bounding_box)
-    keep = [all(position .>= InternalBoundingBoxes.lower(bounding_box)) &&
-            all(position .<= InternalBoundingBoxes.upper(bounding_box)) for position in positions]
-    positions[keep], normals[keep]
+    surface_samples_to_intersection(surface_sampling(geometry, density, bounding_box, scale_density)...)
 end
 
 size_scale(::InfiniteWall) = Inf

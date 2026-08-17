@@ -6,7 +6,7 @@ import LinearAlgebra: norm, nullspace, cross
 import Random: rand
 import ...InternalBoundingBoxes
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
-import ..PhysicalGeometries: surface_sampling, random_surface_positions, size_scale, _geometry_mesh, _mesh_result, _translate_native
+import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _mesh_result, _translate_native
 import ...Properties: GeometryProperties
 
 """
@@ -219,20 +219,6 @@ size_scale(geometry::Shift) = size_scale(geometry.geometry)
 size_scale(geometry::Rotate) = size_scale(geometry.geometry)
 size_scale(geometry::Scale) = geometry.scale * size_scale(geometry.geometry)
 
-function surface_sampling(transformation::Shift{N}, density::GeometryProperties,
-    bounding_box::InternalBoundingBox{N}, scale_density) where {N}
-    positions, normals = surface_sampling(transformation.geometry, density,
-        forward(transformation, bounding_box), scale_density)
-    [backward(transformation, position) for position in positions], normals
-end
-
-function surface_sampling(transformation::Scale{N}, density::GeometryProperties,
-    bounding_box::InternalBoundingBox{N}, scale_density) where {N}
-    positions, normals = surface_sampling(transformation.geometry, density,
-        forward(transformation, bounding_box), scale_density * transformation.scale^(N - 1))
-    [backward(transformation, position) for position in positions], normals
-end
-
 function _deproject_positions(transformation::Rotate{N, M}, positions,
     bounding_box::InternalBoundingBox{N}) where {N, M}
     basis = nullspace(Matrix(transformation.matrix))
@@ -246,20 +232,6 @@ end
 
 _projected_scale(transformation::Rotate{N, M}, bounding_box::InternalBoundingBox{N}) where {N, M} =
     prod(2 .* (abs.(nullspace(Matrix(transformation.matrix)))' * InternalBoundingBoxes.half_size(bounding_box)))
-
-function surface_sampling(transformation::Rotate{N, M}, density::GeometryProperties,
-    bounding_box::InternalBoundingBox{N}, scale_density) where {N, M}
-    positions, normals = surface_sampling(transformation.geometry, density,
-        forward(transformation, bounding_box), scale_density * (N == M ? 1 : _projected_scale(transformation, bounding_box)))
-    positions = N == M ? [backward(transformation, position) for position in positions] : _deproject_positions(transformation, positions, bounding_box)
-    normals = [backward_normal(transformation, normal) for normal in normals]
-    if N == M
-        return positions, normals
-    end
-    keep = [all(position .>= InternalBoundingBoxes.lower(bounding_box)) &&
-        all(position .<= InternalBoundingBoxes.upper(bounding_box)) for position in positions]
-    positions[keep], normals[keep]
-end
 
 function random_surface_positions(transformation::Shift{N}, density::GeometryProperties,
     bounding_box::InternalBoundingBox{N}, scale_density) where {N}
@@ -282,12 +254,7 @@ function random_surface_positions(transformation::Rotate{N, M}, density::Geometr
     positions = N == M ? [backward(transformation, position) for position in positions] : _deproject_positions(transformation, positions, bounding_box)
     intersections = [Intersection(hit.distance, backward_normal(transformation, hit.normal), hit.inside,
         hit.obstruction_index, hit.hit_gap) for hit in intersections]
-    if N == M
-        return positions, intersections
-    end
-    keep = [all(position .>= InternalBoundingBoxes.lower(bounding_box)) &&
-        all(position .<= InternalBoundingBoxes.upper(bounding_box)) for position in positions]
-    positions[keep], intersections[keep]
+    positions, intersections
 end
 
 _geometry_mesh(transformation::Shift, geometry; kwargs...) = _geometry_mesh_preserving(transformation, geometry; kwargs...)

@@ -6,7 +6,7 @@ import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
-import ..PhysicalGeometries: surface_sampling, random_surface_positions, size_scale, _geometry_mesh, _translate_native
+import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _translate_native
 import ...Properties: GeometryProperties
 import ..Groups
 
@@ -119,25 +119,22 @@ InternalBoundingBox(::Repeat) = throw(ArgumentError("repeated geometries do not 
 
 size_scale(repeat::Repeat) = min(size_scale(repeat.geometry), minimum(repeat.repeats))
 
-function _repeat_samples(operation, repeat::Repeat{N}, density::GeometryProperties,
+function _repeat_samples(repeat::Repeat{N}, density::GeometryProperties,
     bounding_box::InternalBoundingBox{N}, scale_density) where {N}
     child_box = InternalBoundingBox(repeat.geometry)
     lower = floor.(Int, (InternalBoundingBoxes.lower(bounding_box) - InternalBoundingBoxes.upper(child_box)) ./ repeat.repeats)
     upper = ceil.(Int, (InternalBoundingBoxes.upper(bounding_box) - InternalBoundingBoxes.lower(child_box)) ./ repeat.repeats)
     draws = (let
         displacement = SVector{N, Float64}(indices) .* repeat.repeats
-        values = operation(repeat.geometry, density, InternalBoundingBoxes.shift(bounding_box, -displacement), scale_density)
+        values = random_surface_positions(repeat.geometry, density,
+            InternalBoundingBoxes.shift(bounding_box, -displacement), scale_density)
         ([value + displacement for value in values[1]], values[2])
     end for indices in Iterators.product((lower[index]:upper[index] for index in 1:N)...))
-    values = operation === surface_sampling ? Groups._combine(draws, Val(N)) : Groups._random_combine(draws, Val(N))
-    keep = [all(position .>= InternalBoundingBoxes.lower(bounding_box)) && all(position .<= InternalBoundingBoxes.upper(bounding_box)) for position in values[1]]
-    values[1][keep], values[2][keep]
+    Groups._combine(draws, Val(N))
 end
 
-surface_sampling(repeat::Repeat, density::GeometryProperties, bounding_box, scale_density) =
-    _repeat_samples(surface_sampling, repeat, density, bounding_box, scale_density)
 random_surface_positions(repeat::Repeat, density::GeometryProperties, bounding_box, scale_density) =
-    _repeat_samples(random_surface_positions, repeat, density, bounding_box, scale_density)
+    _repeat_samples(repeat, density, bounding_box, scale_density)
 
 function _geometry_mesh(repeat::Repeat{N}; bounding_box=nothing, kwargs...) where N
     child_box = InternalBoundingBox(repeat.geometry)
