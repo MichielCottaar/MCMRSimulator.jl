@@ -1,9 +1,21 @@
 module Transparents
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox, size_scale
+import ..PhysicalGeometries: surface_sampling, random_surface_positions, _geometry_mesh
+import ...Properties: GeometryProperties
 
 abstract type Transparent{N, P <: PhysicalGeometry{N}} <: PhysicalGeometry{N} end
+
+struct SizeScaleOverride{N, P <: PhysicalGeometry{N}} <: Transparent{N, P}
+    geometry::P
+    size_scale::Float64
+end
+
+function SizeScaleOverride(geometry::P, size_scale::Real) where {N, P <: PhysicalGeometry{N}}
+    size_scale > 0 || throw(ArgumentError("size_scale must be positive"))
+    SizeScaleOverride{N, P}(geometry, Float64(size_scale))
+end
 
 transparent_geometry(wrapper::Transparent) = getfield(wrapper, :geometry)
 
@@ -25,5 +37,16 @@ function detect_intersection(
 ) where {N}
     detect_intersection(transparent_geometry(wrapper), start, destination, previous_hit)
 end
+
+size_scale(wrapper::SizeScaleOverride) = wrapper.size_scale
+size_scale(wrapper::Transparent) = size_scale(transparent_geometry(wrapper))
+
+surface_sampling(wrapper::Transparent{N}, density::GeometryProperties,
+    bounding_box::InternalBoundingBox{N}, scale_density) where N =
+    surface_sampling(transparent_geometry(wrapper), density, bounding_box, scale_density)
+random_surface_positions(wrapper::Transparent{N}, density::GeometryProperties,
+    bounding_box::InternalBoundingBox{N}, scale_density) where N =
+    random_surface_positions(transparent_geometry(wrapper), density, bounding_box, scale_density)
+_geometry_mesh(wrapper::Transparent; kwargs...) = _geometry_mesh(transparent_geometry(wrapper); kwargs...)
 
 end

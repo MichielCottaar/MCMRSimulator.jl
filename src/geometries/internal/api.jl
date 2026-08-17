@@ -4,8 +4,9 @@ import StaticArrays: SVector
 import ..BoundingBoxes: BoundingBox
 import .Indices: ObstructionIndex
 import .InternalBoundingBoxes: InternalBoundingBox
-import .PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, surface_sampling, random_surface_positions, inside_indices
+import .PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, surface_sampling, random_surface_positions, inside_indices, size_scale, geometry_mesh
 import .PhysicalGeometries.Groups: GeometryTuple
+import .PhysicalGeometries.Transparents: SizeScaleOverride
 import .Properties: all_property_values, get_value
 import .Susceptibility: susceptibility_off_resonance, off_resonance_gradient
 import ...Properties: stick_probability
@@ -14,7 +15,7 @@ import .RayGridIntersection: ray_grid_intersections
 export FixedGeometry, Intersection, IsInside, collision_normal,
     isinside, detect_intersection, surface_sampling, random_surface_positions, geometry_mesh,
     ray_grid_intersections,
-    size_scale, max_timestep_sticking, max_permeability_non_inf,
+    size_scale, SizeScaleOverride, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
     permeability, surface_relaxation, surface_density, dwell_time,
     R1, R2, off_resonance,
@@ -126,10 +127,21 @@ end
 
 Return render-ready mesh data for `geometry`.
 """
-function geometry_mesh end
+function geometry_mesh(geometry::FixedGeometry; bounding_box=nothing, kwargs...)
+    bounding_box = bounding_box isa BoundingBox ? InternalBoundingBox(bounding_box) : bounding_box
+    geometry_mesh(geometry.geometry; bounding_box, kwargs...)
+end
+
+function geometry_mesh(geometry::FixedGeometry, bounding_box::BoundingBox; kwargs...)
+    geometry_mesh(geometry; bounding_box=InternalBoundingBox(bounding_box), kwargs...)
+end
+
+function geometry_mesh(geometry::PhysicalGeometry, bounding_box::BoundingBox; kwargs...)
+    geometry_mesh(geometry; bounding_box=InternalBoundingBox(bounding_box), kwargs...)
+end
 
 """Return the smallest relevant obstruction size in `geometry`."""
-function size_scale end
+size_scale(geometry::FixedGeometry) = size_scale(geometry.geometry)
 
 """Return the largest timestep permitted by surface-sticking constraints."""
 function max_timestep_sticking(geometry::FixedGeometry, diffusivity::Number, scaling)

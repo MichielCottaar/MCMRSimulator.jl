@@ -2,9 +2,12 @@
 module Transformations
 
 import StaticArrays: SMatrix, SVector
-import LinearAlgebra: norm
+import LinearAlgebra: norm, nullspace, cross
+import Random: rand
 import ...InternalBoundingBoxes
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: surface_sampling, random_surface_positions, size_scale, _geometry_mesh, _mesh_result, _translate_native
+import ...Properties: GeometryProperties
 
 """
     Transformation{N, M, P} <: PhysicalGeometry{N}
@@ -210,6 +213,135 @@ function detect_intersection(
         child_intersection.obstruction_index,
         child_intersection.hit_gap,
     )
+end
+
+size_scale(geometry::Shift) = size_scale(geometry.geometry)
+size_scale(geometry::Rotate) = size_scale(geometry.geometry)
+size_scale(geometry::Scale) = geometry.scale * size_scale(geometry.geometry)
+
+function surface_sampling(transformation::Shift{N}, density::GeometryProperties,
+    bounding_box::InternalBoundingBox{N}, scale_density) where {N}
+    positions, normals = surface_sampling(transformation.geometry, density,
+        forward(transformation, bounding_box), scale_density)
+    [backward(transformation, position) for position in positions], normals
+end
+
+function surface_sampling(transformation::Scale{N}, density::GeometryProperties,
+    bounding_box::InternalBoundingBox{N}, scale_density) where {N}
+    positions, normals = surface_sampling(transformation.geometry, density,
+        forward(transformation, bounding_box), scale_density * transformation.scale^(N - 1))
+    [backward(transformation, position) for position in positions], normals
+end
+
+function _deproject_positions(transformation::Rotate{N, M}, positions,
+    bounding_box::InternalBoundingBox{N}) where {N, M}
+    basis = nullspace(Matrix(transformation.matrix))
+    center = InternalBoundingBoxes.center(bounding_box)
+    half_size = InternalBoundingBoxes.half_size(bounding_box)
+    null_center = basis' * center
+    null_half_size = abs.(basis)' * half_size
+    [transformation.matrix' * position + basis * (null_center +
+        (2 .* rand(length(null_center)) .- 1) .* null_half_size) for position in positions]
+end
+
+_projected_scale(transformation::Rotate{N, M}, bounding_box::InternalBoundingBox{N}) where {N, M} =
+    prod(2 .* (abs.(nullspace(Matrix(transformation.matrix)))' * InternalBoundingBoxes.half_size(bounding_box)))
+
+function surface_sampling(transformation::Rotate{N, M}, density::GeometryProperties,
+    bounding_box::InternalBoundingBox{N}, scale_density) where {N, M}
+    positions, normals = surface_sampling(transformation.geometry, density,
+        forward(transformation, bounding_box), scale_density * (N == M ? 1 : _projected_scale(transformation, bounding_box)))
+    positions = N == M ? [backward(transformation, position) for position in positions] : _deproject_positions(transformation, positions, bounding_box)
+    normals = [backward_normal(transformation, normal) for normal in normals]
+    if N == M
+        return positions, normals
+    end
+    keep = [all(position .>= InternalBoundingBoxes.lower(bounding_box)) &&
+        all(position .<= InternalBoundingBoxes.upper(bounding_box)) for position in positions]
+    positions[keep], normals[keep]
+end
+
+function random_surface_positions(transformation::Shift{N}, density::GeometryProperties,
+    bounding_box::InternalBoundingBox{N}, scale_density) where {N}
+    positions, intersections = random_surface_positions(transformation.geometry, density,
+        forward(transformation, bounding_box), scale_density)
+    [backward(transformation, position) for position in positions], intersections
+end
+
+function random_surface_positions(transformation::Scale{N}, density::GeometryProperties,
+    bounding_box::InternalBoundingBox{N}, scale_density) where {N}
+    positions, intersections = random_surface_positions(transformation.geometry, density,
+        forward(transformation, bounding_box), scale_density * transformation.scale^(N - 1))
+    [backward(transformation, position) for position in positions], intersections
+end
+
+function random_surface_positions(transformation::Rotate{N, M}, density::GeometryProperties,
+    bounding_box::InternalBoundingBox{N}, scale_density) where {N, M}
+    positions, intersections = random_surface_positions(transformation.geometry, density,
+        forward(transformation, bounding_box), scale_density * (N == M ? 1 : _projected_scale(transformation, bounding_box)))
+    positions = N == M ? [backward(transformation, position) for position in positions] : _deproject_positions(transformation, positions, bounding_box)
+    intersections = [Intersection(hit.distance, backward_normal(transformation, hit.normal), hit.inside,
+        hit.obstruction_index, hit.hit_gap) for hit in intersections]
+    if N == M
+        return positions, intersections
+    end
+    keep = [all(position .>= InternalBoundingBoxes.lower(bounding_box)) &&
+        all(position .<= InternalBoundingBoxes.upper(bounding_box)) for position in positions]
+    positions[keep], intersections[keep]
+end
+
+_geometry_mesh(transformation::Shift, geometry; kwargs...) = _geometry_mesh_preserving(transformation, geometry; kwargs...)
+_geometry_mesh(transformation::Scale, geometry; kwargs...) = _geometry_mesh_preserving(transformation, geometry; kwargs...)
+_geometry_mesh(transformation::Rotate{N, N}, geometry; kwargs...) where N = _geometry_mesh_preserving(transformation, geometry; kwargs...)
+_geometry_mesh(transformation::Shift; kwargs...) = _geometry_mesh(transformation, transformation.geometry; kwargs...)
+_geometry_mesh(transformation::Scale; kwargs...) = _geometry_mesh(transformation, transformation.geometry; kwargs...)
+_geometry_mesh(transformation::Rotate; kwargs...) = _geometry_mesh(transformation, transformation.geometry; kwargs...)
+
+function _geometry_mesh_preserving(transformation, geometry; bounding_box=nothing, kwargs...)
+    local_box = isnothing(bounding_box) ? nothing : forward(transformation, bounding_box)
+    _transform_native(transformation, _geometry_mesh(geometry; kwargs..., bounding_box=local_box))
+end
+
+_transform_native(transformation, value) = value isa Real ? backward(transformation, SVector{1, Float64}(value))[1] :
+    value isa SVector ? backward(transformation, value) :
+    value isa NamedTuple ? _mesh_result([backward(transformation, vertex) for vertex in value.vertices], value.triangles) :
+    [_transform_native(transformation, item) for item in value]
+
+function _geometry_mesh(transformation::Rotate{3, 1}, geometry; height=nothing, bounding_box=nothing, kwargs...)
+    local_box = isnothing(bounding_box) ? nothing : forward(transformation, bounding_box)
+    positions = _geometry_mesh(geometry; kwargs..., bounding_box=local_box)
+    normal = SVector{3, Float64}(transformation.matrix[1, :])
+    reference = abs(normal[1]) < 0.9 ? SVector(1., 0., 0.) : SVector(0., 1., 0.)
+    first = cross(normal, reference); first = first ./ norm(first)
+    second = cross(normal, first)
+    mesh_height(axis) = isnothing(height) ? (isnothing(bounding_box) ? 1. :
+        2 * sum(abs.(axis) .* InternalBoundingBoxes.half_size(bounding_box))) : Float64(height)
+    h1 = mesh_height(first)
+    h2 = mesh_height(second)
+    [_mesh_result([transformation.matrix' * SVector{1, Float64}(position) + a * h1/2 * first + b * h2/2 * second
+        for (a, b) in ((1,1),(-1,1),(1,-1),(-1,-1))], [SVector(1,2,3), SVector(4,3,2)]) for position in positions]
+end
+
+function _circle_triangles(circle)
+    triangles = SVector{3, Int}[]
+    for index in 1:length(circle)
+        next = mod1(index + 1, length(circle))
+        push!(triangles, SVector(index, next, length(circle) + index))
+        push!(triangles, SVector(next, length(circle) + next, length(circle) + index))
+    end
+    triangles
+end
+
+function _geometry_mesh(transformation::Rotate{3, 2}, geometry; height=nothing, bounding_box=nothing, kwargs...)
+    local_box = isnothing(bounding_box) ? nothing : forward(transformation, bounding_box)
+    circles = _geometry_mesh(geometry; kwargs..., bounding_box=local_box)
+    first = SVector{3, Float64}(transformation.matrix[1, :]); second = SVector{3, Float64}(transformation.matrix[2, :])
+    axis = cross(first, second); axis = axis ./ norm(axis)
+    extrusion = isnothing(height) ? (isnothing(bounding_box) ? 1. :
+        2 * sum(abs.(axis) .* InternalBoundingBoxes.half_size(bounding_box))) : Float64(height)
+    [_mesh_result(vcat([transformation.matrix' * point for point in circle] .+ Ref(axis * extrusion/2),
+        [transformation.matrix' * point for point in circle] .- Ref(axis * extrusion/2)),
+        _circle_triangles(circle)) for circle in circles]
 end
 
 end

@@ -68,3 +68,27 @@ function detect_intersection(
     inside = destination_distance > start_distance
     return Intersection(distance, inside ? -triangle_normal : triangle_normal, inside, ObstructionIndex(), false)
 end
+
+function _triangle_sampling(triangle::FullTriangle, density, scale_density)
+    edge_1 = triangle.b - triangle.a
+    edge_2 = triangle.c - triangle.a
+    surface = norm(cross(edge_1, edge_2)) / 2
+    nspins = rand(Poisson(surface * density * scale_density))
+    draw_position() = begin
+        u1, u2 = rand(2)
+        if u1 + u2 > 1
+            u1 = 1 - u1
+            u2 = 1 - u2
+        end
+        SVector{3, Float64}(triangle.a + u1 * edge_1 + u2 * edge_2)
+    end
+    positions = [draw_position() for _ in 1:nspins]
+    positions, fill(-normal(triangle), nspins)
+end
+
+function surface_sampling(
+    triangle::FullTriangle, density::GeometryLeafProperties,
+    bounding_box::InternalBoundingBox{3}, scale_density,
+)
+    _filter_to_box(_triangle_sampling(triangle, density.value, scale_density)..., bounding_box)
+end

@@ -7,6 +7,10 @@ import NearestNeighbors: KDTree, nn
 
 import ...Indices: ObstructionIndex
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: surface_sampling, random_surface_positions, size_scale, _geometry_mesh
+import ...Properties: GeometryLeafProperties
+import ..BaseObstructions: _sample_intersections, _triangle_sampling
+import ..Groups
 import ..GridDispatch: detect_intersection_grid
 import ...InternalBoundingBoxes
 import ...InternalBoundingBoxes: grid_indices
@@ -411,6 +415,32 @@ curvature(mesh::Mesh; include_gap_triangles=false) = curvature(
     first_index_of_gap=mesh.first_index_of_gap,
     include_gap_triangles,
 )
+
+size_scale(mesh::Mesh) = begin
+    ntriangles = mesh.first_index_of_gap - 1
+    ntriangles <= 1 && return Inf
+    1 / (2 * curvature(mesh))
+end
+
+function random_surface_positions(mesh::Mesh, density::GeometryLeafProperties,
+    bounding_box::InternalBoundingBox{3}, scale_density)
+    _sample_intersections(surface_sampling(mesh, density, bounding_box, scale_density)...)
+end
+
+function surface_sampling(mesh::Mesh, density::GeometryLeafProperties,
+    bounding_box::InternalBoundingBox{3}, scale_density)
+    draws = (_triangle_sampling(triangle(mesh, index), density.value, scale_density)
+        for index in 1:(mesh.first_index_of_gap - 1))
+    values = Groups._combine(draws, Val(3))
+    keep = [all(position .>= InternalBoundingBoxes.lower(bounding_box)) &&
+        all(position .<= InternalBoundingBoxes.upper(bounding_box)) for position in values[1]]
+    values[1][keep], values[2][keep]
+end
+
+function _geometry_mesh(mesh::Mesh; kwargs...)
+    number_of_triangles = mesh.first_index_of_gap - 1
+    [(vertices=mesh.vertices, triangles=mesh.indices[1:number_of_triangles])]
+end
 
 
 """

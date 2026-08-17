@@ -6,6 +6,8 @@ import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
 import ..GridDispatch: detect_intersection_grid
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: surface_sampling, random_surface_positions, size_scale, _geometry_mesh
+import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 
 abstract type GroupGeometry{N} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N} end
@@ -336,5 +338,55 @@ Base.getindex(geometry::GeometryTuple, index...) = getindex(geometry.geometries,
 Base.iterate(geometry::GeometryTuple, state...) = iterate(geometry.geometries, state...)
 Base.eltype(::Type{GeometryTuple{N, P}}) where {N, P} = eltype(P)
 Base.Tuple(geometry::GeometryTuple) = geometry.geometries
+
+_density_child(density::GeometryLeafProperties, ::Int) = density
+_density_child(density::GeometryVectorProperties, index::Int) = density.properties[index]
+_density_child(density::GeometryTupleProperties, index::Int) = density.properties[index]
+
+function _combine(draws, ::Val{N}) where {N}
+    draws = collect(draws)
+    positions = reduce(vcat, (draw[1] for draw in draws); init=SVector{N, Float64}[])
+    normals = reduce(vcat, (draw[2] for draw in draws); init=SVector{N, Float64}[])
+    positions, normals
+end
+
+function _random_combine(draws, ::Val{N}) where {N}
+    draws = collect(draws)
+    positions = reduce(vcat, (draw[1] for draw in draws); init=SVector{N, Float64}[])
+    intersections = reduce(vcat, (draw[2] for draw in draws); init=Intersection{N}[])
+    positions, intersections
+end
+
+function _prepend_intersection(index::Int, intersection::Intersection{N}) where {N}
+    Intersection(intersection.distance, intersection.normal, intersection.inside,
+        ObstructionIndex(SVector(index, intersection.obstruction_index.indices...)), intersection.hit_gap)
+end
+
+for operation in (:surface_sampling, :random_surface_positions)
+    @eval function $operation(geometry::GeometryVectorLike{N}, density::GeometryProperties,
+        bounding_box::InternalBoundingBox{N}, scale_density) where {N}
+        combiner = $operation === surface_sampling ? _combine : _random_combine
+        combiner((let
+            values = $operation(child, _density_child(density, index), bounding_box, scale_density)
+            $operation === surface_sampling ? values : (values[1], [_prepend_intersection(index, hit) for hit in values[2]])
+        end for (index, child) in enumerate(geometry)), Val(N))
+    end
+    @eval function $operation(geometry::GeometryTuple{N}, density::GeometryProperties,
+        bounding_box::InternalBoundingBox{N}, scale_density) where {N}
+        combiner = $operation === surface_sampling ? _combine : _random_combine
+        combiner((let
+            values = $operation(child, _density_child(density, index), bounding_box, scale_density)
+            $operation === surface_sampling ? values : (values[1], [_prepend_intersection(index, hit) for hit in values[2]])
+        end for (index, child) in enumerate(geometry)), Val(N))
+    end
+end
+
+size_scale(geometry::GeometryVectorLike) = isempty(geometry) ? Inf : minimum(size_scale, geometry)
+size_scale(geometry::GeometryTuple) = isempty(geometry) ? Inf : minimum(size_scale, geometry)
+
+_geometry_mesh(geometry::GeometryVectorLike; kwargs...) =
+    reduce(vcat, (_geometry_mesh(child; kwargs...) for child in geometry); init=Any[])
+_geometry_mesh(geometry::GeometryTuple; kwargs...) =
+    reduce(vcat, (_geometry_mesh(child; kwargs...) for child in geometry); init=Any[])
 
 end

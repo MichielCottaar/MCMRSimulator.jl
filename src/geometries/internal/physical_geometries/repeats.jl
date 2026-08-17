@@ -6,6 +6,9 @@ import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: surface_sampling, random_surface_positions, size_scale, _geometry_mesh, _translate_native
+import ...Properties: GeometryProperties
+import ..Groups
 
 struct Repeat{N, P<:PhysicalGeometry{N}} <: PhysicalGeometry{N}
     geometry::P
@@ -113,6 +116,47 @@ function inside_indices(
 end
 
 InternalBoundingBox(::Repeat) = throw(ArgumentError("repeated geometries do not have a finite bounding box"))
+
+size_scale(repeat::Repeat) = min(size_scale(repeat.geometry), minimum(repeat.repeats))
+
+function _repeat_samples(operation, repeat::Repeat{N}, density::GeometryProperties,
+    bounding_box::InternalBoundingBox{N}, scale_density) where {N}
+    child_box = InternalBoundingBox(repeat.geometry)
+    lower = floor.(Int, (InternalBoundingBoxes.lower(bounding_box) - InternalBoundingBoxes.upper(child_box)) ./ repeat.repeats)
+    upper = ceil.(Int, (InternalBoundingBoxes.upper(bounding_box) - InternalBoundingBoxes.lower(child_box)) ./ repeat.repeats)
+    draws = (let
+        displacement = SVector{N, Float64}(indices) .* repeat.repeats
+        values = operation(repeat.geometry, density, InternalBoundingBoxes.shift(bounding_box, -displacement), scale_density)
+        ([value + displacement for value in values[1]], values[2])
+    end for indices in Iterators.product((lower[index]:upper[index] for index in 1:N)...))
+    values = operation === surface_sampling ? Groups._combine(draws, Val(N)) : Groups._random_combine(draws, Val(N))
+    keep = [all(position .>= InternalBoundingBoxes.lower(bounding_box)) && all(position .<= InternalBoundingBoxes.upper(bounding_box)) for position in values[1]]
+    values[1][keep], values[2][keep]
+end
+
+surface_sampling(repeat::Repeat, density::GeometryProperties, bounding_box, scale_density) =
+    _repeat_samples(surface_sampling, repeat, density, bounding_box, scale_density)
+random_surface_positions(repeat::Repeat, density::GeometryProperties, bounding_box, scale_density) =
+    _repeat_samples(random_surface_positions, repeat, density, bounding_box, scale_density)
+
+function _geometry_mesh(repeat::Repeat{N}; bounding_box=nothing, kwargs...) where N
+    child_box = InternalBoundingBox(repeat.geometry)
+    lower, upper = isnothing(bounding_box) ? (zeros(Int, N), zeros(Int, N)) :
+        (floor.(Int, (InternalBoundingBoxes.lower(bounding_box) - InternalBoundingBoxes.upper(child_box)) ./ repeat.repeats),
+         ceil.(Int, (InternalBoundingBoxes.upper(bounding_box) - InternalBoundingBoxes.lower(child_box)) ./ repeat.repeats))
+    child = _geometry_mesh(repeat.geometry; kwargs...)
+    result = Any[]
+    for index in Iterators.product((lower[i]:upper[i] for i in 1:N)...)
+        displacement = SVector{N, Float64}(index) .* repeat.repeats
+        if !isnothing(bounding_box)
+            shifted_lower = InternalBoundingBoxes.lower(child_box) + displacement
+            shifted_upper = InternalBoundingBoxes.upper(child_box) + displacement
+            (all(shifted_lower .<= InternalBoundingBoxes.upper(bounding_box)) && all(shifted_upper .>= InternalBoundingBoxes.lower(bounding_box))) || continue
+        end
+        append!(result, [_translate_native(value, displacement) for value in child])
+    end
+    result
+end
 
 function detect_intersection(
     repeat::Repeat{N},
