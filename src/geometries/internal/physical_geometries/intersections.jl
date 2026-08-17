@@ -38,6 +38,14 @@ function remove_index(intersection::Intersection)
     obstruction_index,
     intersection.hit_gap
 ))
+
+flip(intersection::Intersection) = Intersection(
+    intersection.distance,
+    -intersection.normal,
+    !intersection.inside,
+    intersection.obstruction_index,
+    intersection.hit_gap
+)
 end
 
 end
