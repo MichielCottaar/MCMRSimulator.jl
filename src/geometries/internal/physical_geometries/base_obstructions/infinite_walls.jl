@@ -42,4 +42,6 @@ function surface_sampling(
     fill(zero(SVector{1, Float64}), nspins), fill(SVector{1, Float64}(1.0), nspins)
 end
 
+size_scale(::InfiniteWall) = Inf
+
 _geometry_mesh(::InfiniteWall; kwargs...) = [0.]

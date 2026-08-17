@@ -38,8 +38,4 @@ function random_surface_positions(
     surface_samples_to_intersection(surface_sampling(geometry, density, bounding_box, scale_density)...)
 end
 
-size_scale(::InfiniteWall) = Inf
-size_scale(round::Round) = round.radius
-size_scale(round::OverlappingRound) = round.radius
-
 end

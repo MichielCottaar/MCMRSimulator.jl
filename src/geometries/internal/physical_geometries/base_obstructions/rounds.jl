@@ -21,6 +21,8 @@ InternalBoundingBox(round::Round{N}) where {N} = InternalBoundingBox{N}(round.ra
 isinside(round::Round{N}, position::SVector{N, Float64}) where {N} =
     sum(position .* position) < round.radius^2
 
+size_scale(round::Round) = round.radius
+
 function detect_intersection(
     round::Round{N},
     start::SVector{N, Float64},

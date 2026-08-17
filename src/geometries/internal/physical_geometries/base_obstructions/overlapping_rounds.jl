@@ -58,3 +58,5 @@ function surface_sampling(
     keep = [!_inside_other_rounds(round, position) for position in positions]
     positions[keep], normals[keep]
 end
+
+size_scale(round::OverlappingRound) = round.radius
