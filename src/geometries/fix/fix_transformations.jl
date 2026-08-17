@@ -18,7 +18,7 @@ function _shift_obstructions(group, geometry::Vector{P}) where {N, P<:PhysicalGe
     hasproperty(group, :position) || return geometry
     isglobal(group.position) && return geometry
     positions = _values(group.position, length(geometry))
-    shifts = [-SVector{N, Float64}(position) for position in positions]
+    shifts = [SVector{N, Float64}(position) for position in positions]
     Shift.(geometry, shifts)
 end
 
@@ -42,7 +42,7 @@ function _apply_local_transformations(group, geometry::Vector)
 end
 
 function _rotation_matrix(group)
-    transpose(group.rotation.value)
+    group.rotation.value
 end
 
 function _apply_rotation(group, geometry)
@@ -60,7 +60,7 @@ function _apply_global_shift(group, geometry)
     isglobal(group.position) || return geometry
     iszero(group.position.value) && return geometry
     position = SVector{group.type.ndim, Float64}(group.position.value)
-    Shift(geometry, -position)
+    Shift(geometry, position)
 end
 
 function fix_transformations(group::Union{Walls, Cylinders, Spheres, Mesh}, geometry::Vector)
