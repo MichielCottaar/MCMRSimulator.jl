@@ -41,6 +41,19 @@ function remove_index(intersection::Intersection)
 end
 
 """
+    remove_expected_index(intersection, expected_index)
+
+If the index in `intersection` matches `expected_index` an intersection is returned with that element removed.  Otherwise, an empty intersection is returned.
+"""
+function remove_expected_index(intersection::Intersection{N}, expected::Int) where {N}
+    Base.isempty(intersection) && return Intersection{N}()
+    isempty(intersection.obstruction_index.indices) &&
+        throw(ArgumentError("Intersection indices are unexpectedly empty."))
+    intersection.obstruction_index.indices[1] == expected || return Intersection{N}()
+    remove_index(intersection)[2]
+end
+
+"""
     flip(intersection)
 
 Flips a collision of the spin with a surface to the other side.

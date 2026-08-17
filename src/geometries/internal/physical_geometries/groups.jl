@@ -2,9 +2,10 @@
 module Groups
 
 import StaticArrays: SVector
-import ...Indices: ObstructionIndex, add_index, remove_index
+import ...Indices: ObstructionIndex, add_index
 import ...InternalBoundingBoxes
 import ..GridDispatch: detect_intersection_grid
+import ..Intersections: remove_expected_index
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
@@ -77,16 +78,6 @@ end
 
 InternalBoundingBox(geometry::GeometryVectorGrid) = geometry.bounding_box
 
-function _inside_child_intersection(
-    intersection::Intersection{N},
-    child_index::Int,
-) where {N}
-    Base.isempty(intersection) && return Intersection{N}()
-    isempty(intersection.obstruction_index.indices) && return Intersection{N}()
-    index, child_intersection = remove_index(intersection)
-    index == child_index ? child_intersection : Intersection{N}()
-end
-
 function _inside_indices(
     geometry::GeometryVectorLike{N, P},
     child_indices,
@@ -97,13 +88,13 @@ function _inside_indices(
     indices = ObstructionIndex[]
     if has_single_inside(P)
         for child_index in child_indices
-            child_intersection = _inside_child_intersection(intersection, child_index)
+            child_intersection = remove_expected_index(intersection, child_index)
             isinside_single(geometry.geometries[child_index], position, child_intersection) || continue
             push!(indices, add_index(ObstructionIndex(), child_index))
         end
     else
         for child_index in child_indices
-            child_intersection = _inside_child_intersection(intersection, child_index)
+            child_intersection = remove_expected_index(intersection, child_index)
             for obstruction_index in inside_indices(geometry.geometries[child_index], position, child_intersection)
                 push!(indices, add_index(obstruction_index, child_index))
             end
@@ -166,7 +157,7 @@ function inside_indices(
 ) where {N}
     indices = ObstructionIndex[]
     for (child_index, child) in enumerate(geometry)
-        child_intersection = _inside_child_intersection(intersection, child_index)
+        child_intersection = remove_expected_index(intersection, child_index)
         append!(indices, add_index.(inside_indices_for_any_type(child, position, child_intersection), child_index))
     end
     indices
@@ -233,18 +224,6 @@ GeometryVectorBoundingBox(
 GeometryTuple{N}(geometries::Tuple{Vararg{PhysicalGeometry{N}}}) where {N} =
     GeometryTuple{N, typeof(geometries)}(geometries)
 
-function _previous_hit_for_child(
-    geometry::GroupGeometry,
-    previous_hit::Intersection{3},
-    child_index::Int,
-)
-    Base.isempty(previous_hit) && return Intersection{3}()
-    isempty(previous_hit.obstruction_index.indices) &&
-        throw(ArgumentError("a non-empty previous hit must have an obstruction index"))
-    index, child_previous_hit = remove_index(previous_hit)
-    index == child_index ? child_previous_hit : Intersection{3}()
-end
-
 function _could_intersect(
     ::GroupGeometry,
     ::Int,
@@ -281,7 +260,7 @@ function detect_intersection(
     closest = Intersection{N}()
     for (child_index, child) in enumerate(geometry)
         _could_intersect(geometry, child_index, start, destination) || continue
-        child_previous_hit = _previous_hit_for_child(geometry, previous_hit, child_index)
+        child_previous_hit = remove_expected_index(previous_hit, child_index)
         intersection = detect_intersection(child, start, destination, child_previous_hit)
         if intersection.distance < closest.distance
             closest = add_index(intersection, child_index)
@@ -304,7 +283,7 @@ function detect_intersection(
         destination,
         previous_hit,
     ) do child_index, previous
-        child_previous_hit = _previous_hit_for_child(geometry, previous, child_index)
+        child_previous_hit = remove_expected_index(previous, child_index)
         intersection = detect_intersection(geometry.geometries[child_index], start, destination, child_previous_hit)
         add_index(intersection, child_index)
     end

@@ -530,6 +530,14 @@ end
     @test intersection.obstruction_index == ObstructionIndex(SVector(1, 2))
     @test !Base.isempty(intersection)
     @test Base.isempty(GI.PhysicalGeometries.Intersection{3}())
+    remove_expected_index = GI.PhysicalGeometries.Intersections.remove_expected_index
+    @test remove_expected_index(intersection, 1).obstruction_index == ObstructionIndex(SVector(2))
+    @test Base.isempty(remove_expected_index(intersection, 3))
+    @test Base.isempty(remove_expected_index(GI.PhysicalGeometries.Intersection{3}(), 1))
+    @test_throws ArgumentError remove_expected_index(
+        GI.PhysicalGeometries.Intersection(0.5, normal, false, ObstructionIndex(), false),
+        1,
+    )
 
     infinite_wall = BaseObstructions.InfiniteWall()
     @test infinite_wall isa PhysicalGeometry{1}
