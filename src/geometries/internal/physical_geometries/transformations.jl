@@ -12,11 +12,12 @@ import ...Properties: GeometryProperties
 """
     Transformation{N, M, P} <: PhysicalGeometry{N}
 
-Transformation of a geometry from an `N`-dimensional coordinate system to an
-`M`-dimensional coordinate system.
+Transformation that places an `M`-dimensional child geometry in an
+`N`-dimensional parent coordinate system.
 
-`forward` transforms map from the global N-dimensional space to the local geometry-specific M-dimensional space.
-`backward` are the inverse transformations.
+`to_child_coordinates` maps from the parent coordinate system to the child
+coordinate system. `from_child_coordinates` maps child coordinates to the
+parent coordinate system.
 """
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
 
@@ -24,7 +25,7 @@ has_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_inside(P)
 has_single_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_single_inside(P)
 
 InternalBoundingBox(transformation::Transformation) =
-    backward(transformation, InternalBoundingBox(transformation.geometry))
+    from_child_coordinates(transformation, InternalBoundingBox(transformation.geometry))
 
 function isinside_single(
     transformation::Transformation{N, M},
@@ -33,7 +34,7 @@ function isinside_single(
 ) where {N, M}
     isinside_single(
         transformation.geometry,
-        forward(transformation, position),
+        to_child_coordinates(transformation, position),
         intersection,
     )
 end
@@ -45,7 +46,7 @@ function inside_indices(
 ) where {N, M}
     inside_indices(
         transformation.geometry,
-        forward(transformation, position),
+        to_child_coordinates(transformation, position),
         intersection,
     )
 end
@@ -90,9 +91,9 @@ it is a rotation followed by projection.
 """
 struct Rotate{N, M, P<:PhysicalGeometry{M}} <: Transformation{N, M, P}
     geometry::P
-    matrix::SMatrix{M, N, Float64}
+    matrix::SMatrix{N, M, Float64}
 
-    function Rotate{N, M, P}(geometry::P, matrix::SMatrix{M, N, Float64}) where {N, M, P<:PhysicalGeometry{M}}
+    function Rotate{N, M, P}(geometry::P, matrix::SMatrix{N, M, Float64}) where {N, M, P<:PhysicalGeometry{M}}
         _validate_rotate_matrix(matrix, N, M)
         new{N, M, P}(geometry, matrix)
     end
@@ -102,54 +103,54 @@ function _validate_rotate_matrix(matrix, N, M)
     M <= N || throw(ArgumentError("a Rotate transformation cannot increase dimension"))
     all(
         isapprox(
-            sum(matrix[i, k] * matrix[j, k] for k in 1:N),
+            sum(matrix[k, i] * matrix[k, j] for k in 1:N),
             i == j ? 1.0 : 0.0;
             atol=1e-10,
             rtol=1e-10,
         )
         for i in 1:M, j in 1:M
-    ) || throw(ArgumentError("Rotate matrix rows must be orthonormal"))
+    ) || throw(ArgumentError("Rotate matrix columns must be orthonormal"))
     nothing
 end
 
 function Rotate(geometry::P, matrix::AbstractMatrix{<:Real}) where {M, P<:PhysicalGeometry{M}}
-    N = size(matrix, 2)
-    size(matrix, 1) == M || throw(ArgumentError("rotation matrix rows must match geometry dimension"))
-    matrix = SMatrix{M, N, Float64}(matrix)
+    N = size(matrix, 1)
+    size(matrix, 2) == M || throw(ArgumentError("rotation matrix columns must match geometry dimension"))
+    matrix = SMatrix{N, M, Float64}(matrix)
     Rotate{N, M, P}(geometry, matrix)
 end
 
 InternalBoundingBox(transformation::Rotate{N, M}) where {N, M} =
-    N == M ? backward(transformation, InternalBoundingBox(transformation.geometry)) :
-    throw(ArgumentError("dimension-reducing Rotate transformations do not have a finite bounding box"))
+    N == M ? from_child_coordinates(transformation, InternalBoundingBox(transformation.geometry)) :
+        throw(ArgumentError("dimension-reducing Rotate transformations do not have a finite bounding box"))
 
-"""Transform a value from the source to the destination coordinate system."""
-function forward end
+"""Transform a value from parent coordinates to child coordinates."""
+function to_child_coordinates end
 
-"""Transform a value from the destination to the source coordinate system."""
-function backward end
+"""Transform a value from child coordinates to parent coordinates."""
+function from_child_coordinates end
 
-"""Transform a surface normal from the source to the destination coordinate system."""
-function forward_normal end
+"""Transform a surface normal from parent coordinates to child coordinates."""
+function normal_to_child_coordinates end
 
-"""Transform a surface normal from the destination to the source coordinate system."""
-function backward_normal end
+"""Transform a surface normal from child coordinates to parent coordinates."""
+function normal_from_child_coordinates end
 
-forward(transformation::Shift, position) = position + transformation.shift
-backward(transformation::Shift, position) = position - transformation.shift
-forward_normal(::Shift, normal) = normal
-backward_normal(::Shift, normal) = normal
+to_child_coordinates(transformation::Shift, position) = position - transformation.shift
+from_child_coordinates(transformation::Shift, position) = position + transformation.shift
+normal_to_child_coordinates(::Shift, normal) = normal
+normal_from_child_coordinates(::Shift, normal) = normal
 
-forward(transformation::Scale, position) = transformation.scale * position
-backward(transformation::Scale, position) = position / transformation.scale
-forward_normal(::Scale, normal) = normal
-backward_normal(::Scale, normal) = normal
+to_child_coordinates(transformation::Scale, position) = position / transformation.scale
+from_child_coordinates(transformation::Scale, position) = transformation.scale * position
+normal_to_child_coordinates(::Scale, normal) = normal
+normal_from_child_coordinates(::Scale, normal) = normal
 
-forward(transformation::Shift, box::InternalBoundingBoxes.InternalBoundingBox) =
-    InternalBoundingBoxes.shift(box, transformation.shift)
-
-backward(transformation::Shift, box::InternalBoundingBoxes.InternalBoundingBox) =
+to_child_coordinates(transformation::Shift, box::InternalBoundingBoxes.InternalBoundingBox) =
     InternalBoundingBoxes.shift(box, -transformation.shift)
+
+from_child_coordinates(transformation::Shift, box::InternalBoundingBoxes.InternalBoundingBox) =
+    InternalBoundingBoxes.shift(box, transformation.shift)
 
 function _box_center(box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N}
     return InternalBoundingBoxes.center(box)
@@ -168,36 +169,35 @@ function _scale_box(transformation::Scale, box::InternalBoundingBoxes.InternalBo
     )
 end
 
-forward(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox) =
-    _scale_box(transformation, box)
-
-backward(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox) =
+to_child_coordinates(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox) =
     _scale_box(Scale(transformation.geometry, inv(transformation.scale)), box)
 
-forward(transformation::Rotate, position) = transformation.matrix * position
-backward(transformation::Rotate{N, M}, position) where {N, M} =
-    N == M ? transformation.matrix' * position : throw(ArgumentError("backward is not defined for dimension-reducing Rotate transformations"))
-forward_normal(transformation::Rotate{N, M}, normal) where {N, M} =
-    N == M ? transformation.matrix * normal : throw(ArgumentError("forward_normal is not defined for dimension-reducing Rotate transformations"))
-backward_normal(transformation::Rotate, normal) = begin
-    result = transformation.matrix' * normal
+from_child_coordinates(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox) =
+    _scale_box(transformation, box)
+
+to_child_coordinates(transformation::Rotate, position) = transformation.matrix' * position
+from_child_coordinates(transformation::Rotate, position) = transformation.matrix * position
+normal_to_child_coordinates(transformation::Rotate{N, M}, normal) where {N, M} =
+    N == M ? transformation.matrix' * normal : throw(ArgumentError("normal_to_child_coordinates is not defined for dimension-reducing Rotate transformations"))
+normal_from_child_coordinates(transformation::Rotate, normal) = begin
+    result = transformation.matrix * normal
     result ./ norm(result)
 end
 
 function _rotate_box(transformation::Rotate{N, M}, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N, M}
-    center = transformation.matrix * _box_center(box)
-    half_size = abs.(transformation.matrix) * _box_half_size(box)
+    center = transformation.matrix' * _box_center(box)
+    half_size = abs.(transformation.matrix') * _box_half_size(box)
     return InternalBoundingBoxes.InternalBoundingBox{M}(half_size, center)
 end
 
-forward(transformation::Rotate, box::InternalBoundingBoxes.InternalBoundingBox) =
+to_child_coordinates(transformation::Rotate, box::InternalBoundingBoxes.InternalBoundingBox) =
     _rotate_box(transformation, box)
 
-backward(transformation::Rotate{N, M}, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N, M} =
+from_child_coordinates(transformation::Rotate{N, M}, box::InternalBoundingBoxes.InternalBoundingBox{M}) where {N, M} =
     N == M ? InternalBoundingBoxes.InternalBoundingBox{N}(
-        abs.(transformation.matrix') * _box_half_size(box),
-        transformation.matrix' * _box_center(box),
-    ) : throw(ArgumentError("backward is not defined for dimension-reducing Rotate transformations"))
+        abs.(transformation.matrix) * _box_half_size(box),
+        transformation.matrix * _box_center(box),
+    ) : throw(ArgumentError("from_child_coordinates is not defined for dimension-reducing Rotate transformations"))
 
 function detect_intersection(
     transformation::Transformation{N, M, P},
@@ -207,14 +207,14 @@ function detect_intersection(
 ) where {N, M, P}
     child_intersection = detect_intersection(
         transformation.geometry,
-        forward(transformation, start),
-        forward(transformation, destination),
+        to_child_coordinates(transformation, start),
+        to_child_coordinates(transformation, destination),
         previous_hit,
     )
     Base.isempty(child_intersection) && return Intersection{N}()
     return Intersection(
         child_intersection.distance,
-        backward_normal(transformation, child_intersection.normal),
+        normal_from_child_coordinates(transformation, child_intersection.normal),
         child_intersection.inside,
         child_intersection.obstruction_index,
         child_intersection.hit_gap,
@@ -227,7 +227,7 @@ size_scale(geometry::Scale) = geometry.scale * size_scale(geometry.geometry)
 
 function _deproject_positions(transformation::Rotate{N, M}, positions,
     bounding_box::InternalBoundingBox{N}) where {N, M}
-    basis = nullspace(Matrix(transformation.matrix))
+    basis = nullspace(Matrix(transformation.matrix'))
     center = InternalBoundingBoxes.center(bounding_box)
     half_size = InternalBoundingBoxes.half_size(bounding_box)
     null_center = basis' * center
@@ -237,28 +237,28 @@ function _deproject_positions(transformation::Rotate{N, M}, positions,
 end
 
 _projected_scale(transformation::Rotate{N, M}, bounding_box::InternalBoundingBox{N}) where {N, M} =
-    prod(2 .* (abs.(nullspace(Matrix(transformation.matrix)))' * InternalBoundingBoxes.half_size(bounding_box)))
+    prod(2 .* (abs.(nullspace(Matrix(transformation.matrix')))' * InternalBoundingBoxes.half_size(bounding_box)))
 
 function random_surface_positions(transformation::Shift{N}, density::GeometryProperties,
     bounding_box::InternalBoundingBox{N}, scale_density) where {N}
     positions, intersections = random_surface_positions(transformation.geometry, density,
-        forward(transformation, bounding_box), scale_density)
-    [backward(transformation, position) for position in positions], intersections
+        to_child_coordinates(transformation, bounding_box), scale_density)
+    [from_child_coordinates(transformation, position) for position in positions], intersections
 end
 
 function random_surface_positions(transformation::Scale{N}, density::GeometryProperties,
     bounding_box::InternalBoundingBox{N}, scale_density) where {N}
     positions, intersections = random_surface_positions(transformation.geometry, density,
-        forward(transformation, bounding_box), scale_density * transformation.scale^(N - 1))
-    [backward(transformation, position) for position in positions], intersections
+        to_child_coordinates(transformation, bounding_box), scale_density * transformation.scale^(N - 1))
+    [from_child_coordinates(transformation, position) for position in positions], intersections
 end
 
 function random_surface_positions(transformation::Rotate{N, M}, density::GeometryProperties,
     bounding_box::InternalBoundingBox{N}, scale_density) where {N, M}
     positions, intersections = random_surface_positions(transformation.geometry, density,
-        forward(transformation, bounding_box), scale_density * (N == M ? 1 : _projected_scale(transformation, bounding_box)))
-    positions = N == M ? [backward(transformation, position) for position in positions] : _deproject_positions(transformation, positions, bounding_box)
-    intersections = [Intersection(hit.distance, backward_normal(transformation, hit.normal), hit.inside,
+        to_child_coordinates(transformation, bounding_box), scale_density * (N == M ? 1 : _projected_scale(transformation, bounding_box)))
+    positions = N == M ? [from_child_coordinates(transformation, position) for position in positions] : _deproject_positions(transformation, positions, bounding_box)
+    intersections = [Intersection(hit.distance, normal_from_child_coordinates(transformation, hit.normal), hit.inside,
         hit.obstruction_index, hit.hit_gap) for hit in intersections]
     positions, intersections
 end
@@ -271,19 +271,19 @@ _geometry_mesh(transformation::Scale; kwargs...) = _geometry_mesh(transformation
 _geometry_mesh(transformation::Rotate; kwargs...) = _geometry_mesh(transformation, transformation.geometry; kwargs...)
 
 function _geometry_mesh_preserving(transformation, geometry; bounding_box=nothing, kwargs...)
-    local_box = isnothing(bounding_box) ? nothing : forward(transformation, bounding_box)
+    local_box = isnothing(bounding_box) ? nothing : to_child_coordinates(transformation, bounding_box)
     _transform_native(transformation, _geometry_mesh(geometry; kwargs..., bounding_box=local_box))
 end
 
-_transform_native(transformation, value) = value isa Real ? backward(transformation, SVector{1, Float64}(value))[1] :
-    value isa SVector ? backward(transformation, value) :
-    value isa NamedTuple ? _mesh_result([backward(transformation, vertex) for vertex in value.vertices], value.triangles) :
+_transform_native(transformation, value) = value isa Real ? from_child_coordinates(transformation, SVector{1, Float64}(value))[1] :
+    value isa SVector ? from_child_coordinates(transformation, value) :
+    value isa NamedTuple ? _mesh_result([from_child_coordinates(transformation, vertex) for vertex in value.vertices], value.triangles) :
     [_transform_native(transformation, item) for item in value]
 
 function _geometry_mesh(transformation::Rotate{3, 1}, geometry; height=nothing, bounding_box=nothing, kwargs...)
-    local_box = isnothing(bounding_box) ? nothing : forward(transformation, bounding_box)
+    local_box = isnothing(bounding_box) ? nothing : to_child_coordinates(transformation, bounding_box)
     positions = _geometry_mesh(geometry; kwargs..., bounding_box=local_box)
-    normal = SVector{3, Float64}(transformation.matrix[1, :])
+    normal = SVector{3, Float64}(transformation.matrix[:, 1])
     reference = abs(normal[1]) < 0.9 ? SVector(1., 0., 0.) : SVector(0., 1., 0.)
     first = cross(normal, reference); first = first ./ norm(first)
     second = cross(normal, first)
@@ -306,9 +306,9 @@ function _circle_triangles(circle)
 end
 
 function _geometry_mesh(transformation::Rotate{3, 2}, geometry; height=nothing, bounding_box=nothing, kwargs...)
-    local_box = isnothing(bounding_box) ? nothing : forward(transformation, bounding_box)
+    local_box = isnothing(bounding_box) ? nothing : to_child_coordinates(transformation, bounding_box)
     circles = _geometry_mesh(geometry; kwargs..., bounding_box=local_box)
-    first = SVector{3, Float64}(transformation.matrix[1, :]); second = SVector{3, Float64}(transformation.matrix[2, :])
+    first = SVector{3, Float64}(transformation.matrix[:, 1]); second = SVector{3, Float64}(transformation.matrix[:, 2])
     axis = cross(first, second); axis = axis ./ norm(axis)
     extrusion = isnothing(height) ? (isnothing(bounding_box) ? 1. :
         2 * sum(abs.(axis) .* InternalBoundingBoxes.half_size(bounding_box))) : Float64(height)

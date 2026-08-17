@@ -64,7 +64,7 @@ const fix = mr.Geometries.Fix.fix
     )
     @test positioned isa Transformations.Rotate{3, 2}
     @test positioned.geometry isa Groups.GeometryVectorBoundingBox
-    @test positioned.geometry.geometries[2].shift == SVector(-2.0, 0.0)
+    @test positioned.geometry.geometries[2].shift == SVector(2.0, 0.0)
 
     global_position_group = mr.Spheres(radius=1.0, position=[1.0, 2.0, 3.0])
     globally_positioned = FixTransformations.fix_transformations(
@@ -72,7 +72,7 @@ const fix = mr.Geometries.Fix.fix
         FixBaseGeometry.fix_base_geometry(global_position_group),
     )
     @test globally_positioned isa Transformations.Shift
-    @test globally_positioned.shift == SVector(-1.0, -2.0, -3.0)
+    @test globally_positioned.shift == SVector(1.0, 2.0, 3.0)
 
     grid_group = mr.Spheres(radius=1.0, grid_resolution=1.0)
     gridded = FixTransformations.fix_transformations(
@@ -103,7 +103,7 @@ const fix = mr.Geometries.Fix.fix
     @test annulus_transformed isa Transformations.Rotate{3, 2}
     @test annulus_transformed.geometry isa Transformations.Shift{2}
     @test annulus_transformed.geometry.geometry isa Groups.GeometryTuple
-    @test annulus_transformed.geometry.shift == SVector(0.0, -1.0)
+    @test annulus_transformed.geometry.shift == SVector(0.0, 1.0)
 
     cylinders = mr.Cylinders(
         radius=[1.0, 2.0],

@@ -253,12 +253,12 @@ end
     @test render_mesh[1].vertices == mesh.vertices
     @test render_mesh[1].triangles == mesh.indices[1:(mesh.first_index_of_gap - 1)]
     shifted_render_mesh = GI.geometry_mesh(Shift(mesh, [1.0, 2.0, 3.0]))
-    @test shifted_render_mesh[1].vertices == [vertex - SVector(1.0, 2.0, 3.0) for vertex in mesh.vertices]
+    @test shifted_render_mesh[1].vertices == [vertex + SVector(1.0, 2.0, 3.0) for vertex in mesh.vertices]
     grouped_render_mesh = GI.geometry_mesh(GeometryTuple{3}((mesh, mesh)))
     @test length(grouped_render_mesh) == 2
 
     wall = BaseObstructions.InfiniteWall()
-    wall_rotation = Rotate(wall, reshape([1.0, 0.0, 0.0], 1, 3))
+    wall_rotation = Rotate(wall, reshape([1.0, 0.0, 0.0], 3, 1))
     wall_mesh = GI.geometry_mesh(wall_rotation; height=2.0)
     @test length(wall_mesh) == 1
     @test length(wall_mesh[1].vertices) == 4
@@ -276,14 +276,14 @@ end
 
     repeated_walls = Repeat(GeometryVector{1}([wall]), [4.0])
     repeated_wall_mesh = GI.geometry_mesh(
-        Rotate(repeated_walls, reshape([1.0, 0.0, 0.0], 1, 3)),
+        Rotate(repeated_walls, reshape([1.0, 0.0, 0.0], 3, 1)),
         PublicBoundingBoxes.BoundingBox([-5.0, -2.0, -2.0], [5.0, 2.0, 2.0]);
         height=2.0,
     )
     @test length(repeated_wall_mesh) == 3
 
     cylinder = BaseObstructions.InfiniteCylinder(1.0)
-    cylinder_rotation = Rotate(cylinder, [1.0 0.0 0.0; 0.0 1.0 0.0])
+    cylinder_rotation = Rotate(cylinder, [1.0 0.0; 0.0 1.0; 0.0 0.0])
     cylinder_mesh = GI.geometry_mesh(cylinder_rotation; nsamples=8, height=2.0)
     @test length(cylinder_mesh) == 1
     @test length(cylinder_mesh[1].vertices) == 16
@@ -302,7 +302,7 @@ end
 
     repeated_circles = Repeat(GeometryVector{2}([cylinder]), [4.0, 4.0])
     repeated_cylinder_mesh = GI.geometry_mesh(
-        Rotate(repeated_circles, [1.0 0.0 0.0; 0.0 1.0 0.0]),
+        Rotate(repeated_circles, [1.0 0.0; 0.0 1.0; 0.0 0.0]),
         PublicBoundingBoxes.BoundingBox([-5.0, -5.0, -1.0], [5.0, 5.0, 1.0]);
         nsamples=8,
         height=2.0,
@@ -515,10 +515,10 @@ end
     position = SVector(4.0, 5.0, 6.0)
     normal = SVector(0.0, 1.0, 0.0)
     @test shift isa Transformations.Transformation{3, 3, typeof(geometry_3d)}
-    @test Transformations.forward(shift, position) == SVector(5.0, 7.0, 9.0)
-    @test Transformations.backward(shift, position) == SVector(3.0, 3.0, 3.0)
-    @test Transformations.forward_normal(shift, normal) == normal
-    @test Transformations.backward_normal(shift, normal) == normal
+    @test Transformations.to_child_coordinates(shift, position) == SVector(3.0, 3.0, 3.0)
+    @test Transformations.from_child_coordinates(shift, SVector(3.0, 3.0, 3.0)) == position
+    @test Transformations.normal_to_child_coordinates(shift, normal) == normal
+    @test Transformations.normal_from_child_coordinates(shift, normal) == normal
 
     intersection = GI.PhysicalGeometries.Intersection(
         0.5,
@@ -755,7 +755,7 @@ end
     @test scaled_hit.distance ≈ 5 / 12
     @test scaled_hit.normal ≈ SVector(-1.0, 0.0, 0.0)
 
-    projected_cylinder = Rotate(cylinder, SMatrix{2, 3, Float64}([1.0 0.0 0.0; 0.0 1.0 0.0]))
+    projected_cylinder = Rotate(cylinder, SMatrix{3, 2, Float64}([1.0 0.0; 0.0 1.0; 0.0 0.0]))
     projected_hit = GI.PhysicalGeometries.detect_intersection(
         projected_cylinder,
         SVector(-3.0, 0.0, 4.0),
@@ -790,32 +790,32 @@ end
     scale = Scale(geometry_3d, 2.0)
     @test scale isa Transformations.Transformation{3, 3, typeof(geometry_3d)}
     @test scale.scale == 2.0
-    @test Transformations.forward(scale, position) == SVector(8.0, 10.0, 12.0)
-    @test Transformations.backward(scale, SVector(8.0, 10.0, 12.0)) == position
-    @test Transformations.forward_normal(scale, normal) == normal
-    @test Transformations.backward_normal(scale, normal) == normal
+    @test Transformations.to_child_coordinates(scale, position) == SVector(2.0, 2.5, 3.0)
+    @test Transformations.from_child_coordinates(scale, SVector(2.0, 2.5, 3.0)) == position
+    @test Transformations.normal_to_child_coordinates(scale, normal) == normal
+    @test Transformations.normal_from_child_coordinates(scale, normal) == normal
     @test_throws ArgumentError Scale(geometry_3d, 0.0)
     @test_throws ArgumentError Scale(geometry_3d, -1.0)
     rotation = Rotate(geometry_2d, SMatrix{2, 2, Float64}([0.0 -1.0; 1.0 0.0]))
     position_2d = SVector(1.0, 2.0)
-    @test Transformations.forward(rotation, position_2d) == SVector(-2.0, 1.0)
-    @test Transformations.backward(rotation, SVector(-2.0, 1.0)) == position_2d
-    @test Transformations.forward_normal(rotation, position_2d) == SVector(-2.0, 1.0)
+    @test Transformations.to_child_coordinates(rotation, position_2d) == SVector(-2.0, 1.0)
+    @test Transformations.from_child_coordinates(rotation, SVector(-2.0, 1.0)) == position_2d
+    @test Transformations.normal_to_child_coordinates(rotation, position_2d) == SVector(-2.0, 1.0)
     reflection = Rotate(geometry_2d, SMatrix{2, 2, Float64}([-1.0 0.0; 0.0 1.0]))
-    @test Transformations.forward(reflection, position_2d) == SVector(-1.0, 2.0)
+    @test Transformations.to_child_coordinates(reflection, position_2d) == SVector(-1.0, 2.0)
 
-    projection = Rotate(geometry_2d, SMatrix{2, 3, Float64}([1.0 0.0 0.0; 0.0 1.0 0.0]))
+    projection = Rotate(geometry_2d, SMatrix{3, 2, Float64}([1.0 0.0; 0.0 1.0; 0.0 0.0]))
     @test projection isa Transformations.Transformation{3, 2, typeof(geometry_2d)}
-    @test Transformations.forward(projection, SVector(1.0, 2.0, 3.0)) == SVector(1.0, 2.0)
-    @test_throws ArgumentError Transformations.backward(projection, SVector(1.0, 2.0))
-    @test_throws ArgumentError Transformations.forward_normal(projection, SVector(1.0, 2.0, 3.0))
-    @test Transformations.backward_normal(projection, SVector(1.0, 2.0)) ≈ SVector(1.0, 2.0, 0.0) / sqrt(5)
+    @test Transformations.to_child_coordinates(projection, SVector(1.0, 2.0, 3.0)) == SVector(1.0, 2.0)
+    @test_throws ArgumentError Transformations.from_child_coordinates(projection, SVector(1.0, 2.0))
+    @test_throws ArgumentError Transformations.normal_to_child_coordinates(projection, SVector(1.0, 2.0, 3.0))
+    @test Transformations.normal_from_child_coordinates(projection, SVector(1.0, 2.0)) ≈ SVector(1.0, 2.0, 0.0) / sqrt(5)
     @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(projection)
 
     geometry_1d = TestGeometry{1}(0)
-    projection_z = Rotate(geometry_1d, SMatrix{1, 3, Float64}([0.0 0.0 1.0]))
-    @test Transformations.forward(projection_z, SVector(1.0, 2.0, 3.0)) == SVector(3.0)
-    @test_throws ArgumentError Rotate(geometry_1d, SMatrix{1, 2, Float64}([2.0 0.0]))
+    projection_z = Rotate(geometry_1d, SMatrix{3, 1, Float64}([0.0; 0.0; 1.0]))
+    @test Transformations.to_child_coordinates(projection_z, SVector(1.0, 2.0, 3.0)) == SVector(3.0)
+    @test_throws ArgumentError Rotate(geometry_1d, SMatrix{2, 1, Float64}([2.0; 0.0]))
 
     cube = BoundingBoxes.InternalBoundingBox(2.0, [1.0, 2.0, 3.0])
     centered_cube = BoundingBoxes.InternalBoundingBox{3}(2.0)
@@ -942,17 +942,17 @@ end
     shifted_cube = BoundingBoxes.shift(cube, displacement)
     shifted_centered_rect = BoundingBoxes.shift(centered_rect, displacement)
     shifted_rect = BoundingBoxes.shift(rect, displacement)
-    scaled_centered_cube = Transformations.forward(scale, centered_cube)
-    scaled_rect = Transformations.forward(scale, rect)
+    scaled_centered_cube = Transformations.to_child_coordinates(scale, centered_cube)
+    scaled_rect = Transformations.to_child_coordinates(scale, rect)
     @test scaled_centered_cube isa BoundingBoxes.InternalBoundingBox{3}
     @test scaled_rect isa BoundingBoxes.InternalBoundingBox{3}
-    @test BoundingBoxes.lower(scaled_centered_cube) == SVector(-4.0, -4.0, -4.0)
-    @test BoundingBoxes.upper(scaled_centered_cube) == SVector(4.0, 4.0, 4.0)
+    @test BoundingBoxes.lower(scaled_centered_cube) == SVector(-1.0, -1.0, -1.0)
+    @test BoundingBoxes.upper(scaled_centered_cube) == SVector(1.0, 1.0, 1.0)
     @test BoundingBoxes.lower(scaled_rect) == SVector(0.0, 0.0, 0.0)
-    @test BoundingBoxes.upper(scaled_rect) == SVector(4.0, 8.0, 12.0)
-    @test Transformations.forward(shift, centered_cube) isa BoundingBoxes.InternalBoundingBox{3}
-    transformed_centered_cube = Transformations.forward(shift, centered_cube)
-    recovered_centered_cube = Transformations.backward(shift, transformed_centered_cube)
+    @test BoundingBoxes.upper(scaled_rect) == SVector(1.0, 2.0, 3.0)
+    @test Transformations.to_child_coordinates(shift, centered_cube) isa BoundingBoxes.InternalBoundingBox{3}
+    transformed_centered_cube = Transformations.to_child_coordinates(shift, centered_cube)
+    recovered_centered_cube = Transformations.from_child_coordinates(shift, transformed_centered_cube)
     @test BoundingBoxes.lower(recovered_centered_cube) == BoundingBoxes.lower(centered_cube)
     @test BoundingBoxes.upper(recovered_centered_cube) == BoundingBoxes.upper(centered_cube)
     @test shifted_centered_cube isa BoundingBoxes.InternalBoundingBox{3}
@@ -964,16 +964,16 @@ end
     @test BoundingBoxes.lower(shifted_centered_rect) == SVector(3.0, 3.0, 3.0)
     @test BoundingBoxes.lower(shifted_rect) == SVector(4.0, 5.0, 6.0)
     @test typeof(BoundingBoxes.shift(centered_cube, [4.0, 5.0, 6.0])) === typeof(shifted_centered_cube)
-    @test Transformations.forward(projection, centered_cube) isa BoundingBoxes.InternalBoundingBox{2}
-    @test Transformations.forward(projection_z, centered_cube) isa BoundingBoxes.InternalBoundingBox{1}
-    @test_throws ArgumentError Transformations.backward(projection, centered_cube)
+    @test Transformations.to_child_coordinates(projection, centered_cube) isa BoundingBoxes.InternalBoundingBox{2}
+    @test Transformations.to_child_coordinates(projection_z, centered_cube) isa BoundingBoxes.InternalBoundingBox{1}
+    @test_throws ArgumentError Transformations.from_child_coordinates(projection, centered_cube)
 
     rotation_3d = Rotate(geometry_3d, SMatrix{3, 3, Float64}(I))
-    rotated_box = Transformations.forward(rotation_3d, centered_cube)
+    rotated_box = Transformations.to_child_coordinates(rotation_3d, centered_cube)
     @test rotated_box isa BoundingBoxes.InternalBoundingBox{3}
     transformed_bounds = (BoundingBoxes.lower(centered_cube), BoundingBoxes.upper(centered_cube))
-    @test all(BoundingBoxes.isinside(rotated_box, Transformations.forward(rotation_3d, point)) for point in transformed_bounds)
-    @test Transformations.backward(rotation_3d, rotated_box) isa BoundingBoxes.InternalBoundingBox{3}
+    @test all(BoundingBoxes.isinside(rotated_box, Transformations.to_child_coordinates(rotation_3d, point)) for point in transformed_bounds)
+    @test Transformations.from_child_coordinates(rotation_3d, rotated_box) isa BoundingBoxes.InternalBoundingBox{3}
 end
 
 @testset "Fixed geometry susceptibility state" begin
