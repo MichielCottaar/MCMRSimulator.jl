@@ -38,6 +38,7 @@ function remove_index(intersection::Intersection)
     obstruction_index,
     intersection.hit_gap
 ))
+end
 
 """
     flip(intersection)
@@ -53,6 +54,5 @@ flip(intersection::Intersection) = Intersection(
     intersection.obstruction_index,
     intersection.hit_gap
 )
-end
 
 end
