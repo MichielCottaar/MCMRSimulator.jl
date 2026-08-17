@@ -6,6 +6,7 @@ import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: intersection_index_length, inside_index_length, contains_geometry_tuple
 import ..Groups: inside_indices_for_any_type
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _translate_native
 import ...Properties: GeometryProperties
@@ -29,6 +30,12 @@ struct Repeat{N, P<:PhysicalGeometry{N}} <: PhysicalGeometry{N}
         new{N, P}(geometry, repeats, lower_overlap, upper_overlap)
     end
 end
+
+contains_geometry_tuple(::Type{<:Repeat{N, P}}) where {N, P} = contains_geometry_tuple(P)
+intersection_index_length(::Type{<:Repeat{N, P}}) where {N, P} =
+    contains_geometry_tuple(P) ? 0 : intersection_index_length(P)
+inside_index_length(::Type{<:Repeat{N, P}}) where {N, P} =
+    contains_geometry_tuple(P) ? 0 : inside_index_length(P)
 
 Repeat(geometry::P, repeats::AbstractVector{<:Real}) where {N, P<:PhysicalGeometry{N}} =
     Repeat{N, P}(geometry, SVector{N, Float64}(repeats))
@@ -101,7 +108,9 @@ function inside_indices(
     intersection::Intersection{N}=Intersection{N}(),
 ) where {N}
     local_position = _wrap(repeat, position)
-    indices = ObstructionIndex[]
+    geometry_type = typeof(repeat.geometry)
+    indices = contains_geometry_tuple(geometry_type) ?
+        ObstructionIndex[] : ObstructionIndex{inside_index_length(geometry_type)}[]
     candidates = if Base.isempty(intersection) && _needs_image_search(repeat)
         ((_child_image(repeat, local_position, image), image) for image in _candidate_images(repeat, local_position))
     else
@@ -164,8 +173,8 @@ function detect_intersection(
     previous_hit::Intersection{3}=Intersection{3}(),
 ) where {N}
     displacement = destination - start
-    iszero(displacement) && return Intersection{N}()
-    closest = Intersection{N}()
+    iszero(displacement) && return Intersection{N, intersection_index_length(typeof(repeat))}()
+    closest = Intersection{N, intersection_index_length(typeof(repeat))}()
     previous = previous_hit
     scaled_start = (start .+ repeat.repeats / 2) ./ repeat.repeats
     scaled_destination = (destination .+ repeat.repeats / 2) ./ repeat.repeats
@@ -182,7 +191,7 @@ function detect_intersection(
                 local_destination .+ shift .* repeat.repeats,
                 previous,
             )
-            previous = Intersection{3}()
+            previous = Intersection{3, intersection_index_length(typeof(repeat))}()
             Base.isempty(local_intersection) && continue
             distance = entry_time + local_intersection.distance * (exit_time - entry_time)
             if distance < closest.distance
@@ -199,7 +208,7 @@ function detect_intersection(
             return closest
         end
     end
-    return Intersection{N}()
+    return Intersection{N, intersection_index_length(typeof(repeat))}()
 end
 
 end

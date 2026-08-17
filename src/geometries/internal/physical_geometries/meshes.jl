@@ -7,6 +7,7 @@ import NearestNeighbors: KDTree, nn
 
 import ...Indices: ObstructionIndex, add_index
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, InternalBoundingBox
+import ..PhysicalGeometries: intersection_index_length, inside_index_length
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryLeafProperties
 import ..Groups
@@ -31,6 +32,8 @@ end
 
 has_inside(::Type{Mesh}) = true
 has_single_inside(::Type{Mesh}) = true
+intersection_index_length(::Type{Mesh}) = 1
+inside_index_length(::Type{Mesh}) = 0
 
 function _mesh_indices(indices, nvertices)
     result = [SVector{3, Int}(triangle) for triangle in indices]
@@ -195,19 +198,20 @@ function _mesh_inside_mask(
             grid,
             centre,
             destination,
-            Intersection{3}(),
+            Intersection{3, 1}(),
+            Intersection{3, 1}(),
         ) do candidate_index, _
             hit = detect_intersection(
                 _mesh_triangle(vertices, indices[candidate_index]),
                 centre,
                 destination,
             )
-            Base.isempty(hit) && return hit
+            Base.isempty(hit) && return Intersection{3, 1}()
             Intersection(
                 hit.distance,
                 hit.normal,
                 hit.inside,
-            add_index(ObstructionIndex(), candidate_index),
+                add_index(ObstructionIndex(), candidate_index),
                 false,
             )
         end
@@ -269,8 +273,8 @@ function detect_intersection(
     mesh::Mesh,
     start::SVector{3, Float64},
     destination::SVector{3, Float64},
-    previous_hit::Intersection{3}=Intersection{3}(),
-)
+    previous_hit::Intersection{3, M}=Intersection{3, 1}(),
+) where {M}
     previous_index = 0
     if !Base.isempty(previous_hit)
         previous_indices = previous_hit.obstruction_index.indices
@@ -286,15 +290,16 @@ function detect_intersection(
         start,
         destination,
         previous_hit,
+        Intersection{3, 1}(),
     ) do triangle_index, previous
-        triangle_previous_hit = triangle_index == previous_index ? previous : Intersection{3}()
+        triangle_previous_hit = triangle_index == previous_index ? previous : Intersection{3, 1}()
         intersection = detect_intersection(
             triangle(mesh, triangle_index),
             start,
             destination,
             triangle_previous_hit,
         )
-        Base.isempty(intersection) && return intersection
+        Base.isempty(intersection) && return Intersection{3, 1}()
         Intersection(
             intersection.distance,
             intersection.normal,

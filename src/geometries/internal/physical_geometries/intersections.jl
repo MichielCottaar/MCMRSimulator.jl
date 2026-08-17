@@ -17,7 +17,8 @@ struct Intersection{N, M}
     hit_gap::Bool
 end
 
-Intersection{N}() where {N} = Intersection(Inf, zero(SVector{N, Float64}), false, ObstructionIndex(), false)
+Intersection{N, M}() where {N, M} = Intersection(Inf, zero(SVector{N, Float64}), false, ObstructionIndex{M}(), false)
+Intersection{N}() where {N} = Intersection{N, 0}()
 function Base.isempty(intersection::Intersection)
     intersection.distance < 0 || intersection.distance > 1
 end
@@ -45,12 +46,21 @@ end
 
 If the index in `intersection` matches `expected_index` an intersection is returned with that element removed.  Otherwise, an empty intersection is returned.
 """
-function remove_expected_index(intersection::Intersection{N}, expected::Int) where {N}
-    Base.isempty(intersection) && return Intersection{N}()
+function remove_expected_index(
+    intersection::Intersection{N, M},
+    expected::Int,
+) where {N, M}
+    empty_intersection = Intersection{N, M - 1}()
+    Base.isempty(intersection) && return empty_intersection
     isempty(intersection.obstruction_index.indices) &&
         throw(ArgumentError("Intersection indices are unexpectedly empty."))
-    intersection.obstruction_index.indices[1] == expected || return Intersection{N}()
+    intersection.obstruction_index.indices[1] == expected || return empty_intersection
     remove_index(intersection)[2]
+end
+
+function remove_expected_index(intersection::Intersection{N, 0}, expected::Int) where {N}
+    Base.isempty(intersection) && return intersection
+    throw(ArgumentError("Intersection indices are unexpectedly empty."))
 end
 
 """

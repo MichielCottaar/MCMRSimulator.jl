@@ -62,15 +62,16 @@ function detect_intersection_grid(
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
     previous_hit::Intersection{N},
-) where {N}
-    iszero(destination - start) && return Intersection{N}()
-    InternalBoundingBoxes.could_intersect(grid.grid_bounding_box, start, destination) || return Intersection{N}()
-    InternalBoundingBoxes.does_intersect(grid.grid_bounding_box, start, destination) || return Intersection{N}()
+    empty_intersection::Intersection{N, M},
+) where {N, M}
+    iszero(destination - start) && return empty_intersection
+    InternalBoundingBoxes.could_intersect(grid.grid_bounding_box, start, destination) || return empty_intersection
+    InternalBoundingBoxes.does_intersect(grid.grid_bounding_box, start, destination) || return empty_intersection
 
     lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)
     scaled_start = (start - lower_bound) .* grid.inv_resolution
     scaled_destination = (destination - lower_bound) .* grid.inv_resolution
-    found = Intersection{N}()
+    found = empty_intersection
     entered_grid = false
     grid_size = SVector{N, Int}(size(grid.indices))
 

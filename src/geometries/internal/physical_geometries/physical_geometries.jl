@@ -30,6 +30,15 @@ function inside_indices end
 """Whether the geometry is within the single inside."""
 function isinside_single end
 
+"""Return the obstruction-index depth of intersections from a geometry."""
+function intersection_index_length end
+
+"""Return the obstruction-index depth of inside results from a geometry."""
+function inside_index_length end
+
+"""Whether a geometry contains a tuple group and may be type unstable."""
+function contains_geometry_tuple end
+
 """Sample surface positions together with initialized collision states."""
 function random_surface_positions end
 

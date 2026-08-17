@@ -10,6 +10,7 @@ struct ObstructionIndex{N}
     indices::SVector{N, Int}
 end
 
+ObstructionIndex{N}() where {N} = ObstructionIndex{N}(zero(SVector{N, Int}))
 ObstructionIndex() = ObstructionIndex{0}(SVector{0, Int}())
 
 """

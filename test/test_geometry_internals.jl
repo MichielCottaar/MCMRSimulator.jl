@@ -367,6 +367,26 @@ end
     @test mesh.indices[mesh.first_index_of_gap] == SVector(4, 2, 3)
     @test BoundingBoxes.lower(mesh.bounding_box) == SVector(0.0, 0.0, 0.0)
     @test BoundingBoxes.upper(mesh.bounding_box) == SVector(1.0, 1.0, 1.0)
+    stability_start = SVector(-2.0, 0.0, 0.0)
+    stability_destination = SVector(2.0, 0.0, 0.0)
+    stable_group = GeometryVector([BaseObstructions.Sphere(1.0)])
+    stable_group_hit = @inferred GI.PhysicalGeometries.detect_intersection(
+        stable_group, stability_start, stability_destination,
+    )
+    @test stable_group_hit isa GI.Intersection{3, 1}
+    stable_group_inside = @inferred inside_indices(stable_group, SVector(0.0, 0.0, 0.0))
+    @test stable_group_inside isa Vector{ObstructionIndex{1}}
+    stable_mesh_hit = @inferred GI.PhysicalGeometries.detect_intersection(
+        mesh, stability_start, stability_destination,
+    )
+    @test stable_mesh_hit isa GI.Intersection{3, 1}
+    stable_mesh_group = GeometryVector([mesh])
+    stable_mesh_group_hit = @inferred GI.PhysicalGeometries.detect_intersection(
+        stable_mesh_group, stability_start, stability_destination,
+    )
+    @test stable_mesh_group_hit isa GI.Intersection{3, 2}
+    stable_mesh_group_inside = @inferred inside_indices(stable_mesh_group, SVector(0.2, 0.2, 0.2))
+    @test stable_mesh_group_inside isa Vector{ObstructionIndex{1}}
     @test size_scale(mesh) == 1 / (2 * Meshes.curvature(mesh))
     @test size_scale(SizeScaleOverride(mesh, 0.25)) == 0.25
     @test SizeScaleOverride(mesh, 0.25) isa Transparent
