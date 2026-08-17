@@ -5,22 +5,19 @@ end
 has_inside(::Type{<:Round}) = true
 has_single_inside(::Type{<:Round}) = true
 
-function inside_indices(
+function isinside_single(
     round::Round{N},
     position::SVector{N, Float64},
     intersection::Intersection{N}=Intersection{N}(),
 ) where {N}
-    !Base.isempty(intersection) && return intersection.inside ? [ObstructionIndex()] : ObstructionIndex[]
-    isinside(round, position) ? [ObstructionIndex()] : ObstructionIndex[]
+    !Base.isempty(intersection) && return intersection.inside
+    return sum(position .* position) < round.radius^2
 end
 
 const InfiniteCylinder = Round{2}
 const Sphere = Round{3}
 
 InternalBoundingBox(round::Round{N}) where {N} = InternalBoundingBox{N}(round.radius)
-
-isinside(round::Round{N}, position::SVector{N, Float64}) where {N} =
-    sum(position .* position) < round.radius^2
 
 size_scale(round::Round) = round.radius
 

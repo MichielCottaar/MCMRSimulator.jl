@@ -5,14 +5,14 @@ end
 
 has_inside(::Type{<:OverlappingRound}) = true
 has_single_inside(::Type{<:OverlappingRound}) = true
+Round(r::OverlappingRound{N}) where {N} = Round{N}(r.radius)
 
-function inside_indices(
+function isinside_single(
     round::OverlappingRound{N},
     position::SVector{N, Float64},
     intersection::Intersection{N}=Intersection{N}(),
 ) where {N}
-    !Base.isempty(intersection) && return intersection.inside ? [ObstructionIndex()] : ObstructionIndex[]
-    isinside(round, position) ? [ObstructionIndex()] : ObstructionIndex[]
+    isinside_single(Round(round), position, intersection)
 end
 
 const OverlappingInfiniteCylinder = OverlappingRound{2}
@@ -22,9 +22,6 @@ OverlappingRound{N}(radius::Number) where {N} =
     OverlappingRound{N}(Float64(radius), Tuple{SVector{N, Float64}, Float64}[])
 
 InternalBoundingBox(round::OverlappingRound{N}) where {N} = InternalBoundingBox{N}(round.radius)
-
-isinside(round::OverlappingRound{N}, position::SVector{N, Float64}) where {N} =
-    sum(position .* position) < round.radius^2
 
 function _inside_other_rounds(round::OverlappingRound{N}, position::SVector{N, Float64}) where {N}
     any(

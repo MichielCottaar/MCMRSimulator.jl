@@ -8,14 +8,6 @@ end
 
 has_inside(::Type{FullTriangle}) = false
 has_single_inside(::Type{FullTriangle}) = false
-function inside_indices(
-    ::FullTriangle,
-    ::SVector{3, Float64},
-    intersection::Intersection{3}=Intersection{3}(),
-)
-    !Base.isempty(intersection) && return intersection.inside ? [ObstructionIndex()] : ObstructionIndex[]
-    ObstructionIndex[]
-end
 
 Base.getindex(triangle::FullTriangle, index::Int) = (triangle.a, triangle.b, triangle.c)[index]
 

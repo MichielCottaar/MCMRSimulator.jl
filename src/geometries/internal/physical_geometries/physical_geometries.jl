@@ -28,7 +28,7 @@ function has_single_inside end
 function inside_indices end
 
 """Whether the geometry is within the single inside."""
-function is_in_single_inside end
+function isinside_single end
 
 """Sample surface positions together with initialized collision states."""
 function random_surface_positions end
