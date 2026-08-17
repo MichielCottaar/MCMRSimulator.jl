@@ -1,3 +1,5 @@
+import ....User.ToMesh: icosahedron
+
 struct Round{N} <: BaseObstruction{N}
     radius::Float64
 end
@@ -73,12 +75,8 @@ function _geometry_mesh(cylinder::InfiniteCylinder; nsamples=100, kwargs...)
         cylinder.radius * sin(2π * index / nsamples)) for index in 0:(nsamples - 1)]]
 end
 
-function _geometry_mesh(sphere::Sphere; nsamples=100, kwargs...)
-    p = 1 / ((1 + sqrt(5)) / 2)
-    vertices = [SVector{3, Float64}(v / norm(v)) for v in [[0,p,-1],[p,1,0],[-p,1,0],[0,p,1],
-        [0,-p,1],[-1,0,p],[0,-p,-1],[1,0,-p],[1,0,p],[-1,0,-p],[p,-1,0],[-p,-1,0]]]
-    triangles = [SVector{3, Int}(t) for t in [[3,2,1],[2,3,4],[6,5,4],[5,9,4],[8,7,1],
-        [7,10,1],[12,11,5],[11,12,7],[10,6,3],[6,10,12],[9,8,2],[8,9,11],[3,6,4],[9,2,4],
-        [10,3,1],[2,8,1],[12,10,7],[8,11,7],[6,12,5],[11,9,5]]]
-    [_mesh_result(sphere.radius .* vertices, triangles)]
+function _geometry_mesh(sphere::Sphere; nsamples, kwargs...)
+    subdivisions = Int(ceil(sqrt(nsamples / 20)))
+    base_vertices, triangles = icosahedron(subdivisions)
+    [_mesh_result(sphere.radius .* base_vertices, triangles)]
 end
