@@ -4,7 +4,7 @@ module Groups
 import StaticArrays: SVector
 import ...Indices: ObstructionIndex, add_index
 import ...InternalBoundingBoxes
-import ..GridDispatch: detect_intersection_grid
+import ..GridDispatch: IntersectionGrid, detect_intersection_grid
 import ..Intersections: remove_expected_index
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
@@ -42,18 +42,14 @@ end
 
 struct GeometryVectorGrid{N, P<:PhysicalGeometry{N}} <: GeometryVectorLike{N, P}
     geometries::Vector{P}
-    bounding_box::InternalBoundingBoxes.InternalBoundingBox{N}
-    inv_resolution::SVector{N, Float64}
-    indices::Array{Vector{Int}, N}
+    grid::IntersectionGrid{N}
 
     function GeometryVectorGrid{N, P}(
         geometries::Vector{P},
-        bounding_box::InternalBoundingBoxes.InternalBoundingBox{N},
-        inv_resolution::SVector{N, Float64},
-        indices::Array{Vector{Int}, N},
+        grid::IntersectionGrid{N},
     ) where {N, P<:PhysicalGeometry{N}}
         _is_fully_concrete(P) || throw(ArgumentError("GeometryVector element types must be fully concrete"))
-        new{N, P}(geometries, bounding_box, inv_resolution, indices)
+        new{N, P}(geometries, grid)
     end
 end
 
@@ -76,7 +72,7 @@ function InternalBoundingBox(geometry::GroupGeometry{N, P}) where {N, P}
     )
 end
 
-InternalBoundingBox(geometry::GeometryVectorGrid) = geometry.bounding_box
+InternalBoundingBox(geometry::GeometryVectorGrid) = geometry.grid.bounding_box
 
 function _inside_indices(
     geometry::GeometryVectorLike{N, P},
@@ -131,8 +127,8 @@ function _grid_coordinate(
     geometry::GeometryVectorGrid{N},
     position::SVector{N, Float64},
 ) where {N}
-    coordinate = Int.(floor.((position - InternalBoundingBoxes.lower(geometry.bounding_box)) .* geometry.inv_resolution)) .+ 1
-    any(coordinate .< 1) || any(coordinate .> size(geometry.indices)) ? nothing : SVector{N, Int}(coordinate)
+    coordinate = Int.(floor.((position - InternalBoundingBoxes.lower(geometry.grid.grid_bounding_box)) .* geometry.grid.inv_resolution)) .+ 1
+    any(coordinate .< 1) || any(coordinate .> size(geometry.grid.indices)) ? nothing : SVector{N, Int}(coordinate)
 end
 
 function inside_indices(
@@ -146,8 +142,8 @@ function inside_indices(
 end
 
 function _grid_candidates(geometry::GeometryVectorGrid, coordinate)
-    (any(coordinate .< 1) || any(coordinate .> size(geometry.indices))) && return Int[]
-    geometry.indices[coordinate...]
+    (any(coordinate .< 1) || any(coordinate .> size(geometry.grid.indices))) && return Int[]
+    geometry.grid.indices[coordinate...]
 end
 
 function inside_indices(
@@ -177,39 +173,14 @@ function GeometryVector(
     bounding_box ? GeometryVectorBoundingBox(geometries) : GeometryVector{N, P}(geometries)
 end
 
-function _grid_dimensions(box::InternalBoundingBoxes.InternalBoundingBox{N}, resolution) where {N}
-    extent = InternalBoundingBoxes.upper(box) - InternalBoundingBoxes.lower(box)
-    if isinf(resolution)
-        return SVector{N, Int}(ones(Int, N)), extent
-    end
-    resolution > 0 || throw(ArgumentError("grid_resolution must be positive"))
-    dimensions = max.(SVector{N, Int}(ceil.(Int, extent ./ resolution)), 1)
-    return dimensions, extent ./ dimensions
-end
-
 function GeometryVectorGrid(
     geometries::Vector{P};
     grid_resolution=nothing,
 ) where {N, P<:PhysicalGeometry{N}}
     isempty(geometries) && throw(ArgumentError("cannot construct a grid for an empty geometry vector"))
     boxes = InternalBoundingBox.(geometries)
-    lower_bound = reduce((a, b) -> min.(a, b), (InternalBoundingBoxes.lower(box) for box in boxes))
-    upper_bound = reduce((a, b) -> max.(a, b), (InternalBoundingBoxes.upper(box) for box in boxes))
-    box = InternalBoundingBoxes.InternalBoundingBox(
-        (upper_bound - lower_bound) / 2,
-        (upper_bound + lower_bound) / 2,
-    )
-    extent = upper_bound - lower_bound
-    resolution = isnothing(grid_resolution) ?
-        (maximum(extent) / max(ceil(Int, length(geometries)^(1 / N)), 1)) : grid_resolution
-    dimensions, cell_size = _grid_dimensions(box, resolution)
-    actual_box = InternalBoundingBoxes.InternalBoundingBox(
-        cell_size .* dimensions / 2,
-        lower_bound + cell_size .* dimensions / 2,
-    )
-    inv_resolution = SVector{N, Float64}(1 ./ cell_size)
-    indices = InternalBoundingBoxes.grid_indices(actual_box, dimensions, boxes)
-    GeometryVectorGrid{N, P}(geometries, actual_box, inv_resolution, indices)
+    grid = IntersectionGrid(boxes; resolution=grid_resolution)
+    GeometryVectorGrid{N, P}(geometries, grid)
 end
 
 GeometryVectorBoundingBox(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}} =
@@ -276,9 +247,7 @@ function detect_intersection(
     previous_hit::Intersection{3}=Intersection{3}(),
 ) where {N}
     return detect_intersection_grid(
-        geometry.bounding_box,
-        geometry.inv_resolution,
-        geometry.indices,
+        geometry.grid,
         start,
         destination,
         previous_hit,

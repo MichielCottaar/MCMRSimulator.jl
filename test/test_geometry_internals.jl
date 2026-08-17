@@ -16,6 +16,7 @@ const ObstructionIndex = GI.Indices.ObstructionIndex
 const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
 const Meshes = GI.PhysicalGeometries.Meshes
 const Mesh = Meshes.Mesh
+const IntersectionGrid = GI.PhysicalGeometries.GridDispatch.IntersectionGrid
 const Transparents = GI.PhysicalGeometries.Transparents
 const Transparent = GI.PhysicalGeometries.Transparent
 const SizeScaleOverride = GI.SizeScaleOverride
@@ -38,6 +39,26 @@ const Properties = GI.Properties
     @test_throws DimensionMismatch PublicBoundingBoxes.BoundingBox([0, 0], [1, 1])
     @test_throws ArgumentError PublicBoundingBoxes.BoundingBox(-1.0)
 end
+
+@testset "intersection grids" begin
+    grid_box = BoundingBoxes.InternalBoundingBox([2.0, 1.0, 1.0])
+    child_boxes = [
+        BoundingBoxes.InternalBoundingBox([0.5, 1.0, 1.0], [-1.0, 0.0, 0.0]),
+        BoundingBoxes.InternalBoundingBox([0.5, 1.0, 1.0], [1.0, 0.0, 0.0]),
+    ]
+    grid = IntersectionGrid(child_boxes; resolution=2.0, bounding_box=grid_box)
+    @test grid.bounding_box == grid_box
+    @test size(grid.indices) == (2, 1, 1)
+    @test grid.indices[1, 1, 1] == [1]
+    @test grid.indices[2, 1, 1] == [2]
+
+    planar_box = BoundingBoxes.InternalBoundingBox([1.0, 1.0, 0.0])
+    planar_grid = IntersectionGrid([planar_box]; resolution=1.0)
+    @test planar_grid.bounding_box == planar_box
+    @test all(isfinite, planar_grid.inv_resolution)
+    @test BoundingBoxes.upper(planar_grid.grid_bounding_box)[3] > BoundingBoxes.lower(planar_grid.grid_bounding_box)[3]
+end
+
 const get_value = Properties.get_value
 const all_property_values = Properties.all_property_values
 

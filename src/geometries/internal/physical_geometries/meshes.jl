@@ -10,9 +10,8 @@ import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryLeafProperties
 import ..Groups
-import ..GridDispatch: detect_intersection_grid
+import ..GridDispatch: IntersectionGrid, detect_intersection_grid
 import ...InternalBoundingBoxes
-import ...InternalBoundingBoxes: grid_indices
 import ..BaseObstructions: FullTriangle, normal
 
 """A connected mesh component backed by lazily materialized triangles.
@@ -26,9 +25,7 @@ struct Mesh <: PhysicalGeometry{3}
     indices::Vector{SVector{3, Int}}
     first_index_of_gap::Int
     bounding_box::InternalBoundingBox{3}
-    grid_bounding_box::InternalBoundingBox{3}
-    inv_resolution::SVector{3, Float64}
-    indices_grid::Array{Vector{Int}, 3}
+    grid::IntersectionGrid{3}
     inside_mask::BitArray{3}
 end
 
@@ -40,27 +37,6 @@ function _mesh_indices(indices, nvertices)
     all(all(triangle .>= 1) && all(triangle .<= nvertices) for triangle in result) ||
         throw(ArgumentError("mesh triangle indices must refer to existing vertices"))
     result
-end
-
-function _mesh_grid_box(box::InternalBoundingBox{3})
-    lower_bound = InternalBoundingBoxes.lower(box)
-    upper_bound = InternalBoundingBoxes.upper(box)
-    extent = upper_bound - lower_bound
-    # A planar mesh can have zero extent in one or more dimensions. Give the
-    # dispatch grid a finite cell in those dimensions without changing the
-    # mesh's reported bounding box.
-    grid_extent = max.(extent, eps(Float64))
-    InternalBoundingBox(
-        grid_extent / 2,
-        (lower_bound + upper_bound) / 2,
-    )
-end
-
-function _mesh_grid_resolution(extent, number, resolution)
-    isnothing(resolution) && return maximum(extent) / max(ceil(Int, number^(1 / 3)), 1)
-    isinf(resolution) && return resolution
-    resolution > 0 || throw(ArgumentError("grid_resolution must be positive"))
-    Float64(resolution)
 end
 
 "Helper function to compute holes in meshes (`_mesh_gap_indices`)"
@@ -170,41 +146,18 @@ function Mesh(
         InternalBoundingBox(FullTriangle(fixed_vertices[triangle[1]], fixed_vertices[triangle[2]], fixed_vertices[triangle[3]]))
         for triangle in fixed_indices
     ]
-    lower_bound = reduce((a, b) -> min.(a, b), (InternalBoundingBoxes.lower(box) for box in triangle_boxes))
-    upper_bound = reduce((a, b) -> max.(a, b), (InternalBoundingBoxes.upper(box) for box in triangle_boxes))
-    bounding_box = InternalBoundingBox(
-        (upper_bound - lower_bound) / 2,
-        (upper_bound + lower_bound) / 2,
-    )
-
-    grid_box = _mesh_grid_box(bounding_box)
-    extent = InternalBoundingBoxes.upper(grid_box) - InternalBoundingBoxes.lower(grid_box)
-    resolution = _mesh_grid_resolution(extent, length(triangle_boxes), grid_resolution)
-    dimensions = isinf(resolution) ? SVector{3, Int}(1, 1, 1) :
-        max.(SVector{3, Int}(ceil.(Int, extent ./ resolution)), 1)
-    cell_size = extent ./ dimensions
-    inv_resolution = SVector{3, Float64}(1 ./ cell_size)
-
-    indices_grid = grid_indices(
-        grid_box,
-        dimensions,
-        triangle_boxes,
-    )
+    grid = IntersectionGrid(triangle_boxes; resolution=grid_resolution)
     inside_mask = _mesh_inside_mask(
         fixed_vertices,
         fixed_indices,
-        grid_box,
-        inv_resolution,
-        indices_grid,
+        grid,
     )
     Mesh(
         fixed_vertices,
         fixed_indices,
         first_index_of_gap,
-        bounding_box,
-        grid_box,
-        inv_resolution,
-        indices_grid,
+        grid.bounding_box,
+        grid,
         inside_mask,
     )
 end
@@ -224,26 +177,22 @@ InternalBoundingBox(mesh::Mesh) = mesh.bounding_box
 function _mesh_inside_mask(
     vertices,
     indices,
-    grid_box,
-    inv_resolution,
-    indices_grid,
+    grid::IntersectionGrid{3},
 )
     centroids = [
         sum((vertices[vertex] for vertex in triangle)) / 3
         for triangle in indices
     ]
     tree = KDTree(centroids)
-    mask = falses(size(indices_grid))
-    lower_bound = InternalBoundingBoxes.lower(grid_box)
+    mask = falses(size(grid.indices))
+    lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)
     for coordinate in CartesianIndices(mask)
         grid_coordinate = SVector{3, Float64}(Tuple(coordinate)) .- 0.5
-        centre = lower_bound .+ grid_coordinate ./ inv_resolution
+        centre = lower_bound .+ grid_coordinate ./ grid.inv_resolution
         triangle_index = nn(tree, centre)[1]
         destination = centroids[triangle_index]
         intersection = detect_intersection_grid(
-            grid_box,
-            inv_resolution,
-            indices_grid,
+            grid,
             centre,
             destination,
             Intersection{3}(),
@@ -275,8 +224,8 @@ function _mesh_triangle(vertices, triangle::SVector{3, Int})
 end
 
 function _mesh_grid_coordinate(mesh::Mesh, position)
-    coordinate = Int.(floor.((position - InternalBoundingBoxes.lower(mesh.grid_bounding_box)) .* mesh.inv_resolution)) .+ 1
-    any(coordinate .< 1) || any(coordinate .> size(mesh.indices_grid)) ? nothing : SVector{3, Int}(coordinate)
+    coordinate = Int.(floor.((position - InternalBoundingBoxes.lower(mesh.grid.grid_bounding_box)) .* mesh.grid.inv_resolution)) .+ 1
+    any(coordinate .< 1) || any(coordinate .> size(mesh.grid.indices)) ? nothing : SVector{3, Int}(coordinate)
 end
 
 function isinside_single(
@@ -296,11 +245,11 @@ function isinside_single(
     coordinate = _mesh_grid_coordinate(mesh, position)
     isnothing(coordinate) && return false
 
-    lower_bound = InternalBoundingBoxes.lower(mesh.grid_bounding_box)
-    centre = lower_bound .+ (SVector{3, Float64}(coordinate) .- 0.5) ./ mesh.inv_resolution
+    lower_bound = InternalBoundingBoxes.lower(mesh.grid.grid_bounding_box)
+    centre = lower_bound .+ (SVector{3, Float64}(coordinate) .- 0.5) ./ mesh.grid.inv_resolution
     inside = mesh.inside_mask[coordinate...]
     intersection_points = SVector{3, Float64}[]
-    for triangle_index in mesh.indices_grid[coordinate...]
+    for triangle_index in mesh.grid.indices[coordinate...]
         triangle_intersection = detect_intersection(
             triangle(mesh, triangle_index),
             centre,
@@ -333,9 +282,7 @@ function detect_intersection(
     end
 
     detect_intersection_grid(
-        mesh.grid_bounding_box,
-        mesh.inv_resolution,
-        mesh.indices_grid,
+        mesh.grid,
         start,
         destination,
         previous_hit,
