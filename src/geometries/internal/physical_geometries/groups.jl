@@ -355,21 +355,13 @@ function _prepend_intersection(index::Int, intersection::Intersection{N}) where 
         ObstructionIndex(SVector(index, intersection.obstruction_index.indices...)), intersection.hit_gap)
 end
 
-function _random_surface_positions(geometry, density::GeometryProperties,
+function random_surface_positions(geometry::Union{GeometryVectorLike{N}, GeometryTuple{N}}, density::GeometryProperties,
     bounding_box::InternalBoundingBox{N}, scale_density) where {N}
     _combine((let
         values = random_surface_positions(child, _density_child(density, index), bounding_box, scale_density)
         (values[1], [_prepend_intersection(index, hit) for hit in values[2]])
     end for (index, child) in enumerate(geometry)), Val(N))
 end
-
-random_surface_positions(geometry::GeometryVectorLike, density::GeometryProperties,
-    bounding_box::InternalBoundingBox{N}, scale_density) where {N} =
-    _random_surface_positions(geometry, density, bounding_box, scale_density)
-
-random_surface_positions(geometry::GeometryTuple{N}, density::GeometryProperties,
-    bounding_box::InternalBoundingBox{N}, scale_density) where {N} =
-    _random_surface_positions(geometry, density, bounding_box, scale_density)
 
 size_scale(geometry::GeometryVectorLike) = isempty(geometry) ? Inf : minimum(size_scale, geometry)
 size_scale(geometry::GeometryTuple) = isempty(geometry) ? Inf : minimum(size_scale, geometry)
