@@ -1,8 +1,7 @@
 """MRI-property storage and lookup for physical geometries."""
 module Properties
 
-import StaticArrays: SVector
-import ..Indices: ObstructionIndex
+import ..Indices: ObstructionIndex, remove_index
 
 """
 MRI properties assigned to obstructions or groups of obstructions of type `S`.
@@ -58,13 +57,9 @@ end
 
 function get_value(properties::GeometryProperties, index::ObstructionIndex)
     properties isa GeometryLeafProperties && return properties.value
-    child_index = index.indices[1]
+    child_index, remaining = remove_index(index)
     1 <= child_index <= length(properties.properties) ||
         throw(BoundsError(properties.properties, child_index))
-    remaining_length = length(index.indices) - 1
-    remaining = ObstructionIndex{remaining_length}(
-        SVector{remaining_length, Int}(index.indices[2:end]),
-    )
     get_value(properties.properties[child_index], remaining)
 end
 
@@ -83,7 +78,7 @@ function get_value(properties::GeometryProperties, indices::AbstractVector{<:Obs
     child_indices = ObstructionIndex[]
     for index in indices
         isempty(index.indices) && throw(ArgumentError("inside indices must not be empty"))
-        next_child_index = index.indices[1]
+        next_child_index, remaining = remove_index(index)
         if child_index !== nothing && next_child_index < child_index
             throw(ArgumentError("inside indices must be sorted"))
         end
@@ -95,10 +90,7 @@ function get_value(properties::GeometryProperties, indices::AbstractVector{<:Obs
             empty!(child_indices)
         end
         child_index = next_child_index
-        remaining_length = length(index.indices) - 1
-        push!(child_indices, ObstructionIndex{remaining_length}(
-            SVector{remaining_length, Int}(index.indices[2:end]),
-        ))
+        push!(child_indices, remaining)
     end
 
     1 <= child_index <= length(properties.properties) ||
