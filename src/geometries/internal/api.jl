@@ -6,7 +6,7 @@ import .Indices: ObstructionIndex
 import .InternalBoundingBoxes: InternalBoundingBox
 import .InternalBoundingBoxes
 import .PhysicalGeometries: PhysicalGeometry, Intersection, flip, detect_intersection, random_surface_positions, inside_indices, size_scale, geometry_mesh
-import .PhysicalGeometries.Groups: GeometryTuple
+import .PhysicalGeometries.Groups: GeometryTuple, inside_indices_for_any_type
 import .PhysicalGeometries.Transparents: SizeScaleOverride
 import .Properties: all_property_values, get_value
 import .Susceptibility: susceptibility_off_resonance, off_resonance_gradient
@@ -66,7 +66,8 @@ Return the obstruction indices containing `position`.
 
 An intersection may be provided when the particle is already attached or is currently hitting a surface.
 """
-isinside(geometry::FixedGeometry, position::SVector{3, Float64}, intersection::Intersection=Intersection{3}()) = IsInside(inside_indices(geometry.geometry, position, intersection))
+isinside(geometry::FixedGeometry, position::SVector{3, Float64}, intersection::Intersection=Intersection{3}()) =
+    IsInside(inside_indices_for_any_type(geometry.geometry, position, intersection))
 
 """
     detect_intersection(geometry, start, destination, previous_intersection)

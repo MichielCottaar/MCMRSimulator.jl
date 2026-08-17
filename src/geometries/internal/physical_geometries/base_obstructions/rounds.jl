@@ -8,7 +8,7 @@ has_single_inside(::Type{<:Round}) = true
 function isinside_single(
     round::Round{N},
     position::SVector{N, Float64},
-    intersection::Intersection{N}=Intersection{N}(),
+    intersection::Intersection{3}=Intersection{3}(),
 ) where {N}
     !Base.isempty(intersection) && return intersection.inside
     return sum(position .* position) < round.radius^2
@@ -28,7 +28,7 @@ function detect_intersection(
     previous_hit::Intersection{3}=Intersection{3}(),
 ) where {N}
     previous = !Base.isempty(previous_hit)
-    inside = previous ? previous_hit.inside : isinside(round, start)
+    inside = previous ? previous_hit.inside : isinside_single(round, start)
     !inside && previous && return Intersection{N}()
     difference = destination - start
     a = sum(difference .* difference)

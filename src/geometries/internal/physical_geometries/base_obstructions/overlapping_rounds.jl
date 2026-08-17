@@ -10,7 +10,7 @@ Round(r::OverlappingRound{N}) where {N} = Round{N}(r.radius)
 function isinside_single(
     round::OverlappingRound{N},
     position::SVector{N, Float64},
-    intersection::Intersection{N}=Intersection{N}(),
+    intersection::Intersection{3}=Intersection{3}(),
 ) where {N}
     isinside_single(Round(round), position, intersection)
 end

@@ -21,6 +21,8 @@ const Transparent = GI.PhysicalGeometries.Transparent
 const SizeScaleOverride = GI.SizeScaleOverride
 const size_scale = GI.size_scale
 const has_inside = GI.PhysicalGeometries.has_inside
+const has_single_inside = GI.PhysicalGeometries.has_single_inside
+const isinside_single = GI.PhysicalGeometries.isinside_single
 const inside_indices = GI.PhysicalGeometries.inside_indices
 const Properties = GI.Properties
 
@@ -322,8 +324,9 @@ end
     )
     @test length(transformed_bounded_mesh) == 1
     @test minimum(vertex[1] for vertex in transformed_bounded_mesh[1].vertices) == -1.0
-    @test inside_indices(mesh, SVector(0.2, 0.2, 0.2)) == [ObstructionIndex()]
-    @test inside_indices(mesh, SVector(1.2, 0.2, 0.2)) == ObstructionIndex[]
+    @test has_single_inside(typeof(mesh))
+    @test isinside_single(mesh, SVector(0.2, 0.2, 0.2))
+    @test !isinside_single(mesh, SVector(1.2, 0.2, 0.2))
     @test mesh.indices[mesh.first_index_of_gap] == SVector(4, 2, 3)
     @test BoundingBoxes.lower(mesh.bounding_box) == SVector(0.0, 0.0, 0.0)
     @test BoundingBoxes.upper(mesh.bounding_box) == SVector(1.0, 1.0, 1.0)
@@ -473,13 +476,15 @@ end
     ))
 
     sphere = BaseObstructions.Sphere(1.0)
-    @test inside_indices(sphere, SVector(0.0, 0.0, 0.0)) == [ObstructionIndex()]
-    @test inside_indices(sphere, SVector(2.0, 0.0, 0.0)) == ObstructionIndex[]
-    @test inside_indices(BaseObstructions.InfiniteWall(), SVector(0.0)) == ObstructionIndex[]
+    @test has_single_inside(typeof(sphere))
+    @test isinside_single(sphere, SVector(0.0, 0.0, 0.0))
+    @test !isinside_single(sphere, SVector(2.0, 0.0, 0.0))
+    @test !has_inside(typeof(BaseObstructions.InfiniteWall()))
 
     shifted_inside = Shift(sphere, [2.0, 0.0, 0.0])
-    @test inside_indices(shifted_inside, SVector(-2.0, 0.0, 0.0)) == [ObstructionIndex()]
-    @test inside_indices(shifted_inside, SVector(0.0, 0.0, 0.0)) == ObstructionIndex[]
+    @test has_single_inside(typeof(shifted_inside))
+    @test isinside_single(shifted_inside, SVector(-2.0, 0.0, 0.0))
+    @test !isinside_single(shifted_inside, SVector(0.0, 0.0, 0.0))
 
     inside_spheres = GeometryVector{3}([
         Shift(sphere, [-0.5, 0.0, 0.0]),
@@ -579,8 +584,8 @@ end
         ObstructionIndex(),
         false,
     )
-    @test inside_indices(sphere, boundary, boundary_inside) == [ObstructionIndex()]
-    @test inside_indices(sphere, boundary, boundary_outside) == ObstructionIndex[]
+    @test isinside_single(sphere, boundary, boundary_inside)
+    @test !isinside_single(sphere, boundary, boundary_outside)
 
     fixed_sphere = mr.fix(mr.Spheres(radius=2.0))
     fixed_boundary_inside = GI.PhysicalGeometries.Intersection(

@@ -5,7 +5,7 @@ import StaticArrays: SMatrix, SVector
 import LinearAlgebra: norm, nullspace, cross
 import Random: rand
 import ...InternalBoundingBoxes
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _mesh_result, _translate_native
 import ...Properties: GeometryProperties
 
@@ -26,23 +26,28 @@ has_single_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_singl
 InternalBoundingBox(transformation::Transformation) =
     backward(transformation, InternalBoundingBox(transformation.geometry))
 
+function isinside_single(
+    transformation::Transformation{N, M},
+    position::SVector{N, Float64},
+    intersection::Intersection{N}=Intersection{N}(),
+) where {N, M}
+    isinside_single(
+        transformation.geometry,
+        forward(transformation, position),
+        intersection,
+    )
+end
+
 function inside_indices(
     transformation::Transformation{N, M},
     position::SVector{N, Float64},
     intersection::Intersection{N}=Intersection{N}(),
 ) where {N, M}
-    child_intersection = if Base.isempty(intersection)
-        Intersection{M}()
-    else
-        Intersection(
-            intersection.distance,
-            zero(SVector{M, Float64}),
-            intersection.inside,
-            intersection.obstruction_index,
-            intersection.hit_gap,
-        )
-    end
-    inside_indices(transformation.geometry, forward(transformation, position), child_intersection)
+    inside_indices(
+        transformation.geometry,
+        forward(transformation, position),
+        intersection,
+    )
 end
 
 """

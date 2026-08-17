@@ -5,11 +5,11 @@ import StaticArrays: SVector
 import ...Indices: ObstructionIndex, add_index, remove_index
 import ...InternalBoundingBoxes
 import ..GridDispatch: detect_intersection_grid
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 
-abstract type GroupGeometry{N, P<:PhysicalGeometry{N}} <: PhysicalGeometry{N} end
+abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
 
 _is_fully_concrete(::Type{T}) where {T} =
@@ -56,14 +56,15 @@ struct GeometryVectorGrid{N, P<:PhysicalGeometry{N}} <: GeometryVectorLike{N, P}
     end
 end
 
-struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} <: GroupGeometry{N}
+struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} <: GroupGeometry{N, P}
     geometries::P
 end
 
-has_inside(::Type{<:GroupGeometry{N, P}}) where {N, P} = has_inside(P)
+has_inside(::Type{<:GeometryVectorLike{N, P}}) where {N, P} = has_inside(P)
+has_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = any(has_inside, P.parameters)
 has_single_inside(::Type{<:GroupGeometry}) = false
 
-function InternalBoundingBox(geometry::GroupGeometry{N}) where {N}
+function InternalBoundingBox(geometry::GroupGeometry{N, P}) where {N, P}
     isempty(geometry) && throw(ArgumentError("cannot construct a bounding box for an empty geometry group"))
     boxes = [InternalBoundingBoxes.InternalBoundingBox(child) for child in geometry]
     lower_bound = reduce((a, b) -> min.(a, b), (InternalBoundingBoxes.lower(box) for box in boxes))
@@ -86,22 +87,53 @@ function _inside_child_intersection(
     index == child_index ? child_intersection : Intersection{N}()
 end
 
+function _inside_indices(
+    geometry::GeometryVectorLike{N, P},
+    child_indices,
+    position::SVector{N, Float64},
+    intersection::Intersection{N}=Intersection{N}(),
+) where {N, P}
+    has_inside(P) || return ObstructionIndex[]
+    indices = ObstructionIndex[]
+    if has_single_inside(P)
+        for child_index in child_indices
+            child_intersection = _inside_child_intersection(intersection, child_index)
+            isinside_single(geometry.geometries[child_index], position, child_intersection) || continue
+            push!(indices, add_index(ObstructionIndex(), child_index))
+        end
+    else
+        for child_index in child_indices
+            child_intersection = _inside_child_intersection(intersection, child_index)
+            for obstruction_index in inside_indices(geometry.geometries[child_index], position, child_intersection)
+                push!(indices, add_index(obstruction_index, child_index))
+            end
+        end
+    end
+    indices
+end
+
+function inside_indices_for_any_type(geometry, position, intersection)
+    geometry_type = typeof(geometry)
+    has_inside(geometry_type) || return ObstructionIndex[]
+    if has_single_inside(geometry_type)
+        return isinside_single(geometry, position, intersection) ?
+            [ObstructionIndex()] : ObstructionIndex[]
+    end
+    return inside_indices(geometry, position, intersection)
+end
+
 function inside_indices(
     geometry::GeometryVectorLike{N},
     position::SVector{N, Float64},
     intersection::Intersection{N}=Intersection{N}(),
 ) where {N}
-    has_inside(typeof(geometry)) || return ObstructionIndex[]
-    indices = ObstructionIndex[]
-    for (child_index, child) in enumerate(geometry)
-        geometry isa GeometryVectorBoundingBox &&
-            !InternalBoundingBoxes.isinside(geometry.bounding_boxes[child_index], position) && continue
-        child_intersection = _inside_child_intersection(intersection, child_index)
-        for obstruction_index in inside_indices(child, position, child_intersection)
-            push!(indices, add_index(obstruction_index, child_index))
-        end
+    child_indices = if geometry isa GeometryVectorBoundingBox
+        (child_index for child_index in eachindex(geometry.geometries)
+            if InternalBoundingBoxes.isinside(geometry.bounding_boxes[child_index], position))
+    else
+        eachindex(geometry.geometries)
     end
-    indices
+    _inside_indices(geometry, child_indices, position, intersection)
 end
 
 function _grid_coordinate(
@@ -117,17 +149,9 @@ function inside_indices(
     position::SVector{N, Float64},
     intersection::Intersection{N}=Intersection{N}(),
 ) where {N}
-    has_inside(typeof(geometry)) || return ObstructionIndex[]
     coordinate = _grid_coordinate(geometry, position)
     isnothing(coordinate) && return ObstructionIndex[]
-    indices = ObstructionIndex[]
-    for child_index in geometry.indices[coordinate...]
-        child_intersection = _inside_child_intersection(intersection, child_index)
-        for obstruction_index in inside_indices(geometry.geometries[child_index], position, child_intersection)
-            push!(indices, add_index(obstruction_index, child_index))
-        end
-    end
-    indices
+    _inside_indices(geometry, _grid_candidates(geometry, coordinate), position, intersection)
 end
 
 function _grid_candidates(geometry::GeometryVectorGrid, coordinate)
@@ -143,9 +167,7 @@ function inside_indices(
     indices = ObstructionIndex[]
     for (child_index, child) in enumerate(geometry)
         child_intersection = _inside_child_intersection(intersection, child_index)
-        for obstruction_index in inside_indices(child, position, child_intersection)
-            push!(indices, add_index(obstruction_index, child_index))
-        end
+        append!(indices, add_index.(inside_indices_for_any_type(child, position, child_intersection), child_index))
     end
     indices
 end
@@ -237,18 +259,18 @@ function _could_intersect(
     child_index::Int,
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
-) where {N}
+ ) where {N}
     box = geometry.bounding_boxes[child_index]
     InternalBoundingBoxes.could_intersect(box, start, destination) &&
         InternalBoundingBoxes.does_intersect(box, start, destination)
 end
 
 function detect_intersection(
-    geometry::GroupGeometry{N},
+    geometry::GroupGeometry{N, P},
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
     previous_hit::Intersection{3}=Intersection{3}(),
-) where {N}
+ ) where {N, P}
     if !Base.isempty(previous_hit)
         indices = previous_hit.obstruction_index.indices
         isempty(indices) && throw(ArgumentError("a non-empty previous hit must have an obstruction index"))

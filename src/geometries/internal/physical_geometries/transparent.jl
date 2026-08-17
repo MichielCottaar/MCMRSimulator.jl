@@ -1,7 +1,7 @@
 module Transparents
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, inside_indices, InternalBoundingBox, size_scale
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox, size_scale
 import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ...Properties: GeometryProperties
 
@@ -29,6 +29,12 @@ inside_indices(
     position::SVector{N, Float64},
     intersection::Intersection{N}=Intersection{N}(),
 ) where {N} = inside_indices(transparent_geometry(wrapper), position, intersection)
+
+isinside_single(
+    wrapper::Transparent{N},
+    position::SVector{N, Float64},
+    intersection::Intersection{N}=Intersection{N}(),
+) where {N} = isinside_single(transparent_geometry(wrapper), position, intersection)
 
 function detect_intersection(
     wrapper::Transparent{N},

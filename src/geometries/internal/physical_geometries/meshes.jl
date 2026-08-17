@@ -6,7 +6,7 @@ import DelaunayTriangulation: triangulate, get_triangles
 import NearestNeighbors: KDTree, nn
 
 import ...Indices: ObstructionIndex, add_index
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryLeafProperties
 import ..Groups
@@ -34,6 +34,12 @@ end
 
 has_inside(::Type{Mesh}) = true
 has_single_inside(::Type{Mesh}) = true
+
+isinside_single(
+    mesh::Mesh,
+    position::SVector{3, Float64},
+    intersection::Intersection{3}=Intersection{3}(),
+) = !Base.isempty(inside_indices(mesh, position, intersection))
 
 function _mesh_indices(indices, nvertices)
     result = [SVector{3, Int}(triangle) for triangle in indices]

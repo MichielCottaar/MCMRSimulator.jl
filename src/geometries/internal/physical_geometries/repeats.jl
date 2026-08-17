@@ -6,6 +6,7 @@ import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
+import ..Groups: inside_indices_for_any_type
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _translate_native
 import ...Properties: GeometryProperties
 import ..Groups
@@ -107,7 +108,7 @@ function inside_indices(
         ((local_position .+ shift .* repeat.repeats, shift) for shift in _candidate_shifts(repeat, local_position))
     end
     for (child_position, _) in candidates
-        append!(indices, inside_indices(
+        append!(indices, inside_indices_for_any_type(
             repeat.geometry,
             child_position,
             intersection,
