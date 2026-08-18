@@ -1,7 +1,20 @@
 module Utils
 
-import LinearAlgebra: norm
+import LinearAlgebra: cross, norm, ⋅
 import StaticArrays: SVector
+
+function volume_conserving_cylinder_radius(radius, nsamples)
+    half_theta_step = π / nsamples
+    radius * sqrt(half_theta_step / (sin(half_theta_step) * cos(half_theta_step)))
+end
+
+function volume_conserving_sphere_radius(radius, vertices, triangles)
+    polyhedron_volume = abs(sum(
+        vertices[triangle[1]] ⋅ cross(vertices[triangle[2]], vertices[triangle[3]]) / 6
+        for triangle in triangles
+    ))
+    radius * (4π / (3 * polyhedron_volume))^(1 / 3)
+end
 
 """
     icosahedron(subdivision)

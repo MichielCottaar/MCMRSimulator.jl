@@ -1,4 +1,4 @@
-import ....Utils: icosahedron
+import ....Utils: icosahedron, volume_conserving_cylinder_radius, volume_conserving_sphere_radius
 
 struct Round{N} <: BaseObstruction{N}
     radius::Float64
@@ -71,12 +71,14 @@ end
 
 function _geometry_mesh(cylinder::InfiniteCylinder; nsamples=100, kwargs...)
     nsamples >= 3 || throw(ArgumentError("nsamples must be at least 3"))
-    [[SVector{2, Float64}(cylinder.radius * cos(2π * index / nsamples),
-        cylinder.radius * sin(2π * index / nsamples)) for index in 0:(nsamples - 1)]]
+    radius = volume_conserving_cylinder_radius(cylinder.radius, nsamples)
+    [[SVector{2, Float64}(radius * cos(2π * index / nsamples),
+        radius * sin(2π * index / nsamples)) for index in 0:(nsamples - 1)]]
 end
 
 function _geometry_mesh(sphere::Sphere; nsamples, kwargs...)
     subdivisions = Int(ceil(sqrt(nsamples / 20)))
     base_vertices, triangles = icosahedron(subdivisions)
-    [_mesh_result(sphere.radius .* base_vertices, triangles)]
+    radius = volume_conserving_sphere_radius(sphere.radius, base_vertices, triangles)
+    [_mesh_result(radius .* base_vertices, triangles)]
 end

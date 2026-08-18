@@ -7,7 +7,7 @@ import BSplineKit: BSplineOrder, interpolate, Derivative
 import LinearAlgebra: cross, norm, ⋅
 import Statistics: mean
 import ....Methods: get_rotation
-import ...Utils: icosahedron
+import ...Utils: icosahedron, volume_conserving_cylinder_radius, volume_conserving_sphere_radius
 import ..Obstructions: Mesh, value_as_vector, BendyCylinder, Cylinder, Cylinders, Wall, Walls, Sphere, Spheres
 
 """
@@ -83,8 +83,7 @@ function Mesh(bendy_cylinder::BendyCylinder)
         centroid = fpos(dist)
         radius_uncorrected = frad(dist)
         # correct radius to preserve final volume
-        half_theta_step = π / nsamples
-        radius = radius_uncorrected * (half_theta_step / (sin(half_theta_step) * cos(half_theta_step)))
+        radius = volume_conserving_cylinder_radius(radius_uncorrected, nsamples)
         last_vec = cross(direction, vec_theta0)
         return [SVector{3}((radius * sin(t)) .* last_vec .+ (radius * cos(t)) .* vec_theta0 .+ centroid) for t in theta]
     end
@@ -211,7 +210,8 @@ function Mesh(sphere::Sphere; nsamples=1000)
     subdivisions = Int(ceil(sqrt(nsamples / 20)))
     base_vertices, triangles = icosahedron(subdivisions)
 
-    vertices = [(v .* sphere.radius) .+ sphere.position for v in base_vertices]
+    radius = volume_conserving_sphere_radius(sphere.radius, base_vertices, triangles)
+    vertices = [(v .* radius) .+ sphere.position for v in base_vertices]
     
     mesh_kwargs = Dict{Symbol, Any}(
         :vertices => vertices,
