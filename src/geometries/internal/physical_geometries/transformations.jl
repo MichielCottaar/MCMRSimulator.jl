@@ -37,7 +37,7 @@ InternalBoundingBox(transformation::Transformation) =
 function isinside_single(
     transformation::Transformation{N, M},
     position::SVector{N, Float64},
-    intersection::Intersection{N}=Intersection{N}(),
+    intersection::Intersection{3}=Intersection{3}(),
 ) where {N, M}
     isinside_single(
         transformation.geometry,
@@ -49,7 +49,7 @@ end
 function inside_indices(
     transformation::Transformation{N, M},
     position::SVector{N, Float64},
-    intersection::Intersection{N}=Intersection{N}(),
+    intersection::Intersection{3}=Intersection{3}(),
 ) where {N, M}
     inside_indices(
         transformation.geometry,

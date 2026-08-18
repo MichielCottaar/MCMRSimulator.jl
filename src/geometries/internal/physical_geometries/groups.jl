@@ -109,7 +109,7 @@ function _inside_indices(
     geometry::GeometryVectorLike{N, P},
     child_indices,
     position::SVector{N, Float64},
-    intersection::Intersection{N, M}=Intersection{N, inside_index_length(typeof(geometry))}(),
+    intersection::Intersection{3, M}=Intersection{3, inside_index_length(typeof(geometry))}(),
 ) where {N, P, M}
     has_inside(P) || return _empty_inside_indices(typeof(geometry))
     geometry_type = typeof(geometry)
@@ -145,7 +145,7 @@ end
 function inside_indices(
     geometry::GeometryVectorLike{N},
     position::SVector{N, Float64},
-    intersection::Intersection{N, M}=Intersection{N, inside_index_length(typeof(geometry))}(),
+    intersection::Intersection{3, M}=Intersection{3, inside_index_length(typeof(geometry))}(),
 ) where {N, M}
     child_indices = if geometry isa GeometryVectorBoundingBox
         (child_index for child_index in eachindex(geometry.geometries)
@@ -167,7 +167,7 @@ end
 function inside_indices(
     geometry::GeometryVectorGrid{N},
     position::SVector{N, Float64},
-    intersection::Intersection{N, M}=Intersection{N, inside_index_length(typeof(geometry))}(),
+    intersection::Intersection{3, M}=Intersection{3, inside_index_length(typeof(geometry))}(),
 ) where {N, M}
     coordinate = _grid_coordinate(geometry, position)
     isnothing(coordinate) && return _empty_inside_indices(typeof(geometry))
@@ -182,7 +182,7 @@ end
 function inside_indices(
     geometry::GeometryTuple{N},
     position::SVector{N, Float64},
-    intersection::Intersection{N, M}=Intersection{N, inside_index_length(typeof(geometry))}(),
+    intersection::Intersection{3, M}=Intersection{3, inside_index_length(typeof(geometry))}(),
 ) where {N, M}
     geometry_type = typeof(geometry)
     indices = _empty_inside_indices(geometry_type)

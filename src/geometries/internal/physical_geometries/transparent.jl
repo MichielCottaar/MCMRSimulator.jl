@@ -31,20 +31,20 @@ InternalBoundingBox(wrapper::Transparent) = InternalBoundingBox(transparent_geom
 inside_indices(
     wrapper::Transparent{N},
     position::SVector{N, Float64},
-    intersection::Intersection{N}=Intersection{N}(),
+    intersection::Intersection{3}=Intersection{3}(),
 ) where {N} = inside_indices(transparent_geometry(wrapper), position, intersection)
 
 isinside_single(
     wrapper::Transparent{N},
     position::SVector{N, Float64},
-    intersection::Intersection{N}=Intersection{N}(),
+    intersection::Intersection{3}=Intersection{3}(),
 ) where {N} = isinside_single(transparent_geometry(wrapper), position, intersection)
 
 function detect_intersection(
     wrapper::Transparent{N},
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
-    previous_hit::Intersection{N}=Intersection{N}(),
+    previous_hit::Intersection{3}=Intersection{3}(),
 ) where {N}
     detect_intersection(transparent_geometry(wrapper), start, destination, previous_hit)
 end

@@ -105,7 +105,7 @@ end
 function inside_indices(
     repeat::Repeat{N},
     position::SVector{N, Float64},
-    intersection::Intersection{N}=Intersection{N}(),
+    intersection::Intersection{3}=Intersection{3}(),
 ) where {N}
     local_position = _wrap(repeat, position)
     geometry_type = typeof(repeat.geometry)
