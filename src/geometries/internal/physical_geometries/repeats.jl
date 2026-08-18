@@ -48,20 +48,14 @@ _wrap(repeat::Repeat, position) = mod.(position .+ repeat.repeats / 2, repeat.re
 function _candidate_shifts(repeat::Repeat{N}, start, destination=start) where {N}
     local_start = _wrap(repeat, start)
     local_destination = _wrap(repeat, destination)
+    box = InternalBoundingBox(repeat.geometry)
     choices = ntuple(N) do dimension
-        lower = repeat.upper_overlap[dimension] > 0 &&
-            min(local_start[dimension], local_destination[dimension]) <=
-                -repeat.repeats[dimension] / 2 + repeat.upper_overlap[dimension] &&
-            max(local_start[dimension], local_destination[dimension]) >= -repeat.repeats[dimension] / 2
-        upper = repeat.lower_overlap[dimension] > 0 &&
-            min(local_start[dimension], local_destination[dimension]) <=
-                repeat.repeats[dimension] / 2 &&
-            max(local_start[dimension], local_destination[dimension]) >=
-                repeat.repeats[dimension] / 2 - repeat.lower_overlap[dimension]
-        values = [0]
-        lower && push!(values, 1)
-        upper && push!(values, -1)
-        values
+        local_lower = min(local_start[dimension], local_destination[dimension])
+        local_upper = max(local_start[dimension], local_destination[dimension])
+        first_shift = ceil(Int, (InternalBoundingBoxes.lower(box)[dimension] - local_upper) / repeat.repeats[dimension])
+        last_shift = floor(Int, (InternalBoundingBoxes.upper(box)[dimension] - local_lower) / repeat.repeats[dimension])
+        shifts = collect(first_shift:last_shift)
+        [0, filter(!iszero, shifts)...]
     end
     shifts = SVector{N, Int}[]
     for shift in Iterators.product(choices...)
