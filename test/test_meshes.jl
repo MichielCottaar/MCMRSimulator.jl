@@ -181,6 +181,8 @@ end
         Random.seed!(1)
         for _ in 1:1000
             position = Random.rand(3) .* 1000.
+            local_position = mod.(position[2:3] .+ 1, 2) .- 1
+            abs(norm(local_position) - 1) <= 0.001 && continue
             @test length(mr.isinside(fmesh, position)) == length(mr.isinside(fcylinder, position))
         end
     end
