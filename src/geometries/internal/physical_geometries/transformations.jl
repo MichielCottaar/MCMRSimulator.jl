@@ -6,7 +6,7 @@ import LinearAlgebra: norm, nullspace, cross
 import Random: rand
 import ...InternalBoundingBoxes
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox
-import ..PhysicalGeometries: intersection_index_length, inside_index_length, contains_geometry_tuple
+import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _mesh_result, _translate_native
 import ...Properties: GeometryProperties
 
@@ -24,11 +24,12 @@ abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N
 
 has_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_inside(P)
 has_single_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_single_inside(P)
-contains_geometry_tuple(::Type{<:Transformation{N, M, P}}) where {N, M, P} = contains_geometry_tuple(P)
 intersection_index_length(::Type{<:Transformation{N, M, P}}) where {N, M, P} =
-    contains_geometry_tuple(P) ? 0 : intersection_index_length(P)
+    intersection_index_length(P)
 inside_index_length(::Type{<:Transformation{N, M, P}}) where {N, M, P} =
-    contains_geometry_tuple(P) ? 0 : inside_index_length(P)
+    inside_index_length(P)
+all_equal_inside_depth(::Type{<:Transformation{N, M, P}}) where {N, M, P} =
+    all_equal_inside_depth(P)
 
 InternalBoundingBox(transformation::Transformation) =
     from_child_coordinates(transformation, InternalBoundingBox(transformation.geometry))

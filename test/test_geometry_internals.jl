@@ -25,6 +25,7 @@ const has_inside = GI.PhysicalGeometries.has_inside
 const has_single_inside = GI.PhysicalGeometries.has_single_inside
 const isinside_single = GI.PhysicalGeometries.isinside_single
 const inside_indices = GI.PhysicalGeometries.inside_indices
+const all_equal_inside_depth = GI.PhysicalGeometries.all_equal_inside_depth
 const Properties = GI.Properties
 
 @testset "public bounding boxes" begin
@@ -250,6 +251,19 @@ end
         SVector(1.0, 0.0, 0.0),
         SVector(0.0, 1.0, 0.0),
     )))
+    equal_depth_tuple = GeometryTuple{3}((
+        BaseObstructions.Sphere(1.0),
+        BaseObstructions.Sphere(2.0),
+    ))
+    unequal_depth_tuple = GeometryTuple{3}((
+        BaseObstructions.Sphere(1.0),
+        GeometryVector([BaseObstructions.Sphere(1.0)]),
+    ))
+    @test all_equal_inside_depth(typeof(BaseObstructions.Sphere(1.0)))
+    @test all_equal_inside_depth(typeof(equal_depth_tuple))
+    @test !all_equal_inside_depth(typeof(unequal_depth_tuple))
+    equal_tuple_inside = @inferred inside_indices(equal_depth_tuple, SVector(0.0, 0.0, 0.0))
+    @test equal_tuple_inside isa Vector{ObstructionIndex{1}}
     mesh = Mesh(
         [
             SVector(0.0, 0.0, 0.0),

@@ -2,7 +2,7 @@ module BaseObstructions
 
 import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, flip
-import ..PhysicalGeometries: intersection_index_length, inside_index_length, contains_geometry_tuple
+import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ...InternalBoundingBoxes: InternalBoundingBox
 import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
@@ -15,7 +15,7 @@ abstract type BaseObstruction{N} <: PhysicalGeometry{N} end
 
 intersection_index_length(::Type{<:BaseObstruction}) = 0
 inside_index_length(::Type{<:BaseObstruction}) = 0
-contains_geometry_tuple(::Type{<:BaseObstruction}) = false
+all_equal_inside_depth(::Type{<:BaseObstruction}) = true
 
 function surface_sampling end
 

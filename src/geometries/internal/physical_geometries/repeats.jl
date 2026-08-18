@@ -6,7 +6,7 @@ import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
-import ..PhysicalGeometries: intersection_index_length, inside_index_length, contains_geometry_tuple
+import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ..Groups: inside_indices_for_any_type
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _translate_native
 import ...Properties: GeometryProperties
@@ -31,11 +31,11 @@ struct Repeat{N, P<:PhysicalGeometry{N}} <: PhysicalGeometry{N}
     end
 end
 
-contains_geometry_tuple(::Type{<:Repeat{N, P}}) where {N, P} = contains_geometry_tuple(P)
 intersection_index_length(::Type{<:Repeat{N, P}}) where {N, P} =
-    contains_geometry_tuple(P) ? 0 : intersection_index_length(P)
+    intersection_index_length(P)
 inside_index_length(::Type{<:Repeat{N, P}}) where {N, P} =
-    contains_geometry_tuple(P) ? 0 : inside_index_length(P)
+    inside_index_length(P)
+all_equal_inside_depth(::Type{<:Repeat{N, P}}) where {N, P} = all_equal_inside_depth(P)
 
 Repeat(geometry::P, repeats::AbstractVector{<:Real}) where {N, P<:PhysicalGeometry{N}} =
     Repeat{N, P}(geometry, SVector{N, Float64}(repeats))
@@ -109,8 +109,7 @@ function inside_indices(
 ) where {N}
     local_position = _wrap(repeat, position)
     geometry_type = typeof(repeat.geometry)
-    indices = contains_geometry_tuple(geometry_type) ?
-        ObstructionIndex[] : ObstructionIndex{inside_index_length(geometry_type)}[]
+    indices = Groups._empty_inside_indices(geometry_type)
     candidates = if Base.isempty(intersection) && _needs_image_search(repeat)
         ((_child_image(repeat, local_position, image), image) for image in _candidate_images(repeat, local_position))
     else

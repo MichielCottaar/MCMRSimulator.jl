@@ -7,7 +7,7 @@ import NearestNeighbors: KDTree, nn
 
 import ...Indices: ObstructionIndex, add_index
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, InternalBoundingBox
-import ..PhysicalGeometries: intersection_index_length, inside_index_length
+import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryLeafProperties
 import ..Groups
@@ -34,6 +34,7 @@ has_inside(::Type{Mesh}) = true
 has_single_inside(::Type{Mesh}) = true
 intersection_index_length(::Type{Mesh}) = 1
 inside_index_length(::Type{Mesh}) = 0
+all_equal_inside_depth(::Type{Mesh}) = true
 
 function _mesh_indices(indices, nvertices)
     result = [SVector{3, Int}(triangle) for triangle in indices]

@@ -7,7 +7,7 @@ import ...InternalBoundingBoxes
 import ..GridDispatch: IntersectionGrid, detect_intersection_grid
 import ..Intersections: remove_expected_index
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox
-import ..PhysicalGeometries: intersection_index_length, inside_index_length, contains_geometry_tuple
+import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 
@@ -62,18 +62,35 @@ has_inside(::Type{<:GeometryVectorLike{N, P}}) where {N, P} = has_inside(P)
 has_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = any(has_inside, P.parameters)
 has_single_inside(::Type{<:GroupGeometry}) = false
 
-contains_geometry_tuple(::Type{<:GeometryTuple}) = true
-contains_geometry_tuple(::Type{<:GeometryVectorLike{N, P}}) where {N, P} = contains_geometry_tuple(P)
+_tuple_intersection_index_length(::Type{P}) where {P<:Tuple} =
+    isempty(P.parameters) ? 0 : intersection_index_length(P.parameters[1]) + 1
+_tuple_inside_index_length(::Type{P}) where {P<:Tuple} =
+    isempty(P.parameters) ? 0 : inside_index_length(P.parameters[1]) + 1
 
-intersection_index_length(::Type{<:GeometryTuple}) = 0
-inside_index_length(::Type{<:GeometryTuple}) = 0
+intersection_index_length(::Type{<:GeometryTuple{N, P}}) where {N, P} =
+    _tuple_intersection_index_length(P)
+inside_index_length(::Type{<:GeometryTuple{N, P}}) where {N, P} =
+    _tuple_inside_index_length(P)
 intersection_index_length(::Type{<:GeometryVectorLike{N, P}}) where {N, P} =
-    contains_geometry_tuple(P) ? 0 : intersection_index_length(P) + 1
+    intersection_index_length(P) + 1
 inside_index_length(::Type{<:GeometryVectorLike{N, P}}) where {N, P} =
-    contains_geometry_tuple(P) ? 0 : inside_index_length(P) + 1
+    inside_index_length(P) + 1
+all_equal_inside_depth(::Type{<:GeometryVectorLike{N, P}}) where {N, P} =
+    all_equal_inside_depth(P)
 
-_empty_inside_indices(::Type{G}) where {G} = contains_geometry_tuple(G) ?
-    ObstructionIndex[] : ObstructionIndex{inside_index_length(G)}[]
+function all_equal_inside_depth(::Type{<:GeometryTuple{N, P}}) where {N, P}
+    child_types = P.parameters
+    isempty(child_types) && return true
+    all(all_equal_inside_depth, child_types) || return false
+    first_depth = inside_index_length(child_types[1])
+    all(inside_index_length(child_type) == first_depth for child_type in child_types)
+end
+
+@generated function _empty_inside_indices(::Type{G}) where {G}
+    all_equal_inside_depth(G) || return :(ObstructionIndex[])
+    depth = inside_index_length(G)
+    :(ObstructionIndex{$depth}[])
+end
 
 function InternalBoundingBox(geometry::GroupGeometry{N, P}) where {N, P}
     isempty(geometry) && throw(ArgumentError("cannot construct a bounding box for an empty geometry group"))
@@ -167,7 +184,8 @@ function inside_indices(
     position::SVector{N, Float64},
     intersection::Intersection{N, M}=Intersection{N, inside_index_length(typeof(geometry))}(),
 ) where {N, M}
-    indices = ObstructionIndex[]
+    geometry_type = typeof(geometry)
+    indices = _empty_inside_indices(geometry_type)
     for (child_index, child) in enumerate(geometry)
         child_intersection = remove_expected_index(intersection, child_index)
         append!(indices, add_index.(inside_indices_for_any_type(child, position, child_intersection), child_index))

@@ -36,8 +36,8 @@ function intersection_index_length end
 """Return the obstruction-index depth of inside results from a geometry."""
 function inside_index_length end
 
-"""Whether a geometry contains a tuple group and may be type unstable."""
-function contains_geometry_tuple end
+"""Whether all inside-index results from a geometry have one depth."""
+function all_equal_inside_depth end
 
 """Sample surface positions together with initialized collision states."""
 function random_surface_positions end
