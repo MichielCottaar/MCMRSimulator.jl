@@ -19,8 +19,8 @@ import MCMRSimulator.Geometries: fix
     linestyle=nothing
     "Set the line colour in 2D plots"
     linecolor=@inherit linecolor
-    "Number of samples in mesh used to plot cylinders (default: 100) and spheres (default: 1000) in 3D plot."
-    nsamples=Makie.automatic
+    "Number of samples in mesh used to plot cylinders and spheres (1000)."
+    nsamples=1000
     "Size to plot in μm of infinite walls and cylinders in 3D plot."
     height=nothing
 
