@@ -14,7 +14,7 @@ import ..Internal: FixedGeometry
 
 import .FixBaseGeometry: fix_base_geometry
 import .FixTransformations: fix_transformations
-import .FixProperties: fix_properties
+import .FixProperties: fix_properties, _zero_volume, _zero_surface
 import .FixSusceptibility: fix_susceptibility
 
 function fix(
@@ -85,12 +85,16 @@ function fix(
     surface_relaxation=0.,
     density=0.,
 )
-    isempty(geometries) && return FixedGeometry{typeof(GeometryTuple{3}(())), Nothing, Nothing, Tuple{}}(
-        GeometryTuple{3}(()),
-        nothing,
-        nothing,
-        (),
-    )
+    if isempty(geometries)
+        volume = _zero_volume()
+        surface = _zero_surface(; permeability, dwell_time, surface_relaxation, density)
+        return FixedGeometry{typeof(GeometryTuple{3}(())), typeof(volume), typeof(surface), Tuple{}}(
+            GeometryTuple{3}(()),
+            volume,
+            surface,
+            (),
+        )
+    end
 
     fixed = [
         fix(

@@ -60,6 +60,23 @@ function _zero_volume()
     )
 end
 
+function _zero_surface(
+    ; permeability=0.,
+    dwell_time=0.,
+    surface_relaxation=0.,
+    density=0.,
+)
+    (
+        R1 = GeometryLeafProperties(0.0),
+        R2 = GeometryLeafProperties(0.0),
+        off_resonance = GeometryLeafProperties(0.0),
+        permeability = GeometryLeafProperties(Float64(permeability)),
+        dwell_time = GeometryLeafProperties(Float64(dwell_time)),
+        surface_relaxation = GeometryLeafProperties(Float64(surface_relaxation)),
+        density = GeometryLeafProperties(Float64(density)),
+    )
+end
+
 function fix_properties(
     group::Union{Cylinders, Spheres, Mesh};
     permeability=0.,

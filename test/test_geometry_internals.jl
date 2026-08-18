@@ -171,6 +171,18 @@ end
     @test GI.max_surface_relaxation(empty_fixed) == 0.0
     @test GI.min_dwell_time(empty_fixed) == Inf
     @test GI.max_timestep_sticking(empty_fixed, 1.0, 0.1) == Inf
+    @test empty_fixed.volume.R1.value == 0.0
+    @test empty_fixed.volume.R2.value == 0.0
+    @test empty_fixed.volume.off_resonance.value == 0.0
+    @test empty_fixed.surface.permeability.value == 0.0
+    @test empty_fixed.surface.dwell_time.value == 0.0
+    @test empty_fixed.surface.surface_relaxation.value == 0.0
+    @test empty_fixed.surface.density.value == 0.0
+    configured_empty = mr.fix([]; permeability=1.0, dwell_time=2.0, surface_relaxation=3.0, density=4.0)
+    @test configured_empty.surface.permeability.value == 1.0
+    @test configured_empty.surface.dwell_time.value == 2.0
+    @test configured_empty.surface.surface_relaxation.value == 3.0
+    @test configured_empty.surface.density.value == 4.0
 
     property_geometry = mr.fix(
         mr.Spheres(
