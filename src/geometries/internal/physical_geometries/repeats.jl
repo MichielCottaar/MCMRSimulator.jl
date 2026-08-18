@@ -5,7 +5,7 @@ import StaticArrays: SVector
 import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ..Groups: inside_indices_for_any_type
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _translate_native
