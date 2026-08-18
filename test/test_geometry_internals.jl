@@ -27,6 +27,7 @@ const isinside_single = GI.PhysicalGeometries.isinside_single
 const inside_indices = GI.PhysicalGeometries.inside_indices
 const all_equal_inside_depth = GI.PhysicalGeometries.all_equal_inside_depth
 const Properties = GI.Properties
+const Plot = mr.Plot
 
 @testset "public bounding boxes" begin
     box = PublicBoundingBoxes.BoundingBox([-1, -2, -3], [1, 2, 3])
@@ -58,6 +59,45 @@ end
     @test planar_grid.bounding_box == planar_box
     @test all(isfinite, planar_grid.inv_resolution)
     @test BoundingBoxes.upper(planar_grid.grid_bounding_box)[3] > BoundingBoxes.lower(planar_grid.grid_bounding_box)[3]
+end
+
+@testset "projected mesh field of view" begin
+    plot_plane = mr.PlotPlane(sizex=1.0, sizey=1.0)
+    crossing_mesh = [(;
+        vertices=[
+            SVector(-2.0, 0.0, -1.0),
+            SVector(2.0, 0.0, -1.0),
+            SVector(0.0, 0.0, 1.0),
+        ],
+        triangles=[(1, 2, 3)],
+    )]
+    projected = Plot.project_mesh_plane(plot_plane, crossing_mesh)
+    @test projected[1:2] == [SVector(0.5, 0.0), SVector(-0.5, 0.0)]
+    @test all(isnan, projected[3])
+
+    outside_mesh = [(;
+        vertices=[
+            SVector(-2.0, 2.0, -1.0),
+            SVector(2.0, 2.0, -1.0),
+            SVector(0.0, 2.0, 1.0),
+        ],
+        triangles=[(1, 2, 3)],
+    )]
+    @test isempty(Plot.project_mesh_plane(plot_plane, outside_mesh))
+
+    coplanar_mesh = [(;
+        vertices=[
+            SVector(-2.0, 0.0, 0.0),
+            SVector(2.0, 0.0, 0.0),
+            SVector(0.0, 2.0, 0.0),
+        ],
+        triangles=[(1, 2, 3)],
+    )]
+    coplanar_projected = Plot.project_mesh_plane(plot_plane, coplanar_mesh)
+    finite_points = filter(point -> all(isfinite, point), coplanar_projected)
+    @test all(all(-0.5 <= coordinate <= 0.5 for coordinate in point) for point in finite_points)
+    @test any(point -> point == SVector(-0.5, 0.0), finite_points)
+    @test any(point -> point == SVector(0.5, 0.0), finite_points)
 end
 
 const get_value = Properties.get_value

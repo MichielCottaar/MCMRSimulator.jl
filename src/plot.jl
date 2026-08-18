@@ -200,7 +200,7 @@ function project_mesh_plane(
         vertices = plot_plane.transformation.(mesh.vertices)
         for face in mesh.triangles
             triangle = ntuple(index -> vertices[face[index]], 3)
-            _append_triangle_plane_intersection!(projected, triangle; atol)
+            _append_triangle_plane_intersection!(projected, triangle, plot_plane; atol)
         end
     end
 
@@ -209,7 +209,7 @@ end
 
 function _append_triangle_plane_intersection!(
     projected,
-    triangle::NTuple{3, MeshPoint};
+    triangle::NTuple{3, MeshPoint}, plot_plane::PlotPlane;
     atol,
 )
     tolerance = atol * max(1.0, maximum(norm, triangle))
@@ -243,15 +243,53 @@ function _append_triangle_plane_intersection!(
     end
 
     if length(points) == 2
-        append!(projected, points)
-        push!(projected, ProjectedPoint(NaN, NaN))
+        _append_clipped_segment!(projected, points[1], points[2], plot_plane; atol)
     elseif length(points) == 3
         for edge in ((1, 2), (2, 3), (3, 1))
-            push!(projected, points[edge[1]])
-            push!(projected, points[edge[2]])
-            push!(projected, ProjectedPoint(NaN, NaN))
+            _append_clipped_segment!(projected, points[edge[1]], points[edge[2]], plot_plane; atol)
         end
     end
+end
+
+function _append_clipped_segment!(projected, first, second, plot_plane::PlotPlane; atol)
+    clipped = _clip_segment_to_plot_plane(first, second, plot_plane; atol)
+    isnothing(clipped) && return
+    append!(projected, clipped)
+    push!(projected, ProjectedPoint(NaN, NaN))
+end
+
+function _clip_segment_to_plot_plane(first, second, plot_plane::PlotPlane; atol)
+    lower = SVector(
+        isfinite(plot_plane.sizex) ? -Float64(plot_plane.sizex) / 2 : -Inf,
+        isfinite(plot_plane.sizey) ? -Float64(plot_plane.sizey) / 2 : -Inf,
+    )
+    upper = SVector(
+        isfinite(plot_plane.sizex) ? Float64(plot_plane.sizex) / 2 : Inf,
+        isfinite(plot_plane.sizey) ? Float64(plot_plane.sizey) / 2 : Inf,
+    )
+    displacement = second - first
+    lower_with_tolerance = lower .- atol
+    upper_with_tolerance = upper .+ atol
+    entry = 0.0
+    exit = 1.0
+
+    for dimension in 1:2
+        if iszero(displacement[dimension])
+            lower_with_tolerance[dimension] <= first[dimension] <= upper_with_tolerance[dimension] || return nothing
+            continue
+        end
+        first_time = (lower_with_tolerance[dimension] - first[dimension]) / displacement[dimension]
+        second_time = (upper_with_tolerance[dimension] - first[dimension]) / displacement[dimension]
+        entry = max(entry, min(first_time, second_time))
+        exit = min(exit, max(first_time, second_time))
+        entry <= exit || return nothing
+    end
+
+    clipped_first = first + entry .* displacement
+    clipped_second = first + exit .* displacement
+    clipped_first = clamp.(clipped_first, lower, upper)
+    clipped_second = clamp.(clipped_second, lower, upper)
+    ProjectedPoint(clipped_first[1], clipped_first[2]), ProjectedPoint(clipped_second[1], clipped_second[2])
 end
 
 function project_trajectory(pp::PlotPlane, pos::AbstractVector{<:SVector{3, Float64}})
