@@ -317,7 +317,7 @@ function project_trajectory(pp::PlotPlane, pos::AbstractVector{<:SVector{3, Floa
     all_pos = SVector{2, Float64}[]
     times = Float64[]
     for (pos_index, origin, destination) in zip(1:length(pos2D)-1, pos2D[1:end-1], pos2D[2:end])
-        for (_, t1, p1, t2, p2) in  ray_grid_intersections(origin, destination)
+        for (_, t1, p1, t2, p2) in  ray_grid_intersection(origin, destination)
             if pos_index == 1 && t1 == zero(t1)
                 to_pos!(pos_index + t1, p1)
             end
