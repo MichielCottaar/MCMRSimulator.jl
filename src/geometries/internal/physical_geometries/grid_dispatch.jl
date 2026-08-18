@@ -61,7 +61,7 @@ function detect_intersection_grid(
     grid::IntersectionGrid{N},
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
-    previous_hit::Intersection{N},
+    previous_hit::Intersection{3},
     empty_intersection::Intersection{N, M},
 ) where {N, M}
     iszero(destination - start) && return empty_intersection

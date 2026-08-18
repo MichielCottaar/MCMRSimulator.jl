@@ -253,7 +253,7 @@ function detect_intersection(
     geometry::GroupGeometry{N, P},
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
-    previous_hit::Intersection{N, M}=Intersection{N, intersection_index_length(typeof(geometry))}(),
+    previous_hit::Intersection{3, M}=Intersection{3, intersection_index_length(typeof(geometry))}(),
 ) where {N, P, M}
     if !Base.isempty(previous_hit)
         indices = previous_hit.obstruction_index.indices
@@ -278,7 +278,7 @@ function detect_intersection(
     geometry::GeometryVectorGrid{N},
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
-    previous_hit::Intersection{N, M}=Intersection{N, intersection_index_length(typeof(geometry))}(),
+    previous_hit::Intersection{3, M}=Intersection{3, intersection_index_length(typeof(geometry))}(),
 ) where {N, M}
     return detect_intersection_grid(
         geometry.grid,
