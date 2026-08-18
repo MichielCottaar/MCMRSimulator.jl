@@ -48,7 +48,7 @@ end
 end
 
 @testset "Computing normals" begin
-    normal = mr.Geometries.Internal.Obstructions.Triangles.normal
+    normal = mr.Geometries.Internal.PhysicalGeometries.BaseObstructions.normal
     @test normal([0, 0, 0], [1, 0, 0], [0, 1, 0]) ≈ [0, 0, 1]
     @test normal([0, 0, 0], [2, 0, 0], [0, 1, 0]) ≈ [0, 0, 1]
     @test normal([0, 0, 0], [2, 1, 0], [-1, 1, 0]) ≈ [0, 0, 1]
