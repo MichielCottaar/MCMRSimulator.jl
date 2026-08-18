@@ -45,51 +45,19 @@ has_single_inside(::Type{<:Repeat}) = false
 
 _wrap(repeat::Repeat, position) = mod.(position .+ repeat.repeats / 2, repeat.repeats) .- repeat.repeats / 2
 
-_child_image(repeat::Repeat, position, image) = position .- image .* repeat.repeats
-
-function _candidate_images(repeat::Repeat{N}, start, destination=start) where {N}
-    local_start = _wrap(repeat, start)
-    local_destination = _wrap(repeat, destination)
-    child_box = InternalBoundingBox(repeat.geometry)
-    child_lower = InternalBoundingBoxes.lower(child_box)
-    child_upper = InternalBoundingBoxes.upper(child_box)
-    images = SVector{N, Int}[]
-    for image in Iterators.product(((-1):1 for _ in 1:N)...)
-        image = SVector{N, Int}(image)
-        child_start = _child_image(repeat, local_start, image)
-        child_destination = _child_image(repeat, local_destination, image)
-        lower = min.(child_start, child_destination)
-        upper = max.(child_start, child_destination)
-        all(lower .<= child_upper) && all(upper .>= child_lower) && push!(images, image)
-    end
-    images
-end
-
-function _needs_image_search(repeat::Repeat)
-    child_box = InternalBoundingBox(repeat.geometry)
-    child_lower = InternalBoundingBoxes.lower(child_box)
-    child_upper = InternalBoundingBoxes.upper(child_box)
-    any(
-        ((repeat.lower_overlap .== 0) .& (repeat.upper_overlap .> 0) .&
-         (child_upper .<= repeat.repeats)) .|
-        ((repeat.lower_overlap .> 0) .& (repeat.upper_overlap .== 0) .&
-         (child_lower .>= -repeat.repeats))
-    )
-end
-
 function _candidate_shifts(repeat::Repeat{N}, start, destination=start) where {N}
     local_start = _wrap(repeat, start)
     local_destination = _wrap(repeat, destination)
     choices = ntuple(N) do dimension
-        lower = repeat.lower_overlap[dimension] > 0 &&
+        lower = repeat.upper_overlap[dimension] > 0 &&
             min(local_start[dimension], local_destination[dimension]) <=
-                -repeat.repeats[dimension] / 2 + repeat.lower_overlap[dimension] &&
+                -repeat.repeats[dimension] / 2 + repeat.upper_overlap[dimension] &&
             max(local_start[dimension], local_destination[dimension]) >= -repeat.repeats[dimension] / 2
-        upper = repeat.upper_overlap[dimension] > 0 &&
+        upper = repeat.lower_overlap[dimension] > 0 &&
             min(local_start[dimension], local_destination[dimension]) <=
                 repeat.repeats[dimension] / 2 &&
             max(local_start[dimension], local_destination[dimension]) >=
-                repeat.repeats[dimension] / 2 - repeat.upper_overlap[dimension]
+                repeat.repeats[dimension] / 2 - repeat.lower_overlap[dimension]
         values = [0]
         lower && push!(values, 1)
         upper && push!(values, -1)
@@ -110,11 +78,8 @@ function inside_indices(
     local_position = _wrap(repeat, position)
     geometry_type = typeof(repeat.geometry)
     indices = Groups._empty_inside_indices(geometry_type)
-    candidates = if Base.isempty(intersection) && _needs_image_search(repeat)
-        ((_child_image(repeat, local_position, image), image) for image in _candidate_images(repeat, local_position))
-    else
-        ((local_position .+ shift .* repeat.repeats, shift) for shift in _candidate_shifts(repeat, local_position))
-    end
+    candidates = ((local_position .+ shift .* repeat.repeats, shift)
+        for shift in _candidate_shifts(repeat, local_position))
     for (child_position, _) in candidates
         append!(indices, inside_indices_for_any_type(
             repeat.geometry,

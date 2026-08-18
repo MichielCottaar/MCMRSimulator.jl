@@ -532,6 +532,11 @@ end
     )
     shifted_position = SVector(-0.5, 0.0, 0.0)
     @test inside_indices(shifted_repeated_sphere, shifted_position) == [ObstructionIndex()]
+    neighboring_position = SVector(0.5, 0.0, 0.0)
+    @test Repeats._candidate_shifts(shifted_repeated_sphere, neighboring_position) == [
+        SVector(0, 0, 0), SVector(-1, 0, 0),
+    ]
+    @test inside_indices(shifted_repeated_sphere, neighboring_position) == [ObstructionIndex()]
     @test_throws ArgumentError Repeat(BaseObstructions.Sphere(1.0), [0.0, 4.0, 4.0])
     @test_throws ArgumentError Repeat(BaseObstructions.Sphere(2.0), [1.0, 4.0, 4.0])
     @test_throws ArgumentError Repeat(
