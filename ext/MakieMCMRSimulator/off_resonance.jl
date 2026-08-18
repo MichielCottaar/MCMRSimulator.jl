@@ -2,8 +2,8 @@ module OffResonance
 using Makie
 import StaticArrays: SVector
 import MCMRSimulator.Plot: PlotPlane, plot_off_resonance, plot_off_resonance!, GeometryLike
-import MCMRSimulator.Geometries.Internal: FixedSusceptibility, susceptibility_off_resonance
-import MCMRSimulator.Geometries: fix_susceptibility
+import MCMRSimulator.Geometries.Internal: FixedGeometry, susceptibility_off_resonance
+import MCMRSimulator.Geometries: fix
 
 @recipe Plot_Off_Resonance (plot_plane::PlotPlane, geometry::GeometryLike) begin
     "sets the number of points where the off-resonance field is evaluated before producing the image. Setting this to a higher number will produce a more accurate image of the off-resonance field at the cost of more computing power."
@@ -16,7 +16,8 @@ Makie.argument_names(::Type{<: Plot_Off_Resonance}, N) = (:plot_plane, :geometry
 
 function Makie.plot!(scene::Plot_Off_Resonance)
     Makie.register_computation!(scene.attributes, [:geometry, :plot_plane, :ngrid], [:x_interval, :y_interval, :field]) do inputs, changed, cached
-        susc = inputs.geometry isa FixedSusceptibility ? inputs.geometry : fix_susceptibility(inputs.geometry)
+        fixed_geometry = inputs.geometry isa FixedGeometry ? inputs.geometry : fix(inputs.geometry)
+        susc = fixed_geometry.susceptibility
 
         dims = -0.5:(1/inputs.ngrid):0.5
         xx_1d = dims * inputs.plot_plane.sizex
