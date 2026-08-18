@@ -29,6 +29,14 @@ function InternalBoundingBox(triangle::FullTriangle)
     InternalBoundingBox((upper - lower) / 2, (upper + lower) / 2)
 end
 
+radius(triangle::FullTriangle) = maximum(
+    InternalBoundingBoxes.upper(InternalBoundingBox(triangle)) -
+    InternalBoundingBoxes.lower(InternalBoundingBox(triangle)),
+) / 2
+
+triangle_size(triangle::FullTriangle) = triangle_size(triangle.a, triangle.b, triangle.c)
+triangle_size(a, b, c) = norm(cross(b - a, c - a)) / 2
+
 normal(triangle::FullTriangle) = normal(triangle.a, triangle.b, triangle.c)
 normal(a::AbstractVector, b::AbstractVector, c::AbstractVector) = begin
     unnormalized = cross(b - a, c - a)
