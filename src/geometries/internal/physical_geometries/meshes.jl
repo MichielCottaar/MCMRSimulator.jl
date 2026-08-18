@@ -194,7 +194,7 @@ function _mesh_inside_mask(
         grid_coordinate = SVector{3, Float64}(Tuple(coordinate)) .- 0.5
         centre = lower_bound .+ grid_coordinate ./ grid.inv_resolution
         triangle_index = nn(tree, centre)[1]
-        destination = centroids[triangle_index]
+        destination = centre + 1.001 .* (centroids[triangle_index] - centre)
         intersection = detect_intersection_grid(
             grid,
             centre,
