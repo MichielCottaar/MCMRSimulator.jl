@@ -86,6 +86,7 @@ If no intersection is found, `nothing` is returned instead.
 `previous_intersection` represents the intersection that just finished, which should not be immediately returned again.
 """
 function detect_intersection(fixed_geometry::FixedGeometry, start::SVector{3, Float64}, dest::SVector{3, Float64}, previous_intersection=nothing)
+    length(fixed_geometry) == 0 && return nothing
     full_indices = find_intersection(
         fixed_geometry.geometry,
         start,
@@ -146,6 +147,7 @@ function isinside(
     position::SVector{3, Float64},
     intersection=nothing,
 )
+    length(geometry) == 0 && return IsInside(SVector{0, Union{}}())
     as_vec = inside_indices_for_any_type(geometry.geometry, position, intersection)
     expected_type = inside_indices_eltype(typeof(geometry.geometry))
     IsInside(SVector{length(as_vec), expected_type}(as_vec))
@@ -310,6 +312,7 @@ function susceptibility_off_resonance(
     position::SVector{3, Float64},
     inside::Union{Nothing, Bool}=nothing,
 )
+    isempty(geometry.susceptibility) && return 0.0
     susceptibility_off_resonance(geometry.susceptibility, position, inside)
 end
 

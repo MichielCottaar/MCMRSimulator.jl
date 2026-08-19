@@ -1025,6 +1025,11 @@ end
 end
 
 @testset "Fixed geometry susceptibility state" begin
+    empty_geometry = mr.fix(())
+    @test GI.detect_intersection(empty_geometry, SVector(0.0, 0.0, 0.0), SVector(1.0, 0.0, 0.0)) === nothing
+    @test length(GI.isinside(empty_geometry, SVector(0.0, 0.0, 0.0))) == 0
+    @test GI.susceptibility_off_resonance(empty_geometry, SVector(0.0, 0.0, 0.0)) == 0.0
+
     walls = mr.fix(mr.Walls(position=0.0))
     @test walls.susceptibility == ()
     susceptibility_position = SVector(0.0, 0.0, 0.0)
