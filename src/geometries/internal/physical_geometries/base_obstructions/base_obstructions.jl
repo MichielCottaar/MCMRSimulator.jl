@@ -2,7 +2,7 @@ module BaseObstructions
 
 import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, child_type, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, isinside_single, flip
-import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
+import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth, to_property_index
 import ...InternalBoundingBoxes: InternalBoundingBox
 import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
@@ -38,5 +38,7 @@ function random_surface_positions(
     inside = rand(Bool, length(positions))
     return positions, [(i, ) for i in inside]
 end
+
+to_property_index(geometry::BaseObstruction, index) = ()
 
 end

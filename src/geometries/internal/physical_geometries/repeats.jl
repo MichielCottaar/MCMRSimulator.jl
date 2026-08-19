@@ -7,7 +7,7 @@ import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
 import ..PhysicalGeometries: PhysicalGeometry, Intersection, child_type, detect_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, InternalBoundingBox
 import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
-import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _translate_native
+import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _translate_native, to_property_index
 import ...Properties: GeometryProperties
 import ..Groups
 import ..Transformations: Shift
@@ -42,6 +42,15 @@ all_equal_inside_depth(::Type{<:Repeat{N, P}}) where {N, P} = all_equal_inside_d
 
 Repeat(geometry::P, repeats::AbstractVector{<:Real}) where {N, P<:PhysicalGeometry{N}} =
     Repeat{N, P}(geometry, SVector{N, Float64}(repeats))
+
+function to_property_index(geometry::Repeat, indices)
+    if isnothing(indices)
+        return nothing
+    end
+    child, child_indices = get_child(geometry, indices)
+    cleaned = to_property_index(child, child_indices)
+    return cleaned
+end
 
 function Groups.intersection_candidates(
     repeat::Repeat{N},

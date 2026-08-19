@@ -6,7 +6,7 @@ import ...Indices: ObstructionIndex, add_index
 import ...InternalBoundingBoxes
 import ..GridDispatch: IntersectionGrid, GridIterator, detect_intersection_grid
 import ..Intersections: remove_expected_index
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, child_type, find_intersection, has_inside, has_single_inside, inside_indices_eltype, isinside_single, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
@@ -95,6 +95,16 @@ group_geometries(group::GeometryTuple; include_gap=true) = group.geometries
 
 group_geometries(group::GroupGeometry, bounding_box::InternalBoundingBox; kwargs...) =
     group_geometries(group; kwargs...)
+
+function get_child(group::GeometryVectorLike, indices::Tuple)
+    child_index = indices[1]
+    group_geometries(group)[child_index], indices[2:end]
+end
+
+function get_child(group::GeometryTuple, indices::Tuple)
+    child_index = indices[1]
+    group_geometries(group)[child_index], indices[2:end]
+end
 
 child_type(::Type{<:GeometryTuple{N, P}}) where {N, P} = Union{P.parameters...}
 

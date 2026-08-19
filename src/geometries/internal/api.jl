@@ -5,7 +5,7 @@ import ..BoundingBoxes: BoundingBox
 import .Indices: ObstructionIndex
 import .InternalBoundingBoxes: InternalBoundingBox
 import .InternalBoundingBoxes
-import .PhysicalGeometries: PhysicalGeometry, Intersection, flip, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh
+import .PhysicalGeometries: PhysicalGeometry, Intersection, flip, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, to_property_index
 import .PhysicalGeometries.Groups: GeometryTuple, inside_indices_for_any_type
 import .PhysicalGeometries.Transparents: SizeScaleOverride
 import .Properties: all_property_values, get_value
@@ -51,9 +51,10 @@ Intersection between a path and a physical geometry.
 - `inside` is whether the surface got hit on the "inside" of the obstruction (arbitrarily defined for some obstructions such as infinite walls)
 - `hit_gap` is whether the collision actually hit something that represents a gap in the obstruction. In that case the spin will be left through unaltered except for an update to whether it is inside/outside of that obstruction.
 """
-struct Intersection{T}
+struct Intersection{T, PT}
     distance::Float64
     indices::T
+    property_indices::PT
     normal::SVector{3, Float64}
     inside::Bool
     hit_gap::Bool
@@ -75,9 +76,11 @@ function detect_intersection(fixed_geometry::FixedGeometry, start::SVector{3, Fl
     end
     params = get_intersection_params(fixed_geometry.geometry, start, dest, full_indices)
     indices = full_indices[1:end-1]
-    return Intersection{typeof(indices)}(
+    property_indices = to_property_index(fixed_geometry.geometry, indices)
+    return Intersection{typeof(indices), typeof(property_indices)}(
         full_indices[end],
         indices,
+        property_indices,
         params.normal,
         params.inside,
         params.hit_gap
@@ -136,9 +139,11 @@ function random_surface_positions(
     io = eltype(indices)
     intersections = map(positions, indices) do pos, index
         params = get_intersection_params(fixed_geometry.geometry, pos, pos, (index..., 0.))
-        return Intersection{io}(
+        property_index = to_property_index(fixed_geometry.geometry, index)
+        return Intersection{io, typeof(property_index)}(
             0.,
             index,
+            property_index,
             params.normal,
             params.inside,
             params.hit_gap

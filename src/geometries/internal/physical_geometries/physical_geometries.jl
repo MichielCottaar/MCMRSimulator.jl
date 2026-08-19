@@ -124,6 +124,21 @@ function inside_indices end
 """Whether the geometry is within the single inside."""
 function isinside_single end
 
+"""
+    to_property_index(geometry, indices) -> indices
+
+Returns a version of `indices` that is appropriate for property sampling (i.e., does not include the `repeat` index).
+"""
+function to_property_index(geometry::PhysicalGeometry, indices)
+    if isnothing(indices)
+        return nothing
+    end
+    child, child_indices = get_child(geometry, indices)
+    cleaned = to_property_index(child, child_indices)
+    nremoved = length(indices) - length(child_indices)
+    return (indices[1:nremoved]..., cleaned...)
+end
+
 """Return the obstruction-index depth of intersections from a geometry."""
 function intersection_index_length end
 
