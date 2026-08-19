@@ -180,6 +180,9 @@ function could_intersect(box::InternalBoundingBox{N}, start::AbstractVector, des
 end
 
 function does_intersect(box::InternalBoundingBox{N}, start::AbstractVector, destination::AbstractVector) where {N}
+    if !could_intersect(box, start, dest)
+        return false
+    end
     t_min = 0.0
     t_max = 1.0
 
