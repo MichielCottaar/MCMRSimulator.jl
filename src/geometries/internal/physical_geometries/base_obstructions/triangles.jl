@@ -87,7 +87,7 @@ end
 
 function surface_sampling(
     triangle::FullTriangle, density::GeometryLeafProperties,
-    bounding_box::InternalBoundingBox{3}, scale_density,
+    scale_density,
 )
     edge_1 = triangle.b - triangle.a
     edge_2 = triangle.c - triangle.a
@@ -102,5 +102,5 @@ function surface_sampling(
         SVector{3, Float64}(triangle.a + u1 * edge_1 + u2 * edge_2)
     end
     positions = [draw_position() for _ in 1:nspins]
-    positions, fill(-normal(triangle), nspins)
+    positions
 end

@@ -66,19 +66,19 @@ function _round_sampling(round::Round{N}, density, scale_density) where {N}
         nspins = rand(Poisson(2π * round.radius * effective_density))
         theta = rand(nspins) .* 2π
         normals = [SVector{2, Float64}(cos(t), sin(t)) for t in theta]
-        return normals .* (-round.radius), normals
+        return normals .* (-round.radius)
     end
     nspins = rand(Poisson(4π * round.radius^2 * effective_density))
     normals = [let z = rand(Float64) * 2 - 1, r = sqrt(1 - z^2), theta = rand(Float64) * 2π
         s, c = sincos(theta)
         SVector{3, Float64}(r * s, r * c, z)
     end for _ in 1:nspins]
-    normals .* (-round.radius), normals
+    normals .* (-round.radius)
 end
 
 function surface_sampling(
     round::Round{N}, density::GeometryLeafProperties,
-    bounding_box::InternalBoundingBox{N}, scale_density,
+    scale_density,
 ) where {N}
     _round_sampling(round, density.value, scale_density)
 end

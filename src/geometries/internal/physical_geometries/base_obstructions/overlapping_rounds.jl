@@ -56,11 +56,13 @@ end
 
 function surface_sampling(
     round::OverlappingRound{N}, density::GeometryLeafProperties,
-    bounding_box::InternalBoundingBox{N}, scale_density,
+    scale_density,
 ) where {N}
-    positions, normals = surface_sampling(Round{N}(round.radius), density, bounding_box, scale_density)
-    keep = [!_inside_other_rounds(round, position) for position in positions]
-    positions[keep], normals[keep]
+    [
+        position
+        for position in surface_sampling(Round{N}(round.radius), density, scale_density)
+        if !_inside_other_rounds(round, position)
+    ]
 end
 
 size_scale(round::OverlappingRound) = round.radius

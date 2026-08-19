@@ -34,13 +34,9 @@ function random_surface_positions(
     geometry::BaseObstruction{N}, density::GeometryLeafProperties,
     bounding_box::InternalBoundingBoxes.InternalBoundingBox{N}, scale_density,
 ) where {N}
-    positions, normals = surface_sampling(geometry, density, bounding_box, scale_density)
-    intersections = Intersection{N}[]
-    for normal in normals
-        intersection = Intersection(0.0, normal, true, ObstructionIndex(), false)
-        push!(intersections, rand(Bool) ? intersection : flip(intersection))
-    end
-    positions, intersections
+    positions = surface_sampling(geometry, density, scale_density)
+    inside = rand(Bool, length(positions))
+    return positions, [(i, ) for i in inside]
 end
 
 end

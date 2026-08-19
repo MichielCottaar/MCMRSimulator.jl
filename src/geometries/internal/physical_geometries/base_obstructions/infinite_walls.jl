@@ -38,10 +38,10 @@ end
 
 function surface_sampling(
     ::InfiniteWall, density::GeometryLeafProperties,
-    bounding_box::InternalBoundingBox{1}, scale_density,
+    scale_density,
 )
     nspins = rand(Poisson(density.value * scale_density))
-    fill(zero(SVector{1, Float64}), nspins), fill(SVector{1, Float64}(1.0), nspins)
+    fill(zero(SVector{1, Float64}), nspins)
 end
 
 size_scale(::InfiniteWall) = Inf
