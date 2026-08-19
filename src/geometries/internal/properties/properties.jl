@@ -1,6 +1,7 @@
 """MRI-property storage and lookup for physical geometries."""
 module Properties
 
+import StaticArrays: SVector
 import ..Indices: ObstructionIndex, remove_index
 
 """
@@ -55,12 +56,47 @@ function get_value(property, ::ObstructionIndex)
     property
 end
 
+function get_value(property, ::Tuple)
+    property
+end
+
 function get_value(properties::GeometryProperties, index::ObstructionIndex)
     properties isa GeometryLeafProperties && return properties.value
     child_index, remaining = remove_index(index)
     1 <= child_index <= length(properties.properties) ||
         throw(BoundsError(properties.properties, child_index))
     get_value(properties.properties[child_index], remaining)
+end
+
+function get_value(properties::GeometryProperties, index::Tuple)
+    properties isa GeometryLeafProperties && return properties.value
+    isempty(index) && throw(ArgumentError("property index is empty for a nested property"))
+    child_index = index[1]
+    1 <= child_index <= length(properties.properties) ||
+        throw(BoundsError(properties.properties, child_index))
+    get_value(properties.properties[child_index], index[2:end])
+end
+
+function _get_value_many(properties::GeometryProperties, indices::Tuple)
+    isempty(indices) && return 0
+    properties isa GeometryLeafProperties && return properties.value
+
+    grouped_indices = Dict{Int, Vector{Tuple}}()
+    for index in indices
+        isempty(index) && throw(ArgumentError("property indices must not be empty"))
+        child_index = index[1]
+        child_index isa Int || throw(ArgumentError("property child indices must be integers"))
+        push!(get!(grouped_indices, child_index, Tuple[]), index[2:end])
+    end
+
+    sum(_get_value_many(
+        properties.properties[child_index],
+        Tuple(child_indices),
+    ) for (child_index, child_indices) in grouped_indices)
+end
+
+function get_value(properties::GeometryProperties, indices::SVector)
+    _get_value_many(properties, Tuple(indices))
 end
 
 

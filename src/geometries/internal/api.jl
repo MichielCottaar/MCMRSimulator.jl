@@ -5,7 +5,7 @@ import ..BoundingBoxes: BoundingBox
 import .Indices: ObstructionIndex
 import .InternalBoundingBoxes: InternalBoundingBox
 import .InternalBoundingBoxes
-import .PhysicalGeometries: PhysicalGeometry, Intersection, flip, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, to_property_index
+import .PhysicalGeometries: PhysicalGeometry, Intersection, flip, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, to_property_index, inside_indices_eltype
 import .PhysicalGeometries.Groups: GeometryTuple, inside_indices_for_any_type
 import .PhysicalGeometries.Transparents: SizeScaleOverride
 import .Properties: all_property_values, get_value
@@ -95,11 +95,11 @@ end
 Identifies which obstructions this position/spin is inside of.
 Use `Base.length` to get the number of obstructions.
 """
-struct IsInside
-    inside_of::Vector{ObstructionIndex}
+struct IsInside{N, T}
+    inside_of::SVector{N, T}
 end
 
-Base.length(ii::IsInside) = length(ii.inside_of)
+Base.length(::IsInside{N}) where {N} = N
 
 
 """
@@ -116,8 +116,18 @@ Return the obstruction indices containing `position`.
 
 An intersection may be provided when the particle is already attached or is currently hitting a surface.
 """
-isinside(geometry::FixedGeometry, position::SVector{3, Float64}, intersection::Intersection=Intersection{3}()) =
-    IsInside(inside_indices_for_any_type(geometry.geometry, position, intersection))
+function isinside(
+    geometry::FixedGeometry,
+    position::SVector{3, Float64},
+    intersection=nothing,
+)
+    as_vec = inside_indices_for_any_type(geometry.geometry, position, intersection)
+    expected_type = inside_indices_eltype(typeof(geometry.geometry))
+    IsInside(SVector{length(as_vec), expected_type}(as_vec))
+end
+
+isinside(geometry::FixedGeometry, position::SVector{3, Float64}, intersection::Intersection) =
+    isinside(geometry, position, (intersection.indices..., intersection.distance))
 
 
 function _filter_to_box(positions, values, bounding_box)
@@ -229,28 +239,28 @@ end
 function permeability(geometry::FixedGeometry, intersection::Intersection)
     @assert !Base.isempty(intersection) "permeability requires a non-empty intersection"
     intersection.hit_gap && return Inf
-    get_value(geometry.surface.permeability, intersection.obstruction_index)
+    get_value(geometry.surface.permeability, intersection.property_indices)
 end
 
 """Return the surface-relaxation value associated with a collision state."""
 function surface_relaxation(geometry::FixedGeometry, intersection::Intersection)
     @assert !Base.isempty(intersection) "surface_relaxation requires a non-empty intersection"
     intersection.hit_gap && return 0.
-    get_value(geometry.surface.surface_relaxation, intersection.obstruction_index)
+    get_value(geometry.surface.surface_relaxation, intersection.property_indices)
 end
 
 """Return the surface-density value associated with a collision state."""
 function surface_density(geometry::FixedGeometry, intersection::Intersection)
     @assert !Base.isempty(intersection) "surface_density requires a non-empty intersection"
     intersection.hit_gap && return 0.
-    get_value(geometry.surface.density, intersection.obstruction_index)
+    get_value(geometry.surface.density, intersection.property_indices)
 end
 
 """Return the dwell-time value associated with a collision state."""
 function dwell_time(geometry::FixedGeometry, intersection::Intersection)
     @assert !Base.isempty(intersection) "dwell_time requires a non-empty intersection"
     intersection.hit_gap && return 0.
-    get_value(geometry.surface.dwell_time, intersection.obstruction_index)
+    get_value(geometry.surface.dwell_time, intersection.property_indices)
 end
 
 # Generate the shared volume-plus-surface lookup for MRI properties.
@@ -259,19 +269,19 @@ for symbol in (:R1, :R2, :off_resonance)
         function $symbol(
             geometry::FixedGeometry,
             inside::IsInside,
-            intersection::Intersection=Intersection{3}(),
+            intersection=nothing,
         )
             volume = get_value(geometry.volume.$symbol, inside.inside_of)
-            surface = Base.isempty(intersection) ?
+            surface = isnothing(intersection) ?
                 0.0 :
-                get_value(geometry.surface.$symbol, intersection.obstruction_index)
+                get_value(geometry.surface.$symbol, intersection.property_indices)
             volume + surface
         end
 
         function $symbol(
             geometry::FixedGeometry,
             position::SVector{3, Float64},
-            intersection::Intersection=Intersection{3}(),
+            intersection=nothing,
         )
             $symbol(geometry, isinside(geometry, position, intersection), intersection)
         end
