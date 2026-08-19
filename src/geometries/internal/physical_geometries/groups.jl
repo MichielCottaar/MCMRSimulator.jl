@@ -15,11 +15,14 @@ group_geometries(group::GeometryVectorLike; include_gap=true) = group.geometries
 
 child_type(::Type{<:GroupGeometry{N, P}}) where {N, P} = P
 
-_prepend_type(::Type{Prefix}, ::Type{Union{}}) where {Prefix} = Union{}
-_prepend_type(::Type{Prefix}, ::Type{T}) where {Prefix, T<:Union} = Union{
-    (_prepend_type(Prefix, element) for element in Base.uniontypes(T))...,
-}
-_prepend_type(::Type{Prefix}, ::Type{T}) where {Prefix, T<:Tuple} = Tuple{Prefix, T.parameters...}
+function _prepend_type(::Type{Prefix}, ::Type{T}) where {Prefix, T}
+    T === Union{} && return Union{}
+    T isa Union && return Union{
+        (_prepend_type(Prefix, element) for element in Base.uniontypes(T))...,
+    }
+    T <: Tuple && return Tuple{Prefix, T.parameters...}
+    throw(MethodError(_prepend_type, (Type{Prefix}, Type{T})))
+end
 
 function inside_indices_eltype(::Type{T}) where {T}
     T isa Union || throw(MethodError(inside_indices_eltype, (Type{T},)))
