@@ -26,8 +26,6 @@ function GridIterator(
 ) where {N}
     grid_size = SVector{N, Int}(size(grid.indices))
     iszero(destination - start) && return GridIterator{N, typeof(grid), Nothing}(grid, nothing, grid_size)
-    InternalBoundingBoxes.could_intersect(grid.grid_bounding_box, start, destination) ||
-        return GridIterator{N, typeof(grid), Nothing}(grid, nothing, grid_size)
     InternalBoundingBoxes.does_intersect(grid.grid_bounding_box, start, destination) ||
         return GridIterator{N, typeof(grid), Nothing}(grid, nothing, grid_size)
 
@@ -130,7 +128,6 @@ function detect_intersection_grid(
     empty_intersection::Intersection{N, M},
 ) where {N, M}
     iszero(destination - start) && return empty_intersection
-    InternalBoundingBoxes.could_intersect(grid.grid_bounding_box, start, destination) || return empty_intersection
     InternalBoundingBoxes.does_intersect(grid.grid_bounding_box, start, destination) || return empty_intersection
 
     lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)

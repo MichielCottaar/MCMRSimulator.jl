@@ -327,8 +327,7 @@ function _could_intersect(
     destination::SVector{N, Float64},
  ) where {N}
     box = geometry.bounding_boxes[child_index]
-    InternalBoundingBoxes.could_intersect(box, start, destination) &&
-        InternalBoundingBoxes.does_intersect(box, start, destination)
+    InternalBoundingBoxes.does_intersect(box, start, destination)
 end
 
 function detect_intersection(
