@@ -6,7 +6,7 @@ import DelaunayTriangulation: triangulate, get_triangles
 import NearestNeighbors: KDTree, nn
 
 import ...Indices: ObstructionIndex, add_index
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, get_intersection_params, has_inside, has_single_inside, isinside_single, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, isinside_single, InternalBoundingBox
 import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryLeafProperties
@@ -52,6 +52,7 @@ Base.eltype(::Type{MeshGeometryView}) = FullTriangle
 
 has_inside(::Type{Mesh}) = true
 has_single_inside(::Type{Mesh}) = true
+inside_indices_eltype(::Type{Mesh}) = Tuple{}
 intersection_index_length(::Type{Mesh}) = 1
 inside_index_length(::Type{Mesh}) = 0
 all_equal_inside_depth(::Type{Mesh}) = true
@@ -241,29 +242,18 @@ function _mesh_inside_mask(
         centre = lower_bound .+ grid_coordinate ./ grid.inv_resolution
         triangle_index = nn(tree, centre)[1]
         destination = centre + 1.001 .* (centroids[triangle_index] - centre)
-        intersection = detect_intersection_grid(
-            grid,
-            centre,
-            destination,
-            Intersection{3, 1}(),
-            Intersection{3, 1}(),
-        ) do candidate_index, _
-            hit = detect_intersection(
-                _mesh_triangle(vertices, indices[candidate_index]),
-                centre,
-                destination,
-            )
-            Base.isempty(hit) && return Intersection{3, 1}()
-            Intersection(
-                hit.distance,
-                hit.normal,
-                hit.inside,
-                add_index(ObstructionIndex(), candidate_index),
-                false,
-            )
+        hit_index = nothing
+        hit_distance = Inf
+        for (candidate_index, _) in GridIterator(grid, centre, destination)
+            triangle = _mesh_triangle(vertices, indices[candidate_index])
+            hit = find_intersection(triangle, centre, destination)
+            isnothing(hit) && continue
+            _, distance = hit
+            distance < hit_distance || continue
+            hit_index = candidate_index
+            hit_distance = distance
         end
-        Base.isempty(intersection) && continue
-        hit_index = intersection.obstruction_index.indices[1]
+        isnothing(hit_index) && continue
         hit_triangle = _mesh_triangle(vertices, indices[hit_index])
         mask[coordinate] = (centre - centroids[hit_index]) ⋅ normal(hit_triangle) < 0
     end
@@ -301,19 +291,34 @@ function isinside_single(
     inside = mesh.inside_mask[coordinate...]
     intersection_points = SVector{3, Float64}[]
     for triangle_index in mesh.grid.indices[coordinate...]
-        triangle_intersection = detect_intersection(
-            triangle(mesh, triangle_index),
-            centre,
-            position,
-            )
-        if !Base.isempty(triangle_intersection) && 0 <= triangle_intersection.distance < 1
-            point = centre + triangle_intersection.distance .* (position - centre)
+        triangle_intersection = find_intersection(triangle(mesh, triangle_index), centre, position)
+        if !isnothing(triangle_intersection) && 0 <= triangle_intersection[2] < 1
+            point = centre + triangle_intersection[2] .* (position - centre)
             any(norm(point - existing) < 1e-8 for existing in intersection_points) ||
                 push!(intersection_points, point)
         end
     end
     isodd(length(intersection_points)) && (inside = !inside)
     inside
+end
+
+function find_intersection(
+    mesh::Mesh,
+    start::SVector{3, Float64},
+    destination::SVector{3, Float64},
+    previous_hit=nothing,
+)
+    previous_index = isnothing(previous_hit) ? nothing : previous_hit[1]
+    best = nothing
+    for (triangle_index, _) in GridIterator(mesh.grid, start, destination)
+        triangle_index == previous_index && continue
+        hit = find_intersection(triangle(mesh, triangle_index), start, destination)
+        isnothing(hit) && continue
+        inside, distance = hit
+        (isnothing(best) || distance < best[3]) || continue
+        best = (triangle_index, inside, distance)
+    end
+    best
 end
 
 function detect_intersection(
