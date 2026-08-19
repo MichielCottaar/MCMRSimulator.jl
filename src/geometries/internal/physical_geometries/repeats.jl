@@ -32,7 +32,7 @@ struct Repeat{N, P<:PhysicalGeometry{N}} <: Groups.GroupGeometry{N, Shift{N, P}}
 end
 
 inside_indices_eltype(::Type{<:Repeat{N, P}}) where {N, P} =
-    Groups._prepend_inside_index(SVector{3, Int}, inside_indices_eltype(child_type(Repeat{N, P})))
+    Groups._prepend_type(SVector{3, Int}, inside_indices_eltype(child_type(Repeat{N, P})))
 
 intersection_index_length(::Type{<:Repeat{N, P}}) where {N, P} =
     intersection_index_length(P)

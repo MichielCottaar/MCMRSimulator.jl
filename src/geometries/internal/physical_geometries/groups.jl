@@ -18,16 +18,21 @@ group_geometries(group::GeometryVectorLike; include_gap=true) = group.geometries
 
 child_type(::Type{<:GroupGeometry{N, P}}) where {N, P} = P
 
-function _prepend_inside_index(::Type{Index}, ::Type{T}) where {Index, T}
+function _prepend_type(::Type{Prefix}, ::Type{T}) where {Prefix, T}
     T isa Union && return Union{
-        (_prepend_inside_index(Index, element) for element in T.parameters)...,
+        (_prepend_type(Prefix, element) for element in Base.uniontypes(T))...,
     }
-    T <: Tuple && return Tuple{Index, T.parameters...}
-    Tuple{Index, T}
+    T <: Tuple && return Tuple{Prefix, T.parameters...}
+    Tuple{Prefix, T}
+end
+
+function inside_indices_eltype(::Type{T}) where {T}
+    T isa Union || throw(MethodError(inside_indices_eltype, (Type{T},)))
+    Union{(inside_indices_eltype(element) for element in Base.uniontypes(T))...}
 end
 
 inside_indices_eltype(::Type{<:GroupGeometry{N, P}}) where {N, P} =
-    _prepend_inside_index(Int, inside_indices_eltype(P))
+    _prepend_type(Int, inside_indices_eltype(P))
 
 
 function find_intersection(group::GroupGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, previous_hit=nothing) where {N}
@@ -110,7 +115,7 @@ end
 child_type(::Type{<:GeometryTuple{N, P}}) where {N, P} = Union{P.parameters...}
 
 inside_indices_eltype(::Type{<:GeometryTuple{N, P}}) where {N, P} =
-    _prepend_inside_index(Int, inside_indices_eltype(Union{P.parameters...}))
+    _prepend_type(Int, inside_indices_eltype(Union{P.parameters...}))
 
 function inside_candidates end
 
