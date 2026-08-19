@@ -119,6 +119,7 @@ function has_single_inside end
 Return the element type of the array returned by `inside_indices`.
 """
 function inside_indices_eltype end
+inside_indices_eltype(::Type{Union{}}) = Union{}
 
 """Return the obstruction indices containing a position."""
 function inside_indices end
