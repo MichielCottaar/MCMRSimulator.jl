@@ -131,7 +131,7 @@ inside_candidates(group::GeometryVectorBoundingBox, position) =
 function inside_candidates(group::GeometryVectorGrid{N}, position::SVector{N, Float64}) where {N}
     coordinate = _grid_coordinate(group, position)
     isnothing(coordinate) && return ()
-    ((index, group_geometries(group)[index]) for index in _grid_candidates(group, coordinate))
+    ((index, group_geometries(group)[index]) for index in group.grid.indices[coordinate...])
 end
 
 inside_candidates(group::GeometryTuple, position) = enumerate(group_geometries(group))
