@@ -1,6 +1,5 @@
 module PhysicalGeometries
 import StaticArrays: SVector
-import ..Indices: ObstructionIndex
 import ..InternalBoundingBoxes: InternalBoundingBox
 import ...BoundingBoxes: BoundingBox
 
@@ -31,9 +30,6 @@ The final two elements therefore always have the form `(..., inside, distance)`.
 Return `nothing` if there is no intersection between `start` and `dest`.
 """
 function find_intersection end
-
-# Kept as a declaration while legacy geometry paths are migrated.
-function detect_intersection end
 
 """
     get_child(geometry::PhysicalGeometry, indices) -> (PhysicalGeometry, remaining_indices)
@@ -145,15 +141,6 @@ function to_property_index(geometry::PhysicalGeometry, indices)
     return (indices[1:nremoved]..., cleaned...)
 end
 
-"""Return the obstruction-index depth of intersections from a geometry."""
-function intersection_index_length end
-
-"""Return the obstruction-index depth of inside results from a geometry."""
-function inside_index_length end
-
-"""Whether all inside-index results from a geometry have one depth."""
-function all_equal_inside_depth end
-
 """Sample surface positions together with initialized collision states."""
 function random_surface_positions end
 
@@ -171,8 +158,6 @@ function geometry_mesh(geometry; height=nothing, nsamples=100, bounding_box=noth
     _geometry_mesh(geometry; height, nsamples, bounding_box)
 end
 
-include("intersections.jl")
-import .Intersections: Intersection, flip
 include("grid_dispatch.jl")
 include("groups.jl")
 include("transformations.jl")

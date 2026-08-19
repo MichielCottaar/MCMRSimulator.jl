@@ -1,8 +1,7 @@
 module Transparents
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, isinside_single, inside_indices, InternalBoundingBox, size_scale
-import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
+import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, isinside_single, inside_indices, InternalBoundingBox, size_scale
 import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ...Properties: GeometryProperties
 
@@ -25,16 +24,12 @@ transparent_geometry(wrapper::Transparent) = getfield(wrapper, :geometry)
 
 has_inside(::Type{<:Transparent{N, P}}) where {N, P} = has_inside(P)
 has_single_inside(::Type{<:Transparent{N, P}}) where {N, P} = has_single_inside(P)
-intersection_index_length(::Type{<:Transparent{N, P}}) where {N, P} = intersection_index_length(P)
-inside_index_length(::Type{<:Transparent{N, P}}) where {N, P} = inside_index_length(P)
-all_equal_inside_depth(::Type{<:Transparent{N, P}}) where {N, P} = all_equal_inside_depth(P)
-
 InternalBoundingBox(wrapper::Transparent) = InternalBoundingBox(transparent_geometry(wrapper))
 
 inside_indices(
     wrapper::Transparent{N},
     position::SVector{N, Float64},
-    intersection::Intersection{3}=Intersection{3}(),
+    intersection=nothing,
 ) where {N} = inside_indices(transparent_geometry(wrapper), position, intersection)
 
 isinside_single(

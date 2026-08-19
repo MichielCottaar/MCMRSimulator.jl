@@ -5,13 +5,11 @@ import LinearAlgebra: cross, norm, svd, ⋅
 import DelaunayTriangulation: triangulate, get_triangles
 import NearestNeighbors: KDTree, nn
 
-import ...Indices: ObstructionIndex, add_index
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, isinside_single, InternalBoundingBox
-import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
+import ..PhysicalGeometries: PhysicalGeometry, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, isinside_single, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryLeafProperties
 import ..Groups
-import ..GridDispatch: IntersectionGrid, GridIterator, detect_intersection_grid
+import ..GridDispatch: IntersectionGrid, GridIterator
 import ...InternalBoundingBoxes
 import ..BaseObstructions: FullTriangle, normal
 
@@ -53,10 +51,6 @@ Base.eltype(::Type{MeshGeometryView}) = FullTriangle
 has_inside(::Type{Mesh}) = true
 has_single_inside(::Type{Mesh}) = true
 inside_indices_eltype(::Type{Mesh}) = Tuple{}
-intersection_index_length(::Type{Mesh}) = 1
-inside_index_length(::Type{Mesh}) = 0
-all_equal_inside_depth(::Type{Mesh}) = true
-
 function _mesh_indices(indices, nvertices)
     result = [SVector{3, Int}(triangle) for triangle in indices]
     all(all(triangle .>= 1) && all(triangle .<= nvertices) for triangle in result) ||
@@ -319,47 +313,6 @@ function find_intersection(
         best = (triangle_index, inside, distance)
     end
     best
-end
-
-function detect_intersection(
-    mesh::Mesh,
-    start::SVector{3, Float64},
-    destination::SVector{3, Float64},
-    previous_hit::Intersection{3, M}=Intersection{3, 1}(),
-) where {M}
-    previous_index = 0
-    if !Base.isempty(previous_hit)
-        previous_indices = previous_hit.obstruction_index.indices
-        length(previous_indices) == 1 ||
-            throw(ArgumentError("a non-empty mesh hit must have one triangle index"))
-        previous_index = previous_indices[1]
-        1 <= previous_index <= length(mesh.indices) ||
-            throw(ArgumentError("previous-hit triangle index is not part of the mesh"))
-    end
-
-    detect_intersection_grid(
-        mesh.grid,
-        start,
-        destination,
-        previous_hit,
-        Intersection{3, 1}(),
-    ) do triangle_index, previous
-        triangle_previous_hit = triangle_index == previous_index ? previous : Intersection{3, 1}()
-        intersection = detect_intersection(
-            triangle(mesh, triangle_index),
-            start,
-            destination,
-            triangle_previous_hit,
-        )
-        Base.isempty(intersection) && return Intersection{3, 1}()
-        Intersection(
-            intersection.distance,
-            intersection.normal,
-            intersection.inside,
-            add_index(ObstructionIndex(), triangle_index),
-            triangle_index >= mesh.first_index_of_gap,
-        )
-    end
 end
 
 function _mesh_neighbours(indices)

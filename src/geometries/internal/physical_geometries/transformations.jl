@@ -5,8 +5,7 @@ import StaticArrays: SMatrix, SVector
 import LinearAlgebra: norm, nullspace, cross
 import Random: rand
 import ...InternalBoundingBoxes
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, isinside_single, inside_indices, InternalBoundingBox
-import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
+import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _mesh_result, _translate_native
 import ..PhysicalGeometries: to_child_coordinates, from_child_coordinates, to_child_coordinates_normal, from_child_coordinates_normal
 import ...Properties: GeometryProperties
@@ -28,13 +27,6 @@ inside_indices_eltype(::Type{<:Transformation{N, M, P}}) where {N, M, P} = insid
 
 has_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_inside(P)
 has_single_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_single_inside(P)
-intersection_index_length(::Type{<:Transformation{N, M, P}}) where {N, M, P} =
-    intersection_index_length(P)
-inside_index_length(::Type{<:Transformation{N, M, P}}) where {N, M, P} =
-    inside_index_length(P)
-all_equal_inside_depth(::Type{<:Transformation{N, M, P}}) where {N, M, P} =
-    all_equal_inside_depth(P)
-
 InternalBoundingBox(transformation::Transformation) =
     from_child_coordinates(transformation, InternalBoundingBox(transformation.geometry))
 
@@ -53,7 +45,7 @@ end
 function inside_indices(
     transformation::Transformation{N, M},
     position::SVector{N, Float64},
-    intersection::Intersection{3}=Intersection{3}(),
+    intersection=nothing,
 ) where {N, M}
     inside_indices(
         transformation.geometry,

@@ -3,7 +3,6 @@ module GridDispatch
 import StaticArrays: SVector
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
-import ..PhysicalGeometries: Intersection
 
 struct IntersectionGrid{N}
     bounding_box::InternalBoundingBoxes.InternalBoundingBox{N}
@@ -116,43 +115,6 @@ function IntersectionGrid(
         SVector{N, Float64}(1 ./ cell_size),
         InternalBoundingBoxes.grid_indices(grid_bounding_box, dimensions, bounding_boxes),
     )
-end
-
-"""Dispatch a ray through a precomputed grid and stop at the first hit voxel."""
-function detect_intersection_grid(
-    detect_child,
-    grid::IntersectionGrid{N},
-    start::SVector{N, Float64},
-    destination::SVector{N, Float64},
-    previous_hit::Intersection{3},
-    empty_intersection::Intersection{N, M},
-) where {N, M}
-    iszero(destination - start) && return empty_intersection
-    InternalBoundingBoxes.does_intersect(grid.grid_bounding_box, start, destination) || return empty_intersection
-
-    lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)
-    scaled_start = (start - lower_bound) .* grid.inv_resolution
-    scaled_destination = (destination - lower_bound) .* grid.inv_resolution
-    found = empty_intersection
-    entered_grid = false
-    grid_size = SVector{N, Int}(size(grid.indices))
-
-    for (voxel, _, _, exit_time, _) in ray_grid_intersections(scaled_start, scaled_destination)
-        if any(voxel .< 0) || any(voxel .>= grid_size)
-            entered_grid && break
-            continue
-        end
-        entered_grid = true
-
-        for child_index in grid.indices[voxel .+ 1...]
-            intersection = detect_child(child_index, previous_hit)
-            if intersection.distance < found.distance
-                found = intersection
-            end
-        end
-        found.distance <= exit_time && return found
-    end
-    found
 end
 
 end

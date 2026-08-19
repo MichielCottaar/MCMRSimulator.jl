@@ -9,7 +9,7 @@ include("user/user.jl")
 include("fix/fix.jl")
 import .Fix:
     fix, fix_susceptibility
-import .Internal: FixedGeometry, Intersection, ObstructionIndex
+import .Internal: FixedGeometry, Intersection
 import .BoundingBoxes: BoundingBox
 import .User:
     ObstructionGroup, IndexedObstruction,

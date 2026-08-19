@@ -2,11 +2,9 @@
 module Repeats
 
 import StaticArrays: SVector
-import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, child_type, detect_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, InternalBoundingBox
-import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
+import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _translate_native, to_property_index
 import ...Properties: GeometryProperties
 import ..Groups
@@ -33,12 +31,6 @@ end
 
 inside_indices_eltype(::Type{<:Repeat{N, P}}) where {N, P} =
     Groups._prepend_type(SVector{3, Int}, inside_indices_eltype(child_type(Repeat{N, P})))
-
-intersection_index_length(::Type{<:Repeat{N, P}}) where {N, P} =
-    intersection_index_length(P)
-inside_index_length(::Type{<:Repeat{N, P}}) where {N, P} =
-    inside_index_length(P)
-all_equal_inside_depth(::Type{<:Repeat{N, P}}) where {N, P} = all_equal_inside_depth(P)
 
 Repeat(geometry::P, repeats::AbstractVector{<:Real}) where {N, P<:PhysicalGeometry{N}} =
     Repeat{N, P}(geometry, SVector{N, Float64}(repeats))
@@ -157,51 +149,6 @@ function _geometry_mesh(repeat::Repeat{N}; bounding_box=nothing, kwargs...) wher
         append!(result, [_translate_native(value, displacement) for value in child])
     end
     result
-end
-
-function detect_intersection(
-    repeat::Repeat{N},
-    start::SVector{N, Float64},
-    destination::SVector{N, Float64},
-    previous_hit::Intersection{3}=Intersection{3}(),
-) where {N}
-    displacement = destination - start
-    iszero(displacement) && return Intersection{N, intersection_index_length(typeof(repeat))}()
-    closest = Intersection{N, intersection_index_length(typeof(repeat))}()
-    previous = previous_hit
-    scaled_start = (start .+ repeat.repeats / 2) ./ repeat.repeats
-    scaled_destination = (destination .+ repeat.repeats / 2) ./ repeat.repeats
-    for (voxel, entry_time, _, exit_time, _) in ray_grid_intersections(scaled_start, scaled_destination)
-        segment_start = start + entry_time .* displacement
-        segment_destination = start + exit_time .* displacement
-        cell_shift = voxel .* repeat.repeats
-        local_start = segment_start - cell_shift
-        local_destination = segment_destination - cell_shift
-        for shift in _candidate_shifts(repeat, local_start, local_destination)
-            local_intersection = detect_intersection(
-                repeat.geometry,
-                local_start .+ shift .* repeat.repeats,
-                local_destination .+ shift .* repeat.repeats,
-                previous,
-            )
-            previous = Intersection{3, intersection_index_length(typeof(repeat))}()
-            Base.isempty(local_intersection) && continue
-            distance = entry_time + local_intersection.distance * (exit_time - entry_time)
-            if distance < closest.distance
-                closest = Intersection(
-                    distance,
-                    local_intersection.normal,
-                    local_intersection.inside,
-                    local_intersection.obstruction_index,
-                    local_intersection.hit_gap,
-                )
-            end
-        end
-        if !isempty(closest)
-            return closest
-        end
-    end
-    return Intersection{N, intersection_index_length(typeof(repeat))}()
 end
 
 end

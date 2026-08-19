@@ -1,10 +1,9 @@
 module BaseObstructions
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, child_type, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, isinside_single, flip
-import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth, to_property_index
+import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, isinside_single
+import ..PhysicalGeometries: to_property_index
 import ...InternalBoundingBoxes: InternalBoundingBox
-import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
 import ...Properties: GeometryLeafProperties
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _mesh_result
@@ -17,10 +16,6 @@ child_type(::Type{<:BaseObstruction}) =
     throw(ArgumentError("base obstructions do not have child geometries"))
 
 inside_indices_eltype(::Type{<:BaseObstruction}) = Tuple{}
-
-intersection_index_length(::Type{<:BaseObstruction}) = 0
-inside_index_length(::Type{<:BaseObstruction}) = 0
-all_equal_inside_depth(::Type{<:BaseObstruction}) = true
 
 function surface_sampling end
 

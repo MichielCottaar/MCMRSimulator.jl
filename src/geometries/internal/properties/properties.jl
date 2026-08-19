@@ -2,7 +2,6 @@
 module Properties
 
 import StaticArrays: SVector
-import ..Indices: ObstructionIndex, remove_index
 
 """
 MRI properties assigned to obstructions or groups of obstructions of type `S`.
@@ -52,20 +51,8 @@ function GeometryTupleProperties(properties::Tuple)
     GeometryTupleProperties{S, typeof(properties)}(properties)
 end
 
-function get_value(property, ::ObstructionIndex)
-    property
-end
-
 function get_value(property, ::Tuple)
     property
-end
-
-function get_value(properties::GeometryProperties, index::ObstructionIndex)
-    properties isa GeometryLeafProperties && return properties.value
-    child_index, remaining = remove_index(index)
-    1 <= child_index <= length(properties.properties) ||
-        throw(BoundsError(properties.properties, child_index))
-    get_value(properties.properties[child_index], remaining)
 end
 
 function get_value(properties::GeometryProperties, index::Tuple)
@@ -100,21 +87,21 @@ function get_value(properties::GeometryProperties, indices::SVector)
 end
 
 
-function get_value(property, indices::AbstractVector{<:ObstructionIndex})
+function get_value(property, indices::AbstractVector{<:Tuple})
     isempty(indices) && return 0
     property
 end
 
-function get_value(properties::GeometryProperties, indices::AbstractVector{<:ObstructionIndex})
+function get_value(properties::GeometryProperties, indices::AbstractVector{<:Tuple})
     isempty(indices) && return 0
     properties isa GeometryLeafProperties && return properties.value
 
     total = nothing
     child_index = nothing
-    child_indices = ObstructionIndex[]
+    child_indices = Tuple[]
     for index in indices
-        isempty(index.indices) && throw(ArgumentError("inside indices must not be empty"))
-        next_child_index, remaining = remove_index(index)
+        isempty(index) && throw(ArgumentError("inside indices must not be empty"))
+        next_child_index, remaining = index[1], index[2:end]
         if child_index !== nothing && next_child_index < child_index
             throw(ArgumentError("inside indices must be sorted"))
         end

@@ -12,7 +12,6 @@ const Repeats = GI.PhysicalGeometries.Repeats
 const Repeat = Repeats.Repeat
 const BoundingBoxes = GI.InternalBoundingBoxes
 const PublicBoundingBoxes = mr.Geometries.BoundingBoxes
-const ObstructionIndex = GI.Indices.ObstructionIndex
 const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
 const Meshes = GI.PhysicalGeometries.Meshes
 const Mesh = Meshes.Mesh
@@ -25,7 +24,6 @@ const has_inside = GI.PhysicalGeometries.has_inside
 const has_single_inside = GI.PhysicalGeometries.has_single_inside
 const isinside_single = GI.PhysicalGeometries.isinside_single
 const inside_indices = GI.PhysicalGeometries.inside_indices
-const all_equal_inside_depth = GI.PhysicalGeometries.all_equal_inside_depth
 const Properties = GI.Properties
 const Plot = mr.Plot
 
@@ -301,13 +299,6 @@ end
         BaseObstructions.Sphere(1.0),
         BaseObstructions.Sphere(2.0),
     ))
-    unequal_depth_tuple = GeometryTuple{3}((
-        BaseObstructions.Sphere(1.0),
-        GeometryVector([BaseObstructions.Sphere(1.0)]),
-    ))
-    @test all_equal_inside_depth(typeof(BaseObstructions.Sphere(1.0)))
-    @test all_equal_inside_depth(typeof(equal_depth_tuple))
-    @test !all_equal_inside_depth(typeof(unequal_depth_tuple))
     equal_tuple_inside = @inferred inside_indices(equal_depth_tuple, SVector(0.0, 0.0, 0.0))
     @test equal_tuple_inside isa Vector{Tuple{Int}}
     mesh = Mesh(
@@ -543,38 +534,38 @@ end
     )
     @test overlapping_hit[end] ≈ 0.2
 
-    @test get_value(3.0, ObstructionIndex(SVector(1, 2))) == 3.0
+    @test get_value(3.0, (1, 2)) == 3.0
     leaf_properties = Properties.GeometryLeafProperties(3.0)
     @test leaf_properties isa Properties.GeometryProperties{Float64}
     @test eltype(leaf_properties) === Float64
     vector_properties = Properties.GeometryVectorProperties([10.0, 20.0])
     @test vector_properties isa Properties.GeometryProperties{Float64}
     @test eltype(vector_properties) === Float64
-    @test get_value(vector_properties, ObstructionIndex(SVector(2, 1))) == 20.0
+    @test get_value(vector_properties, (2, 1)) == 20.0
     tuple_properties = Properties.GeometryTupleProperties((1.0, vector_properties))
     @test tuple_properties isa Properties.GeometryProperties{Float64}
     @test eltype(tuple_properties) === Float64
-    @test get_value(tuple_properties, ObstructionIndex(SVector(2, 2))) == 20.0
+    @test get_value(tuple_properties, (2, 2)) == 20.0
     @test get_value(tuple_properties, [
-        ObstructionIndex(SVector(1, 4)),
-        ObstructionIndex(SVector(2, 2)),
+        (1, 4),
+        (2, 2),
     ]) == 21.0
     aggregation_properties = Properties.GeometryTupleProperties((
         Properties.GeometryVectorProperties([1.0, 2.0]),
         10.0,
     ))
     @test get_value(aggregation_properties, [
-        ObstructionIndex(SVector(1, 1)),
-        ObstructionIndex(SVector(1, 2)),
-        ObstructionIndex(SVector(2, 1)),
-        ObstructionIndex(SVector(2, 2)),
+        (1, 1),
+        (1, 2),
+        (2, 1),
+        (2, 2),
     ]) == 13.0
-    @test get_value(aggregation_properties, ObstructionIndex[]) == 0
+    @test get_value(aggregation_properties, Tuple[]) == 0
     @test_throws ArgumentError get_value(aggregation_properties, [
-        ObstructionIndex(SVector(2, 1)),
-        ObstructionIndex(SVector(1, 1)),
+        (2, 1),
+        (1, 1),
     ])
-    @test_throws BoundsError get_value(vector_properties, ObstructionIndex(SVector(3)))
+    @test_throws BoundsError get_value(vector_properties, (3,))
     @test_throws ArgumentError Properties.GeometryVectorProperties([
         Properties.GeometryLeafProperties(1.0),
         Properties.GeometryLeafProperties(2),
@@ -628,25 +619,6 @@ end
     @test Transformations.from_child_coordinates(shift, SVector(3.0, 3.0, 3.0)) == position
     @test Transformations.to_child_coordinates_normal(shift, normal) == normal
     @test Transformations.from_child_coordinates_normal(shift, normal) == normal
-
-    intersection = GI.PhysicalGeometries.Intersection(
-        0.5,
-        normal,
-        true,
-        ObstructionIndex(SVector(1, 2)),
-        false,
-    )
-    @test intersection.obstruction_index == ObstructionIndex(SVector(1, 2))
-    @test !Base.isempty(intersection)
-    @test Base.isempty(GI.PhysicalGeometries.Intersection{3}())
-    remove_expected_index = GI.PhysicalGeometries.Intersections.remove_expected_index
-    @test remove_expected_index(intersection, 1).obstruction_index == ObstructionIndex(SVector(2))
-    @test Base.isempty(remove_expected_index(intersection, 3))
-    @test Base.isempty(remove_expected_index(GI.PhysicalGeometries.Intersection{3}(), 1))
-    @test_throws ArgumentError remove_expected_index(
-        GI.PhysicalGeometries.Intersection(0.5, normal, false, ObstructionIndex(), false),
-        1,
-    )
 
     infinite_wall = BaseObstructions.InfiniteWall()
     @test infinite_wall isa PhysicalGeometry{1}

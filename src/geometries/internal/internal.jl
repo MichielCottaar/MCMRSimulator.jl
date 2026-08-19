@@ -1,5 +1,4 @@
 module Internal
-include("indices.jl")
 include("internal_bounding_boxes.jl")
 include("ray_grid_intersection.jl")
 include("properties/properties.jl")
