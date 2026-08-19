@@ -40,8 +40,8 @@ inside_indices(
 isinside_single(
     wrapper::Transparent{N},
     position::SVector{N, Float64},
-    intersection::Intersection{3}=Intersection{3}(),
-) where {N} = isinside_single(transparent_geometry(wrapper), position, intersection)
+    previous_intersection=nothing,
+) where {N} = isinside_single(transparent_geometry(wrapper), position, previous_intersection)
 
 function find_intersection(
     wrapper::Transparent{N},

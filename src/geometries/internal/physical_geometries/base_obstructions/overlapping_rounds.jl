@@ -10,9 +10,9 @@ Round(r::OverlappingRound{N}) where {N} = Round{N}(r.radius)
 function isinside_single(
     round::OverlappingRound{N},
     position::SVector{N, Float64},
-    intersection::Intersection{3}=Intersection{3}(),
+    previous_intersection=nothing,
 ) where {N}
-    isinside_single(Round(round), position, intersection)
+    isinside_single(Round(round), position, previous_intersection)
 end
 
 const OverlappingInfiniteCylinder = OverlappingRound{2}

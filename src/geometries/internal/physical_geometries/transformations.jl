@@ -41,12 +41,12 @@ InternalBoundingBox(transformation::Transformation) =
 function isinside_single(
     transformation::Transformation{N, M},
     position::SVector{N, Float64},
-    intersection::Intersection{3}=Intersection{3}(),
+    previous_intersection=nothing,
 ) where {N, M}
     isinside_single(
         transformation.geometry,
         to_child_coordinates(transformation, position),
-        intersection,
+        previous_intersection,
     )
 end
 

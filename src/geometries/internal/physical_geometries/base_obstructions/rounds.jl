@@ -10,9 +10,9 @@ has_single_inside(::Type{<:Round}) = true
 function isinside_single(
     round::Round{N},
     position::SVector{N, Float64},
-    intersection::Intersection{3}=Intersection{3}(),
+    previous_intersection=nothing,
 ) where {N}
-    !Base.isempty(intersection) && return intersection.inside
+    !isnothing(previous_intersection) && return previous_intersection[1]
     return sum(position .* position) < round.radius^2
 end
 

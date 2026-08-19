@@ -281,15 +281,15 @@ end
 function isinside_single(
     mesh::Mesh,
     position::SVector{3, Float64},
-    previous_intersection::Intersection{3}=Intersection{3}(),
+    previous_intersection=nothing,
 )
-    if !Base.isempty(previous_intersection)
-        previous_indices = previous_intersection.obstruction_index.indices
-        length(previous_indices) == 1 ||
+    if !isnothing(previous_intersection)
+        triangle_index = previous_intersection[1]
+        triangle_index isa Int ||
             throw(ArgumentError("a non-empty mesh intersection must have one triangle index"))
-        1 <= previous_indices[1] <= length(mesh.indices) ||
+        1 <= triangle_index <= length(mesh.indices) ||
             throw(ArgumentError("previous-hit triangle index is not part of the mesh"))
-        return previous_intersection.inside
+        return previous_intersection[2]
     end
 
     coordinate = _mesh_grid_coordinate(mesh, position)
