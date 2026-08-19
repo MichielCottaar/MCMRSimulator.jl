@@ -7,7 +7,7 @@ import BSplineKit: BSplineOrder, interpolate, Derivative
 import LinearAlgebra: cross, norm, ⋅
 import Statistics: mean
 import ....Methods: get_rotation
-import ...Utils: icosahedron, volume_conserving_cylinder_radius, volume_conserving_sphere_radius
+import ...Utils: sphere_mesh, volume_conserving_cylinder_radius, volume_conserving_sphere_radius
 import ..Obstructions: Mesh, value_as_vector, BendyCylinder, Cylinder, Cylinders, Wall, Walls, Sphere, Spheres
 
 """
@@ -207,8 +207,7 @@ Mesh(w::Walls; kwargs...) = Mesh.(w; kwargs...)
 
 
 function Mesh(sphere::Sphere; nsamples=1000)
-    subdivisions = Int(ceil(sqrt(nsamples / 20)))
-    base_vertices, triangles = icosahedron(subdivisions)
+    base_vertices, triangles = sphere_mesh(nsamples)
 
     radius = volume_conserving_sphere_radius(sphere.radius, base_vertices, triangles)
     vertices = [(v .* radius) .+ sphere.position for v in base_vertices]

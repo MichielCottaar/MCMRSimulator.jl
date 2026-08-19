@@ -1,4 +1,4 @@
-import ....Utils: icosahedron, volume_conserving_cylinder_radius, volume_conserving_sphere_radius
+import ....Utils: sphere_mesh, volume_conserving_cylinder_radius, volume_conserving_sphere_radius
 
 struct Round{N} <: BaseObstruction{N}
     radius::Float64
@@ -91,8 +91,7 @@ function _geometry_mesh(cylinder::InfiniteCylinder; nsamples=100, kwargs...)
 end
 
 function _geometry_mesh(sphere::Sphere; nsamples, kwargs...)
-    subdivisions = Int(ceil(sqrt(nsamples / 20)))
-    base_vertices, triangles = icosahedron(subdivisions)
+    base_vertices, triangles = sphere_mesh(nsamples)
     radius = volume_conserving_sphere_radius(sphere.radius, base_vertices, triangles)
     [_mesh_result(radius .* base_vertices, triangles)]
 end
