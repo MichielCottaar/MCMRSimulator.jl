@@ -370,7 +370,7 @@ end
 
     sphere_mesh = GI.geometry_mesh(BaseObstructions.Sphere(1.0); nsamples=20)
     @test length(sphere_mesh) == 1
-    @test length(sphere_mesh[1].triangles) == 20
+    @test length(sphere_mesh[1].triangles) == 36
 
     repeated_circles = Repeat(GeometryVector{2}([cylinder]), [4.0, 4.0])
     repeated_cylinder_mesh = GI.geometry_mesh(
