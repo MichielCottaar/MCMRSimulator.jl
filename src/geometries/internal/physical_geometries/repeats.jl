@@ -5,14 +5,15 @@ import StaticArrays: SVector
 import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, get_child, has_inside, has_single_inside, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ..Groups: inside_indices_for_any_type
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _translate_native
 import ...Properties: GeometryProperties
 import ..Groups
+import ..Transformations: Shift
 
-struct Repeat{N, P<:PhysicalGeometry{N}} <: PhysicalGeometry{N}
+struct Repeat{N, P<:PhysicalGeometry{N}} <: Groups.GroupGeometry{N, Shift{N, P}}
     geometry::P
     repeats::SVector{N, Float64}
     lower_overlap::SVector{N, Float64}
@@ -39,6 +40,37 @@ all_equal_inside_depth(::Type{<:Repeat{N, P}}) where {N, P} = all_equal_inside_d
 
 Repeat(geometry::P, repeats::AbstractVector{<:Real}) where {N, P<:PhysicalGeometry{N}} =
     Repeat{N, P}(geometry, SVector{N, Float64}(repeats))
+
+function Groups.intersection_candidates(
+    repeat::Repeat{N},
+    start::SVector{N, Float64},
+    destination::SVector{N, Float64},
+) where {N}
+    displacement = destination - start
+    iszero(displacement) && return ()
+
+    scaled_start = (start .+ repeat.repeats / 2) ./ repeat.repeats
+    scaled_destination = (destination .+ repeat.repeats / 2) ./ repeat.repeats
+    checked = Set{SVector{N, Int}}()
+
+    (
+        let copy_shift = voxel - local_shift
+            (copy_shift, Shift(repeat.geometry, copy_shift .* repeat.repeats), entry_time)
+        end
+        for (voxel, entry_time, _, exit_time, _) in ray_grid_intersections(scaled_start, scaled_destination)
+        for local_shift in _candidate_shifts(
+            repeat,
+            start + entry_time .* displacement - voxel .* repeat.repeats,
+            start + exit_time .* displacement - voxel .* repeat.repeats,
+        )
+        if !((voxel - local_shift) in checked) && (push!(checked, voxel - local_shift); true)
+    )
+end
+
+function get_child(repeat::Repeat{N}, indices::Tuple) where {N}
+    copy_shift = indices[1]
+    Shift(repeat.geometry, copy_shift .* repeat.repeats), indices[2:end]
+end
 
 has_inside(::Type{<:Repeat{N, P}}) where {N, P} = has_inside(P)
 has_single_inside(::Type{<:Repeat}) = false

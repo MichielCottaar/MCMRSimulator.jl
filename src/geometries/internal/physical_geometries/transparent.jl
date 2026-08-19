@@ -1,7 +1,7 @@
 module Transparents
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox, size_scale
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, find_intersection, get_child, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox, size_scale
 import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ...Properties: GeometryProperties
@@ -40,14 +40,16 @@ isinside_single(
     intersection::Intersection{3}=Intersection{3}(),
 ) where {N} = isinside_single(transparent_geometry(wrapper), position, intersection)
 
-function detect_intersection(
+function find_intersection(
     wrapper::Transparent{N},
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
-    previous_hit::Intersection{3}=Intersection{3}(),
+    previous_hit=nothing,
 ) where {N}
-    detect_intersection(transparent_geometry(wrapper), start, destination, previous_hit)
+    find_intersection(transparent_geometry(wrapper), start, destination, previous_hit)
 end
+
+get_child(wrapper::Transparent, indices) = (transparent_geometry(wrapper), indices)
 
 size_scale(wrapper::SizeScaleOverride) = wrapper.size_scale
 size_scale(wrapper::Transparent) = size_scale(transparent_geometry(wrapper))

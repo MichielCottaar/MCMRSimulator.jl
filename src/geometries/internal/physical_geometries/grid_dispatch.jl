@@ -12,6 +12,71 @@ struct IntersectionGrid{N}
     indices::Array{Vector{Int}, N}
 end
 
+"""Iterate over grid child indices in ray order."""
+struct GridIterator{N, G, R}
+    grid::G
+    ray::R
+    grid_size::SVector{N, Int}
+end
+
+function GridIterator(
+    grid::IntersectionGrid{N},
+    start::SVector{N, Float64},
+    destination::SVector{N, Float64},
+) where {N}
+    grid_size = SVector{N, Int}(size(grid.indices))
+    iszero(destination - start) && return GridIterator{N, typeof(grid), Nothing}(grid, nothing, grid_size)
+    InternalBoundingBoxes.could_intersect(grid.grid_bounding_box, start, destination) ||
+        return GridIterator{N, typeof(grid), Nothing}(grid, nothing, grid_size)
+    InternalBoundingBoxes.does_intersect(grid.grid_bounding_box, start, destination) ||
+        return GridIterator{N, typeof(grid), Nothing}(grid, nothing, grid_size)
+
+    lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)
+    scaled_start = (start - lower_bound) .* grid.inv_resolution
+    scaled_destination = (destination - lower_bound) .* grid.inv_resolution
+    GridIterator{N, typeof(grid), typeof(ray_grid_intersections(scaled_start, scaled_destination))}(
+        grid,
+        ray_grid_intersections(scaled_start, scaled_destination),
+        grid_size,
+    )
+end
+
+Base.IteratorSize(::Type{<:GridIterator}) = Base.SizeUnknown()
+Base.eltype(::Type{<:GridIterator}) = Tuple{Int, Float64}
+
+function Base.iterate(iterator::GridIterator, state=nothing)
+    isnothing(iterator.ray) && return nothing
+
+    ray_state, children, child_position, entered_grid, checked, entry_time = isnothing(state) ?
+        (nothing, Int[], 1, false, Set{Int}(), 0.0) : state
+
+    while true
+        while child_position <= length(children)
+            child_index = children[child_position]
+            child_position += 1
+            child_index in checked && continue
+            push!(checked, child_index)
+            return (
+                (child_index, entry_time),
+                (ray_state, children, child_position, entered_grid, checked, entry_time),
+            )
+        end
+
+        next_voxel = isnothing(ray_state) ? iterate(iterator.ray) : iterate(iterator.ray, ray_state)
+        isnothing(next_voxel) && return nothing
+        ((voxel, entry_time, _, _, _), ray_state) = next_voxel
+
+        if any(voxel .< 0) || any(voxel .>= iterator.grid_size)
+            entered_grid && return nothing
+            continue
+        end
+
+        entered_grid = true
+        children = iterator.grid.indices[voxel .+ 1...]
+        child_position = 1
+    end
+end
+
 function _grid_bounding_box(box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N}
     lower_bound = InternalBoundingBoxes.lower(box)
     upper_bound = InternalBoundingBoxes.upper(box)

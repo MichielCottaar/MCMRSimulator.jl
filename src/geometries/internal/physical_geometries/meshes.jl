@@ -11,7 +11,7 @@ import ..PhysicalGeometries: intersection_index_length, inside_index_length, all
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryLeafProperties
 import ..Groups
-import ..GridDispatch: IntersectionGrid, detect_intersection_grid
+import ..GridDispatch: IntersectionGrid, GridIterator, detect_intersection_grid
 import ...InternalBoundingBoxes
 import ..BaseObstructions: FullTriangle, normal
 
@@ -21,7 +21,7 @@ import ..BaseObstructions: FullTriangle, normal
 mesh gap. `first_index_of_gap` marks the first gap triangle. All indices use
 one-based indices into `vertices`.
 """
-struct Mesh <: PhysicalGeometry{3}
+struct Mesh <: Groups.GeometryVectorLike{3, FullTriangle}
     vertices::Vector{SVector{3, Float64}}
     indices::Vector{SVector{3, Int}}
     first_index_of_gap::Int
@@ -29,6 +29,25 @@ struct Mesh <: PhysicalGeometry{3}
     grid::IntersectionGrid{3}
     inside_mask::BitArray{3}
 end
+
+struct MeshGeometryView
+    mesh::Mesh
+end
+
+Groups.group_geometries(mesh::Mesh) = MeshGeometryView(mesh)
+
+Base.size(view::MeshGeometryView) = size(view.mesh.indices)
+Base.axes(view::MeshGeometryView) = axes(view.mesh.indices)
+Base.length(view::MeshGeometryView) = length(view.mesh.indices)
+Base.firstindex(view::MeshGeometryView) = firstindex(view.mesh.indices)
+Base.lastindex(view::MeshGeometryView) = lastindex(view.mesh.indices)
+Base.getindex(view::MeshGeometryView, index::Int) = triangle(view.mesh, index)
+Base.iterate(view::MeshGeometryView, state...) = begin
+    next = isempty(state) ? firstindex(view) : first(state)
+    next > lastindex(view) && return nothing
+    (triangle(view.mesh, next), (next + 1,))
+end
+Base.eltype(::Type{MeshGeometryView}) = FullTriangle
 
 has_inside(::Type{Mesh}) = true
 has_single_inside(::Type{Mesh}) = true
@@ -175,6 +194,12 @@ function _mesh_triangle(mesh::Mesh, triangle::SVector{3, Int})
 end
 
 triangle(mesh::Mesh, index::Int) = _mesh_triangle(mesh, mesh.indices[index])
+
+Groups.intersection_candidates(mesh::Mesh, start, destination) =
+    (
+        (triangle_index, triangle(mesh, triangle_index), dist_all_checked)
+        for (triangle_index, dist_all_checked) in GridIterator(mesh.grid, start, destination)
+    )
 
 InternalBoundingBox(mesh::Mesh) = mesh.bounding_box
 

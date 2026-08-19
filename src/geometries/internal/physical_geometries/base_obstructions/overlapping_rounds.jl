@@ -30,21 +30,27 @@ function _inside_other_rounds(round::OverlappingRound{N}, position::SVector{N, F
     )
 end
 
-function detect_intersection(
+function find_intersection(
     round::OverlappingRound{N},
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
-    previous_hit::Intersection{3}=Intersection{3}(),
+    previous_hit=nothing,
 ) where {N}
-    candidate = detect_intersection(Round{N}(round.radius), start, destination, previous_hit)
-    Base.isempty(candidate) && return candidate
-    position = start + candidate.distance .* (destination - start)
-    return Intersection(
-        candidate.distance,
-        candidate.normal,
-        candidate.inside,
-        ObstructionIndex(),
-        _inside_other_rounds(round, position),
+    find_intersection(Round{N}(round.radius), start, destination, previous_hit)
+end
+
+function get_intersection_params(
+    round::OverlappingRound{N},
+    start::SVector{N, Float64},
+    destination::SVector{N, Float64},
+    intersection::Tuple,
+) where {N}
+    params = get_intersection_params(Round{N}(round.radius), start, destination, intersection)
+    position = start + intersection[end] .* (destination - start)
+    (
+        inside=params.inside,
+        normal=params.normal,
+        hit_gap=_inside_other_rounds(round, position),
     )
 end
 

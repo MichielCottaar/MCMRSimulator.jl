@@ -5,9 +5,10 @@ import StaticArrays: SMatrix, SVector
 import LinearAlgebra: norm, nullspace, cross
 import Random: rand
 import ...InternalBoundingBoxes
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, find_intersection, get_child, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _mesh_result, _translate_native
+import ..PhysicalGeometries: to_child_coordinates, from_child_coordinates, to_child_coordinates_normal, from_child_coordinates_normal
 import ...Properties: GeometryProperties
 
 """
@@ -137,21 +138,15 @@ function to_child_coordinates end
 """Transform a value from child coordinates to parent coordinates."""
 function from_child_coordinates end
 
-"""Transform a surface normal from parent coordinates to child coordinates."""
-function normal_to_child_coordinates end
-
-"""Transform a surface normal from child coordinates to parent coordinates."""
-function normal_from_child_coordinates end
-
 to_child_coordinates(transformation::Shift, position) = position - transformation.shift
 from_child_coordinates(transformation::Shift, position) = position + transformation.shift
-normal_to_child_coordinates(::Shift, normal) = normal
-normal_from_child_coordinates(::Shift, normal) = normal
+to_child_coordinates_normal(::Shift, normal) = normal
+from_child_coordinates_normal(::Shift, normal) = normal
 
 to_child_coordinates(transformation::Scale, position) = position / transformation.scale
 from_child_coordinates(transformation::Scale, position) = transformation.scale * position
-normal_to_child_coordinates(::Scale, normal) = normal
-normal_from_child_coordinates(::Scale, normal) = normal
+to_child_coordinates_normal(::Scale, normal) = normal
+from_child_coordinates_normal(::Scale, normal) = normal
 
 to_child_coordinates(transformation::Shift, box::InternalBoundingBoxes.InternalBoundingBox) =
     InternalBoundingBoxes.shift(box, -transformation.shift)
@@ -184,9 +179,9 @@ from_child_coordinates(transformation::Scale, box::InternalBoundingBoxes.Interna
 
 to_child_coordinates(transformation::Rotate, position) = transformation.matrix' * position
 from_child_coordinates(transformation::Rotate, position) = transformation.matrix * position
-normal_to_child_coordinates(transformation::Rotate{N, M}, normal) where {N, M} =
+to_child_coordinates_normal(transformation::Rotate{N, M}, normal) where {N, M} =
     N == M ? transformation.matrix' * normal : throw(ArgumentError("normal_to_child_coordinates is not defined for dimension-reducing Rotate transformations"))
-normal_from_child_coordinates(transformation::Rotate, normal) = begin
+from_child_coordinates_normal(transformation::Rotate, normal) = begin
     result = transformation.matrix * normal
     result ./ norm(result)
 end
@@ -211,28 +206,21 @@ function from_child_coordinates(
     )
 end
 
-function detect_intersection(
+function find_intersection(
     transformation::Transformation{N, M, P},
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
-    previous_hit::Intersection{3}=Intersection{3}(),
+    previous_hit=nothing,
 ) where {N, M, P}
-    child_intersection = detect_intersection(
+    find_intersection(
         transformation.geometry,
         to_child_coordinates(transformation, start),
         to_child_coordinates(transformation, destination),
         previous_hit,
     )
-    Base.isempty(child_intersection) &&
-        return Intersection{N, intersection_index_length(typeof(transformation))}()
-    return Intersection(
-        child_intersection.distance,
-        normal_from_child_coordinates(transformation, child_intersection.normal),
-        child_intersection.inside,
-        child_intersection.obstruction_index,
-        child_intersection.hit_gap,
-    )
 end
+
+get_child(transformation::Transformation, indices) = (transformation.geometry, indices)
 
 size_scale(geometry::Shift) = size_scale(geometry.geometry)
 size_scale(geometry::Rotate) = size_scale(geometry.geometry)
@@ -271,7 +259,7 @@ function random_surface_positions(transformation::Rotate{N, M}, density::Geometr
     positions, intersections = random_surface_positions(transformation.geometry, density,
         to_child_coordinates(transformation, bounding_box), scale_density * (N == M ? 1 : _projected_scale(transformation, bounding_box)))
     positions = N == M ? [from_child_coordinates(transformation, position) for position in positions] : _deproject_positions(transformation, positions, bounding_box)
-    intersections = [Intersection(hit.distance, normal_from_child_coordinates(transformation, hit.normal), hit.inside,
+    intersections = [Intersection(hit.distance, from_child_coordinates_normal(transformation, hit.normal), hit.inside,
         hit.obstruction_index, hit.hit_gap) for hit in intersections]
     positions, intersections
 end

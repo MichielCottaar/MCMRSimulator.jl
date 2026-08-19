@@ -4,15 +4,36 @@ module Groups
 import StaticArrays: SVector
 import ...Indices: ObstructionIndex, add_index
 import ...InternalBoundingBoxes
-import ..GridDispatch: IntersectionGrid, detect_intersection_grid
+import ..GridDispatch: IntersectionGrid, GridIterator, detect_intersection_grid
 import ..Intersections: remove_expected_index
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, find_intersection, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 
 abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
+
+group_geometries(group::GeometryVectorLike) = group.geometries
+
+
+function find_intersection(group::GroupGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, previous_hit=nothing)
+    current = nothing
+    for (index, candidate, dist_all_checked) in intersection_candidates(group, start, dest)
+        if !isnothing(current) && current[end] < dist_all_checked
+            return current
+        end
+        candidate_previous_hit = isnothing(previous_hit) || previous_hit[1] != index ? nothing : previous_hit[2:end]
+        intersect = find_intersection(candidate, start, dest, candidate_previous_hit)
+        if isnothing(intersect)
+            continue
+        end
+        if isnothing(current) || intersect[end] < current[end]
+            current = (index, intersect...)
+        end
+    end
+    return current
+end
 
 _is_fully_concrete(::Type{T}) where {T} =
     isconcretetype(T) && all(parameter -> !(parameter isa Type) || _is_fully_concrete(parameter), T.parameters)
@@ -57,6 +78,24 @@ end
 struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} <: GroupGeometry{N, P}
     geometries::P
 end
+
+group_geometries(group::GeometryTuple) = group.geometries
+
+intersection_candidates(group::Union{GeometryVector, GeometryTuple}, start, destination) =
+    ((index, child, 0.0) for (index, child) in enumerate(group_geometries(group)))
+
+intersection_candidates(group::GeometryVectorBoundingBox, start, destination) =
+    (
+        (index, group_geometries(group)[index], 0.0)
+        for index in eachindex(group_geometries(group))
+        if _could_intersect(group, index, start, destination)
+    )
+
+intersection_candidates(group::GeometryVectorGrid, start, destination) =
+    (
+        (child_index, group_geometries(group)[child_index], dist_all_checked)
+        for (child_index, dist_all_checked) in GridIterator(group.grid, start, destination)
+    )
 
 has_inside(::Type{<:GeometryVectorLike{N, P}}) where {N, P} = has_inside(P)
 has_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = any(has_inside, P.parameters)
@@ -117,13 +156,13 @@ function _inside_indices(
     if has_single_inside(P)
         for child_index in child_indices
             child_intersection = remove_expected_index(intersection, child_index)
-            isinside_single(geometry.geometries[child_index], position, child_intersection) || continue
+            isinside_single(group_geometries(geometry)[child_index], position, child_intersection) || continue
             push!(indices, add_index(ObstructionIndex(), child_index))
         end
     else
         for child_index in child_indices
             child_intersection = remove_expected_index(intersection, child_index)
-            for obstruction_index in inside_indices(geometry.geometries[child_index], position, child_intersection)
+            for obstruction_index in inside_indices(group_geometries(geometry)[child_index], position, child_intersection)
                 push!(indices, add_index(obstruction_index, child_index))
             end
         end
@@ -148,10 +187,10 @@ function inside_indices(
     intersection::Intersection{3, M}=Intersection{3, inside_index_length(typeof(geometry))}(),
 ) where {N, M}
     child_indices = if geometry isa GeometryVectorBoundingBox
-        (child_index for child_index in eachindex(geometry.geometries)
+        (child_index for child_index in eachindex(group_geometries(geometry))
             if InternalBoundingBoxes.isinside(geometry.bounding_boxes[child_index], position))
     else
-        eachindex(geometry.geometries)
+        eachindex(group_geometries(geometry))
     end
     _inside_indices(geometry, child_indices, position, intersection)
 end
@@ -288,28 +327,28 @@ function detect_intersection(
         Intersection{N, intersection_index_length(typeof(geometry))}(),
     ) do child_index, previous
         child_previous_hit = remove_expected_index(previous, child_index)
-        intersection = detect_intersection(geometry.geometries[child_index], start, destination, child_previous_hit)
+        intersection = detect_intersection(group_geometries(geometry)[child_index], start, destination, child_previous_hit)
         add_index(intersection, child_index)
     end
 end
 
-Base.size(geometry::GeometryVectorLike) = size(geometry.geometries)
-Base.axes(geometry::GeometryVectorLike) = axes(geometry.geometries)
-Base.length(geometry::GeometryVectorLike) = length(geometry.geometries)
-Base.firstindex(geometry::GeometryVectorLike) = firstindex(geometry.geometries)
-Base.lastindex(geometry::GeometryVectorLike) = lastindex(geometry.geometries)
-Base.getindex(geometry::GeometryVectorLike, index...) = getindex(geometry.geometries, index...)
-Base.setindex!(geometry::GeometryVectorLike, value, index...) = setindex!(geometry.geometries, value, index...)
-Base.iterate(geometry::GeometryVectorLike, state...) = iterate(geometry.geometries, state...)
+Base.size(geometry::GeometryVectorLike) = size(group_geometries(geometry))
+Base.axes(geometry::GeometryVectorLike) = axes(group_geometries(geometry))
+Base.length(geometry::GeometryVectorLike) = length(group_geometries(geometry))
+Base.firstindex(geometry::GeometryVectorLike) = firstindex(group_geometries(geometry))
+Base.lastindex(geometry::GeometryVectorLike) = lastindex(group_geometries(geometry))
+Base.getindex(geometry::GeometryVectorLike, index...) = getindex(group_geometries(geometry), index...)
+Base.setindex!(geometry::GeometryVectorLike, value, index...) = setindex!(group_geometries(geometry), value, index...)
+Base.iterate(geometry::GeometryVectorLike, state...) = iterate(group_geometries(geometry), state...)
 Base.eltype(::Type{<:GeometryVectorLike{N, P}}) where {N, P} = P
 
-Base.length(geometry::GeometryTuple) = length(geometry.geometries)
-Base.firstindex(geometry::GeometryTuple) = firstindex(geometry.geometries)
-Base.lastindex(geometry::GeometryTuple) = lastindex(geometry.geometries)
-Base.getindex(geometry::GeometryTuple, index...) = getindex(geometry.geometries, index...)
-Base.iterate(geometry::GeometryTuple, state...) = iterate(geometry.geometries, state...)
+Base.length(geometry::GeometryTuple) = length(group_geometries(geometry))
+Base.firstindex(geometry::GeometryTuple) = firstindex(group_geometries(geometry))
+Base.lastindex(geometry::GeometryTuple) = lastindex(group_geometries(geometry))
+Base.getindex(geometry::GeometryTuple, index...) = getindex(group_geometries(geometry), index...)
+Base.iterate(geometry::GeometryTuple, state...) = iterate(group_geometries(geometry), state...)
 Base.eltype(::Type{GeometryTuple{N, P}}) where {N, P} = eltype(P)
-Base.Tuple(geometry::GeometryTuple) = geometry.geometries
+Base.Tuple(geometry::GeometryTuple) = group_geometries(geometry)
 
 _density_child(density::GeometryLeafProperties, ::Int) = density
 _density_child(density::GeometryVectorProperties, index::Int) = density.properties[index]

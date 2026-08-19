@@ -23,27 +23,41 @@ InternalBoundingBox(round::Round{N}) where {N} = InternalBoundingBox{N}(round.ra
 
 size_scale(round::Round) = round.radius
 
-function detect_intersection(
+function find_intersection(
     round::Round{N},
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
-    previous_hit::Intersection{3}=Intersection{3}(),
+    previous_hit=nothing,
 ) where {N}
-    previous = !Base.isempty(previous_hit)
-    inside = previous ? previous_hit.inside : isinside_single(round, start)
-    !inside && previous && return Intersection{N}()
+    previous = !isnothing(previous_hit)
+    inside = previous ? previous_hit[1] : isinside_single(round, start)
+    !inside && previous && return nothing
     difference = destination - start
     a = sum(difference .* difference)
     b = sum(2 .* start .* difference)
     c = sum(start .* start)
     determinant = b * b - 4 * a * (c - round.radius^2)
-    determinant < 0 && return Intersection{N}()
+    determinant < 0 && return nothing
 
     solution = (inside ? -b + sqrt(determinant) : -b - sqrt(determinant)) / (2 * a)
-    (solution <= 0 || solution > 1) && return Intersection{N}()
+    (solution <= 0 || solution > 1) && return nothing
 
+    return (inside, solution)
+end
+
+function get_intersection_params(
+    round::Round{N},
+    start::SVector{N, Float64},
+    destination::SVector{N, Float64},
+    intersection::Tuple,
+) where {N}
+    inside, solution = intersection
     normal = (solution .* destination .+ (1 - solution) .* start) ./ round.radius
-    return Intersection(solution, inside ? -normal : normal, inside, ObstructionIndex(), false)
+    (
+        inside=inside,
+        normal=inside ? -normal : normal,
+        hit_gap=false,
+    )
 end
 
 function _round_sampling(round::Round{N}, density, scale_density) where {N}

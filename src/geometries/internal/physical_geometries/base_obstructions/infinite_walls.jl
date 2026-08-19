@@ -8,23 +8,31 @@ const _positive_wall_normal = SVector(1.0)
 
 InternalBoundingBox(::InfiniteWall) = InternalBoundingBox{1}(SVector(0.0), SVector(0.0))
 
-function detect_intersection(
+function find_intersection(
     ::InfiniteWall,
     start::SVector{1, Float64},
     destination::SVector{1, Float64},
-    previous_hit::Intersection{3}=Intersection{3}(),
+    previous_hit=nothing,
 )
-    !Base.isempty(previous_hit) && return Intersection{1}()
+    !isnothing(previous_hit) && return nothing
     origin = start[1]
     destination_position = destination[1]
-    origin * destination_position > 0 && return Intersection{1}()
+    origin * destination_position > 0 && return nothing
+    return (abs(origin) / abs(origin - destination_position),)
+end
+
+function get_intersection_params(
+    ::InfiniteWall,
+    start::SVector{1, Float64},
+    destination::SVector{1, Float64},
+    intersection::Tuple,
+)
+    origin = start[1]
     inside = origin > 0
-    return Intersection(
-        abs(origin) / abs(origin - destination_position),
-        inside ? _positive_wall_normal : _negative_wall_normal,
-        inside,
-        ObstructionIndex(),
-        false,
+    (
+        inside=inside,
+        normal=inside ? _positive_wall_normal : _negative_wall_normal,
+        hit_gap=false,
     )
 end
 

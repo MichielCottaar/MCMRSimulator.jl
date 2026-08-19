@@ -43,31 +43,45 @@ normal(a::AbstractVector, b::AbstractVector, c::AbstractVector) = begin
     unnormalized ./ norm(unnormalized)
 end
 
-function detect_intersection(
+function find_intersection(
     triangle::FullTriangle,
     start::SVector{3, Float64},
     destination::SVector{3, Float64},
-    previous_hit::Intersection{3}=Intersection{3}(),
+    previous_hit=nothing,
 )
-    !Base.isempty(previous_hit) && return Intersection{3}()
+    !isnothing(previous_hit) && return nothing
     triangle_normal = normal(triangle)
     plane_distance = triangle_normal ⋅ triangle.a
     start_distance = triangle_normal ⋅ start
     destination_distance = triangle_normal ⋅ destination
-    abs(start_distance - destination_distance) < 1e-8 && return Intersection{3}()
+    abs(start_distance - destination_distance) < 1e-8 && return nothing
 
     distance = (plane_distance - start_distance) / (destination_distance - start_distance)
-    (distance < 0 || distance > 1) && return Intersection{3}()
+    (distance < 0 || distance > 1) && return nothing
     intersection_point = distance .* destination .+ (1 - distance) .* start
 
     for (dimension, next_dimension) in ((1, 2), (2, 3), (3, 1))
         edge = triangle[next_dimension] - triangle[dimension]
         to_point = intersection_point - triangle[dimension]
-        cross(edge, to_point) ⋅ triangle_normal < 0 && return Intersection{3}()
+        cross(edge, to_point) ⋅ triangle_normal < 0 && return nothing
     end
 
-    inside = destination_distance > start_distance
-    return Intersection(distance, inside ? -triangle_normal : triangle_normal, inside, ObstructionIndex(), false)
+    return (distance,)
+end
+
+function get_intersection_params(
+    triangle::FullTriangle,
+    start::SVector{3, Float64},
+    destination::SVector{3, Float64},
+    intersection::Tuple,
+)
+    triangle_normal = normal(triangle)
+    inside = triangle_normal ⋅ destination > triangle_normal ⋅ start
+    (
+        inside=inside,
+        normal=inside ? -triangle_normal : triangle_normal,
+        hit_gap=false,
+    )
 end
 
 function surface_sampling(
