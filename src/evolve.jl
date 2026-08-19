@@ -507,7 +507,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 new_pos = SVector{3, Float64}(test_new_pos)
             end
             reflection = Reflection(norm(new_pos - current_pos) / sqrt(2 * simulation.diffusivity * timestep))
-            phit = Intersection{3}()
+            phit = nothing
         end
         for _ in 1:1000000
             if is_stuck
@@ -535,8 +535,8 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 phit,
             )
 
-            use_distance = Base.isempty(collision) ? 1. : max(prevfloat(collision.distance), 0.)
-            if Base.isempty(collision)
+            use_distance = isnothing(collision) ? 1. : max(prevfloat(collision.distance), 0.)
+            if isnothing(collision)
                 next_fraction_timestep = 1.
                 collision_pos = new_pos
             else
@@ -547,7 +547,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
             # spin relaxation
             relax!(spin, collision_pos, simulation, parts, fraction_timestep, next_fraction_timestep, B0s)
 
-            if Base.isempty(collision)
+            if isnothing(collision)
                 spin.position = new_pos
                 found_solution = true
                 break
