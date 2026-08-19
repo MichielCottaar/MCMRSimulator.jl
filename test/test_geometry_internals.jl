@@ -105,12 +105,12 @@ const all_property_values = Properties.all_property_values
 
 @testset "reflections" begin
     Reflections = mr.Reflections
-    index = ObstructionIndex(SVector{2, Int}(1, 2))
-    collision = GI.Intersection(0.5, SVector(1.0, 0.0, 0.0), false, index, false)
+    index = (1, 2)
+    collision = GI.Intersection(0.5, index, index, SVector(1.0, 0.0, 0.0), false, false)
 
     free = Reflections.Reflection(1.0)
     @test !Reflections.has_intersection(free)
-    @test isempty(Reflections.previous_hit(free).obstruction_index.indices)
+    @test isnothing(Reflections.previous_hit(free))
 
     reflection = Reflections.Reflection(
         collision,
@@ -121,7 +121,7 @@ const all_property_values = Properties.all_property_values
     )
     @test Reflections.has_intersection(reflection)
     @test Reflections.has_hit(reflection) == index
-    @test Reflections.previous_hit(reflection).obstruction_index == index
+    @test Reflections.previous_hit(reflection) == (1, 2, false, 0.5)
     @test reflection.direction == SVector(1.0, 0.0, 0.0)
 
     permeable = Reflections.Reflection(
@@ -193,34 +193,30 @@ end
             relaxation_surface=[9.0, 10.0],
         ),
     )
-    property_intersection = GI.PhysicalGeometries.Intersection(
+    property_intersection = GI.Intersection(
         0.5,
+        (2, 1),
+        (2, 1),
         SVector(1.0, 0.0, 0.0),
         false,
-        ObstructionIndex(SVector(2, 1)),
         false,
     )
     @test GI.permeability(property_geometry, property_intersection) == 4.0
     @test GI.surface_relaxation(property_geometry, property_intersection) == 10.0
     @test GI.surface_density(property_geometry, property_intersection) == 6.0
     @test GI.dwell_time(property_geometry, property_intersection) == 8.0
-    gap_intersection = GI.PhysicalGeometries.Intersection(
+    gap_intersection = GI.Intersection(
         property_intersection.distance,
+        property_intersection.indices,
+        property_intersection.property_indices,
         property_intersection.normal,
         property_intersection.inside,
-        property_intersection.obstruction_index,
         true,
     )
     @test GI.permeability(property_geometry, gap_intersection) == Inf
     @test GI.surface_relaxation(property_geometry, gap_intersection) == 0.0
     @test GI.surface_density(property_geometry, gap_intersection) == 0.0
     @test GI.dwell_time(property_geometry, gap_intersection) == 0.0
-    empty_intersection = GI.PhysicalGeometries.Intersection{3}()
-    @test_throws AssertionError GI.permeability(property_geometry, empty_intersection)
-    @test_throws AssertionError GI.surface_relaxation(property_geometry, empty_intersection)
-    @test_throws AssertionError GI.surface_density(property_geometry, empty_intersection)
-    @test_throws AssertionError GI.dwell_time(property_geometry, empty_intersection)
-
     mri_geometry = mr.fix(mr.Spheres(
         radius=[1.0, 2.0],
         R1_inside=[1.0, 2.0],
@@ -230,12 +226,13 @@ end
         R2_surface=[30.0, 40.0],
         off_resonance_surface=[50.0, 60.0],
     ))
-    inside_second = GI.IsInside([ObstructionIndex(SVector(2))])
-    mri_intersection = GI.PhysicalGeometries.Intersection(
+    inside_second = GI.IsInside(SVector{1, Tuple{Int}}(((2,),)))
+    mri_intersection = GI.Intersection(
         0.5,
+        (2,),
+        (2,),
         SVector(1.0, 0.0, 0.0),
         false,
-        ObstructionIndex(SVector(2)),
         false,
     )
     @test GI.R1(mri_geometry, inside_second) == 2.0
@@ -251,10 +248,7 @@ end
         R2_inside=4.0,
         off_resonance_inside=5.0,
     ))
-    inside_both = GI.IsInside([
-        ObstructionIndex(SVector(1)),
-        ObstructionIndex(SVector(2)),
-    ])
+    inside_both = GI.IsInside(SVector{2, Tuple{Int}}((1,), (2,)))
     @test GI.R1(scalar_mri_geometry, inside_both) == 3.0
     @test GI.R2(scalar_mri_geometry, inside_both) == 4.0
     @test GI.off_resonance(scalar_mri_geometry, inside_both) == 5.0
@@ -315,7 +309,7 @@ end
     @test all_equal_inside_depth(typeof(equal_depth_tuple))
     @test !all_equal_inside_depth(typeof(unequal_depth_tuple))
     equal_tuple_inside = @inferred inside_indices(equal_depth_tuple, SVector(0.0, 0.0, 0.0))
-    @test equal_tuple_inside isa Vector{ObstructionIndex{1}}
+    @test equal_tuple_inside isa Vector{Tuple{Int}}
     mesh = Mesh(
         [
             SVector(0.0, 0.0, 0.0),
@@ -414,20 +408,8 @@ end
     @test has_single_inside(typeof(mesh))
     @test isinside_single(mesh, SVector(0.2, 0.2, 0.2))
     @test !isinside_single(mesh, SVector(1.2, 0.2, 0.2))
-    stuck_inside_mesh = GI.PhysicalGeometries.Intersection(
-        0.5,
-        SVector(1.0, 0.0, 0.0),
-        true,
-        ObstructionIndex(SVector(1)),
-        false,
-    )
-    stuck_outside_mesh = GI.PhysicalGeometries.Intersection(
-        0.5,
-        SVector(1.0, 0.0, 0.0),
-        false,
-        ObstructionIndex(SVector(1)),
-        false,
-    )
+    stuck_inside_mesh = (1, true, 0.5)
+    stuck_outside_mesh = (1, false, 0.5)
     @test isinside_single(mesh, SVector(1.2, 0.2, 0.2), stuck_inside_mesh)
     @test !isinside_single(mesh, SVector(0.2, 0.2, 0.2), stuck_outside_mesh)
     @test mesh.indices[mesh.first_index_of_gap] == SVector(4, 2, 3)
@@ -436,23 +418,23 @@ end
     stability_start = SVector(-2.0, 0.0, 0.0)
     stability_destination = SVector(2.0, 0.0, 0.0)
     stable_group = GeometryVector([BaseObstructions.Sphere(1.0)])
-    stable_group_hit = @inferred GI.PhysicalGeometries.detect_intersection(
+    stable_group_hit = GI.PhysicalGeometries.find_intersection(
         stable_group, stability_start, stability_destination,
     )
-    @test stable_group_hit isa GI.Intersection{3, 1}
+    @test stable_group_hit isa Tuple
     stable_group_inside = @inferred inside_indices(stable_group, SVector(0.0, 0.0, 0.0))
-    @test stable_group_inside isa Vector{ObstructionIndex{1}}
-    stable_mesh_hit = @inferred GI.PhysicalGeometries.detect_intersection(
+    @test stable_group_inside isa Vector{Tuple{Int}}
+    stable_mesh_hit = GI.PhysicalGeometries.find_intersection(
         mesh, stability_start, stability_destination,
     )
-    @test stable_mesh_hit isa GI.Intersection{3, 1}
+    @test stable_mesh_hit isa Tuple
     stable_mesh_group = GeometryVector([mesh])
-    stable_mesh_group_hit = @inferred GI.PhysicalGeometries.detect_intersection(
+    stable_mesh_group_hit = GI.PhysicalGeometries.find_intersection(
         stable_mesh_group, stability_start, stability_destination,
     )
-    @test stable_mesh_group_hit isa GI.Intersection{3, 2}
+    @test stable_mesh_group_hit isa Tuple
     stable_mesh_group_inside = @inferred inside_indices(stable_mesh_group, SVector(0.2, 0.2, 0.2))
-    @test stable_mesh_group_inside isa Vector{ObstructionIndex{1}}
+    @test stable_mesh_group_inside isa Vector{Tuple{Int}}
     @test size_scale(mesh) == 1 / (2 * Meshes.curvature(mesh))
     @test size_scale(SizeScaleOverride(mesh, 0.25)) == 0.25
     @test SizeScaleOverride(mesh, 0.25) isa Transparent
@@ -476,23 +458,21 @@ end
         mesh.indices,
         mesh.vertices,
     )
-    mesh_real_hit = GI.PhysicalGeometries.detect_intersection(
+    mesh_real_hit = GI.PhysicalGeometries.find_intersection(
         mesh,
         SVector(0.2, 0.2, -1.0),
         SVector(0.2, 0.2, 0.2),
     )
-    @test mesh_real_hit.distance ≈ 5 / 6
-    @test mesh_real_hit.obstruction_index == ObstructionIndex(SVector(1))
-    @test !mesh_real_hit.hit_gap
-    mesh_gap_hit = GI.PhysicalGeometries.detect_intersection(
+    @test mesh_real_hit[3] ≈ 5 / 6
+    @test mesh_real_hit[1] == 1
+    mesh_gap_hit = GI.PhysicalGeometries.find_intersection(
         mesh,
         SVector(0.2, 0.2, 0.2),
         SVector(1.0, 1.0, 1.0),
     )
-    @test mesh_gap_hit.distance ≈ 1 / 6
-    @test mesh_gap_hit.obstruction_index == ObstructionIndex(SVector(4))
-    @test mesh_gap_hit.hit_gap
-    @test Base.isempty(GI.PhysicalGeometries.detect_intersection(
+    @test mesh_gap_hit[3] ≈ 1 / 6
+    @test mesh_gap_hit[1] == 4
+    @test isnothing(GI.PhysicalGeometries.find_intersection(
         mesh,
         SVector(0.2, 0.2, 0.2),
         SVector(1.0, 1.0, 1.0),
@@ -524,19 +504,19 @@ end
     @test has_inside(typeof(repeated_sphere))
     @test repeated_sphere.lower_overlap == SVector(0.0, 0.0, 0.0)
     @test repeated_sphere.upper_overlap == SVector(0.0, 0.0, 0.0)
-    @test inside_indices(repeated_sphere, SVector(4.5, 0.0, 0.0)) == [ObstructionIndex()]
-    @test inside_indices(repeated_sphere, SVector(2.0, 0.0, 0.0)) == ObstructionIndex[]
+    @test inside_indices(repeated_sphere, SVector(4.5, 0.0, 0.0)) == [(SVector(1, 0, 0),)]
+    @test inside_indices(repeated_sphere, SVector(2.0, 0.0, 0.0)) == Tuple{SVector{3, Int}}[]
     shifted_repeated_sphere = Repeat(
         Shift(BaseObstructions.Sphere(0.6), SVector(-1.0, 0.0, 0.0)),
         [2.0, 4.0, 4.0],
     )
     shifted_position = SVector(-0.5, 0.0, 0.0)
-    @test inside_indices(shifted_repeated_sphere, shifted_position) == [ObstructionIndex()]
+    @test inside_indices(shifted_repeated_sphere, shifted_position) == [(SVector(0, 0, 0),)]
     neighboring_position = SVector(0.5, 0.0, 0.0)
     @test Repeats._candidate_shifts(shifted_repeated_sphere, neighboring_position) == [
         SVector(0, 0, 0), SVector(-1, 0, 0),
     ]
-    @test inside_indices(shifted_repeated_sphere, neighboring_position) == [ObstructionIndex()]
+    @test inside_indices(shifted_repeated_sphere, neighboring_position) == [(SVector(1, 0, 0),)]
     @test_throws ArgumentError Repeat(BaseObstructions.Sphere(1.0), [0.0, 4.0, 4.0])
     @test_throws ArgumentError Repeat(BaseObstructions.Sphere(2.0), [1.0, 4.0, 4.0])
     @test_throws ArgumentError Repeat(
@@ -544,23 +524,24 @@ end
         [2.0, 4.0, 4.0],
     )
     @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(repeated_sphere)
-    repeated_hit = GI.PhysicalGeometries.detect_intersection(
+    repeated_hit = GI.PhysicalGeometries.find_intersection(
         repeated_sphere,
         SVector(-5.0, 0.0, 0.0),
         SVector(5.0, 0.0, 0.0),
     )
-    @test repeated_hit.distance ≈ 0.4
-    @test repeated_hit.normal ≈ SVector(-1.0, 0.0, 0.0)
+    @test repeated_hit[end] ≈ 0.4
     overlapping_repeat = Repeat(BaseObstructions.Sphere(1.5), [2.0, 4.0, 4.0])
     @test overlapping_repeat.lower_overlap == SVector(0.5, 0.0, 0.0)
     @test overlapping_repeat.upper_overlap == SVector(0.5, 0.0, 0.0)
-    @test inside_indices(overlapping_repeat, SVector(1.4, 0.0, 0.0)) == [ObstructionIndex()]
-    overlapping_hit = GI.PhysicalGeometries.detect_intersection(
+    @test inside_indices(overlapping_repeat, SVector(1.4, 0.0, 0.0)) == [
+        (SVector(1, 0, 0),), (SVector(0, 0, 0),),
+    ]
+    overlapping_hit = GI.PhysicalGeometries.find_intersection(
         overlapping_repeat,
         SVector(1.4, 0.0, 0.0),
         SVector(1.9, 0.0, 0.0),
     )
-    @test overlapping_hit.distance ≈ 0.2
+    @test overlapping_hit[end] ≈ 0.2
 
     @test get_value(3.0, ObstructionIndex(SVector(1, 2))) == 3.0
     leaf_properties = Properties.GeometryLeafProperties(3.0)
@@ -619,17 +600,17 @@ end
         Shift(sphere, [0.5, 0.0, 0.0]),
     ])
     @test inside_indices(inside_spheres, SVector(0.0, 0.0, 0.0)) == [
-        ObstructionIndex(SVector(1)),
-        ObstructionIndex(SVector(2)),
+        (1,),
+        (2,),
     ]
     walls = GeometryVector{1}([BaseObstructions.InfiniteWall(), BaseObstructions.InfiniteWall()])
-    @test inside_indices(walls, SVector(0.0)) == ObstructionIndex[]
+    @test inside_indices(walls, SVector(0.0)) == Tuple{Int}[]
 
     nested = GeometryTuple{3}((inside_spheres, sphere))
     @test inside_indices(nested, SVector(0.0, 0.0, 0.0)) == [
-        ObstructionIndex(SVector(1, 1)),
-        ObstructionIndex(SVector(1, 2)),
-        ObstructionIndex(SVector(2)),
+        (1, 1),
+        (1, 2),
+        (2,),
     ]
     @test_throws MethodError GeometryVector{3}([TestGeometry{2}(1)])
     @test_throws ArgumentError GeometryVector{3, PhysicalGeometry{3}}(PhysicalGeometry{3}[])
@@ -645,8 +626,8 @@ end
     @test shift isa Transformations.Transformation{3, 3, typeof(geometry_3d)}
     @test Transformations.to_child_coordinates(shift, position) == SVector(3.0, 3.0, 3.0)
     @test Transformations.from_child_coordinates(shift, SVector(3.0, 3.0, 3.0)) == position
-    @test Transformations.normal_to_child_coordinates(shift, normal) == normal
-    @test Transformations.normal_from_child_coordinates(shift, normal) == normal
+    @test Transformations.to_child_coordinates_normal(shift, normal) == normal
+    @test Transformations.from_child_coordinates_normal(shift, normal) == normal
 
     intersection = GI.PhysicalGeometries.Intersection(
         0.5,
@@ -670,21 +651,17 @@ end
     infinite_wall = BaseObstructions.InfiniteWall()
     @test infinite_wall isa PhysicalGeometry{1}
     @test BoundingBoxes.InternalBoundingBox(infinite_wall) isa BoundingBoxes.InternalBoundingBox{1}
-    wall_hit = GI.PhysicalGeometries.detect_intersection(
+    wall_hit = GI.PhysicalGeometries.find_intersection(
         infinite_wall,
         SVector(-1.0),
         SVector(1.0),
     )
-    @test wall_hit.distance == 0.5
-    @test wall_hit.normal == SVector(-1.0)
-    previous_wall_hit = GI.PhysicalGeometries.Intersection(
-        0.5,
-        SVector(1.0, 0.0, 0.0),
-        false,
-        ObstructionIndex(),
-        false,
-    )
-    @test Base.isempty(GI.PhysicalGeometries.detect_intersection(
+    @test wall_hit[2] == 0.5
+    @test GI.PhysicalGeometries.get_intersection_params(
+        infinite_wall, SVector(-1.0), SVector(1.0), wall_hit,
+    ).normal == SVector(-1.0)
+    previous_wall_hit = (false, 0.5)
+    @test isnothing(GI.PhysicalGeometries.find_intersection(
         infinite_wall,
         SVector(-1.0),
         SVector(1.0),
@@ -698,94 +675,70 @@ end
     sphere_box = BoundingBoxes.InternalBoundingBox(sphere)
     @test BoundingBoxes.lower(sphere_box) == SVector(-2.0, -2.0, -2.0)
     @test BoundingBoxes.upper(sphere_box) == SVector(2.0, 2.0, 2.0)
-    sphere_hit = GI.PhysicalGeometries.detect_intersection(
+    sphere_hit = GI.PhysicalGeometries.find_intersection(
         sphere,
         SVector(-3.0, 0.0, 0.0),
         SVector(3.0, 0.0, 0.0),
     )
-    @test sphere_hit.distance ≈ 1 / 6
-    @test sphere_hit.normal == SVector(-1.0, 0.0, 0.0)
+    @test sphere_hit[2] ≈ 1 / 6
+    @test GI.PhysicalGeometries.get_intersection_params(
+        sphere, SVector(-3.0, 0.0, 0.0), SVector(3.0, 0.0, 0.0), sphere_hit,
+    ).normal == SVector(-1.0, 0.0, 0.0)
     boundary = SVector(2.0, 0.0, 0.0)
-    boundary_inside = GI.PhysicalGeometries.Intersection(
-        0.5,
-        SVector(1.0, 0.0, 0.0),
-        true,
-        ObstructionIndex(),
-        false,
-    )
-    boundary_outside = GI.PhysicalGeometries.Intersection(
-        0.5,
-        SVector(1.0, 0.0, 0.0),
-        false,
-        ObstructionIndex(),
-        false,
-    )
+    boundary_inside = (true, 0.5)
+    boundary_outside = (false, 0.5)
     @test isinside_single(sphere, boundary, boundary_inside)
     @test !isinside_single(sphere, boundary, boundary_outside)
 
     fixed_sphere = mr.fix(mr.Spheres(radius=2.0))
-    fixed_boundary_inside = GI.PhysicalGeometries.Intersection(
-        boundary_inside.distance,
-        boundary_inside.normal,
-        boundary_inside.inside,
-        ObstructionIndex(SVector(1)),
-        boundary_inside.hit_gap,
-    )
-    fixed_boundary_outside = GI.PhysicalGeometries.Intersection(
-        boundary_outside.distance,
-        boundary_outside.normal,
-        boundary_outside.inside,
-        ObstructionIndex(SVector(1)),
-        boundary_outside.hit_gap,
-    )
-    @test GI.isinside(fixed_sphere, boundary, fixed_boundary_inside).inside_of == [ObstructionIndex(SVector(1))]
-    @test GI.isinside(fixed_sphere, boundary, fixed_boundary_outside).inside_of == ObstructionIndex[]
+    fixed_boundary_inside = (1, true, 0.5)
+    fixed_boundary_outside = (1, false, 0.5)
+    @test GI.isinside(fixed_sphere, boundary, fixed_boundary_inside).inside_of == [(1,)]
+    @test GI.isinside(fixed_sphere, boundary, fixed_boundary_outside).inside_of == Tuple{Int}[]
 
-    @test Base.isempty(GI.PhysicalGeometries.detect_intersection(
+    @test isnothing(GI.PhysicalGeometries.find_intersection(
         sphere,
         SVector(-3.0, 0.0, 0.0),
         SVector(3.0, 0.0, 0.0),
         sphere_hit,
     ))
-    previous_inside_sphere = GI.PhysicalGeometries.Intersection(
-        0.5,
-        SVector(1.0, 0.0, 0.0),
-        true,
-        ObstructionIndex(),
-        false,
-    )
-    inside_sphere_hit = GI.PhysicalGeometries.detect_intersection(
+    previous_inside_sphere = (true, 0.5)
+    inside_sphere_hit = GI.PhysicalGeometries.find_intersection(
         sphere,
         SVector(-1.0, 0.0, 0.0),
         SVector(3.0, 0.0, 0.0),
         previous_inside_sphere,
     )
-    @test inside_sphere_hit.distance ≈ 3 / 4
-    @test inside_sphere_hit.normal == SVector(-1.0, 0.0, 0.0)
+    @test inside_sphere_hit[2] ≈ 3 / 4
+    @test GI.PhysicalGeometries.get_intersection_params(
+        sphere, SVector(-1.0, 0.0, 0.0), SVector(3.0, 0.0, 0.0), inside_sphere_hit,
+    ).normal == SVector(-1.0, 0.0, 0.0)
 
     fixed_sphere_hit = GI.detect_intersection(
         fixed_sphere,
         SVector(-3.0, 0.0, 0.0),
         SVector(3.0, 0.0, 0.0),
     )
-    underlying_sphere_hit = GI.PhysicalGeometries.detect_intersection(
+    underlying_sphere_hit = GI.PhysicalGeometries.find_intersection(
         fixed_sphere.geometry,
         SVector(-3.0, 0.0, 0.0),
         SVector(3.0, 0.0, 0.0),
     )
-    @test fixed_sphere_hit == underlying_sphere_hit
+    @test fixed_sphere_hit.distance == underlying_sphere_hit[end]
 
     shifted_sphere = Shift(sphere, [1.0, 0.0, 0.0])
     shifted_sphere_box = BoundingBoxes.InternalBoundingBox(shifted_sphere)
     @test BoundingBoxes.lower(shifted_sphere_box) == SVector(-1.0, -2.0, -2.0)
     @test BoundingBoxes.upper(shifted_sphere_box) == SVector(3.0, 2.0, 2.0)
-    shifted_hit = GI.PhysicalGeometries.detect_intersection(
+    shifted_hit = GI.PhysicalGeometries.find_intersection(
         shifted_sphere,
         SVector(-4.0, 0.0, 0.0),
         SVector(2.0, 0.0, 0.0),
     )
-    @test shifted_hit.distance ≈ 1 / 2
-    @test shifted_hit.normal == SVector(-1.0, 0.0, 0.0)
+    @test shifted_hit[end] ≈ 1 / 2
+    @test GI.PhysicalGeometries.get_intersection_params(
+        shifted_sphere, SVector(-4.0, 0.0, 0.0), SVector(2.0, 0.0, 0.0), shifted_hit,
+    ).normal == SVector(-1.0, 0.0, 0.0)
 
     grouped_spheres = GeometryVector{3}([
         Shift(BaseObstructions.Sphere(1.0), [-2.0, 0.0, 0.0]),
@@ -800,22 +753,22 @@ end
     ])
     @test filtered_spheres isa GI.PhysicalGeometries.Groups.GeometryVectorLike{3}
     @test length(filtered_spheres.bounding_boxes) == 2
-    filtered_hit = GI.PhysicalGeometries.detect_intersection(
+    filtered_hit = GI.PhysicalGeometries.find_intersection(
         filtered_spheres,
         SVector(-2.0, 0.0, 0.0),
         SVector(2.0, 0.0, 0.0),
     )
-    @test filtered_hit.obstruction_index == ObstructionIndex(SVector(1))
+    @test filtered_hit[1] == 1
     @test inside_indices(filtered_spheres, SVector(0.0, 0.0, 0.0)) == [
-        ObstructionIndex(SVector(1)),
+        (1,),
     ]
     grid_spheres = GeometryVector([
         Shift(sphere, [-3.0, 0.0, 0.0]),
         Shift(sphere, [3.0, 0.0, 0.0]),
     ]; grid=true, grid_resolution=2.0)
     @test grid_spheres isa GeometryVectorGrid{3, Shift{3, BaseObstructions.Sphere}}
-    @test inside_indices(grid_spheres, SVector(3.0, 0.0, 0.0)) == [ObstructionIndex(SVector(2))]
-    regular_grid_hit = GI.PhysicalGeometries.detect_intersection(
+    @test inside_indices(grid_spheres, SVector(3.0, 0.0, 0.0)) == [(2,)]
+    regular_grid_hit = GI.PhysicalGeometries.find_intersection(
         GeometryVector([
             Shift(sphere, [-3.0, 0.0, 0.0]),
             Shift(sphere, [3.0, 0.0, 0.0]),
@@ -823,82 +776,69 @@ end
         SVector(-5.0, 0.0, 0.0),
         SVector(5.0, 0.0, 0.0),
     )
-    grid_hit = GI.PhysicalGeometries.detect_intersection(
+    grid_hit = GI.PhysicalGeometries.find_intersection(
         grid_spheres,
         SVector(-5.0, 0.0, 0.0),
         SVector(5.0, 0.0, 0.0),
     )
-    @test grid_hit.distance == regular_grid_hit.distance
-    @test grid_hit.obstruction_index == regular_grid_hit.obstruction_index
+    @test grid_hit == regular_grid_hit
     @test_throws ArgumentError GeometryVectorBoundingBox(
         [sphere],
         BoundingBoxes.InternalBoundingBox{3}[],
     )
     @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(GeometryVector{3}(TestGeometry{3}[]))
     @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(GeometryTuple{3}(()))
-    grouped_hit = GI.PhysicalGeometries.detect_intersection(
+    grouped_hit = GI.PhysicalGeometries.find_intersection(
         grouped_spheres,
         SVector(-5.0, 0.0, 0.0),
         SVector(5.0, 0.0, 0.0),
     )
-    @test grouped_hit.distance ≈ 1 / 5
-    @test grouped_hit.obstruction_index == ObstructionIndex(SVector(1))
+    @test grouped_hit[end] ≈ 1 / 5
+    @test grouped_hit[1] == 1
     grouped_boundary = SVector(3.0, 0.0, 0.0)
-    grouped_inside = GI.PhysicalGeometries.Intersection(
-        0.5,
-        SVector(1.0, 0.0, 0.0),
-        true,
-        ObstructionIndex(SVector(2)),
-        false,
-    )
-    grouped_outside = GI.PhysicalGeometries.Intersection(
-        0.5,
-        SVector(1.0, 0.0, 0.0),
-        false,
-        ObstructionIndex(SVector(2)),
-        false,
-    )
-    @test inside_indices(grouped_spheres, grouped_boundary, grouped_inside) == [ObstructionIndex(SVector(2))]
-    @test inside_indices(grouped_spheres, grouped_boundary, grouped_outside) == ObstructionIndex[]
+    grouped_inside = (2, true, 0.5)
+    grouped_outside = (2, false, 0.5)
+    @test inside_indices(grouped_spheres, grouped_boundary, grouped_inside) == [(2,)]
+    @test inside_indices(grouped_spheres, grouped_boundary, grouped_outside) == Tuple{Int}[]
 
-    next_grouped_hit = GI.PhysicalGeometries.detect_intersection(
+    next_grouped_hit = GI.PhysicalGeometries.find_intersection(
         grouped_spheres,
         SVector(-5.0, 0.0, 0.0),
         SVector(5.0, 0.0, 0.0),
         grouped_hit,
     )
-    @test next_grouped_hit.distance ≈ 3 / 5
-    @test next_grouped_hit.obstruction_index == ObstructionIndex(SVector(2))
-    @test_throws ArgumentError GI.PhysicalGeometries.detect_intersection(
+    @test next_grouped_hit[end] ≈ 3 / 5
+    @test next_grouped_hit[1] == 2
+    @test GI.PhysicalGeometries.find_intersection(
         grouped_spheres,
         SVector(-5.0, 0.0, 0.0),
         SVector(5.0, 0.0, 0.0),
-        GI.PhysicalGeometries.Intersection(0.5, normal, false, ObstructionIndex(), false),
-    )
-    @test_throws ArgumentError GI.PhysicalGeometries.detect_intersection(
+        (0, false, 0.5),
+    ) == grouped_hit
+    @test GI.PhysicalGeometries.find_intersection(
         grouped_spheres,
         SVector(-5.0, 0.0, 0.0),
         SVector(5.0, 0.0, 0.0),
-        GI.PhysicalGeometries.Intersection(0.5, normal, false, ObstructionIndex(SVector(3)), false),
-    )
+        (3, false, 0.5),
+    ) == grouped_hit
 
     scaled_sphere = Scale(sphere, 2.0)
-    scaled_hit = GI.PhysicalGeometries.detect_intersection(
+    scaled_hit = GI.PhysicalGeometries.find_intersection(
         scaled_sphere,
         SVector(-6.0, 0.0, 0.0),
         SVector(6.0, 0.0, 0.0),
     )
-    @test scaled_hit.distance ≈ 1 / 6
-    @test scaled_hit.normal ≈ SVector(-1.0, 0.0, 0.0)
+    @test scaled_hit[end] ≈ 1 / 6
+    @test scaled_hit[1] == false
 
     projected_cylinder = Rotate(cylinder, SMatrix{3, 2, Float64}([1.0 0.0; 0.0 1.0; 0.0 0.0]))
-    projected_hit = GI.PhysicalGeometries.detect_intersection(
+    projected_hit = GI.PhysicalGeometries.find_intersection(
         projected_cylinder,
         SVector(-3.0, 0.0, 4.0),
         SVector(3.0, 0.0, 4.0),
     )
-    @test projected_hit.distance ≈ 1 / 6
-    @test projected_hit.normal == SVector(-1.0, 0.0, 0.0)
+    @test projected_hit[end] ≈ 1 / 6
+    @test projected_hit[1] == false
 
     triangle = BaseObstructions.FullTriangle(
         SVector(0.0, 0.0, 0.0),
@@ -909,14 +849,14 @@ end
     @test triangle_box isa BoundingBoxes.InternalBoundingBox{3}
     @test BoundingBoxes.lower(triangle_box) == SVector(0.0, 0.0, 0.0)
     @test BoundingBoxes.upper(triangle_box) == SVector(1.0, 1.0, 0.0)
-    triangle_hit = GI.PhysicalGeometries.detect_intersection(
+    triangle_hit = GI.PhysicalGeometries.find_intersection(
         triangle,
         SVector(0.25, 0.25, 1.0),
         SVector(0.25, 0.25, -1.0),
     )
-    @test triangle_hit.distance == 0.5
-    @test triangle_hit.normal == SVector(0.0, 0.0, 1.0)
-    @test Base.isempty(GI.PhysicalGeometries.detect_intersection(
+    @test triangle_hit[end] == 0.5
+    @test triangle_hit[1] == false
+    @test isnothing(GI.PhysicalGeometries.find_intersection(
         triangle,
         SVector(0.25, 0.25, 1.0),
         SVector(0.25, 0.25, -1.0),
