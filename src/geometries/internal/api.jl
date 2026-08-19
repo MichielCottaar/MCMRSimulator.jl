@@ -40,12 +40,12 @@ Base.length(geometry::FixedGeometry) =
 
 
 """
-    Intersection(distance, indices, normal, inside, hit_gap)
+    Intersection(distance, indices, property_indices, normal, inside, hit_gap)
 
 Intersection between a path and a physical geometry. 
 
 - `distance` is normalized to the path from start (0) to destination (1) 
-- `indices` is a tuple containing any information required to find the obstruction of the intersection again
+- `indices` is a tuple containing any information required to find the obstruction of the intersection again, excluding `inside` and `distance`
 - `normal` is the normal of the surface hit by the collision
 - `inside` is whether the surface got hit on the "inside" of the obstruction (arbitrarily defined for some obstructions such as infinite walls)
 - `hit_gap` is whether the collision actually hit something that represents a gap in the obstruction. In that case the spin will be left through unaltered except for an update to whether it is inside/outside of that obstruction.
@@ -86,19 +86,28 @@ If no intersection is found, `nothing` is returned instead.
 `previous_intersection` represents the intersection that just finished, which should not be immediately returned again.
 """
 function detect_intersection(fixed_geometry::FixedGeometry, start::SVector{3, Float64}, dest::SVector{3, Float64}, previous_intersection=nothing)
-    full_indices = find_intersection(fixed_geometry.geometry, start, dest, isnothing(previous_intersection) ? nothing : (previous_intersection.indices..., previous_intersection.distance))
+    full_indices = find_intersection(
+        fixed_geometry.geometry,
+        start,
+        dest,
+        isnothing(previous_intersection) ?
+        nothing :
+        (previous_intersection.indices..., previous_intersection.inside, previous_intersection.distance),
+    )
     if isnothing(full_indices)
         return nothing
     end
     params = get_intersection_params(fixed_geometry.geometry, start, dest, full_indices)
-    indices = full_indices[1:end-1]
+    inside = full_indices[end - 1]
+    distance = full_indices[end]
+    indices = full_indices[1:end - 2]
     property_indices = to_property_index(fixed_geometry.geometry, indices)
     return Intersection{typeof(indices), typeof(property_indices)}(
-        full_indices[end],
+        distance,
         indices,
         property_indices,
         params.normal,
-        params.inside,
+        inside,
         params.hit_gap
     )
 end
@@ -143,7 +152,7 @@ function isinside(
 end
 
 isinside(geometry::FixedGeometry, position::SVector{3, Float64}, intersection::Intersection) =
-    isinside(geometry, position, (intersection.indices..., intersection.distance))
+    isinside(geometry, position, (intersection.indices..., intersection.inside, intersection.distance))
 
 
 function _filter_to_box(positions, values, bounding_box)
@@ -162,16 +171,17 @@ function random_surface_positions(
     )
     
     positions, indices = _filter_to_box(all_positions, all_indices, bounding_box)
-    io = eltype(indices)
-    intersections = map(positions, indices) do pos, index
-        params = get_intersection_params(fixed_geometry.geometry, pos, pos, (index..., 0.))
+    intersections = map(positions, indices) do pos, full_index
+        inside = full_index[end]
+        index = full_index[1:end - 1]
+        params = get_intersection_params(fixed_geometry.geometry, pos, pos, (full_index..., 0.))
         property_index = to_property_index(fixed_geometry.geometry, index)
-        return Intersection{io, typeof(property_index)}(
+        return Intersection{typeof(index), typeof(property_index)}(
             0.,
             index,
             property_index,
             params.normal,
-            params.inside,
+            inside,
             params.hit_gap
         )
     end

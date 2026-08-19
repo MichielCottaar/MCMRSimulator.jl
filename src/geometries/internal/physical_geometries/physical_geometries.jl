@@ -21,9 +21,12 @@ function geometry_mesh end
 Finds the first intersection between `start` and `dest`.
 
 This returns a tuple with just enough information to identify this intersection, namely:
-1. the distance of the intersection from `start` (0) to `dest` (1) as the final element
-2. an increasingly lengthy list of the `index` (int) of the closest intersection in a group or shift (`SVector{3, Int}`).
-Each layer prepends its identifier information to the front (can be something else).
+1. an increasingly lengthy list of the `index` (int) of the closest intersection in a group or shift (`SVector{3, Int}`)
+2. whether the path enters from the inside as the penultimate element
+3. the distance of the intersection from `start` (0) to `dest` (1) as the final element
+Each layer prepends its identifier information to the front (which can be something else).
+
+The final two elements therefore always have the form `(..., inside, distance)`.
 
 Return `nothing` if there is no intersection between `start` and `dest`.
 """
