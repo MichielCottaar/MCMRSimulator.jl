@@ -74,8 +74,7 @@ has_intersection(reflection::Reflection) = !isnothing(reflection.intersection)
 has_intersection(intersection::Intersection) = true
 
 has_hit(reflection::Reflection) = isnothing(reflection.intersection) ? () : reflection.intersection.indices
-previous_hit(reflection::Reflection) = isnothing(reflection.intersection) ? nothing :
-    (reflection.intersection.indices..., reflection.intersection.inside, reflection.intersection.distance)
+previous_hit(reflection::Reflection) = reflection.intersection
 
 function direction(reflection::Reflection, new_time, diffusivity)
     displacement_size =
