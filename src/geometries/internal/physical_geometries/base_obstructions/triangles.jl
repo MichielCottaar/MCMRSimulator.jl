@@ -66,7 +66,8 @@ function find_intersection(
         cross(edge, to_point) ⋅ triangle_normal < 0 && return nothing
     end
 
-    return (distance,)
+    inside = destination_distance > start_distance
+    return (inside, distance)
 end
 
 function get_intersection_params(
@@ -75,8 +76,8 @@ function get_intersection_params(
     destination::SVector{3, Float64},
     intersection::Tuple,
 )
+    inside, _ = intersection
     triangle_normal = normal(triangle)
-    inside = triangle_normal ⋅ destination > triangle_normal ⋅ start
     (
         inside=inside,
         normal=inside ? -triangle_normal : triangle_normal,

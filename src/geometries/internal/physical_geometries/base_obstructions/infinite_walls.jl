@@ -18,7 +18,8 @@ function find_intersection(
     origin = start[1]
     destination_position = destination[1]
     origin * destination_position > 0 && return nothing
-    return (abs(origin) / abs(origin - destination_position),)
+    inside = origin > 0
+    return (inside, abs(origin) / abs(origin - destination_position))
 end
 
 function get_intersection_params(
@@ -27,8 +28,7 @@ function get_intersection_params(
     destination::SVector{1, Float64},
     intersection::Tuple,
 )
-    origin = start[1]
-    inside = origin > 0
+    inside, _ = intersection
     (
         inside=inside,
         normal=inside ? _positive_wall_normal : _negative_wall_normal,
