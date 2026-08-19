@@ -6,7 +6,7 @@ import DelaunayTriangulation: triangulate, get_triangles
 import NearestNeighbors: KDTree, nn
 
 import ...Indices: ObstructionIndex, add_index
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, has_inside, has_single_inside, isinside_single, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, get_intersection_params, has_inside, has_single_inside, isinside_single, InternalBoundingBox
 import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryLeafProperties
@@ -194,6 +194,26 @@ function _mesh_triangle(mesh::Mesh, triangle::SVector{3, Int})
 end
 
 triangle(mesh::Mesh, index::Int) = _mesh_triangle(mesh, mesh.indices[index])
+
+function get_intersection_params(
+    mesh::Mesh,
+    start::SVector{3, Float64},
+    destination::SVector{3, Float64},
+    indices::Tuple,
+)
+    triangle_index = indices[1]
+    result = get_intersection_params(
+        triangle(mesh, triangle_index),
+        start,
+        destination,
+        indices[2:end],
+    )
+    (
+        inside=result.inside,
+        normal=result.normal,
+        hit_gap=triangle_index >= mesh.first_index_of_gap,
+    )
+end
 
 Groups.intersection_candidates(mesh::Mesh, start, destination) =
     (
