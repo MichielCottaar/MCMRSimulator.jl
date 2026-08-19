@@ -2,10 +2,9 @@
 
 import StaticArrays: SVector
 import ..BoundingBoxes: BoundingBox
-import .Indices: ObstructionIndex
 import .InternalBoundingBoxes: InternalBoundingBox
 import .InternalBoundingBoxes
-import .PhysicalGeometries: PhysicalGeometry, Intersection, flip, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, to_property_index, inside_indices_eltype
+import .PhysicalGeometries: PhysicalGeometry, Intersection, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, to_property_index, inside_indices_eltype
 import .PhysicalGeometries.Groups: GeometryTuple, inside_indices_for_any_type
 import .PhysicalGeometries.Transparents: SizeScaleOverride
 import .Properties: all_property_values, get_value
@@ -58,6 +57,23 @@ struct Intersection{T, PT}
     normal::SVector{3, Float64}
     inside::Bool
     hit_gap::Bool
+end
+
+"""
+    flip(intersection)
+
+Flip an intersection to the opposite side of its surface while preserving its
+distance, obstruction indices, property indices, and gap state.
+"""
+function flip(intersection::Intersection{T, PT}) where {T, PT}
+    Intersection{T, PT}(
+        intersection.distance,
+        intersection.indices,
+        intersection.property_indices,
+        -intersection.normal,
+        !intersection.inside,
+        intersection.hit_gap,
+    )
 end
 
 
@@ -193,8 +209,6 @@ size_scale(geometry::FixedGeometry) = size_scale(geometry.geometry)
 
 """Return the largest timestep permitted by surface-sticking constraints."""
 function max_timestep_sticking(geometry::FixedGeometry, diffusivity::Number, scaling)
-    isnothing(geometry.surface) && return Inf
-
     log_probabilities = [
         log(1 - stick_probability(density, dwell, diffusivity, 1))
         for (density, dwell) in all_property_values(
@@ -209,21 +223,17 @@ end
 
 """Return the largest finite permeability in `geometry`, or zero if absent."""
 function max_permeability_non_inf(geometry::FixedGeometry)
-    isnothing(geometry.surface) && return 0.
     values = (value for value in all_property_values(geometry.surface.permeability) if !isinf(value))
     maximum(values; init=0.)
 end
 
 """Return the largest surface-relaxation value in `geometry`."""
 function max_surface_relaxation(geometry::FixedGeometry)
-    isnothing(geometry.surface) && return 0.
     maximum(all_property_values(geometry.surface.surface_relaxation); init=0.)
 end
 
 """Return the smallest dwell time in `geometry` when a bound pool exists."""
 function min_dwell_time(geometry::FixedGeometry)
-    isnothing(geometry.surface) && return Inf
-
     dwell_times = (
         dwell
         for (density, dwell) in all_property_values(
@@ -237,28 +247,24 @@ end
 
 """Return the permeability associated with a collision state."""
 function permeability(geometry::FixedGeometry, intersection::Intersection)
-    @assert !Base.isempty(intersection) "permeability requires a non-empty intersection"
     intersection.hit_gap && return Inf
     get_value(geometry.surface.permeability, intersection.property_indices)
 end
 
 """Return the surface-relaxation value associated with a collision state."""
 function surface_relaxation(geometry::FixedGeometry, intersection::Intersection)
-    @assert !Base.isempty(intersection) "surface_relaxation requires a non-empty intersection"
     intersection.hit_gap && return 0.
     get_value(geometry.surface.surface_relaxation, intersection.property_indices)
 end
 
 """Return the surface-density value associated with a collision state."""
 function surface_density(geometry::FixedGeometry, intersection::Intersection)
-    @assert !Base.isempty(intersection) "surface_density requires a non-empty intersection"
     intersection.hit_gap && return 0.
     get_value(geometry.surface.density, intersection.property_indices)
 end
 
 """Return the dwell-time value associated with a collision state."""
 function dwell_time(geometry::FixedGeometry, intersection::Intersection)
-    @assert !Base.isempty(intersection) "dwell_time requires a non-empty intersection"
     intersection.hit_gap && return 0.
     get_value(geometry.surface.dwell_time, intersection.property_indices)
 end
