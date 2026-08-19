@@ -140,7 +140,7 @@ intersection_candidates(group::GeometryVectorBoundingBox, start, destination) =
     (
         (index, group_geometries(group)[index], 0.0)
         for index in eachindex(group_geometries(group))
-        if _could_intersect(group, index, start, destination)
+        if InternalBoundingBoxes.does_intersect(group.bounding_boxes[index], start, destination)
     )
 
 intersection_candidates(group::GeometryVectorGrid, start, destination) =
@@ -255,25 +255,6 @@ GeometryVectorBoundingBox(
 
 GeometryTuple{N}(geometries::Tuple{Vararg{PhysicalGeometry{N}}}) where {N} =
     GeometryTuple{N, typeof(geometries)}(geometries)
-
-function _could_intersect(
-    ::GroupGeometry,
-    ::Int,
-    ::SVector,
-    ::SVector,
-)
-    true
-end
-
-function _could_intersect(
-    geometry::GeometryVectorBoundingBox{N},
-    child_index::Int,
-    start::SVector{N, Float64},
-    destination::SVector{N, Float64},
- ) where {N}
-    box = geometry.bounding_boxes[child_index]
-    InternalBoundingBoxes.does_intersect(box, start, destination)
-end
 
 Base.size(geometry::GeometryVectorLike) = size(group_geometries(geometry))
 Base.axes(geometry::GeometryVectorLike) = axes(group_geometries(geometry))
