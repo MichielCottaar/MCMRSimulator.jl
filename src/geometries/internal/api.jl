@@ -5,7 +5,7 @@ import ..BoundingBoxes: BoundingBox
 import .Indices: ObstructionIndex
 import .InternalBoundingBoxes: InternalBoundingBox
 import .InternalBoundingBoxes
-import .PhysicalGeometries: PhysicalGeometry, Intersection, flip, detect_intersection, random_surface_positions, inside_indices, size_scale, geometry_mesh
+import .PhysicalGeometries: PhysicalGeometry, Intersection, flip, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh
 import .PhysicalGeometries.Groups: GeometryTuple, inside_indices_for_any_type
 import .PhysicalGeometries.Transparents: SizeScaleOverride
 import .Properties: all_property_values, get_value
@@ -39,6 +39,53 @@ end
 Base.length(geometry::FixedGeometry) =
     geometry.geometry isa GeometryTuple ? length(geometry.geometry) : 1
 
+
+"""
+    Intersection(distance, indices, normal, inside, hit_gap)
+
+Intersection between a path and a physical geometry. 
+
+- `distance` is normalized to the path from start (0) to destination (1) 
+- `indices` is a tuple containing any information required to find the obstruction of the intersection again
+- `normal` is the normal of the surface hit by the collision
+- `inside` is whether the surface got hit on the "inside" of the obstruction (arbitrarily defined for some obstructions such as infinite walls)
+- `hit_gap` is whether the collision actually hit something that represents a gap in the obstruction. In that case the spin will be left through unaltered except for an update to whether it is inside/outside of that obstruction.
+"""
+struct Intersection{T}
+    distance::Float64
+    indices::T
+    normal::SVector{3, Float64}
+    inside::Bool
+    hit_gap::Bool
+end
+
+
+"""
+    detect_intersection(fixed_geometry, start, dest, previous_intersection=nothing) -> Optional[Intersection]
+
+Finds the closest intersection between `start` and `dest` with `fixed_geometry`.
+
+If no intersection is found, `nothing` is returned instead.
+`previous_intersection` represents the intersection that just finished, which should not be immediately returned again.
+"""
+function detect_intersection(fixed_geometry::FixedGeometry, start::SVector{3, Float64}, dest::SVector{3, Float64}, previous_intersection=nothing)
+    full_indices = find_intersection(fixed_geometry.geometry, start, dest, isnothing(previous_intersection) ? nothing : previous_intersection.indices)
+    if isnothing(full_indices)
+        return nothing
+    end
+    params = get_intersection_params(fixed_geometry.geometry, start, dest, full_indices)
+    indices = full_indices[1:end-1]
+    return Intersection{typeof(indices)}(
+        full_indices[end],
+        indices,
+        params.normal,
+        params.inside,
+        params.hit_gap
+    )
+end
+
+
+
 """
     IsInside
 
@@ -69,20 +116,6 @@ An intersection may be provided when the particle is already attached or is curr
 isinside(geometry::FixedGeometry, position::SVector{3, Float64}, intersection::Intersection=Intersection{3}()) =
     IsInside(inside_indices_for_any_type(geometry.geometry, position, intersection))
 
-"""
-    detect_intersection(geometry, start, destination, previous_intersection)
-
-Return the first intersection between the path from `start` to `destination`
-and `geometry`.
-"""
-function detect_intersection(
-    geometry::FixedGeometry,
-    start::SVector{3, Float64},
-    destination::SVector{3, Float64},
-    previous_intersection::Intersection=Intersection{3}(),
-)
-    detect_intersection(geometry.geometry, start, destination, previous_intersection)
-end
 
 function _filter_to_box(positions, values, bounding_box)
     keep = [all(position .>= InternalBoundingBoxes.lower(bounding_box)) &&

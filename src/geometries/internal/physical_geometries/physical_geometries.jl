@@ -15,8 +15,88 @@ function size_scale end
 function geometry_mesh end
 
 
-"""Find the first intersection of a path with `geometry`."""
-function detect_intersection end
+"""
+    find_intersection(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, previous_hit=nothing) -> Optional{indices}
+
+Finds the first intersection between `start` and `dest`.
+
+This returns a tuple with just enough information to identify this intersection, namely:
+1. the distance of the intersection from `start` (0) to `dest` (1) as the final element
+2. an increasingly lengthy list of the `index` (int) of the closest intersection in a group or shift (`SVector{3, Int}`).
+Each layer prepends its identifier information to the front (can be something else).
+
+Return `nothing` if there is no intersection between `start` and `dest`.
+"""
+function find_intersection end
+
+"""
+    get_child(geometry::PhysicalGeometry, indices) -> (PhysicalGeometry, remaining_indices)
+
+Gets the child of `geometry` corresponding to the `indices` identified by `find_intersection`.
+
+This is a helper function for `get_intersection_params`.
+It should be overwritten by any wrapper obstructions (transformations, groups, repeats, etc.).
+`remaining_indices` should be a tuple with any indices remaining after `get_child`.
+
+It will not be called for base obstructions, which override `get_intersection_params` instead.
+"""
+function get_child end
+
+
+"""
+    get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, indices) -> (inside=true/false, normal=SVector{N, Float64}, hit_gap=true/false)
+
+Gets the `inside`, `normal`, and `hit_gap` properties of the intersection after it has been identified by `find_intersection`.
+
+This should be overwritten for base obstructions, but should work as is for any composite geometries, which override `get_child` instead.
+"""
+function get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, indices::Tuple) where {N}
+    (child, remaining_indices) = get_child(geometry, indices)
+    start_child = to_child_coordinates(geometry, start)
+    dest_child = to_child_coordinates(geometry, dest)
+    result = get_intersection_params(child, start_child, dest_child, remaining_indices)
+    return (
+        inside=result.inside,
+        normal=from_child_coordinates_normal(geometry, result.normal),
+        hit_gap=result.hit_gap,
+    )
+end
+
+"""
+    to_child_coordinates(geometry, position/bounding_box)
+
+Converts the `position`/`bounding_box` from `geometry` coordinates to the coordinates from the child of `geometry`.
+
+This should be overwritten for transformations. It should not be called for base obstructions.
+"""
+to_child_coordinates(::PhysicalGeometry{N}, object) = object
+
+"""
+    from_child_coordinates(geometry, position/bounding_box)
+
+Converts the `position`/`bounding_box` from child of `geometry` coordinates to the coordinates from the `geometry`.
+
+This should be overwritten for transformations. It should not be called for base obstructions.
+"""
+from_child_coordinates(::PhysicalGeometry{N}, object) = object
+
+"""
+    to_child_coordinates_normal(geometry, normal)
+
+Converts the `normal` from `geometry` coordinates to the coordinates from the child of `geometry`.
+
+This should be overwritten for transformations. It should not be called for base obstructions.
+"""
+to_child_coordinates_normal(::PhysicalGeometry{N}, object) = object
+
+"""
+    from_child_coordinates_normal(geometry, normal)
+
+Converts the `normal` from child of `geometry` coordinates to the coordinates from the `geometry`.
+
+This should be overwritten for transformations. It should not be called for base obstructions.
+"""
+from_child_coordinates_normal(::PhysicalGeometry{N}, object) = object
 
 """Return whether a geometry has an inside region."""
 function has_inside end
