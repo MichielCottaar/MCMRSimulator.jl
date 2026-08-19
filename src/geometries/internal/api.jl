@@ -124,14 +124,27 @@ function _filter_to_box(positions, values, bounding_box)
 end
 
 function random_surface_positions(
-    geometry::FixedGeometry,
+    fixed_geometry::FixedGeometry,
     bounding_box::InternalBoundingBox{3},
     volume_density::Number,
 )
-    isnothing(geometry.surface) && return SVector{3, Float64}[], Intersection{3}[]
-    positions, intersections = random_surface_positions(
-        geometry.geometry, geometry.surface.density, bounding_box, volume_density)
-    _filter_to_box(positions, intersections, bounding_box)
+    all_positions, all_indices = random_surface_positions(
+        fixed_geometry.geometry, fixed_geometry.surface.density, bounding_box, volume_density
+    )
+    
+    positions, indices = _filter_to_box(all_positions, all_indices, bounding_box)
+    io = eltype(indices)
+    intersections = map(positions, indices) do pos, index
+        params = get_intersection_params(fixed_geometry.geometry, pos, pos, (index..., 0.))
+        return Intersection{io}(
+            0.,
+            index,
+            params.normal,
+            params.inside,
+            params.hit_gap
+        )
+    end
+    return (positions, intersections)
 end
 
 function random_surface_positions(
