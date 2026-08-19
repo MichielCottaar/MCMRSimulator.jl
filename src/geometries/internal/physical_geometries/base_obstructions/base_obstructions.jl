@@ -1,7 +1,7 @@
 module BaseObstructions
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, find_intersection, get_intersection_params, has_inside, has_single_inside, isinside_single, flip
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, child_type, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, isinside_single, flip
 import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ...InternalBoundingBoxes: InternalBoundingBox
 import ...Indices: ObstructionIndex
@@ -12,6 +12,11 @@ import Distributions: Poisson
 import Random: rand
 
 abstract type BaseObstruction{N} <: PhysicalGeometry{N} end
+
+child_type(::Type{<:BaseObstruction}) =
+    throw(ArgumentError("base obstructions do not have child geometries"))
+
+inside_indices_eltype(::Type{<:BaseObstruction}) = Tuple{}
 
 intersection_index_length(::Type{<:BaseObstruction}) = 0
 inside_index_length(::Type{<:BaseObstruction}) = 0

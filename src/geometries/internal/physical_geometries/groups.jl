@@ -6,7 +6,7 @@ import ...Indices: ObstructionIndex, add_index
 import ...InternalBoundingBoxes
 import ..GridDispatch: IntersectionGrid, GridIterator, detect_intersection_grid
 import ..Intersections: remove_expected_index
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, find_intersection, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, child_type, find_intersection, has_inside, has_single_inside, inside_indices_eltype, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
@@ -15,6 +15,18 @@ abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
 
 group_geometries(group::GeometryVectorLike) = group.geometries
+
+child_type(::Type{<:GroupGeometry{N, P}}) where {N, P} = P
+
+_prepend_inside_index(::Type{Index}, ::Type{Tuple{Elements...}}) where {Index, Elements...} =
+    Tuple{Index, Elements...}
+_prepend_inside_index(::Type{Index}, ::Type{Union{Elements...}}) where {Index, Elements...} =
+    Union{(_prepend_inside_index(Index, Element) for Element in Elements)...}
+_prepend_inside_index(::Type{Index}, ::Type{Element}) where {Index, Element} =
+    Tuple{Index, Element}
+
+inside_indices_eltype(::Type{<:GroupGeometry{N, P}}) where {N, P} =
+    _prepend_inside_index(Int, inside_indices_eltype(P))
 
 
 function find_intersection(group::GroupGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, previous_hit=nothing)
@@ -81,6 +93,30 @@ end
 
 group_geometries(group::GeometryTuple) = group.geometries
 
+child_type(::Type{<:GeometryTuple{N, P}}) where {N, P} = Union{P.parameters...}
+
+inside_indices_eltype(::Type{<:GeometryTuple{N, P}}) where {N, P} =
+    _prepend_inside_index(Int, inside_indices_eltype(Union{P.parameters...}))
+
+function inside_candidates end
+
+inside_candidates(group::GeometryVector, position) = enumerate(group_geometries(group))
+
+inside_candidates(group::GeometryVectorBoundingBox, position) =
+    (
+        (index, group_geometries(group)[index])
+        for index in eachindex(group_geometries(group))
+        if InternalBoundingBoxes.isinside(group.bounding_boxes[index], position)
+    )
+
+function inside_candidates(group::GeometryVectorGrid{N}, position::SVector{N, Float64}) where {N}
+    coordinate = _grid_coordinate(group, position)
+    isnothing(coordinate) && return ()
+    ((index, group_geometries(group)[index]) for index in _grid_candidates(group, coordinate))
+end
+
+inside_candidates(group::GeometryTuple, position) = enumerate(group_geometries(group))
+
 intersection_candidates(group::Union{GeometryVector, GeometryTuple}, start, destination) =
     ((index, child, 0.0) for (index, child) in enumerate(group_geometries(group)))
 
@@ -117,18 +153,14 @@ inside_index_length(::Type{<:GeometryVectorLike{N, P}}) where {N, P} =
 all_equal_inside_depth(::Type{<:GeometryVectorLike{N, P}}) where {N, P} =
     all_equal_inside_depth(P)
 
+_empty_inside_indices(::Type{G}) where {G} = Vector{inside_indices_eltype(G)}()
+
 function all_equal_inside_depth(::Type{<:GeometryTuple{N, P}}) where {N, P}
     child_types = P.parameters
     isempty(child_types) && return true
     all(all_equal_inside_depth, child_types) || return false
     first_depth = inside_index_length(child_types[1])
     all(inside_index_length(child_type) == first_depth for child_type in child_types)
-end
-
-@generated function _empty_inside_indices(::Type{G}) where {G}
-    all_equal_inside_depth(G) || return :(ObstructionIndex[])
-    depth = inside_index_length(G)
-    :(ObstructionIndex{$depth}[])
 end
 
 function InternalBoundingBox(geometry::GroupGeometry{N, P}) where {N, P}
@@ -172,27 +204,35 @@ end
 
 function inside_indices_for_any_type(geometry, position, intersection)
     geometry_type = typeof(geometry)
-    has_inside(geometry_type) || return _empty_inside_indices(geometry_type)
+    has_inside(geometry_type) || return Tuple{}[]
     if has_single_inside(geometry_type)
-        index_type = inside_index_length(geometry_type)
         return isinside_single(geometry, position, intersection) ?
-            [ObstructionIndex{index_type}()] : ObstructionIndex{index_type}[]
+            [()] : Tuple{}[]
     end
     return inside_indices(geometry, position, intersection)
 end
 
 function inside_indices(
-    geometry::GeometryVectorLike{N},
+    geometry::GroupGeometry{N, P},
     position::SVector{N, Float64},
-    intersection::Intersection{3, M}=Intersection{3, inside_index_length(typeof(geometry))}(),
-) where {N, M}
-    child_indices = if geometry isa GeometryVectorBoundingBox
-        (child_index for child_index in eachindex(group_geometries(geometry))
-            if InternalBoundingBoxes.isinside(geometry.bounding_boxes[child_index], position))
-    else
-        eachindex(group_geometries(geometry))
+    intersection=nothing,
+) where {N, P}
+    indices = Vector{inside_indices_eltype(typeof(geometry))}()
+    if !has_inside(P)
+        return indices
     end
-    _inside_indices(geometry, child_indices, position, intersection)
+    single_inside = has_single_inside(P)
+    for (child_index, child) in inside_candidates(geometry, position)
+        child_intersection = !isnothing(intersection) && intersection[1] == child_index ? intersection[2:end] : nothing
+        if single_inside
+            if isinside_single(child, position, child_intersection)
+                push!(indices, (child_index, ))
+            end
+        else
+            append!(indices, [(child_index, new_indices...) for new_indices in inside_indices(child, position, child_intersection)])
+        end
+    end
+    return indices
 end
 
 function _grid_coordinate(
@@ -204,30 +244,14 @@ function _grid_coordinate(
 end
 
 function inside_indices(
-    geometry::GeometryVectorGrid{N},
-    position::SVector{N, Float64},
-    intersection::Intersection{3, M}=Intersection{3, inside_index_length(typeof(geometry))}(),
-) where {N, M}
-    coordinate = _grid_coordinate(geometry, position)
-    isnothing(coordinate) && return _empty_inside_indices(typeof(geometry))
-    _inside_indices(geometry, _grid_candidates(geometry, coordinate), position, intersection)
-end
-
-function _grid_candidates(geometry::GeometryVectorGrid, coordinate)
-    (any(coordinate .< 1) || any(coordinate .> size(geometry.grid.indices))) && return Int[]
-    geometry.grid.indices[coordinate...]
-end
-
-function inside_indices(
     geometry::GeometryTuple{N},
     position::SVector{N, Float64},
-    intersection::Intersection{3, M}=Intersection{3, inside_index_length(typeof(geometry))}(),
-) where {N, M}
-    geometry_type = typeof(geometry)
-    indices = _empty_inside_indices(geometry_type)
+    intersection=nothing
+) where {N}
+    indices = Vector{inside_indices_eltype(typeof(geometry))}()
     for (child_index, child) in enumerate(geometry)
-        child_intersection = remove_expected_index(intersection, child_index)
-        append!(indices, add_index.(inside_indices_for_any_type(child, position, child_intersection), child_index))
+        child_intersection = !isnothing(intersection) && intersection[1] == child_index ? intersection[2:end] : nothing
+        append!(indices, [(child_index, new_indices...) for new_indices in inside_indices_for_any_type(child, position, child_intersection)])
     end
     indices
 end

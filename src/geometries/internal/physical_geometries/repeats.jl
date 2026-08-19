@@ -5,9 +5,8 @@ import StaticArrays: SVector
 import ...Indices: ObstructionIndex
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, detect_intersection, get_child, has_inside, has_single_inside, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, child_type, detect_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, InternalBoundingBox
 import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
-import ..Groups: inside_indices_for_any_type
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _translate_native
 import ...Properties: GeometryProperties
 import ..Groups
@@ -31,6 +30,9 @@ struct Repeat{N, P<:PhysicalGeometry{N}} <: Groups.GroupGeometry{N, Shift{N, P}}
         new{N, P}(geometry, repeats, lower_overlap, upper_overlap)
     end
 end
+
+inside_indices_eltype(::Type{<:Repeat{N, P}}) where {N, P} =
+    Groups._prepend_inside_index(SVector{3, Int}, inside_indices_eltype(child_type(Repeat{N, P})))
 
 intersection_index_length(::Type{<:Repeat{N, P}}) where {N, P} =
     intersection_index_length(P)
@@ -72,6 +74,23 @@ function get_child(repeat::Repeat{N}, indices::Tuple) where {N}
     Shift(repeat.geometry, copy_shift .* repeat.repeats), indices[2:end]
 end
 
+function Groups.inside_candidates(
+    repeat::Repeat{N},
+    position::SVector{N, Float64},
+) where {N}
+    local_position = _wrap(repeat, position)
+    cell_shift = SVector{N, Int}(round.(Int, (position - local_position) ./ repeat.repeats))
+    checked = Set{SVector{N, Int}}()
+
+    (
+        let copy_shift = cell_shift - local_shift
+            (copy_shift, Shift(repeat.geometry, copy_shift .* repeat.repeats))
+        end
+        for local_shift in _candidate_shifts(repeat, local_position)
+        if !((cell_shift - local_shift) in checked) && (push!(checked, cell_shift - local_shift); true)
+    )
+end
+
 has_inside(::Type{<:Repeat{N, P}}) where {N, P} = has_inside(P)
 has_single_inside(::Type{<:Repeat}) = false
 
@@ -94,26 +113,6 @@ function _candidate_shifts(repeat::Repeat{N}, start, destination=start) where {N
         push!(shifts, SVector{N, Int}(shift))
     end
     shifts
-end
-
-function inside_indices(
-    repeat::Repeat{N},
-    position::SVector{N, Float64},
-    intersection::Intersection{3}=Intersection{3}(),
-) where {N}
-    local_position = _wrap(repeat, position)
-    geometry_type = typeof(repeat.geometry)
-    indices = Groups._empty_inside_indices(geometry_type)
-    candidates = ((local_position .+ shift .* repeat.repeats, shift)
-        for shift in _candidate_shifts(repeat, local_position))
-    for (child_position, _) in candidates
-        append!(indices, inside_indices_for_any_type(
-            repeat.geometry,
-            child_position,
-            intersection,
-        ))
-    end
-    sort!(unique!(indices), by=index -> Tuple(index.indices))
 end
 
 InternalBoundingBox(::Repeat) = throw(ArgumentError("repeated geometries do not have a finite bounding box"))

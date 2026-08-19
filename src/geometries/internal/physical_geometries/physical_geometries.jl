@@ -42,6 +42,13 @@ It will not be called for base obstructions, which override `get_intersection_pa
 """
 function get_child end
 
+"""
+    child_type(::Type{<:PhysicalGeometry})
+
+Return the type of the child geometry represented by a physical geometry type.
+"""
+function child_type end
+
 
 """
     get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, indices) -> (inside=true/false, normal=SVector{N, Float64}, hit_gap=true/false)
@@ -103,6 +110,13 @@ function has_inside end
 
 """Returns whether the geometry has a single inside region."""
 function has_single_inside end
+
+"""
+    inside_indices_eltype(::Type{<:PhysicalGeometry})
+
+Return the element type of the array returned by `inside_indices`.
+"""
+function inside_indices_eltype end
 
 """Return the obstruction indices containing a position."""
 function inside_indices end

@@ -5,7 +5,7 @@ import StaticArrays: SMatrix, SVector
 import LinearAlgebra: norm, nullspace, cross
 import Random: rand
 import ...InternalBoundingBoxes
-import ..PhysicalGeometries: PhysicalGeometry, Intersection, find_intersection, get_child, has_inside, has_single_inside, isinside_single, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, Intersection, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: intersection_index_length, inside_index_length, all_equal_inside_depth
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _mesh_result, _translate_native
 import ..PhysicalGeometries: to_child_coordinates, from_child_coordinates, to_child_coordinates_normal, from_child_coordinates_normal
@@ -22,6 +22,9 @@ coordinate system. `from_child_coordinates` maps child coordinates to the
 parent coordinate system.
 """
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
+
+child_type(::Type{<:Transformation{N, M, P}}) where {N, M, P} = P
+inside_indices_eltype(::Type{<:Transformation{N, M, P}}) where {N, M, P} = inside_indices_eltype(P)
 
 has_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_inside(P)
 has_single_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_single_inside(P)
