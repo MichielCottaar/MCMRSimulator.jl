@@ -32,15 +32,16 @@ end
 
 struct MeshGeometryView
     mesh::Mesh
+    include_gap::Bool
 end
 
-Groups.group_geometries(mesh::Mesh) = MeshGeometryView(mesh)
+Groups.group_geometries(mesh::Mesh; include_gap=true) = MeshGeometryView(mesh, include_gap)
 
-Base.size(view::MeshGeometryView) = size(view.mesh.indices)
-Base.axes(view::MeshGeometryView) = axes(view.mesh.indices)
-Base.length(view::MeshGeometryView) = length(view.mesh.indices)
+Base.size(view::MeshGeometryView) = (length(view),)
+Base.axes(view::MeshGeometryView) = (Base.OneTo(length(view)),)
+Base.length(view::MeshGeometryView) = view.include_gap ? length(view.mesh.indices) : view.mesh.first_index_of_gap - 1
 Base.firstindex(view::MeshGeometryView) = firstindex(view.mesh.indices)
-Base.lastindex(view::MeshGeometryView) = lastindex(view.mesh.indices)
+Base.lastindex(view::MeshGeometryView) = length(view)
 Base.getindex(view::MeshGeometryView, index::Int) = triangle(view.mesh, index)
 Base.iterate(view::MeshGeometryView, state...) = begin
     next = isempty(state) ? firstindex(view) : first(state)
@@ -426,15 +427,6 @@ size_scale(mesh::Mesh) = begin
     ntriangles = mesh.first_index_of_gap - 1
     ntriangles <= 1 && return Inf
     1 / (2 * curvature(mesh))
-end
-
-function random_surface_positions(mesh::Mesh, density::GeometryLeafProperties, bounding_box::InternalBoundingBox{3}, scale_density)
-    draws = (let
-        values = random_surface_positions(
-            triangle(mesh, index), density, bounding_box, scale_density)
-        values[1], [add_index(hit, index) for hit in values[2]]
-    end for index in 1:(mesh.first_index_of_gap - 1))
-    Groups._combine(draws, Val(3))
 end
 
 function _geometry_mesh(mesh::Mesh; kwargs...)

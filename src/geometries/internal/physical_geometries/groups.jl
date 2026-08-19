@@ -14,7 +14,7 @@ import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVector
 abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
 
-group_geometries(group::GeometryVectorLike) = group.geometries
+group_geometries(group::GeometryVectorLike; include_gap=true) = group.geometries
 
 child_type(::Type{<:GroupGeometry{N, P}}) where {N, P} = P
 
@@ -91,7 +91,10 @@ struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} <: GroupGeometry{
     geometries::P
 end
 
-group_geometries(group::GeometryTuple) = group.geometries
+group_geometries(group::GeometryTuple; include_gap=true) = group.geometries
+
+group_geometries(group::GroupGeometry, bounding_box::InternalBoundingBox; kwargs...) =
+    group_geometries(group; kwargs...)
 
 child_type(::Type{<:GeometryTuple{N, P}}) where {N, P} = Union{P.parameters...}
 
@@ -377,20 +380,21 @@ Base.Tuple(geometry::GeometryTuple) = group_geometries(geometry)
 _density_child(density::GeometryLeafProperties, ::Int) = density
 _density_child(density::GeometryVectorProperties, index::Int) = density.properties[index]
 _density_child(density::GeometryTupleProperties, index::Int) = density.properties[index]
+_density_child(density::GeometryProperties, ::SVector) = density
 
 function _combine(draws, ::Val{N}) where {N}
     draws = collect(draws)
     positions = reduce(vcat, (draw[1] for draw in draws); init=SVector{N, Float64}[])
-    intersections = reduce(vcat, (draw[2] for draw in draws); init=Intersection{N}[])
-    positions, intersections
+    indices = reduce(vcat, (draw[2] for draw in draws); init=Tuple[])
+    positions, indices
 end
 
-function random_surface_positions(geometry::Union{GeometryVectorLike{N}, GeometryTuple{N}}, density::GeometryProperties,
+function random_surface_positions(geometry::GroupGeometry{N}, density::GeometryProperties,
     bounding_box::InternalBoundingBox{N}, scale_density) where {N}
     _combine((let
         values = random_surface_positions(child, _density_child(density, index), bounding_box, scale_density)
-        (values[1], [add_index(hit, index) for hit in values[2]])
-    end for (index, child) in enumerate(geometry)), Val(N))
+        (values[1], [(index, child_index...) for child_index in values[2]])
+    end for (index, child) in group_geometries(geometry, bounding_box; include_gap=false)), Val(N))
 end
 
 size_scale(geometry::GeometryVectorLike) = isempty(geometry) ? Inf : minimum(size_scale, geometry)

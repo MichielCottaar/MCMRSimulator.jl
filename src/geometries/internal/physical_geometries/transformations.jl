@@ -243,28 +243,49 @@ end
 _projected_scale(transformation::Rotate{N, M}, bounding_box::InternalBoundingBox{N}) where {N, M} =
     prod(2 .* (abs.(nullspace(Matrix(transformation.matrix')))' * InternalBoundingBoxes.half_size(bounding_box)))
 
-function random_surface_positions(transformation::Shift{N}, density::GeometryProperties,
-    bounding_box::InternalBoundingBox{N}, scale_density) where {N}
-    positions, intersections = random_surface_positions(transformation.geometry, density,
-        to_child_coordinates(transformation, bounding_box), scale_density)
-    [from_child_coordinates(transformation, position) for position in positions], intersections
+_surface_density_scale(::Transformation) = 1.0
+_surface_density_scale(transformation::Scale{N}) where {N} = transformation.scale^(N - 1)
+
+function _random_surface_positions_same_dimension(
+    transformation::Transformation{N, N},
+    density::GeometryProperties,
+    bounding_box::InternalBoundingBox{N},
+    scale_density,
+) where {N}
+    positions, indices = random_surface_positions(
+        transformation.geometry,
+        density,
+        to_child_coordinates(transformation, bounding_box),
+        scale_density * _surface_density_scale(transformation),
+    )
+    [from_child_coordinates(transformation, position) for position in positions], indices
 end
 
-function random_surface_positions(transformation::Scale{N}, density::GeometryProperties,
-    bounding_box::InternalBoundingBox{N}, scale_density) where {N}
-    positions, intersections = random_surface_positions(transformation.geometry, density,
-        to_child_coordinates(transformation, bounding_box), scale_density * transformation.scale^(N - 1))
-    [from_child_coordinates(transformation, position) for position in positions], intersections
-end
+random_surface_positions(
+    transformation::Transformation{N, N},
+    density::GeometryProperties,
+    bounding_box::InternalBoundingBox{N},
+    scale_density,
+) where {N} = _random_surface_positions_same_dimension(
+    transformation, density, bounding_box, scale_density,
+)
 
-function random_surface_positions(transformation::Rotate{N, M}, density::GeometryProperties,
-    bounding_box::InternalBoundingBox{N}, scale_density) where {N, M}
-    positions, intersections = random_surface_positions(transformation.geometry, density,
-        to_child_coordinates(transformation, bounding_box), scale_density * (N == M ? 1 : _projected_scale(transformation, bounding_box)))
-    positions = N == M ? [from_child_coordinates(transformation, position) for position in positions] : _deproject_positions(transformation, positions, bounding_box)
-    intersections = [Intersection(hit.distance, from_child_coordinates_normal(transformation, hit.normal), hit.inside,
-        hit.obstruction_index, hit.hit_gap) for hit in intersections]
-    positions, intersections
+function random_surface_positions(
+    transformation::Rotate{N, M},
+    density::GeometryProperties,
+    bounding_box::InternalBoundingBox{N},
+    scale_density,
+) where {N, M}
+    N == M && return _random_surface_positions_same_dimension(
+        transformation, density, bounding_box, scale_density,
+    )
+    positions, indices = random_surface_positions(
+        transformation.geometry,
+        density,
+        to_child_coordinates(transformation, bounding_box),
+        scale_density * _projected_scale(transformation, bounding_box),
+    )
+    _deproject_positions(transformation, positions, bounding_box), indices
 end
 
 _geometry_mesh(transformation::Shift, geometry; kwargs...) = _geometry_mesh_preserving(transformation, geometry; kwargs...)

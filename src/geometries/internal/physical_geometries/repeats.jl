@@ -119,22 +119,17 @@ InternalBoundingBox(::Repeat) = throw(ArgumentError("repeated geometries do not 
 
 size_scale(repeat::Repeat) = min(size_scale(repeat.geometry), minimum(repeat.repeats))
 
-function _repeat_samples(repeat::Repeat{N}, density::GeometryProperties,
-    bounding_box::InternalBoundingBox{N}, scale_density) where {N}
+function Groups.group_geometries(repeat::Repeat{N}, bounding_box::InternalBoundingBox{N}; kwargs...) where {N}
     child_box = InternalBoundingBox(repeat.geometry)
     lower = floor.(Int, (InternalBoundingBoxes.lower(bounding_box) - InternalBoundingBoxes.upper(child_box)) ./ repeat.repeats)
     upper = ceil.(Int, (InternalBoundingBoxes.upper(bounding_box) - InternalBoundingBoxes.lower(child_box)) ./ repeat.repeats)
-    draws = (let
-        displacement = SVector{N, Float64}(indices) .* repeat.repeats
-        values = random_surface_positions(repeat.geometry, density,
-            InternalBoundingBoxes.shift(bounding_box, -displacement), scale_density)
-        ([value + displacement for value in values[1]], values[2])
-    end for indices in Iterators.product((lower[index]:upper[index] for index in 1:N)...))
-    Groups._combine(draws, Val(N))
+    (
+        let copy_shift = SVector{N, Int}(shift)
+            (copy_shift, Shift(repeat.geometry, copy_shift .* repeat.repeats))
+        end
+        for shift in Iterators.product((lower[index]:upper[index] for index in 1:N)...)
+    )
 end
-
-random_surface_positions(repeat::Repeat, density::GeometryProperties, bounding_box, scale_density) =
-    _repeat_samples(repeat, density, bounding_box, scale_density)
 
 function _geometry_mesh(repeat::Repeat{N}; bounding_box=nothing, kwargs...) where N
     child_box = InternalBoundingBox(repeat.geometry)

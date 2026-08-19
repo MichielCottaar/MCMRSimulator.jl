@@ -57,9 +57,14 @@ get_child(wrapper::Transparent, indices) = (transparent_geometry(wrapper), indic
 size_scale(wrapper::SizeScaleOverride) = wrapper.size_scale
 size_scale(wrapper::Transparent) = size_scale(transparent_geometry(wrapper))
 
-random_surface_positions(wrapper::Transparent{N}, density::GeometryProperties,
-    bounding_box::InternalBoundingBox{N}, scale_density) where N =
+function random_surface_positions(
+    wrapper::Transparent{N},
+    density::GeometryProperties,
+    bounding_box::InternalBoundingBox{N},
+    scale_density,
+) where {N}
     random_surface_positions(transparent_geometry(wrapper), density, bounding_box, scale_density)
+end
 _geometry_mesh(wrapper::Transparent; kwargs...) = _geometry_mesh(transparent_geometry(wrapper); kwargs...)
 
 end
