@@ -18,18 +18,19 @@ group_geometries(group::GeometryVectorLike; include_gap=true) = group.geometries
 
 child_type(::Type{<:GroupGeometry{N, P}}) where {N, P} = P
 
-_prepend_inside_index(::Type{Index}, ::Type{Tuple{Elements...}}) where {Index, Elements...} =
-    Tuple{Index, Elements...}
-_prepend_inside_index(::Type{Index}, ::Type{Union{Elements...}}) where {Index, Elements...} =
-    Union{(_prepend_inside_index(Index, Element) for Element in Elements)...}
-_prepend_inside_index(::Type{Index}, ::Type{Element}) where {Index, Element} =
-    Tuple{Index, Element}
+function _prepend_inside_index(::Type{Index}, ::Type{T}) where {Index, T}
+    T isa Union && return Union{
+        (_prepend_inside_index(Index, element) for element in T.parameters)...,
+    }
+    T <: Tuple && return Tuple{Index, T.parameters...}
+    Tuple{Index, T}
+end
 
 inside_indices_eltype(::Type{<:GroupGeometry{N, P}}) where {N, P} =
     _prepend_inside_index(Int, inside_indices_eltype(P))
 
 
-function find_intersection(group::GroupGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, previous_hit=nothing)
+function find_intersection(group::GroupGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, previous_hit=nothing) where {N}
     current = nothing
     for (index, candidate, dist_all_checked) in intersection_candidates(group, start, dest)
         if !isnothing(current) && current[end] < dist_all_checked

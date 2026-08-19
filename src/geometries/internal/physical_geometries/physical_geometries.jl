@@ -32,6 +32,9 @@ Return `nothing` if there is no intersection between `start` and `dest`.
 """
 function find_intersection end
 
+# Kept as a declaration while legacy geometry paths are migrated.
+function detect_intersection end
+
 """
     get_child(geometry::PhysicalGeometry, indices) -> (PhysicalGeometry, remaining_indices)
 
@@ -79,7 +82,7 @@ Converts the `position`/`bounding_box` from `geometry` coordinates to the coordi
 
 This should be overwritten for transformations. It should not be called for base obstructions.
 """
-to_child_coordinates(::PhysicalGeometry{N}, object) = object
+to_child_coordinates(::PhysicalGeometry{N}, object) where {N} = object
 
 """
     from_child_coordinates(geometry, position/bounding_box)
@@ -88,7 +91,7 @@ Converts the `position`/`bounding_box` from child of `geometry` coordinates to t
 
 This should be overwritten for transformations. It should not be called for base obstructions.
 """
-from_child_coordinates(::PhysicalGeometry{N}, object) = object
+from_child_coordinates(::PhysicalGeometry{N}, object) where {N} = object
 
 """
     to_child_coordinates_normal(geometry, normal)
@@ -97,7 +100,7 @@ Converts the `normal` from `geometry` coordinates to the coordinates from the ch
 
 This should be overwritten for transformations. It should not be called for base obstructions.
 """
-to_child_coordinates_normal(::PhysicalGeometry{N}, object) = object
+to_child_coordinates_normal(::PhysicalGeometry{N}, object) where {N} = object
 
 """
     from_child_coordinates_normal(geometry, normal)
@@ -106,7 +109,7 @@ Converts the `normal` from child of `geometry` coordinates to the coordinates fr
 
 This should be overwritten for transformations. It should not be called for base obstructions.
 """
-from_child_coordinates_normal(::PhysicalGeometry{N}, object) = object
+from_child_coordinates_normal(::PhysicalGeometry{N}, object) where {N} = object
 
 """Return whether a geometry has an inside region."""
 function has_inside end
