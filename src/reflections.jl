@@ -3,11 +3,11 @@ module Reflections
 
 import StaticArrays: SVector
 import LinearAlgebra: ⋅, norm
-import ..Geometries.Internal: Intersection, ObstructionIndex, flip
+import ..Geometries.Internal: Intersection, flip
 
 """State carried by a spin while it is reflecting from or bound to a surface."""
 struct Reflection
-    intersection::Intersection{3}
+    intersection::Union{Nothing, Intersection}
     inside::Bool
     direction::SVector{3, Float64}
     ratio_displaced::Float64
@@ -16,7 +16,7 @@ struct Reflection
 end
 
 function Reflection(
-    collision::Intersection{3},
+    collision::Intersection,
     direction::SVector{3},
     ratio_displaced,
     time_moved,
@@ -47,7 +47,7 @@ end
 
 """Create movement state for a free spin at the start of a timestep."""
 Reflection(ratio_displaced) = Reflection(
-    Intersection{3}(),
+    nothing,
     false,
     zero(SVector{3, Float64}),
     ratio_displaced,
@@ -65,16 +65,17 @@ function Reflection(
     time_moved,
     distance_moved,
 )
-    index = ObstructionIndex(SVector{2, Int}(geometry_index, obstruction_index))
-    collision = Intersection(0., zero(SVector{3, Float64}), inside, index, false)
+    indices = (geometry_index, obstruction_index)
+    collision = Intersection(0., indices, indices, zero(SVector{3, Float64}), inside, false)
     Reflection(collision, inside, direction, ratio_displaced, time_moved, distance_moved)
 end
 
-has_intersection(reflection::Reflection) = !isempty(reflection.intersection.obstruction_index.indices)
-has_intersection(intersection::Intersection) = !Base.isempty(intersection)
+has_intersection(reflection::Reflection) = !isnothing(reflection.intersection)
+has_intersection(intersection::Intersection) = true
 
-has_hit(reflection::Reflection) = reflection.intersection.obstruction_index
-previous_hit(reflection::Reflection) = reflection.intersection
+has_hit(reflection::Reflection) = isnothing(reflection.intersection) ? () : reflection.intersection.indices
+previous_hit(reflection::Reflection) = isnothing(reflection.intersection) ? nothing :
+    (reflection.intersection.indices..., reflection.intersection.inside, reflection.intersection.distance)
 
 function direction(reflection::Reflection, new_time, diffusivity)
     displacement_size =

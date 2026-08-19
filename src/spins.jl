@@ -194,11 +194,11 @@ Return the internal representation of the obstruction the spin is stuck to.
 Raises an error if the spin is free.
 """
 function stuck_to(spin::Spin, geometry)
-    obstruction_index = stuck_to(spin)
-    if isempty(obstruction_index.indices)
+    indices = stuck_to(spin)
+    if isempty(indices)
         error("Free spin is not stuck to any obstructions.")
     end
-    return obstruction_index
+    return indices
 end
 
 
