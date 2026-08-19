@@ -119,7 +119,7 @@ const all_property_values = Properties.all_property_values
     )
     @test Reflections.has_intersection(reflection)
     @test Reflections.has_hit(reflection) == index
-    @test Reflections.previous_hit(reflection) == (1, 2, false, 0.5)
+    @test Reflections.previous_hit(reflection) === collision
     @test reflection.direction == SVector(1.0, 0.0, 0.0)
 
     permeable = Reflections.Reflection(
