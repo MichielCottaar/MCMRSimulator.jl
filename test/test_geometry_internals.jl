@@ -868,15 +868,15 @@ end
     @test scale.scale == 2.0
     @test Transformations.to_child_coordinates(scale, position) == SVector(2.0, 2.5, 3.0)
     @test Transformations.from_child_coordinates(scale, SVector(2.0, 2.5, 3.0)) == position
-    @test Transformations.normal_to_child_coordinates(scale, normal) == normal
-    @test Transformations.normal_from_child_coordinates(scale, normal) == normal
+    @test GI.PhysicalGeometries.to_child_coordinates_normal(scale, normal) == normal
+    @test GI.PhysicalGeometries.from_child_coordinates_normal(scale, normal) == normal
     @test_throws ArgumentError Scale(geometry_3d, 0.0)
     @test_throws ArgumentError Scale(geometry_3d, -1.0)
     rotation = Rotate(geometry_2d, SMatrix{2, 2, Float64}([0.0 -1.0; 1.0 0.0]))
     position_2d = SVector(1.0, 2.0)
     @test Transformations.to_child_coordinates(rotation, position_2d) == SVector(2.0, -1.0)
     @test Transformations.from_child_coordinates(rotation, SVector(2.0, -1.0)) == position_2d
-    @test Transformations.normal_to_child_coordinates(rotation, position_2d) == SVector(2.0, -1.0)
+    @test GI.PhysicalGeometries.to_child_coordinates_normal(rotation, position_2d) == SVector(2.0, -1.0)
     reflection = Rotate(geometry_2d, SMatrix{2, 2, Float64}([-1.0 0.0; 0.0 1.0]))
     @test Transformations.to_child_coordinates(reflection, position_2d) == SVector(-1.0, 2.0)
 
@@ -884,8 +884,8 @@ end
     @test projection isa Transformations.Transformation{3, 2, typeof(geometry_2d)}
     @test Transformations.to_child_coordinates(projection, SVector(1.0, 2.0, 3.0)) == SVector(1.0, 2.0)
     @test Transformations.from_child_coordinates(projection, SVector(1.0, 2.0)) == SVector(1.0, 2.0, 0.0)
-    @test_throws ArgumentError Transformations.normal_to_child_coordinates(projection, SVector(1.0, 2.0, 3.0))
-    @test Transformations.normal_from_child_coordinates(projection, SVector(1.0, 2.0)) ≈ SVector(1.0, 2.0, 0.0) / sqrt(5)
+    @test_throws ArgumentError GI.PhysicalGeometries.to_child_coordinates_normal(projection, SVector(1.0, 2.0, 3.0))
+    @test GI.PhysicalGeometries.from_child_coordinates_normal(projection, SVector(1.0, 2.0)) ≈ SVector(1.0, 2.0, 0.0) / sqrt(5)
     @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(projection)
 
     geometry_1d = TestGeometry{1}(0)
