@@ -69,7 +69,7 @@ If no intersection is found, `nothing` is returned instead.
 `previous_intersection` represents the intersection that just finished, which should not be immediately returned again.
 """
 function detect_intersection(fixed_geometry::FixedGeometry, start::SVector{3, Float64}, dest::SVector{3, Float64}, previous_intersection=nothing)
-    full_indices = find_intersection(fixed_geometry.geometry, start, dest, isnothing(previous_intersection) ? nothing : previous_intersection.indices)
+    full_indices = find_intersection(fixed_geometry.geometry, start, dest, isnothing(previous_intersection) ? nothing : (previous_intersection.indices..., previous_intersection.distance))
     if isnothing(full_indices)
         return nothing
     end
