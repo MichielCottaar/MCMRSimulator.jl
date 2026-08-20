@@ -123,8 +123,8 @@ end
 Identifies which obstructions this position/spin is inside of.
 Use `Base.length` to get the number of obstructions.
 """
-struct IsInside{N, T}
-    inside_of::SVector{N, T}
+struct IsInside{T}
+    inside_of::T
 end
 
 Base.length(::IsInside{N}) where {N} = N
@@ -151,8 +151,7 @@ function isinside(
 )
     length(geometry) == 0 && return IsInside(SVector{0, Union{}}())
     as_vec = inside_indices_for_any_type(geometry.geometry, position, intersection)
-    expected_type = inside_indices_eltype(typeof(geometry.geometry))
-    IsInside(SVector{length(as_vec), expected_type}(as_vec))
+    IsInside(as_vec)
 end
 
 isinside(geometry::FixedGeometry, position::SVector{3, Float64}, intersection::Intersection) =
