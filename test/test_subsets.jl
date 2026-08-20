@@ -42,6 +42,22 @@ end
     outside_particles = mr.get_subset(snapshot, sim, inside=false)
     @test all(spin->norm(spin.position) > 1, outside_particles)
 end
+
+@testset "Testing an explicit user geometry" begin
+    simulation = mr.Simulation([], geometry=[])
+    snapshot = mr.Snapshot([
+        mr.Spin(position=[0.0, 0.0, 0.0]),
+        mr.Spin(position=[1.0, 0.0, 0.0]),
+        mr.Spin(position=[2.0, 0.0, 0.0]),
+    ])
+    sphere = mr.Spheres(position=[0.0, 0.0, 0.0], radius=1.0)
+
+    @test length(mr.get_subset(snapshot, simulation, geometry=sphere, inside=true)) == 1
+    @test length(mr.get_subset(snapshot, simulation, geometry=sphere, inside=false)) == 2
+    @test length(mr.get_subset(snapshot, simulation, geometry=sphere, bound=true)) == 1
+    @test length(mr.get_subset(snapshot, simulation, geometry=sphere, bound=false)) == 2
+end
+
 @testset "Test multiple geometries" begin
     geometry = [mr.Spheres(position=[0., 0., 0.], radius=1.), mr.Walls(position=[0., 1.2], density=1., dwell_time=1.)]
     sim = mr.Simulation([], geometry=geometry)
@@ -51,12 +67,12 @@ end
     @test length(mr.get_subset(snapshot, sim)) == N
     @test length(mr.get_subset(snapshot, sim, bound=true)) ≈ 0.4 * N rtol = 0.1
     @test length(mr.get_subset(snapshot, sim, bound=false)) ≈ 0.6 * N rtol = 0.1
-    @test length(mr.get_subset(snapshot, sim, bound=true, geometry_index=1)) == 0
-    @test length(mr.get_subset(snapshot, sim, bound=false, geometry_index=1)) == N
-    @test length(mr.get_subset(snapshot, sim, bound=true, geometry_index=2)) ≈ 0.4 * N rtol = 0.1
-    @test length(mr.get_subset(snapshot, sim, bound=false, geometry_index=2)) ≈ 0.6 * N rtol = 0.1
-    @test length(mr.get_subset(snapshot, sim, bound=true, geometry_index=2, obstruction_index=1)) ≈ 0.2 * N rtol = 0.1
-    @test length(mr.get_subset(snapshot, sim, bound=true, geometry_index=2, obstruction_index=2)) ≈ 0.2 * N rtol = 0.1
+    @test length(mr.get_subset(snapshot, sim, bound=true, geometry=geometry[1])) == 0
+    @test length(mr.get_subset(snapshot, sim, bound=false, geometry=geometry[1])) == N
+    @test length(mr.get_subset(snapshot, sim, bound=true, geometry=geometry[2])) ≈ 0.4 * N rtol = 0.1
+    @test length(mr.get_subset(snapshot, sim, bound=false, geometry=geometry[2])) ≈ 0.6 * N rtol = 0.1
+    @test length(mr.get_subset(snapshot, sim, bound=true, geometry=geometry[2][1])) ≈ 0.2 * N rtol = 0.1
+    @test length(mr.get_subset(snapshot, sim, bound=true, geometry=geometry[2][2])) ≈ 0.2 * N rtol = 0.1
     @test length(mr.get_subset(mr.get_subset(snapshot, sim, bound=true, geometry_index=2, obstruction_index=2), sim, inside=true)) == 0
     @test length(mr.get_subset(mr.get_subset(snapshot, sim, bound=true, geometry_index=2, obstruction_index=2), sim, inside=false)) ≈ 0.2 * N rtol=0.1
 

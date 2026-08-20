@@ -71,12 +71,12 @@ function add_readout_flags!(parser)
             arg_type = Int
             default = 0
         "--subset"
-            help = """Can be provided multiple times. For each time it is provided, the signal will be computed at each readout for a specific subset of spins.  This subset is defined by one or two values from bound/free/inside/outside. Afterwards they can include an integer value to select a specific geometry to consider the bound/inside state of. An additional integer value could be given to select a specific obstruciton within that geometry.
+            help = """Can be provided multiple times. For each time it is provided, the signal will be computed at each readout for a specific subset of spins. This subset is defined by one or two values from bound/free/inside/outside. Afterwards they can include an integer value to select a specific geometry, and an additional integer value to select a specific obstruction within that geometry. The selected user geometry is passed to the subset.
             For example:
             - `--subset free`: include any free spins
             - `--subset inside`: include any spins inside any geometry
             - `--subset outside 2`: include any spins outside of the second obstruction group in the geometry
-            - `--subset inside bound 2 3`: include any spins stuck to the inside surface of the 3rd obstruction in the second obstruction group of the geometry.
+            - `--subset inside bound 2 3`: include any spins inside and bound to the 3rd obstruction in the second obstruction group of the geometry.
             """
             nargs = '+'
             action = :append_arg
@@ -162,7 +162,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     init_snapshot = Snapshot(args["Nspins"], simulation, bb; longitudinal=args["longitudinal"], transverse=args["transverse"])
     as_snapshot = !isnothing(args["output-snapshot"])
     readout_times = iszero(length(args["times"])) ? nothing : args["times"]
-    subsets = [Subset(), parse_subset.(args["subset"])...]
+    subsets = [Subset(), (parse_subset(arguments, geometry) for arguments in args["subset"])...]
     result = readout(init_snapshot, simulation, readout_times; skip_TR=args["skip-TR"], nTR=args["nTR"], noflatten=true, return_snapshot=as_snapshot, subset=subsets)
 
     # convert to tabular format
@@ -252,7 +252,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
 end
 
 
-function parse_subset(arguments)
+function parse_subset(arguments, geometry)
     arg, others... = arguments
     kwargs = Dict{Symbol, Any}()
     if arg == "bound"
@@ -264,8 +264,10 @@ function parse_subset(arguments)
     elseif arg == "outside"
         kwargs[:inside] = false
     else
-        error("First argument of --subset should be bound, free, inside, or outside; not $inside_str")
+        error("First argument of --subset should be bound, free, inside, or outside; not $arg")
     end
+    geometry_index = nothing
+    obstruction_index = nothing
     if length(others) == 0
         return Subset(; kwargs...)
     end
@@ -283,34 +285,40 @@ function parse_subset(arguments)
         kwargs[:inside] = arg == "inside"
     else
         try
-            kwargs[:geometry_index] = parse(Int, arg)
+            geometry_index = parse(Int, arg)
         catch
-            error("Second argument should be one of bound/free/inside/outside or parse to an integer. Instead, '$index' was received.")
+            error("Second argument should be one of bound/free/inside/outside or parse to an integer. Instead, '$arg' was received.")
         end
         if length(others) > 1
             error("Too many arguments provided to --subset.")
         elseif length(others) == 1
-            kwargs[:obstruction_index] = parse(Int, others[1])
+            obstruction_index = parse(Int, others[1])
         end
-        return Subset(kwargs...)
+        return Subset(; geometry=_select_subset_geometry(geometry, geometry_index, obstruction_index), kwargs...)
     end
 
     if length(others) == 0
-        return Subset(kwargs...)
+        return Subset(; kwargs...)
     end
     arg, others... = others
-    kwargs[:geometry_index] = parse(arg, Int)
+    geometry_index = parse(arg, Int)
 
     if length(others) == 0
-        return Subset(kwargs...)
+        return Subset(; geometry=_select_subset_geometry(geometry, geometry_index, nothing), kwargs...)
     end
     arg, others... = others
-    kwargs[:obstruction_index] = parse(arg, Int)
+    obstruction_index = parse(arg, Int)
     if length(others) > 0
         error("Too many arguments provided to --subset.")
     end
     @assert length(others) == 0
-    return Subset(kwargs...)
+    return Subset(; geometry=_select_subset_geometry(geometry, geometry_index, obstruction_index), kwargs...)
+end
+
+function _select_subset_geometry(geometry, geometry_index, obstruction_index)
+    isnothing(geometry_index) && return nothing
+    selected = geometry[geometry_index]
+    isnothing(obstruction_index) ? selected : selected[obstruction_index]
 end
 
 end
