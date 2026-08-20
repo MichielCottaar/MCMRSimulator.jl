@@ -120,7 +120,7 @@ InternalBoundingBox(::Repeat) = throw(ArgumentError("repeated geometries do not 
 
 size_scale(repeat::Repeat) = min(size_scale(repeat.geometry), minimum(repeat.repeats))
 
-function Groups.group_geometries(repeat::Repeat{N}, bounding_box::InternalBoundingBox{N}; kwargs...) where {N}
+function Groups.group_geometries_bounded(repeat::Repeat{N}, bounding_box::InternalBoundingBox{N}; kwargs...) where {N}
     child_box = InternalBoundingBox(repeat.geometry)
     lower = floor.(Int, (InternalBoundingBoxes.lower(bounding_box) - InternalBoundingBoxes.upper(child_box)) ./ repeat.repeats)
     upper = ceil.(Int, (InternalBoundingBoxes.upper(bounding_box) - InternalBoundingBoxes.lower(child_box)) ./ repeat.repeats)
