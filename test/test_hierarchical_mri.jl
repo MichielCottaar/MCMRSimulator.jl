@@ -43,17 +43,23 @@
     @testset "Test length of inside geometry" begin
         geometry = mr.Annuli(inner=0.5, outer=1., R1_outer_volume=0.2)
         simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
-        @test length(simulation.geometry) == 2
-        @test length(simulation.inside_geometry) == 2
+        @test length(simulation.geometry) == 1
+        @test length(mr.isinside(simulation.geometry, SVector(0., 0., 0.))) == 2
+        @test length(mr.isinside(simulation.geometry, SVector(0.75, 0., 0.))) == 1
+        @test length(mr.isinside(simulation.geometry, SVector(1.5, 0., 0.))) == 0
 
         geometry = mr.Annuli(inner=0.5, outer=1.)
         simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
-        @test length(simulation.geometry) == 2
-        @test length(simulation.inside_geometry) == 0
+        @test length(simulation.geometry) == 1
+        @test length(mr.isinside(simulation.geometry, SVector(0., 0., 0.))) == 2
+        @test length(mr.isinside(simulation.geometry, SVector(0.75, 0., 0.))) == 1
+        @test length(mr.isinside(simulation.geometry, SVector(1.5, 0., 0.))) == 0
 
         geometry = mr.Annuli(inner=0.5, outer=1., R1_inner_volume=0.2)
         simulation = mr.Simulation([], geometry=geometry, diffusivity=3.)
-        @test length(simulation.geometry) == 2
-        @test length(simulation.inside_geometry) == 1
+        @test length(simulation.geometry) == 1
+        @test length(mr.isinside(simulation.geometry, SVector(0., 0., 0.))) == 2
+        @test length(mr.isinside(simulation.geometry, SVector(0.75, 0., 0.))) == 1
+        @test length(mr.isinside(simulation.geometry, SVector(1.5, 0., 0.))) == 0
     end
 end
