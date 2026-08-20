@@ -9,7 +9,6 @@ import .PhysicalGeometries.Groups: GeometryTuple, inside_indices_for_any_type
 import .PhysicalGeometries.Transparents: SizeScaleOverride
 import .Properties: all_property_values, get_value
 import .Susceptibility: susceptibility_off_resonance, off_resonance_gradient
-import ...Properties: stick_probability
 import .RayGridIntersection: ray_grid_intersections
 
 export FixedGeometry, Intersection, flip, IsInside, collision_normal,
@@ -222,7 +221,7 @@ size_scale(geometry::FixedGeometry) = size_scale(geometry.geometry)
 """Return the largest timestep permitted by surface-sticking constraints."""
 function max_timestep_sticking(geometry::FixedGeometry, diffusivity::Number, scaling)
     log_probabilities = [
-        log(1 - stick_probability(density, dwell, diffusivity, 1))
+        log(1 - MCMRSimulator.Properties.stick_probability(density, dwell, diffusivity, 1))
         for (density, dwell) in all_property_values(
             geometry.surface.density,
             geometry.surface.dwell_time,
