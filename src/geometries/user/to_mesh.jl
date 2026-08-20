@@ -62,6 +62,12 @@ function Mesh(bendy_cylinder::BendyCylinder)
         for d in range(start=d1, stop=d2, length=max(Int(div(d2 - d1, triangle_size, RoundUp)), 2))[2:end]
     ]...]
 
+    # Slightly pad the BendyMesh, so that the gap triangles from one mesh to not overlap with that in the next repeat.
+    # If the collision code is ever upgraded to allow for perfectly aligned obstructions, this can be removed.
+    if !iszero(nadd)
+        dist_eval[end] += sqrt(eps(Float64))
+    end
+
     vertices = SVector{3, Float64}[]
     triangles = SVector{3, Int}[]
 
