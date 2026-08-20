@@ -1024,6 +1024,38 @@ end
     @test Transformations.from_child_coordinates(rotation_3d, rotated_box) isa BoundingBoxes.InternalBoundingBox{3}
 end
 
+@testset "Surface distance" begin
+    position = SVector(0.0, 0.0, 0.0)
+    @test isinf(GI.distance_to_surface(mr.fix(()), position))
+
+    wall = mr.fix(mr.Walls(position=0.0))
+    @test GI.distance_to_surface(wall, SVector(1.0, 0.0, 0.0)) == 1.0
+    @test GI.distance_to_surface(wall, SVector(-2.0, 0.0, 0.0)) == 2.0
+
+    sphere = mr.fix(mr.Spheres(radius=1.0))
+    @test GI.distance_to_surface(sphere, position) == 1.0
+    @test GI.distance_to_surface(sphere, SVector(1.5, 0.0, 0.0)) == 0.5
+    overlapping_sphere = BaseObstructions.OverlappingRound{3}(1.0)
+    @test GI.distance_to_surface(overlapping_sphere, position) == 1.0
+
+    triangle = BaseObstructions.FullTriangle(
+        SVector(0.0, 0.0, 0.0),
+        SVector(1.0, 0.0, 0.0),
+        SVector(0.0, 1.0, 0.0),
+    )
+    @test GI.distance_to_surface(triangle, SVector(0.25, 0.25, 1.0)) == 1.0
+
+    repeated_wall = mr.fix(mr.Walls(position=0.0, repeats=2.0))
+    @test GI.distance_to_surface(repeated_wall, SVector(2.1, 0.0, 0.0)) ≈ 0.1
+    @test GI.distance_to_surface(repeated_wall, SVector(102.1, 0.0, 0.0)) ≈ 0.1
+
+    combined = mr.fix([
+        mr.Spheres(radius=1.0),
+        mr.Spheres(position=[5.0, 0.0, 0.0], radius=1.0),
+    ])
+    @test GI.distance_to_surface(combined, SVector(1.5, 0.0, 0.0)) == 0.5
+end
+
 @testset "Fixed geometry susceptibility state" begin
     empty_geometry = mr.fix(())
     @test GI.detect_intersection(empty_geometry, SVector(0.0, 0.0, 0.0), SVector(1.0, 0.0, 0.0)) === nothing

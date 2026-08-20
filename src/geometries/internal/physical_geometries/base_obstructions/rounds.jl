@@ -1,8 +1,11 @@
 import ....Utils: sphere_mesh, volume_conserving_cylinder_radius, volume_conserving_sphere_radius
+import LinearAlgebra: norm
 
 struct Round{N} <: BaseObstruction{N}
     radius::Float64
 end
+
+distance_to_surface(round::Round{N}, position::SVector{N, Float64}) where {N} = abs(norm(position) - round.radius)
 
 has_inside(::Type{<:Round}) = true
 has_single_inside(::Type{<:Round}) = true

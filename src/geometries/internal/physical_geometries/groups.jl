@@ -5,13 +5,21 @@ import StaticArrays: SVector
 import ...InternalBoundingBoxes
 import ..GridDispatch: IntersectionGrid, GridIterator
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, isinside_single, inside_indices, InternalBoundingBox
-import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
+import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 
 abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
 
 group_geometries(group::GeometryVectorLike; include_gap=true) = group.geometries
+
+function distance_to_surface(group::GroupGeometry{N}, position::SVector{N, Float64}) where {N}
+    minimum(
+        (distance_to_surface(child, position)
+         for child in group_geometries(group; include_gap=false));
+        init=Inf,
+    )
+end
 
 child_type(::Type{<:GroupGeometry{N, P}}) where {N, P} = P
 

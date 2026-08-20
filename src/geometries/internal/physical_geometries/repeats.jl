@@ -5,7 +5,7 @@ import StaticArrays: SVector
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, InternalBoundingBox
-import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _translate_native, to_property_index
+import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _translate_native, to_property_index
 import ...Properties: GeometryProperties
 import ..Groups
 import ..Transformations: Shift
@@ -96,6 +96,23 @@ has_inside(::Type{<:Repeat{N, P}}) where {N, P} = has_inside(P)
 has_single_inside(::Type{<:Repeat}) = false
 
 _wrap(repeat::Repeat, position) = mod.(position .+ repeat.repeats / 2, repeat.repeats) .- repeat.repeats / 2
+
+function distance_to_surface(
+    repeat::Repeat{N},
+    position::SVector{N, Float64},
+) where {N}
+    local_position = _wrap(repeat, position)
+    minimum(
+        (
+            distance_to_surface(
+                repeat.geometry,
+                local_position - SVector{N, Float64}(shift) .* repeat.repeats,
+            )
+            for shift in Iterators.product(ntuple(_ -> -1:1, N)...)
+        );
+        init=Inf,
+    )
+end
 
 function _candidate_shifts(repeat::Repeat{N}, start, destination=start) where {N}
     local_start = _wrap(repeat, start)

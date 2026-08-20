@@ -1,5 +1,7 @@
 struct InfiniteWall <: BaseObstruction{1} end
 
+distance_to_surface(::InfiniteWall, position::SVector{1, Float64}) = abs(position[1])
+
 has_inside(::Type{InfiniteWall}) = false
 has_single_inside(::Type{InfiniteWall}) = false
 

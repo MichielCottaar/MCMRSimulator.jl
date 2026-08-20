@@ -1,4 +1,5 @@
 import LinearAlgebra: cross, norm, ⋅
+import ..PhysicalGeometries: distance_to_surface
 
 struct FullTriangle <: BaseObstruction{3}
     a::SVector{3, Float64}
@@ -36,6 +37,43 @@ radius(triangle::FullTriangle) = maximum(
 
 triangle_size(triangle::FullTriangle) = triangle_size(triangle.a, triangle.b, triangle.c)
 triangle_size(a, b, c) = norm(cross(b - a, c - a)) / 2
+
+function distance_to_surface(triangle::FullTriangle, position::SVector{3, Float64})
+    a, b, c = triangle.a, triangle.b, triangle.c
+    ab, ac, ap = b - a, c - a, position - a
+    d1, d2 = ab ⋅ ap, ac ⋅ ap
+    d1 <= 0 && d2 <= 0 && return norm(ap)
+
+    bp = position - b
+    d3, d4 = ab ⋅ bp, ac ⋅ bp
+    d3 >= 0 && d4 <= d3 && return norm(bp)
+
+    vc = d1 * d4 - d3 * d2
+    if vc <= 0 && d1 >= 0 && d3 <= 0
+        v = d1 / (d1 - d3)
+        return norm(position - (a + v * ab))
+    end
+
+    cp = position - c
+    d5, d6 = ab ⋅ cp, ac ⋅ cp
+    d6 >= 0 && d5 <= d6 && return norm(cp)
+
+    vb = d5 * d2 - d1 * d6
+    if vb <= 0 && d2 >= 0 && d6 <= 0
+        w = d2 / (d2 - d6)
+        return norm(position - (a + w * ac))
+    end
+
+    va = d3 * d6 - d5 * d4
+    if va <= 0 && (d4 - d3) >= 0 && (d5 - d6) >= 0
+        w = (d4 - d3) / ((d4 - d3) + (d5 - d6))
+        return norm(position - (b + w * (c - b)))
+    end
+
+    denominator = va + vb + vc
+    v, w = vb / denominator, vc / denominator
+    norm(position - (a + v * ab + w * ac))
+end
 
 normal(triangle::FullTriangle) = normal(triangle.a, triangle.b, triangle.c)
 normal(a::AbstractVector, b::AbstractVector, c::AbstractVector) = begin

@@ -6,7 +6,7 @@ import ..PhysicalGeometries: to_property_index
 import ...InternalBoundingBoxes: InternalBoundingBox
 import ...InternalBoundingBoxes
 import ...Properties: GeometryLeafProperties
-import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh, _mesh_result
+import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result
 import Distributions: Poisson
 import Random: rand
 
@@ -23,7 +23,6 @@ include("infinite_walls.jl")
 include("rounds.jl")
 include("overlapping_rounds.jl")
 include("triangles.jl")
-
 
 function random_surface_positions(
     geometry::BaseObstruction{N}, density::GeometryLeafProperties,

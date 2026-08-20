@@ -4,7 +4,7 @@ import StaticArrays: SVector
 import ..BoundingBoxes: BoundingBox
 import .InternalBoundingBoxes: InternalBoundingBox
 import .InternalBoundingBoxes
-import .PhysicalGeometries: PhysicalGeometry, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, to_property_index, inside_indices_eltype
+import .PhysicalGeometries: PhysicalGeometry, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, distance_to_surface, to_property_index, inside_indices_eltype
 import .PhysicalGeometries.Groups: GeometryTuple, inside_indices_for_any_type
 import .PhysicalGeometries.Transparents: SizeScaleOverride
 import .Properties: all_property_values, get_value
@@ -12,7 +12,7 @@ import .Susceptibility: susceptibility_off_resonance, off_resonance_gradient
 import .RayGridIntersection: ray_grid_intersections
 
 export FixedGeometry, Intersection, flip, IsInside, collision_normal,
-    isinside, detect_intersection, random_surface_positions, geometry_mesh,
+    isinside, detect_intersection, random_surface_positions, geometry_mesh, distance_to_surface,
     ray_grid_intersections,
     size_scale, SizeScaleOverride, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
@@ -36,6 +36,9 @@ end
 # A fixed geometry represents one user geometry unless it is a tuple of groups.
 Base.length(geometry::FixedGeometry) =
     geometry.geometry isa GeometryTuple ? length(geometry.geometry) : 1
+
+distance_to_surface(geometry::FixedGeometry, position::SVector{3, Float64}) =
+    distance_to_surface(geometry.geometry, position)
 
 
 """
@@ -218,10 +221,20 @@ end
 """Return the smallest relevant obstruction size in `geometry`."""
 size_scale(geometry::FixedGeometry) = size_scale(geometry.geometry)
 
+function _stick_probability(surface_density, dwell_time, diffusivity, timestep)
+    if iszero(surface_density)
+        return 0.
+    elseif iszero(dwell_time)
+        error("Cannot have a dwell time of zero for any surface containing bound spins.")
+    else
+        return 1 - exp(-sqrt(π * timestep / diffusivity) * surface_density / dwell_time / 2)
+    end
+end
+
 """Return the largest timestep permitted by surface-sticking constraints."""
 function max_timestep_sticking(geometry::FixedGeometry, diffusivity::Number, scaling)
     log_probabilities = [
-        log(1 - MCMRSimulator.Properties.stick_probability(density, dwell, diffusivity, 1))
+        log(1 - _stick_probability(density, dwell, diffusivity, 1))
         for (density, dwell) in all_property_values(
             geometry.surface.density,
             geometry.surface.dwell_time,

@@ -7,6 +7,9 @@ has_inside(::Type{<:OverlappingRound}) = true
 has_single_inside(::Type{<:OverlappingRound}) = true
 Round(r::OverlappingRound{N}) where {N} = Round{N}(r.radius)
 
+distance_to_surface(round::OverlappingRound{N}, position::SVector{N, Float64}) where {N} =
+    distance_to_surface(Round(round), position)
+
 function isinside_single(
     round::OverlappingRound{N},
     position::SVector{N, Float64},

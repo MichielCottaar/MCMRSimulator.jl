@@ -12,6 +12,7 @@ abstract type PhysicalGeometry{N} end
 
 function size_scale end
 function geometry_mesh end
+function distance_to_surface end
 
 
 """
