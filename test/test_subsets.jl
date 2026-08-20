@@ -73,8 +73,9 @@ end
     @test length(mr.get_subset(snapshot, sim, bound=false, geometry=geometry[2])) ≈ 0.6 * N rtol = 0.1
     @test length(mr.get_subset(snapshot, sim, bound=true, geometry=geometry[2][1])) ≈ 0.2 * N rtol = 0.1
     @test length(mr.get_subset(snapshot, sim, bound=true, geometry=geometry[2][2])) ≈ 0.2 * N rtol = 0.1
-    @test length(mr.get_subset(mr.get_subset(snapshot, sim, bound=true, geometry_index=2, obstruction_index=2), sim, inside=true)) == 0
-    @test length(mr.get_subset(mr.get_subset(snapshot, sim, bound=true, geometry_index=2, obstruction_index=2), sim, inside=false)) ≈ 0.2 * N rtol=0.1
+    selected_snapshot = mr.get_subset(snapshot, sim, bound=true, geometry=geometry[2][2])
+    @test length(mr.get_subset(selected_snapshot, sim, inside=true)) == 0
+    @test length(mr.get_subset(selected_snapshot, sim, inside=false)) ≈ 0.2 * N rtol=0.1
 
 end
 
