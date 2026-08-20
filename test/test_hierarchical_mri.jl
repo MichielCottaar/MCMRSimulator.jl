@@ -28,7 +28,15 @@
         end
     end
     @testset "Test correct values in annuli" begin
-        geometry = mr.Annuli(inner=0.5, outer=1., R1_inner_volume=0.1, R1_outer_volume=0.2, R2_outer_volume=10.)
+        geometry = mr.Annuli(
+            inner=0.5,
+            outer=1.,
+            R1_inner_volume=0.1,
+            R1_outer_volume=0.2,
+            R2_outer_volume=10.,
+            off_resonance_inner_volume=0.1,
+            off_resonance_outer_volume=0.2,
+        )
         inner = SVector{3}([0., 0., 0.])
         outer = SVector{3}([0.7, 0., 0.])
         outside = SVector{3}([1.2, 0., 0.])
@@ -39,6 +47,10 @@
         @test mr.R2(inner, geometry, defaults) == 1.
         @test mr.R2(outer, geometry, defaults) == 11.
         @test mr.R2(outside, geometry, defaults) == 1.
+
+        @test mr.off_resonance(inner, geometry, defaults) == (0., 1.1)
+        @test mr.off_resonance(outer, geometry, defaults) == (0., 1.2)
+        @test mr.off_resonance(outside, geometry, defaults) == (0., 1.)
     end
     @testset "Test length of inside geometry" begin
         geometry = mr.Annuli(inner=0.5, outer=1., R1_outer_volume=0.2)
