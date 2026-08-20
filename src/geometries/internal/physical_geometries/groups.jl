@@ -157,11 +157,20 @@ intersection_candidates(group::GeometryVectorBoundingBox, start, destination) =
         if InternalBoundingBoxes.does_intersect(group.bounding_boxes[index], start, destination)
     )
 
-intersection_candidates(group::GeometryVectorGrid, start, destination) =
+function intersection_candidates(group::GeometryVectorGrid, start, destination)
+    start_coordinate = _grid_coordinate(group, start)
+    destination_coordinate = _grid_coordinate(group, destination)
+    if !isnothing(start_coordinate) && start_coordinate == destination_coordinate
+        return (
+            (index, group_geometries(group)[index], 0.0)
+            for index in group.grid.indices[start_coordinate...]
+        )
+    end
     (
         (child_index, group_geometries(group)[child_index], dist_all_checked)
         for (child_index, dist_all_checked) in GridIterator(group.grid, start, destination)
     )
+end
 
 has_inside(::Type{<:GeometryVectorLike{N, P}}) where {N, P} = has_inside(P)
 has_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = any(has_inside, P.parameters)
