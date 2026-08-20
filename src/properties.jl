@@ -14,6 +14,9 @@ Methods:
 """
 module Properties
 
+import StaticArrays: SVector
+import ..Geometries.Internal: FixedGeometry, R1, R2, off_resonance
+
 """
     GlobalProperties(; R1=0, R2=0, off_resonance=0)
 
@@ -32,6 +35,23 @@ end
 for symbol in propertynames(GlobalProperties())
     @eval begin
         $symbol(global_properties::GlobalProperties) = getproperty(global_properties, $(QuoteNode(symbol)))
+    end
+end
+
+for symbol in (:R1, :R2, :off_resonance)
+    @eval begin
+        function $symbol(
+            position::AbstractVector{<:Number},
+            geometry::FixedGeometry,
+            global_properties::GlobalProperties=GlobalProperties(),
+            intersection=nothing,
+        )
+            $symbol(global_properties) + $symbol(
+                geometry,
+                SVector{3, Float64}(position),
+                intersection,
+            )
+        end
     end
 end
 
