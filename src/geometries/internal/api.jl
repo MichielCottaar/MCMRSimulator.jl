@@ -127,7 +127,7 @@ struct IsInside{T}
     inside_of::T
 end
 
-Base.length(::IsInside{N}) where {N} = N
+Base.length(inside::IsInside) = length(inside.inside_of)
 
 
 """
