@@ -244,7 +244,7 @@ function _deproject_positions(transformation::Rotate{N, M}, positions,
     half_size = InternalBoundingBoxes.half_size(bounding_box)
     null_center = basis' * center
     null_half_size = abs.(basis)' * half_size
-    [transformation.matrix' * position + basis * (null_center +
+    [transformation.matrix * position + basis * (null_center +
         (2 .* rand(length(null_center)) .- 1) .* null_half_size) for position in positions]
 end
 
