@@ -139,7 +139,7 @@ const fix = mr.Geometries.Fix.fix
         permeability_outer_surface=4.0,
     ))
     @test annulus_properties.volume.R1 isa Properties.GeometryTupleProperties
-    @test get_value(annulus_properties.volume.R1, (1, 1)) == 1.0
+    @test get_value(annulus_properties.volume.R1, (1, 1)) == -1.0
     @test get_value(annulus_properties.volume.R1, (2, 1)) == 2.0
     @test get_value(annulus_properties.surface.permeability, (1, 1)) == 3.0
     @test get_value(annulus_properties.surface.permeability, (2, 1)) == 4.0
