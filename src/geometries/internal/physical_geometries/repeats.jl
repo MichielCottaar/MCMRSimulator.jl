@@ -208,17 +208,6 @@ InternalBoundingBox(::Repeat) = throw(ArgumentError("repeated geometries do not 
 
 size_scale(repeat::Repeat) = min(size_scale(repeat.geometry), minimum(repeat.repeats))
 
-function Groups.group_geometries_bounded(repeat::Repeat{N}, bounding_box::InternalBoundingBox{N}; kwargs...) where {N}
-    lower = first_repeat(repeat, InternalBoundingBoxes.lower(bounding_box))
-    upper = last_repeat(repeat, InternalBoundingBoxes.upper(bounding_box))
-    (
-        let copy_shift = SVector{N, Int}(repeat_index)
-            (copy_shift, Shift(repeat.geometry, copy_shift .* repeat.repeats))
-        end
-        for repeat_index in _repeat_indices(repeat, lower, upper)
-    )
-end
-
 function _geometry_mesh(repeat::Repeat{N}; bounding_box=nothing, kwargs...) where N
     child_box = InternalBoundingBox(repeat.geometry)
     lower, upper = isnothing(bounding_box) ? (zeros(Int, N), zeros(Int, N)) :

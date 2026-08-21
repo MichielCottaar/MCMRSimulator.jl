@@ -111,14 +111,6 @@ end
 
 group_geometries(group::GeometryTuple; include_gap=true) = group.geometries
 
-function group_geometries_bounded(
-    group::Union{GeometryVectorLike, GeometryTuple},
-    bounding_box::InternalBoundingBox;
-    include_gap=true,
-)
-    ((index, child) for (index, child) in enumerate(group_geometries(group; include_gap)))
-end
-
 function get_child(group::GeometryVectorLike, indices::Tuple)
     child_index = indices[1]
     group_geometries(group)[child_index], indices[2:end]
@@ -329,7 +321,7 @@ function random_surface_positions(geometry::GroupGeometry{N}, density::GeometryP
     _combine((let
         values = random_surface_positions(child, _density_child(density, index), bounding_box, scale_density)
         (values[1], [(index, child_index...) for child_index in values[2]])
-    end for (index, child) in group_geometries_bounded(geometry, bounding_box; include_gap=false)), Val(N))
+    end for (index, child) in enumerate(group_geometries(geometry; include_gap=false))), Val(N))
 end
 
 size_scale(geometry::GeometryVectorLike) = isempty(geometry) ? Inf : minimum(size_scale, geometry)
