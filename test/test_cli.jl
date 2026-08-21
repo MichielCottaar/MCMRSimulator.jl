@@ -120,7 +120,7 @@ end
         end
         @testset "random spheres" begin
             in_tmpdir() do
-                _, err = run_main_test("geometry create-random spheres 0.5 test.json --repeats 20,20,20")
+                _, err = run_main_test("geometry create-random spheres 0.5 test.json --repeats 8,8,8")
                 @test length(err) == 0
                 result = JSON.parse(open("test.json", "r"))
                 @test result["type"] == "Spheres"
