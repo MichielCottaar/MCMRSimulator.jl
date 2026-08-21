@@ -54,8 +54,8 @@ end
 
     @test length(mr.get_subset(snapshot, simulation, geometry=sphere, inside=true)) == 1
     @test length(mr.get_subset(snapshot, simulation, geometry=sphere, inside=false)) == 2
-    @test length(mr.get_subset(snapshot, simulation, geometry=sphere, bound=true)) == 1
-    @test length(mr.get_subset(snapshot, simulation, geometry=sphere, bound=false)) == 2
+    @test length(mr.get_subset(snapshot, simulation, geometry=sphere, bound=true)) == 0
+    @test length(mr.get_subset(snapshot, simulation, geometry=sphere, bound=false)) == 3
 end
 
 @testset "Test multiple geometries" begin
