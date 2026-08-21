@@ -1,7 +1,6 @@
 using MCMRSimulator
-using MRIBuilder
 pos, rad = random_positions_radii(30., 0.6, 2; variance=0.)
-main_seq = DWI(bval=3., slice_thickness=2.)
+main_seq = read_pulseq(joinpath(@__DIR__, "..", "test", "pulseq", "dwi_te_80_bval_2.seq"))
 geometries = Dict(
     "walls" => Walls(position=0.3, repeats=2.),
     "cylinders" => Cylinders(position=pos, radius=rad, repeats=(30., 30.)),

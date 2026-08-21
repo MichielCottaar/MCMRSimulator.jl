@@ -2,7 +2,7 @@
 *.jl.cov
 *.jl.mem
 /Manifest.toml
-/benchmark/*.json
+/benchmark/result-*.json
 /docs/build/
 /docs/Manifest.toml
 /docs/src/installation.md

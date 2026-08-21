@@ -10,9 +10,12 @@ mkconfig(; kwargs...) =
         kwargs...
     )
 
+retune = get(ENV, "RETUNE", "false") == "true"
+
 group_target = benchmarkpkg(
     dirname(@__DIR__),
     mkconfig(),
+    retune=retune,
     resultfile = joinpath(@__DIR__, "result-target.json"),
 )
 
@@ -21,6 +24,7 @@ export_markdown(stdout, group_target)
 group_baseline = benchmarkpkg(
     dirname(@__DIR__),
     mkconfig(id = "add-benchmark"),
+    retune=retune,
     resultfile = joinpath(@__DIR__, "result-baseline.json"),
 )
 
