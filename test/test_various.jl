@@ -296,7 +296,7 @@ end
 
 @testset "Test splitting RF pulse application" begin
     # relevant for collisions
-    props = mr.Geometries.Internal.MRIProperties(0., 0., 0.)
+    props = (R1=0., R2=0., off_resonance=0.)
     cp = mr.SequenceParts.ConstantPulse(1., 0., 2.)
 
     orient_single = mr.SpinOrientation([0., 0., 1.])
