@@ -47,6 +47,29 @@ end
     @test sort(mesh[1].triangles[1]) == [1, 2, 3]
 end
 
+@testset "Surface sampling for mesh" begin
+    Random.seed!(1234)
+    surface_density = 1.
+    volume_density = 10_000.
+    geometry = mr.fix(box_mesh(surface_density=surface_density))
+    bounding_box = mr.Geometries.BoundingBoxes.BoundingBox(
+        [-1.0, -1.0, -1.0],
+        [1.0, 1.0, 1.0],
+    )
+    positions, intersections = mr.Geometries.Internal.random_surface_positions(
+        geometry,
+        bounding_box,
+        volume_density,
+    )
+
+    @test length(positions) ≈ 6 * surface_density * volume_density rtol=0.05
+    @test length(intersections) == length(positions)
+    @test all(
+        all(position .>= -0.5) && all(position .<= 0.5)
+        for position in positions
+    )
+end
+
 @testset "Computing normals" begin
     normal = mr.Geometries.Internal.PhysicalGeometries.BaseObstructions.normal
     @test normal([0, 0, 0], [1, 0, 0], [0, 1, 0]) ≈ [0, 0, 1]
