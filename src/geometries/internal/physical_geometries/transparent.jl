@@ -7,6 +7,12 @@ import ...Properties: GeometryProperties
 
 abstract type Transparent{N, P <: PhysicalGeometry{N}} <: PhysicalGeometry{N} end
 
+function Base.show(io::IO, ::Type{T}) where {N, P, T <: Transparent{N, P}}
+    print(io, nameof(T), "{")
+    show(io, P)
+    print(io, "}")
+end
+
 child_type(::Type{<:Transparent{N, P}}) where {N, P} = P
 inside_indices_eltype(::Type{<:Transparent{N, P}}) where {N, P} = inside_indices_eltype(P)
 

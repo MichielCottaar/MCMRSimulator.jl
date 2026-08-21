@@ -11,6 +11,12 @@ import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVector
 abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
 
+function Base.show(io::IO, ::Type{T}) where {N, P, T <: GeometryVectorLike{N, P}}
+    print(io, "GeometryVector{")
+    show(io, P)
+    print(io, "}")
+end
+
 group_geometries(group::GeometryVectorLike; include_gap=true) = group.geometries
 
 function distance_to_surface(group::GroupGeometry{N}, position::SVector{N, Float64}) where {N}
@@ -296,6 +302,15 @@ Base.getindex(geometry::GeometryTuple, index...) = getindex(group_geometries(geo
 Base.iterate(geometry::GeometryTuple, state...) = iterate(group_geometries(geometry), state...)
 Base.eltype(::Type{GeometryTuple{N, P}}) where {N, P} = eltype(P)
 Base.Tuple(geometry::GeometryTuple) = group_geometries(geometry)
+
+function Base.show(io::IO, ::Type{T}) where {N, P, T <: GeometryTuple{N, P}}
+    print(io, "GeometryTuple{")
+    for (index, child) in enumerate(P.parameters)
+        index > 1 && print(io, ", ")
+        show(io, child)
+    end
+    print(io, "}")
+end
 
 _density_child(density::GeometryLeafProperties, ::Int) = density
 _density_child(density::GeometryVectorProperties, index::Int) = density.properties[index]

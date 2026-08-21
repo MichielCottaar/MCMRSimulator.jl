@@ -31,6 +31,12 @@ struct Repeat{N, P<:PhysicalGeometry{N}} <: Groups.GroupGeometry{N, Shift{N, P}}
     end
 end
 
+function Base.show(io::IO, ::Type{T}) where {N, P, T <: Repeat{N, P}}
+    print(io, "Repeat{")
+    show(io, P)
+    print(io, "}")
+end
+
 inside_indices_eltype(::Type{<:Repeat{N, P}}) where {N, P} =
     Groups._prepend_type(SVector{N, Int}, inside_indices_eltype(child_type(Repeat{N, P})))
 

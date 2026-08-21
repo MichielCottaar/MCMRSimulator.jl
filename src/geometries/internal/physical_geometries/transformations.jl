@@ -22,6 +22,12 @@ parent coordinate system.
 """
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
 
+function Base.show(io::IO, ::Type{T}) where {N, M, P, T <: Transformation{N, M, P}}
+    print(io, nameof(T), "{")
+    show(io, P)
+    print(io, "}")
+end
+
 child_type(::Type{<:Transformation{N, M, P}}) where {N, M, P} = P
 inside_indices_eltype(::Type{<:Transformation{N, M, P}}) where {N, M, P} = inside_indices_eltype(P)
 

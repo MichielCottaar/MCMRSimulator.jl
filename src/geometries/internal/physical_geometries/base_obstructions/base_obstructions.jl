@@ -12,6 +12,10 @@ import Random: rand
 
 abstract type BaseObstruction{N} <: PhysicalGeometry{N} end
 
+function Base.show(io::IO, ::Type{T}) where {N, T <: BaseObstruction{N}}
+    print(io, nameof(T), "{", N, "}")
+end
+
 child_type(::Type{<:BaseObstruction}) =
     throw(ArgumentError("base obstructions do not have child geometries"))
 

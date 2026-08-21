@@ -233,6 +233,21 @@ end
     Base.show(IOBuffer(), sim)
 end
 
+@testset "Physical geometry type display" begin
+    show_type(geometry) = sprint(show, typeof(mr.fix(geometry).geometry))
+
+    @test show_type(mr.Spheres(radius=[1., 2.])) == "GeometryVector{Round{3}}"
+    @test show_type(mr.Spheres(
+        radius=[1., 2.],
+        position=[[0, 0, 0], [1, 1, 1]],
+        repeats=[5, 5, 5],
+    )) == "Repeat{GeometryVector{Shift{Round{3}}}}"
+    @test show_type(mr.Spheres(radius=1., size_scale=2.)) ==
+        "SizeScaleOverride{GeometryVector{Round{3}}}"
+    @test show_type([mr.Spheres(radius=1.), mr.Cylinders(radius=0.5)]) ==
+        "GeometryTuple{GeometryVector{Round{3}}, Rotate{GeometryVector{Round{2}}}}"
+end
+
 @testset "Test size scale calculations" begin
     size_scale(g) = mr.Geometries.Internal.size_scale(mr.fix(g))
 
