@@ -228,6 +228,11 @@ end
     @test repr(sim, context=:compact => true) == "Simulation(2 sequences, Geometry(2 repeating Round objects, ), D=3.0um^2/ms, GlobalProperties(R1=0.1kHz, ))" 
 end
 
+@testset "Base.show currently fails for simulations with geometry" begin
+    sim = mr.Simulation([], geometry=mr.Spheres(radius=[1., 2.]))
+    Base.show(IOBuffer(), sim)
+end
+
 @testset "Test size scale calculations" begin
     size_scale(g) = mr.Geometries.Internal.size_scale(mr.fix(g))
 
