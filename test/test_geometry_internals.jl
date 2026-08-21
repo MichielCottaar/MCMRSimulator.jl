@@ -493,8 +493,8 @@ end
     @test !has_inside(typeof(GeometryTuple{3}(())))
     repeated_sphere = Repeat(BaseObstructions.Sphere(1.0), [4.0, 4.0, 4.0])
     @test has_inside(typeof(repeated_sphere))
-    @test repeated_sphere.lower_overlap == SVector(0.0, 0.0, 0.0)
-    @test repeated_sphere.upper_overlap == SVector(0.0, 0.0, 0.0)
+    @test BoundingBoxes.lower(repeated_sphere.normalized_bounding_box) == SVector(-0.25, -0.25, -0.25)
+    @test BoundingBoxes.upper(repeated_sphere.normalized_bounding_box) == SVector(0.25, 0.25, 0.25)
     @test inside_indices(repeated_sphere, SVector(4.5, 0.0, 0.0)) == [(SVector(1, 0, 0),)]
     @test inside_indices(repeated_sphere, SVector(2.0, 0.0, 0.0)) == Tuple{SVector{3, Int}}[]
     shifted_repeated_sphere = Repeat(
@@ -504,9 +504,8 @@ end
     shifted_position = SVector(-0.5, 0.0, 0.0)
     @test inside_indices(shifted_repeated_sphere, shifted_position) == [(SVector(0, 0, 0),)]
     neighboring_position = SVector(0.5, 0.0, 0.0)
-    @test Repeats._candidate_shifts(shifted_repeated_sphere, neighboring_position) == [
-        SVector(0, 0, 0), SVector(-1, 0, 0),
-    ]
+    @test Repeats.first_repeat(shifted_repeated_sphere, neighboring_position) == SVector(1, 0, 0)
+    @test Repeats.last_repeat(shifted_repeated_sphere, neighboring_position) == SVector(1, 0, 0)
     @test inside_indices(shifted_repeated_sphere, neighboring_position) == [(SVector(1, 0, 0),)]
     @test_throws ArgumentError Repeat(BaseObstructions.Sphere(1.0), [0.0, 4.0, 4.0])
     @test_throws ArgumentError Repeat(BaseObstructions.Sphere(2.0), [1.0, 4.0, 4.0])
@@ -522,10 +521,10 @@ end
     )
     @test repeated_hit[end] ≈ 0.4
     overlapping_repeat = Repeat(BaseObstructions.Sphere(1.5), [2.0, 4.0, 4.0])
-    @test overlapping_repeat.lower_overlap == SVector(0.5, 0.0, 0.0)
-    @test overlapping_repeat.upper_overlap == SVector(0.5, 0.0, 0.0)
+    @test BoundingBoxes.lower(overlapping_repeat.normalized_bounding_box) == SVector(-0.75, -0.375, -0.375)
+    @test BoundingBoxes.upper(overlapping_repeat.normalized_bounding_box) == SVector(0.75, 0.375, 0.375)
     @test inside_indices(overlapping_repeat, SVector(1.4, 0.0, 0.0)) == [
-        (SVector(1, 0, 0),), (SVector(0, 0, 0),),
+        (SVector(0, 0, 0),), (SVector(1, 0, 0),),
     ]
     overlapping_hit = GI.PhysicalGeometries.find_intersection(
         overlapping_repeat,

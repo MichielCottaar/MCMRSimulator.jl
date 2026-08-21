@@ -3,7 +3,6 @@ module Repeats
 
 import StaticArrays: SVector
 import ...InternalBoundingBoxes
-import ...RayGridIntersection: ray_grid_intersections
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _translate_native, to_property_index
 import ...Properties: GeometryProperties
@@ -13,8 +12,7 @@ import ..Transformations: Shift
 struct Repeat{N, P<:PhysicalGeometry{N}} <: Groups.GroupGeometry{N, Shift{N, P}}
     geometry::P
     repeats::SVector{N, Float64}
-    lower_overlap::SVector{N, Float64}
-    upper_overlap::SVector{N, Float64}
+    normalized_bounding_box::InternalBoundingBoxes.InternalBoundingBox{N}
 
     function Repeat{N, P}(geometry::P, repeats::SVector{N, Float64}) where {N, P<:PhysicalGeometry{N}}
         all(repeats .> 0) || throw(ArgumentError("repeat distances must be positive"))
@@ -23,9 +21,13 @@ struct Repeat{N, P<:PhysicalGeometry{N}} <: Groups.GroupGeometry{N, Shift{N, P}}
             throw(ArgumentError("geometry extends too far below its repeat bounds"))
         all(InternalBoundingBoxes.upper(box) .<= 1.5 .* repeats) ||
             throw(ArgumentError("geometry extends too far above its repeat bounds"))
-        lower_overlap = max.(0.0, -repeats / 2 - InternalBoundingBoxes.lower(box))
-        upper_overlap = max.(0.0, InternalBoundingBoxes.upper(box) - repeats / 2)
-        new{N, P}(geometry, repeats, lower_overlap, upper_overlap)
+        normalized_lower = InternalBoundingBoxes.lower(box) ./ repeats
+        normalized_upper = InternalBoundingBoxes.upper(box) ./ repeats
+        normalized_bounding_box = InternalBoundingBoxes.InternalBoundingBox{N}(
+            (normalized_upper - normalized_lower) / 2,
+            (normalized_upper + normalized_lower) / 2,
+        )
+        new{N, P}(geometry, repeats, normalized_bounding_box)
     end
 end
 
@@ -49,25 +51,54 @@ function Groups.intersection_candidates(
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
 ) where {N}
-    displacement = destination - start
-    iszero(displacement) && return ()
-
-    scaled_start = (start .+ repeat.repeats / 2) ./ repeat.repeats
-    scaled_destination = (destination .+ repeat.repeats / 2) ./ repeat.repeats
-    checked = Set{SVector{N, Int}}()
-
-    (
-        let copy_shift = voxel - local_shift
-            (copy_shift, Shift(repeat.geometry, copy_shift .* repeat.repeats), entry_time)
-        end
-        for (voxel, entry_time, _, exit_time, _) in ray_grid_intersections(scaled_start, scaled_destination)
-        for local_shift in _candidate_shifts(
-            repeat,
-            start + entry_time .* displacement - voxel .* repeat.repeats,
-            start + exit_time .* displacement - voxel .* repeat.repeats,
-        )
-        if !((voxel - local_shift) in checked) && (push!(checked, voxel - local_shift); true)
+    iszero(destination - start) && return ()
+    direction = SVector{N, Bool}(destination .>= start)
+    start_repeat = directed_repeat(repeat, start, direction)
+    destination_repeat = directed_repeat(repeat, destination, .!direction)
+    ranges = (
+        min(start_repeat[i], destination_repeat[i]):max(start_repeat[i], destination_repeat[i])
+        for i in 1:N
     )
+    (
+        let copy_shift = SVector{N, Int}(repeat_index)
+            (copy_shift, Shift(repeat.geometry, copy_shift .* repeat.repeats), 0.0)
+        end
+        for repeat_index in Iterators.product(ranges...)
+    )
+end
+
+function find_intersection(
+    repeat::Repeat{N},
+    start::SVector{N, Float64},
+    destination::SVector{N, Float64},
+    previous_hit=nothing,
+) where {N}
+    current = nothing
+    direction = SVector{N, Bool}(destination .>= start)
+    start_repeat = directed_repeat(repeat, start, direction)
+    destination_repeat = directed_repeat(repeat, destination, .!direction)
+    ranges = (
+        min(start_repeat[i], destination_repeat[i]):max(start_repeat[i], destination_repeat[i])
+        for i in 1:N
+    )
+    for repeat_index in Iterators.product(ranges...)
+        copy_shift = SVector{N, Int}(repeat_index)
+        displacement = copy_shift .* repeat.repeats
+        candidate_previous_hit = isnothing(previous_hit) || previous_hit[1] != copy_shift ?
+            nothing : previous_hit[2:end]
+        intersect = find_intersection(
+            repeat.geometry,
+            start - displacement,
+            destination - displacement,
+            candidate_previous_hit,
+        )
+        isnothing(intersect) && continue
+        candidate = (copy_shift, intersect...)
+        if isnothing(current) || candidate[end] < current[end]
+            current = candidate
+        end
+    end
+    current
 end
 
 function get_child(repeat::Repeat{N}, indices::Tuple) where {N}
@@ -79,29 +110,48 @@ function Groups.inside_candidates(
     repeat::Repeat{N},
     position::SVector{N, Float64},
 ) where {N}
-    local_position = _wrap(repeat, position)
-    cell_shift = SVector{N, Int}(round.(Int, (position - local_position) ./ repeat.repeats))
-    checked = Set{SVector{N, Int}}()
-
     (
-        let copy_shift = cell_shift - local_shift
+        let copy_shift = SVector{N, Int}(repeat_index)
             (copy_shift, Shift(repeat.geometry, copy_shift .* repeat.repeats))
         end
-        for local_shift in _candidate_shifts(repeat, local_position)
-        if !((cell_shift - local_shift) in checked) && (push!(checked, cell_shift - local_shift); true)
+        for repeat_index in Iterators.product(
+            (first_repeat(repeat, position)[i]:last_repeat(repeat, position)[i] for i in 1:N)...
+        )
     )
 end
 
 has_inside(::Type{<:Repeat{N, P}}) where {N, P} = has_inside(P)
 has_single_inside(::Type{<:Repeat}) = false
 
-_wrap(repeat::Repeat, position) = mod.(position .+ repeat.repeats / 2, repeat.repeats) .- repeat.repeats / 2
+function first_repeat(repeat::Repeat{N}, position::SVector{N, Float64}) where {N}
+    Int.(ceil.((position ./ repeat.repeats) .-
+        InternalBoundingBoxes.upper(repeat.normalized_bounding_box)))
+end
+
+function last_repeat(repeat::Repeat{N}, position::SVector{N, Float64}) where {N}
+    Int.(floor.((position ./ repeat.repeats) .-
+        InternalBoundingBoxes.lower(repeat.normalized_bounding_box)))
+end
+
+function directed_repeat(
+    repeat::Repeat{N},
+    position::SVector{N, Float64},
+    direction::SVector{N, Bool},
+) where {N}
+    first = first_repeat(repeat, position)
+    last = last_repeat(repeat, position)
+    SVector{N, Int}(direction[i] ? first[i] : last[i] for i in 1:N)
+end
+
+function _repeat_indices(::Repeat{N}, lower, upper) where {N}
+    Iterators.product((lower[i]:upper[i] for i in 1:N)...)
+end
 
 function distance_to_surface(
     repeat::Repeat{N},
     position::SVector{N, Float64},
 ) where {N}
-    local_position = _wrap(repeat, position)
+    local_position = position .- repeat.repeats .* round.(position ./ repeat.repeats)
     minimum(
         (
             distance_to_surface(
@@ -114,38 +164,18 @@ function distance_to_surface(
     )
 end
 
-function _candidate_shifts(repeat::Repeat{N}, start, destination=start) where {N}
-    local_start = _wrap(repeat, start)
-    local_destination = _wrap(repeat, destination)
-    box = InternalBoundingBox(repeat.geometry)
-    choices = ntuple(N) do dimension
-        local_lower = min(local_start[dimension], local_destination[dimension])
-        local_upper = max(local_start[dimension], local_destination[dimension])
-        first_shift = ceil(Int, (InternalBoundingBoxes.lower(box)[dimension] - local_upper) / repeat.repeats[dimension])
-        last_shift = floor(Int, (InternalBoundingBoxes.upper(box)[dimension] - local_lower) / repeat.repeats[dimension])
-        shifts = collect(first_shift:last_shift)
-        [0, filter(!iszero, shifts)...]
-    end
-    shifts = SVector{N, Int}[]
-    for shift in Iterators.product(choices...)
-        push!(shifts, SVector{N, Int}(shift))
-    end
-    shifts
-end
-
 InternalBoundingBox(::Repeat) = throw(ArgumentError("repeated geometries do not have a finite bounding box"))
 
 size_scale(repeat::Repeat) = min(size_scale(repeat.geometry), minimum(repeat.repeats))
 
 function Groups.group_geometries_bounded(repeat::Repeat{N}, bounding_box::InternalBoundingBox{N}; kwargs...) where {N}
-    child_box = InternalBoundingBox(repeat.geometry)
-    lower = floor.(Int, (InternalBoundingBoxes.lower(bounding_box) - InternalBoundingBoxes.upper(child_box)) ./ repeat.repeats)
-    upper = ceil.(Int, (InternalBoundingBoxes.upper(bounding_box) - InternalBoundingBoxes.lower(child_box)) ./ repeat.repeats)
+    lower = first_repeat(repeat, InternalBoundingBoxes.lower(bounding_box))
+    upper = last_repeat(repeat, InternalBoundingBoxes.upper(bounding_box))
     (
-        let copy_shift = SVector{N, Int}(shift)
+        let copy_shift = SVector{N, Int}(repeat_index)
             (copy_shift, Shift(repeat.geometry, copy_shift .* repeat.repeats))
         end
-        for shift in Iterators.product((lower[index]:upper[index] for index in 1:N)...)
+        for repeat_index in _repeat_indices(repeat, lower, upper)
     )
 end
 
