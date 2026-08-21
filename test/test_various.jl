@@ -225,12 +225,13 @@ end
         mr.read_pulseq(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2.seq")),
     ]
     sim = mr.Simulation(sequences, geometry=mr.Spheres(radius=[1, 2.], repeats=[5, 5, 5]), R1=0.1, surface_relaxation=0.3)
-    @test repr(sim, context=:compact => true) == "Simulation(2 sequences, Geometry(2 repeating Round objects, ), D=3.0um^2/ms, GlobalProperties(R1=0.1kHz, ))" 
+    @test repr(sim, context=:compact => true) == "Simulation(2 sequences, fixed(Repeat{GeometryVector{Round{3}}}), D=3.0um^2/ms, GlobalProperties(R1=0.1kHz, ))"
 end
 
-@testset "Base.show currently fails for simulations with geometry" begin
+@testset "Base.show for simulations with geometry" begin
     sim = mr.Simulation([], geometry=mr.Spheres(radius=[1., 2.]))
-    Base.show(IOBuffer(), sim)
+    @test sprint(show, sim) isa String
+    @test contains(sprint(show, sim), "fixed(GeometryVector{Round{3}})")
 end
 
 @testset "Physical geometry type display" begin
@@ -260,6 +261,7 @@ end
     @test size_scale(mr.Cylinders(radius=[0.3, 0.8], repeats=[2, 3])) == 0.3
     @test size_scale(mr.Spheres(radius=[0.3, 0.8])) == 0.3
     @test size_scale(mr.Annuli(inner=[0.5, 0.7], outer=[0.6, 0.9])) ≈ 0.1
+    @test size_scale(mr.Annuli(inner=[0.5, 0.7], outer=[0.6, 0.9], size_scale=2.)) == 2.
 end
 
 @testset "Test geometry JSON I/O" begin

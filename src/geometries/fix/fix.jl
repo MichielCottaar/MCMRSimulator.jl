@@ -12,7 +12,7 @@ import ..Internal.PhysicalGeometries.Groups: GeometryTuple
 import ..Internal.Properties: GeometryTupleProperties
 import ..Internal: FixedGeometry
 
-import .FixBaseGeometry: fix_base_geometry
+import .FixBaseGeometry: fix_base_geometry, annuli_size_scale
 import .FixTransformations: fix_transformations
 import .FixProperties: fix_properties, _zero_volume, _zero_surface
 import .FixSusceptibility: fix_susceptibility
@@ -48,8 +48,12 @@ function fix(
 )
     base_geometry = fix_base_geometry(group)
     physical_geometry = fix_transformations(group, base_geometry)
-    if !isnothing(group.size_scale.value)
-        physical_geometry = SizeScaleOverride(physical_geometry, group.size_scale.value)
+    size_scale = group.size_scale.value
+    if isnothing(size_scale) && group isa Annuli
+        size_scale = annuli_size_scale(group)
+    end
+    if !isnothing(size_scale)
+        physical_geometry = SizeScaleOverride(physical_geometry, size_scale)
     end
     properties = fix_properties(
         group;

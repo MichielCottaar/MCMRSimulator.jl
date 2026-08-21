@@ -43,6 +43,12 @@ function fix_base_geometry(group::Annuli)
     (inner, outer)
 end
 
+function annuli_size_scale(group::Annuli)
+    inner = _values(group.inner, length(group))
+    outer = _values(group.outer, length(group))
+    minimum((minimum(inner), minimum(outer), minimum(outer .- inner)))
+end
+
 function fix_base_geometry(group::Mesh)
     triangle_components = components(group)
     vertices = group.vertices.value
