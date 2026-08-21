@@ -145,10 +145,10 @@ function random_surface_positions(
         InternalBoundingBox(repeat.geometry),
         scale_density * nrepeats,
     )
-    repeat_indices = (
+    repeat_indices = [
         SVector{N, Int}(rand(ranges[index]) for index in 1:N)
         for _ in eachindex(positions)
-    )
+    ]
     shifted_positions = [
         position + repeat_index .* repeat.repeats
         for (position, repeat_index) in zip(positions, repeat_indices)
