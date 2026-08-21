@@ -2,6 +2,7 @@
 module Repeats
 
 import StaticArrays: SVector
+import Random: rand
 import ...InternalBoundingBoxes
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _translate_native, to_property_index
@@ -124,6 +125,39 @@ function Groups.inside_candidates(
             (first_repeat(repeat, position)[i]:last_repeat(repeat, position)[i] for i in 1:N)...
         )
     )
+end
+
+function random_surface_positions(
+    repeat::Repeat{N},
+    density::GeometryProperties,
+    bounding_box::InternalBoundingBoxes.InternalBoundingBox{N},
+    scale_density,
+) where {N}
+    lower = first_repeat(repeat, InternalBoundingBoxes.lower(bounding_box))
+    upper = last_repeat(repeat, InternalBoundingBoxes.upper(bounding_box))
+    any(lower .> upper) && return SVector{N, Float64}[], Tuple[]
+
+    ranges = ntuple(index -> lower[index]:upper[index], N)
+    nrepeats = prod(length, ranges)
+    positions, indices = random_surface_positions(
+        repeat.geometry,
+        density,
+        InternalBoundingBox(repeat.geometry),
+        scale_density * nrepeats,
+    )
+    repeat_indices = (
+        SVector{N, Int}(rand(ranges[index]) for index in 1:N)
+        for _ in eachindex(positions)
+    )
+    shifted_positions = [
+        position + repeat_index .* repeat.repeats
+        for (position, repeat_index) in zip(positions, repeat_indices)
+    ]
+    shifted_indices = [
+        (repeat_index, child_indices...)
+        for (repeat_index, child_indices) in zip(repeat_indices, indices)
+    ]
+    shifted_positions, shifted_indices
 end
 
 has_inside(::Type{<:Repeat{N, P}}) where {N, P} = has_inside(P)

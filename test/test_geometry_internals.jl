@@ -533,6 +533,27 @@ end
     )
     @test overlapping_hit[end] ≈ 0.2
 
+    Random.seed!(1234)
+    sampled_repeat = Repeat(
+        GeometryVector([BaseObstructions.Sphere(0.1)]),
+        [2.0, 4.0, 4.0],
+    )
+    sampled_box = BoundingBoxes.InternalBoundingBox(
+        [1.1, 1.1, 1.1],
+        [1.0, 0.0, 0.0],
+    )
+    sampled_positions, sampled_indices = GI.PhysicalGeometries.random_surface_positions(
+        sampled_repeat,
+        Properties.GeometryLeafProperties(1.0),
+        sampled_box,
+        100.0,
+    )
+    @test !isempty(sampled_positions)
+    @test all(
+        index[1][1] in (0, 1) && index[1][2:3] == SVector(0, 0)
+        for index in sampled_indices
+    )
+
     @test get_value(3.0, (1, 2)) == 3.0
     leaf_properties = Properties.GeometryLeafProperties(3.0)
     @test leaf_properties isa Properties.GeometryProperties{Float64}
