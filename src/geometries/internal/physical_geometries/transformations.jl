@@ -92,13 +92,13 @@ Map coordinates from the outer `N`-dimensional space to the child `M`-dimensiona
 space using an orthonormal matrix. For `M == N` this is a rotation; for `M < N`
 it is a rotation followed by projection.
 """
-struct Rotate{N, M, P<:PhysicalGeometry{M}} <: Transformation{N, M, P}
+struct Rotate{N, M, P<:PhysicalGeometry{M}, L} <: Transformation{N, M, P}
     geometry::P
-    matrix::SMatrix{N, M, Float64}
+    matrix::SMatrix{N, M, Float64, L}
 
     function Rotate{N, M, P}(geometry::P, matrix::SMatrix{N, M, Float64}) where {N, M, P<:PhysicalGeometry{M}}
         _validate_rotate_matrix(matrix, N, M)
-        new{N, M, P}(geometry, matrix)
+        new{N, M, P, N*M}(geometry, matrix)
     end
 end
 
