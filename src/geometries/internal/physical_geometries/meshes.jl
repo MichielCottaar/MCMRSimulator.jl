@@ -41,10 +41,10 @@ Base.length(view::MeshGeometryView) = view.include_gap ? length(view.mesh.indice
 Base.firstindex(view::MeshGeometryView) = firstindex(view.mesh.indices)
 Base.lastindex(view::MeshGeometryView) = length(view)
 Base.getindex(view::MeshGeometryView, index::Int) = triangle(view.mesh, index)
-Base.iterate(view::MeshGeometryView, state...) = begin
-    next = isempty(state) ? firstindex(view) : first(state)
+Base.iterate(view::MeshGeometryView, state=firstindex(view)) = begin
+    next = state
     next > lastindex(view) && return nothing
-    (triangle(view.mesh, next), (next + 1,))
+    (triangle(view.mesh, next), next + 1)
 end
 Base.eltype(::Type{MeshGeometryView}) = FullTriangle
 
