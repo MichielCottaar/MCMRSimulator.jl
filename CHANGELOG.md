@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - 2D plotting support using a `PlotPlane` is added for `BendyCylinder`, meshes and spheres (and any future objects that can be converted into a mesh).
 
+### Optimisation
+- Collision detection algorithm has been sped up, especially for small geometries
+
 ## [v1.1.0]
 `v1.1.0` requires Julia 1.12 or later! This is a big change from `v1.0.0` which only supports Julia 1.11.
 ### Added
