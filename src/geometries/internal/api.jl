@@ -41,6 +41,12 @@ distance_to_surface(geometry::FixedGeometry, position::SVector{3, Float64}) =
     distance_to_surface(geometry.geometry, position)
 
 
+function Base.show(io::IO, geometry::FixedGeometry)
+    print(io, "fixed(")
+    show(io, typeof(geometry.geometry))
+    print(io, ")")
+end
+
 """
     Intersection(distance, indices, property_indices, normal, inside, hit_gap)
 

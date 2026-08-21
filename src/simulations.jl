@@ -125,15 +125,7 @@ end
 
 function Base.show(io::IO, sim::Simulation{N}) where {N}
     function print_geometry()
-        print(io, "Geometry(")
-        if length(sim.geometry) > 20
-            print(io, "$(length(sim.geometry)) groups of obstructions")
-        else
-            for obstruction in sim.geometry
-                print(io, string(obstruction), ", ")
-            end
-        end
-        print(io, ")")
+        show(io, sim.geometry)
     end
     if get(io, :compact, false)
         seq_text = sim.flatten ? "single sequence" : "$N sequences"

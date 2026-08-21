@@ -160,6 +160,11 @@ function geometry_mesh(geometry; height=nothing, nsamples=100, bounding_box=noth
     _geometry_mesh(geometry; height, nsamples, bounding_box)
 end
 
+function Base.show(io::IO, geometry::PhysicalGeometry)
+    show(io, typeof(geometry))
+    show(io, "(...)")
+end
+
 include("grid_dispatch.jl")
 include("groups.jl")
 include("transformations.jl")
