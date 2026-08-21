@@ -23,7 +23,7 @@ export_markdown(stdout, group_target)
 
 group_baseline = benchmarkpkg(
     dirname(@__DIR__),
-    mkconfig(id = "add-benchmark"),
+    mkconfig(id = "main"),
     retune=retune,
     resultfile = joinpath(@__DIR__, "result-baseline.json"),
 )
