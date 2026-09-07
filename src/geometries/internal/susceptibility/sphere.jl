@@ -21,6 +21,8 @@ struct SphereSusceptibility <: BaseSusceptibility{3}
     end
 end
 
+Base.iszero(sphere::SphereSusceptibility) = iszero(sphere.internal_field)
+
 function single_susceptibility(
     sphere::SphereSusceptibility,
     position::AbstractVector,

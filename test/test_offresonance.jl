@@ -98,6 +98,35 @@
             susceptibility = mr.fix_susceptibility(spheres)
             @test length(susceptibility) == 1
             @test length(susceptibility[1].sources) == 1
+
+            cylinders = mr.Cylinders(
+                radius=[1., 1.],
+                g_ratio=[1., 0.8],
+                rotation=:x,
+                susceptibility_iso=1.,
+                susceptibility_aniso=0.,
+            )
+            susceptibility = mr.fix_susceptibility(cylinders)
+            @test length(susceptibility[1].sources) == 1
+
+            annuli = mr.Annuli(
+                inner=[0.7, 0.7],
+                outer=1.,
+                myelin=true,
+                susceptibility_iso=[0., 1.],
+                susceptibility_aniso=0.,
+            )
+            susceptibility = mr.fix_susceptibility(annuli)
+            @test length(susceptibility[1].sources) == 1
+
+            annuli = mr.Annuli(
+                inner=1.,
+                outer=1.,
+                myelin=true,
+                susceptibility_iso=1.,
+                susceptibility_aniso=1.,
+            )
+            @test isempty(mr.fix_susceptibility(annuli))
         end
         @testset "Constant internal field and exact external dipole field" begin
             spheres = mr.Spheres(radius=1., susceptibility=1., grid_resolution=Inf)

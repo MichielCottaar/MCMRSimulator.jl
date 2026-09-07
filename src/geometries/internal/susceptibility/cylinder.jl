@@ -17,6 +17,9 @@ struct CylinderSusceptibility <: BaseSusceptibility{2}
     external_field :: Float64
 end
 
+Base.iszero(cylinder::CylinderSusceptibility) =
+    iszero(cylinder.internal_field) && iszero(cylinder.external_field)
+
 
 function CylinderSusceptibility(radius::Number, g_ratio::Number, chi_I::Number, chi_A::Number, b0_field::AbstractVector)
     @assert length(b0_field) == 2

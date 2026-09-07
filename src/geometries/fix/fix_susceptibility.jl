@@ -81,22 +81,8 @@ end
 function fix_susceptibility_type(group::Spheres)
     radius = group.radius.value isa Number ? fill(group.radius.value, length(group)) : group.radius.value
     susceptibility = group.susceptibility.value isa Number ? fill(group.susceptibility.value, length(group)) : group.susceptibility.value
-    keep = findall(!iszero, susceptibility)
-    isempty(keep) && return nothing
-
-    positions = isglobal(group.position) ?
-        fill(SVector{3}(group.position.value), length(group)) :
-        SVector{3}.(group.position.value)
-    sources = SphereSusceptibility.(radius[keep], susceptibility[keep])
-    total = total_susceptibility(group, group.rotation.value[3, :])
-    total = total isa Number ? fill(total, length(group)) : total
-    add_parent(
-        group,
-        sources;
-        positions=positions[keep],
-        radii=radius[keep],
-        source_susceptibilities=total[keep],
-    )
+    sources = SphereSusceptibility.(radius, susceptibility)
+    add_parent(group, sources)
 end
 
 function total_susceptibility(group::Spheres, B0_field::SVector{3, Float64})
@@ -163,7 +149,7 @@ function total_susceptibility(mesh::Mesh, B0_field::SVector{3, Float64})
     ]
 end
 
-function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusceptibility{N}}; positions=nothing, radii=nothing, radius_symbol=:radius, source_susceptibilities=nothing) where {N}
+function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusceptibility{N}}; positions=nothing, radii=nothing, radius_symbol=:radius) where {N}
     if isnothing(positions)
         positions = isglobal(user.position) ? fill(SVector{N}(user.position.value), length(internal)) : SVector{N}.(user.position.value)
     end
@@ -175,10 +161,17 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
 
     B0_field = user.rotation.value[3, :]
 
-    susceptibilities = isnothing(source_susceptibilities) ? total_susceptibility(user, B0_field) : source_susceptibilities
+    susceptibilities = total_susceptibility(user, B0_field)
     if susceptibilities isa Number || susceptibilities isa SVector
         susceptibilities = fill(susceptibilities, length(internal))
     end
+
+    keep = findall(!iszero, internal)
+    isempty(keep) && return nothing
+    internal = internal[keep]
+    positions = positions[keep]
+    radii = radii[keep]
+    susceptibilities = susceptibilities[keep]
 
     individual_bbs = map(positions, radii) do p, r
         InternalBoundingBox(r, p)

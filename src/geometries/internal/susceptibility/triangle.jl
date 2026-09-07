@@ -24,6 +24,8 @@ There are two versions:
 """
 abstract type TriangleSusceptibility <: BaseSusceptibility{3} end
 
+Base.iszero(triangle::TriangleSusceptibility) = iszero(triangle.susceptibility)
+
 """
     IsotropicTriangleSusceptibility(full_triangle, chi_I)
 

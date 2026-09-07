@@ -20,6 +20,10 @@ struct AnnulusSusceptibility <: BaseSusceptibility{2}
     chi_A :: Float64
 end
 
+Base.iszero(annulus::AnnulusSusceptibility) =
+    (iszero(annulus.chi_I) && iszero(annulus.chi_A)) ||
+    annulus.inner_rsq == annulus.outer_rsq
+
 
 function AnnulusSusceptibility(inner_radius::Number, outer_radius::Number, chi_I::Number, chi_A::Number, b0_field::AbstractVector)
     @assert length(b0_field) == 2
