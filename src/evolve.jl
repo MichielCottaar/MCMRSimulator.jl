@@ -312,7 +312,7 @@ Returns the total signal or a full [`Snapshot`](@ref) at every readout time in t
 - `times` (optional): time of the readouts relative to the start of the TR (in ms). If not provided, the times of any `MRIBuilder.ADC` objects in the sequence will be used (see [`get_readouts`](@ref) for details).
 
 # Keyword arguments:
-- `bounding_box`: size of the voxel in which the spins are initiated in um (default is 1000, corresponding to a 1x1x1 mm box centered on zero). Can be set to a [`BoundingBox`](@ref MCMRSimulator.Geometries.Internal.BoundingBoxes.BoundingBox) object for more control.
+- `bounding_box`: size of the voxel in which the spins are initiated in um (default is 1000, corresponding to a 1x1x1 mm box centered on zero). Can be set to a [`BoundingBox`](@ref MCMRSimulator.Geometries.BoundingBoxes.BoundingBox) object for more control.
 - `skip_TR`: Number of repetition times to skip before starting the readout. 
     Even if set to zero (the default), the simulator will still skip the current TR before starting the readout 
     if the starting snapshot is from a time past one of the sequence readouts.
