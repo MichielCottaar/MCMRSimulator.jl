@@ -4,7 +4,7 @@ module Repeats
 import StaticArrays: SVector
 import Random: rand
 import ...InternalBoundingBoxes
-import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, intersection_type, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _translate_native, to_property_index
 import ...Properties: GeometryProperties
 import ..Groups
@@ -40,6 +40,9 @@ end
 
 inside_indices_eltype(::Type{<:Repeat{N, P}}) where {N, P} =
     Groups._prepend_type(SVector{N, Int}, inside_indices_eltype(child_type(Repeat{N, P})))
+
+intersection_type(::Type{<:Repeat{N, P}}) where {N, P} =
+    Groups._prepend_type(SVector{N, Int}, intersection_type(child_type(Repeat{N, P})))
 
 Repeat(geometry::P, repeats::AbstractVector{<:Real}) where {N, P<:PhysicalGeometry{N}} =
     Repeat{N, P}(geometry, SVector{N, Float64}(repeats))

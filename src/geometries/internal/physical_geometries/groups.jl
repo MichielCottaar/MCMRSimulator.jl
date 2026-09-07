@@ -4,7 +4,7 @@ module Groups
 import StaticArrays: SVector
 import ...InternalBoundingBoxes
 import ..GridDispatch: IntersectionGrid, GridIterator
-import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, isinside_single, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, intersection_type, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 
@@ -45,6 +45,9 @@ end
 
 inside_indices_eltype(::Type{<:GroupGeometry{N, P}}) where {N, P} =
     _prepend_type(Int, inside_indices_eltype(P))
+
+intersection_type(::Type{<:GroupGeometry{N, P}}) where {N, P} =
+    _prepend_type(Int, intersection_type(P))
 
 
 function find_intersection(group::GroupGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, previous_hit=nothing) where {N}
@@ -125,6 +128,9 @@ child_type(::Type{<:GeometryTuple{N, P}}) where {N, P} = Union{P.parameters...}
 
 inside_indices_eltype(::Type{<:GeometryTuple{N, P}}) where {N, P} =
     _prepend_type(Int, inside_indices_eltype(Union{P.parameters...}))
+
+intersection_type(::Type{<:GeometryTuple{N, P}}) where {N, P} =
+    _prepend_type(Int, intersection_type(Union{P.parameters...}))
 
 function inside_candidates end
 

@@ -5,7 +5,7 @@ import LinearAlgebra: cross, norm, svd, ⋅
 import DelaunayTriangulation: triangulate, get_triangles
 import NearestNeighbors: KDTree, nn
 
-import ..PhysicalGeometries: PhysicalGeometry, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, isinside_single, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, intersection_type, isinside_single, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryLeafProperties
 import ..Groups
@@ -51,6 +51,7 @@ Base.eltype(::Type{MeshGeometryView}) = FullTriangle
 has_inside(::Type{Mesh}) = true
 has_single_inside(::Type{Mesh}) = true
 inside_indices_eltype(::Type{Mesh}) = Tuple{}
+intersection_type(::Type{Mesh}) = Tuple{Int}
 function _mesh_indices(indices, nvertices)
     result = [SVector{3, Int}(triangle) for triangle in indices]
     all(all(triangle .>= 1) && all(triangle .<= nvertices) for triangle in result) ||

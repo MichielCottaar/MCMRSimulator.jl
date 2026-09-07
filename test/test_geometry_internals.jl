@@ -24,6 +24,7 @@ const has_inside = GI.PhysicalGeometries.has_inside
 const has_single_inside = GI.PhysicalGeometries.has_single_inside
 const isinside_single = GI.PhysicalGeometries.isinside_single
 const inside_indices = GI.PhysicalGeometries.inside_indices
+const intersection_type = GI.PhysicalGeometries.intersection_type
 const Properties = GI.Properties
 const Plot = mr.Plot
 
@@ -57,6 +58,18 @@ end
     @test planar_grid.bounding_box == planar_box
     @test all(isfinite, planar_grid.inv_resolution)
     @test BoundingBoxes.upper(planar_grid.grid_bounding_box)[3] > BoundingBoxes.lower(planar_grid.grid_bounding_box)[3]
+end
+
+@testset "intersection types" begin
+    sphere_type = BaseObstructions.Sphere
+
+    @test intersection_type(sphere_type) == Tuple{}
+    @test intersection_type(Mesh) == Tuple{Int}
+    @test intersection_type(GeometryVector{3, sphere_type}) == Tuple{Int}
+    @test intersection_type(Repeat{3, sphere_type}) == Tuple{SVector{3, Int}}
+    @test intersection_type(Shift{3, sphere_type}) == Tuple{}
+    @test intersection_type(SizeScaleOverride{3, sphere_type}) == Tuple{}
+    @test intersection_type(GeometryTuple{3, Tuple{BaseObstructions.Sphere, Mesh}}) == Union{Tuple{Int}, Tuple{Int, Int}}
 end
 
 @testset "projected mesh field of view" begin
