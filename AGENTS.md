@@ -10,14 +10,13 @@
 ## Commands
 
 - Instantiate dependencies with `julia --project -e 'using Pkg; Pkg.instantiate()'`.
-- Run all tests with `julia --project -e 'using Pkg; Pkg.test()'`.
+- Prefer focused tests because the full suite has a long runtime; run all tests with `julia --project -e 'using Pkg; Pkg.test()'` when the user requests the full suite.
 - Test-only dependencies are declared in `test/Project.toml`; the workspace resolves them into the ignored root `Manifest.toml`.
-- Run selected test files through `Pkg.test` using `test_args`, for example `julia --project -e 'using Pkg; Pkg.test("MCMRSimulator", test_args=["collisions", "evolve"])'`; use `julia --project -e 'using Pkg; Pkg.test("MCMRSimulator", test_args=["no-plots"])'` to skip the visual `plots` suite.
-- CI installs `xvfb` and adds MRIBuilder from its GitLab repository before testing; use `xvfb-run julia --project=@. -e 'using Pkg; Pkg.add(url="https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl.git"); Pkg.test(coverage=true)'` when reproducing CI rather than assuming a plain test run has identical setup.
+- Run selected test files through `Pkg.test` using `test_args`, for example `julia --project -e 'using Pkg; Pkg.test("MCMRSimulator", test_args=["collisions", "evolve"])'`.
 - Build documentation with `julia --project=docs -e 'using Pkg; Pkg.instantiate(); include("docs/make.jl")'`. `docs/Project.toml` is a workspace subproject, and `docs/make.jl` temporarily generates `docs/src/installation.md` and removes it afterward; do not edit that generated file.
 
 ## Change Boundaries
 
-- Update or add tests under `test/` when changing behavior. Visual tests and some CLI/plot paths may need a display or `xvfb`.
+- Update or add tests under `test/` when changing behavior. Plotting tests can be run locally.
 - Keep dependency changes synchronized with the appropriate `Project.toml` and `Manifest.toml`; the root `.gitignore` ignores the root manifest even though a local checkout may contain one.
 - User-facing MRI acquisition/sequence protocol features belong in the MRIBuilder project, not this package; this repository focuses on simulation, geometry, diffusion, magnetization, and related signal evolution.
