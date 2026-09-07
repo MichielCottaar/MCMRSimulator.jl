@@ -89,6 +89,35 @@
             @test grad(annuli) ≈ outer_field * 4
         end
     end
+    @testset "Sphere off-resonance field" begin
+        @testset "Zero susceptibility is omitted" begin
+            spheres = mr.Spheres(radius=1., susceptibility=0.)
+            @test isempty(mr.fix_susceptibility(spheres))
+
+            spheres = mr.Spheres(radius=[1., 2.], susceptibility=[0., 1.])
+            susceptibility = mr.fix_susceptibility(spheres)
+            @test length(susceptibility) == 1
+            @test length(susceptibility[1].sources) == 1
+        end
+        @testset "Constant internal field and exact external dipole field" begin
+            spheres = mr.Spheres(radius=1., susceptibility=1., grid_resolution=Inf)
+            @test field(spheres, [0., 0., 0.]) ≈ 1//3
+            @test field(spheres, [0., 0., 2.]) ≈ 1//12
+            @test field(spheres, [2., 0., 0.]) ≈ -1//24
+            @test field(spheres, [0., 0., 4.]) ≈ 1//96
+            @test grad(spheres) ≈ 2.
+        end
+        @testset "Repeating spheres" begin
+            spheres = mr.Spheres(
+                radius=1.,
+                susceptibility=1.,
+                repeats=[4., 4., 4.],
+                grid_resolution=Inf,
+            )
+            @test field(spheres, [0., 0., 0.]) > 1//3
+            @test field(spheres, [0., 0., 2.]) > 1//12
+        end
+    end
     @testset "mesh off-resonance field" begin
         for aniso in (0, 1e-12) # test isotropic and anisotropic version of the code
             @testset "Single right triangle test" begin

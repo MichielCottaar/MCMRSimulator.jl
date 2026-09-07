@@ -4,10 +4,10 @@ Defines susceptibility state construction for the fixed geometry engine.
 module FixSusceptibility
 import StaticArrays: SVector
 import LinearAlgebra: transpose, norm, ⋅, I
-import ...Internal.Susceptibility: FixedSusceptibility, SusceptibilityGrid, SusceptibilityGridNoRepeat, SusceptibilityGridRepeat, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, TriangleSusceptibility, IsotropicTriangleSusceptibility, AnisotropicTriangleSusceptibility, triangle_magnetisation, SusceptibilityGridElement, dipole_approximation_repeat, dipole_approximation, IsotropicSusceptibilityGridElement, AnisotropicSusceptibilityGridElement
+import ...Internal.Susceptibility: FixedSusceptibility, SusceptibilityGrid, SusceptibilityGridNoRepeat, SusceptibilityGridRepeat, BaseSusceptibility, CylinderSusceptibility, AnnulusSusceptibility, SphereSusceptibility, TriangleSusceptibility, IsotropicTriangleSusceptibility, AnisotropicTriangleSusceptibility, triangle_magnetisation, SusceptibilityGridElement, dipole_approximation_repeat, dipole_approximation, IsotropicSusceptibilityGridElement, AnisotropicSusceptibilityGridElement
 import ...Internal.InternalBoundingBoxes: InternalBoundingBox, lower, upper, grid_indices, grid_indices_repeating
 import ...Internal.PhysicalGeometries.BaseObstructions: FullTriangle, radius, triangle_size
-import ...User.Obstructions: ObstructionGroup, Cylinders, Annuli, Mesh, isglobal
+import ...User.Obstructions: ObstructionGroup, Cylinders, Annuli, Spheres, Mesh, isglobal
 
 function grid_resolution(obstruction::ObstructionGroup, bounding_box::InternalBoundingBox)
     if !isnothing(obstruction.grid_resolution.value)
@@ -78,6 +78,31 @@ function total_susceptibility(group::Annuli, B0_field::SVector{2, Float64})
     return @. ts * (group.outer.value^2 - group.inner.value^2) * π
 end
 
+function fix_susceptibility_type(group::Spheres)
+    radius = group.radius.value isa Number ? fill(group.radius.value, length(group)) : group.radius.value
+    susceptibility = group.susceptibility.value isa Number ? fill(group.susceptibility.value, length(group)) : group.susceptibility.value
+    keep = findall(!iszero, susceptibility)
+    isempty(keep) && return nothing
+
+    positions = isglobal(group.position) ?
+        fill(SVector{3}(group.position.value), length(group)) :
+        SVector{3}.(group.position.value)
+    sources = SphereSusceptibility.(radius[keep], susceptibility[keep])
+    total = total_susceptibility(group, group.rotation.value[3, :])
+    total = total isa Number ? fill(total, length(group)) : total
+    add_parent(
+        group,
+        sources;
+        positions=positions[keep],
+        radii=radius[keep],
+        source_susceptibilities=total[keep],
+    )
+end
+
+function total_susceptibility(group::Spheres, B0_field::SVector{3, Float64})
+    @. group.susceptibility.value * (4π / 3) * group.radius.value^3
+end
+
 function fix_susceptibility_type(group::Mesh)
     any(group.myelin.value) || return nothing
     isotropic = all(iszero.(group.susceptibility_aniso.value))
@@ -138,7 +163,7 @@ function total_susceptibility(mesh::Mesh, B0_field::SVector{3, Float64})
     ]
 end
 
-function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusceptibility{N}}; positions=nothing, radii=nothing, radius_symbol=:radius) where {N}
+function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusceptibility{N}}; positions=nothing, radii=nothing, radius_symbol=:radius, source_susceptibilities=nothing) where {N}
     if isnothing(positions)
         positions = isglobal(user.position) ? fill(SVector{N}(user.position.value), length(internal)) : SVector{N}.(user.position.value)
     end
@@ -150,7 +175,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
 
     B0_field = user.rotation.value[3, :]
 
-    susceptibilities = total_susceptibility(user, B0_field)
+    susceptibilities = isnothing(source_susceptibilities) ? total_susceptibility(user, B0_field) : source_susceptibilities
     if susceptibilities isa Number || susceptibilities isa SVector
         susceptibilities = fill(susceptibilities, length(internal))
     end

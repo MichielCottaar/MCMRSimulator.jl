@@ -49,6 +49,7 @@ for obstruction_type in (
     ObstructionType(
         :Sphere; ndim=3, fields=[
             Field{Float64}(:radius, "Radius of the sphere.", required=true),
+            Field{Float64}(:susceptibility, "Magnetic susceptibility of the sphere (in ppm).", 0.),
 
             # Allows multiple spheres to intersect, which is useful when reconstructing
             # a cellular substrate from SWC points and radii.
