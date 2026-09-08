@@ -2,6 +2,31 @@
 @testset "test_various.jl" begin
 @test length(detect_ambiguities(mr)) == 0
 
+@testset "Adaptive readout" begin
+    sequence = build_sequence([0., :readout])
+    simulation = mr.Simulation(sequence; diffusivity=0.)
+
+    accumulator = mr.Evolve.TotalSignalAccumulator(0.)
+    spins = [mr.Spin(longitudinal=value) for value in (1., 3.)]
+    mr.Evolve.readout!(accumulator, spins)
+    @test accumulator.nspins[] == 2
+    @test mr.Evolve.standard_error(accumulator)[3] ≈ 2.
+
+    result = mr.readout(
+        simulation;
+        target_snr=10,
+        min_spins=10,
+        batch_size=10,
+        max_spins=20,
+        return_statistics=true,
+        subset=[mr.Subset(), mr.Subset(inside=false)],
+    )
+    @test result.statistics[1].nspins == 10
+    @test result.statistics[2].nspins == 10
+    @test all(result.statistics[1].converged)
+    @test all(result.statistics[2].converged)
+end
+
 @testset "Pulseq repetition time override" begin
     filename = joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2.seq")
     sequence = mr.read_pulseq(filename; TR=300)

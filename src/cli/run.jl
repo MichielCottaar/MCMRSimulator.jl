@@ -70,6 +70,20 @@ function add_readout_flags!(parser)
             help = "The number of repetition times the simulation will run before starting to acquire data."
             arg_type = Int
             default = 0
+        "--target-snr"
+            help = "Adaptively simulate spins until the target signal-to-noise ratio is reached for every subset and magnetisation component."
+            arg_type = Float64
+        "--max-spins"
+            help = "Maximum number of spins for adaptive simulations."
+            arg_type = Int
+        "--batch-size"
+            help = "Number of spins added per batch in adaptive simulations."
+            arg_type = Int
+            default = 1000
+        "--min-spins"
+            help = "Minimum number of spins per subset before a zero transverse signal can be considered converged."
+            arg_type = Int
+            default = 1000
         "--subset"
             help = """Can be provided multiple times. For each time it is provided, the signal will be computed at each readout for a specific subset of spins. This subset is defined by one or two values from bound/free/inside/outside. Afterwards they can include an integer value to select a specific geometry, and an additional integer value to select a specific obstruction within that geometry. The selected user geometry is passed to the subset.
             For example:
@@ -90,7 +104,6 @@ function add_init_flags!(parser)
         "--Nspins", "-N"
             help = "Number of spins to simulate. Ignored if --init is set."
             arg_type = Int
-            default = 10000
         "--voxel-size"
             help = "Size of the voxel (in mm) over which the initial spins are spread."
             arg_type = Float64
@@ -144,6 +157,12 @@ end
 run_main(::Nothing) = Cint(1)
 
 function run_main(args::Dict{<:AbstractString, <:Any})
+    if !isnothing(args["target-snr"]) && !isnothing(args["Nspins"])
+        error("`--target-snr` and `--Nspins` cannot be supplied together; use `--max-spins` to cap an adaptive simulation.")
+    end
+    if isnothing(args["target-snr"]) && !isnothing(args["max-spins"])
+        error("`--max-spins` can only be used together with `--target-snr`.")
+    end
     if "seed" in keys(args)
         Random.seed!(args["seed"])
     end
@@ -157,13 +176,24 @@ function run_main(args::Dict{<:AbstractString, <:Any})
 
     simulation = Simulation(all_sequences; geometry=geometry, R1=args["R1"], R2=args["R2"], diffusivity=args["diffusivity"])
 
-    # initial state
-    bb = BoundingBox(args["voxel-size"] * 1000/2)
-    init_snapshot = Snapshot(args["Nspins"], simulation, bb; longitudinal=args["longitudinal"], transverse=args["transverse"])
     as_snapshot = !isnothing(args["output-snapshot"])
     readout_times = iszero(length(args["times"])) ? nothing : args["times"]
     subsets = [Subset(), (parse_subset(arguments, geometry) for arguments in args["subset"])...]
-    result = readout(init_snapshot, simulation, readout_times; skip_TR=args["skip-TR"], nTR=args["nTR"], noflatten=true, return_snapshot=as_snapshot, subset=subsets)
+    adaptive = !isnothing(args["target-snr"])
+    if adaptive && as_snapshot
+        error("`--output-snapshot` cannot be used together with `--target-snr`.")
+    end
+    if adaptive
+        result = readout(simulation; target_snr=args["target-snr"], readout_times=readout_times, max_spins=args["max-spins"], min_spins=args["min-spins"], batch_size=args["batch-size"], noflatten=true, return_statistics=!isnothing(args["output-signal"]), skip_TR=args["skip-TR"], nTR=args["nTR"], subset=subsets)
+        statistics = isnothing(args["output-signal"]) ? nothing : result.statistics
+        result = result.signal
+    else
+        nspins = isnothing(args["Nspins"]) ? 10000 : args["Nspins"]
+        bb = BoundingBox(args["voxel-size"] * 1000/2)
+        init_snapshot = Snapshot(nspins, simulation, bb; longitudinal=args["longitudinal"], transverse=args["transverse"])
+        result = readout(init_snapshot, simulation, readout_times; skip_TR=args["skip-TR"], nTR=args["nTR"], noflatten=true, return_snapshot=as_snapshot, subset=subsets)
+        statistics = nothing
+    end
 
     # convert to tabular format
     if !isnothing(args["output-signal"])
@@ -175,6 +205,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 value = result[index]
             end
             orient_as_vec = orientation(value)
+            stat = isnothing(statistics) ? nothing : statistics[index]
             push!(df_list, (
                 sequence=sequence_names[index[1]],
                 sequence_index=sequence_indices[index[1]],
@@ -187,6 +218,14 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 phase=phase(value),
                 Sx=orient_as_vec[1],
                 Sy=orient_as_vec[2],
+                Sz=orient_as_vec[3],
+                SE_Sx=isnothing(stat) ? nothing : stat.standard_error[1],
+                SE_Sy=isnothing(stat) ? nothing : stat.standard_error[2],
+                SE_Sz=isnothing(stat) ? nothing : stat.standard_error[3],
+                SNR_Sx=isnothing(stat) ? nothing : stat.snr[1],
+                SNR_Sy=isnothing(stat) ? nothing : stat.snr[2],
+                SNR_Sz=isnothing(stat) ? nothing : stat.snr[3],
+                converged=isnothing(stat) ? nothing : stat.converged,
             ))
         end
         df = DataFrame(
@@ -201,7 +240,17 @@ function run_main(args::Dict{<:AbstractString, <:Any})
             phase=[row.phase for row in df_list],
             Sx=[row.Sx for row in df_list],
             Sy=[row.Sy for row in df_list],
+            Sz=[row.Sz for row in df_list],
         )
+        if adaptive
+            df[!, :SE_Sx] = [row.SE_Sx for row in df_list]
+            df[!, :SE_Sy] = [row.SE_Sy for row in df_list]
+            df[!, :SE_Sz] = [row.SE_Sz for row in df_list]
+            df[!, :SNR_Sx] = [row.SNR_Sx for row in df_list]
+            df[!, :SNR_Sy] = [row.SNR_Sy for row in df_list]
+            df[!, :SNR_Sz] = [row.SNR_Sz for row in df_list]
+            df[!, :converged] = [row.converged for row in df_list]
+        end
         @show df
         CSV.write(args["output-signal"], df)
     end

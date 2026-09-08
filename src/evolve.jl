@@ -39,9 +39,13 @@ After the simulation a [`SpinOrientationSum`](@ref) will be returned.
 struct TotalSignalAccumulator <: SingleAccumulator
     nspins :: Ref{Int}
     as_vector :: MVector{3, Float64}
+    means :: MVector{3, Float64}
+    m2 :: MVector{3, Float64}
     nwrite :: Ref{Int}
     TotalSignalAccumulator(time::Number) = new(
         Ref(0),
+        zero(MVector{3, Float64}),
+        zero(MVector{3, Float64}),
         zero(MVector{3, Float64}),
         Ref(0)
     )
@@ -234,8 +238,15 @@ end
 Adds the `spins` to the readout of `single_accumulator`
 """
 function readout!(acc::TotalSignalAccumulator, spins::Vector{<:Spin{1}})
-    acc.nspins[] += length(spins)
-    acc.as_vector .+= orientation(Snapshot(spins))
+    for spin in spins
+        value = orientation(spin)
+        n = acc.nspins[] + 1
+        delta = value .- acc.means
+        acc.means .+= delta ./ n
+        acc.m2 .+= delta .* (value .- acc.means)
+        acc.as_vector .+= value
+        acc.nspins[] = n
+    end
     acc.nwrite[] += 1
 end
 
@@ -290,6 +301,30 @@ fix_accumulator(acc::TotalSignalAccumulator) = SpinOrientationSum(
     SpinOrientation(acc.as_vector),
     acc.nspins[]
 )
+
+function standard_error(acc::TotalSignalAccumulator)
+    n = acc.nspins[]
+    n < 2 && return fill(Inf, 3)
+    return sqrt.(max.(zero(Float64), acc.m2 ./ (n - 1) .* n))
+end
+
+function inverse_snr(acc::TotalSignalAccumulator, min_spins::Int)
+    signal = acc.as_vector
+    uncertainty = standard_error(acc)
+    transverse_norm = hypot(signal[1], signal[2])
+    transverse = if iszero(transverse_norm)
+        all(iszero, uncertainty[1:2]) && acc.nspins[] >= min_spins ? zeros(2) : fill(Inf, 2)
+    else
+        uncertainty[1:2] ./ transverse_norm
+    end
+    longitudinal = iszero(acc.nspins[]) ? Inf : uncertainty[3] / acc.nspins[]
+    return SVector(transverse[1], transverse[2], longitudinal)
+end
+
+function converged(acc::TotalSignalAccumulator, target_snr::Float64, min_spins::Int)
+    return all(inverse_snr(acc, min_spins) .<= 1 / target_snr)
+end
+
 fix_accumulator(acc::SnapshotAccumulator) = Snapshot(vcat(acc.spins...), acc.time)
 fix_accumulator(::FillerAccumulator) = nothing
 
@@ -304,6 +339,31 @@ function fix_accumulator(acc::GridAccumulator)
         flatten ? 1 : (:)
     end
     return full_grid[indices...]
+end
+
+function fix_statistics(acc::GridAccumulator, target_snr::Float64, min_spins::Int)
+    full_grid = map(acc.grid) do cell
+        if cell isa TotalSignalAccumulator
+            (
+                standard_error=standard_error(cell),
+                snr=inv.(inverse_snr(cell, min_spins)),
+                nspins=cell.nspins[],
+                converged=converged(cell, target_snr, min_spins),
+            )
+        else
+            nothing
+        end
+    end
+    indices = map(acc.flatten) do flatten
+        flatten ? 1 : (:)
+    end
+    return full_grid[indices...]
+end
+
+function converged(acc::GridAccumulator, target_snr::Float64, min_spins::Int)
+    return all(acc.grid) do cell
+        cell isa FillerAccumulator || converged(cell, target_snr, min_spins)
+    end
 end
 
 
@@ -338,6 +398,42 @@ By default each element of this matrix is either a [`SpinOrientationSum`](@ref) 
 If `return_snapshot=true` is set, each element is the full [`Snapshot`](@ref) instead.
 """
 readout(spins, simulation::Simulation, new_readout_times=nothing; bounding_box=500, kwargs...) = readout_internal(_to_snapshot(spins, simulation, bounding_box), simulation, new_readout_times; kwargs...)
+
+"""
+    readout(simulation; target_snr, readout_times=nothing, min_spins=1000, batch_size=1000, max_spins=nothing)
+
+Adaptively simulates independent batches of spins until the requested target SNR is
+reached for every signal component and subset. Each batch contributes to every
+subset before convergence is checked. Set `max_spins` to limit the total number of
+spins; it is unlimited by default.
+
+Set `return_statistics=true` to return the signal together with standard errors,
+SNRs, spin counts, and convergence flags.
+"""
+function readout(simulation::Simulation; target_snr, readout_times=nothing, min_spins=1000, batch_size=1000, max_spins=nothing, return_statistics=false, bounding_box=500, kwargs...)
+    iszero(length(simulation.sequences)) && error("Adaptive readout requires at least one sequence.")
+    target_snr > 0 || error("`target_snr` should be positive.")
+    min_spins > 0 || error("`min_spins` should be positive.")
+    batch_size > 0 || error("`batch_size` should be positive.")
+    if !isnothing(max_spins)
+        max_spins >= min_spins || error("`max_spins` should be at least `min_spins`.")
+    end
+
+    return_snapshot = get(kwargs, :return_snapshot, false)
+    return_snapshot && error("Adaptive readout cannot return snapshots.")
+    accumulator = GridAccumulator(simulation, 0.; readouts=readout_times, return_snapshot=false, kwargs...)
+    nspins = 0
+    while isnothing(max_spins) || nspins < max_spins
+        nrun = isnothing(max_spins) ? batch_size : min(batch_size, max_spins - nspins)
+        run_readout!(_to_snapshot(nrun, simulation, bounding_box), simulation, accumulator; readouts=readout_times, kwargs...)
+        nspins += nrun
+        if nspins >= min_spins && converged(accumulator, Float64(target_snr), Int(min_spins))
+            break
+        end
+    end
+    result = fix_accumulator(accumulator)
+    return return_statistics ? (signal=result, statistics=fix_statistics(accumulator, Float64(target_snr), Int(min_spins))) : result
+end
 
 function readout_internal(snapshot::Snapshot{N}, simulation::Simulation{N}, new_readout_times=nothing; return_snapshot=false, kwargs...) where {N}
     if :readouts in keys(kwargs)
