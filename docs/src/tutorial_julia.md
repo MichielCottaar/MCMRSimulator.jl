@@ -11,10 +11,9 @@ using CairoMakie  # used for plotting; use GLMakie or WGLMakie for interactive p
 update_theme!(Theme(Axis=(xgridvisible=false, ygridvisible=false))) # hide grid lines
 ```
 
-In general, running a simulation will consist of the following three steps:
+In general, running a simulation will consist of the following steps:
 - Defining the microstructure and one or more sequences by creating an appropriate [`Simulation`](@ref) object.
-- Initialising [`Snapshot`](@ref) with one or more [`Spin`](@ref) objects.
-- Simulating a random walk of the spins through the microstructure and the MR signal produced by those spins.
+- Simulating a random walk of the spins through the microstructure and the MR signal produced by those spins. For signal simulations, the recommended approach is adaptive readout using a target SNR.
 - Plotting the MR signal or storing it to disk.
 We will look through each of these steps below.
 
@@ -75,7 +74,7 @@ This is essentially a vector of [`Spin`](@ref) objects with a time stamp.
 Each [`Spin`](@ref) represents a single diffusing particle.
 Besides containing its current position, it also contains its contribution to the MR signal for each of the sequences in the simulation and whether it is stuck on any surfaces.
 
-The recommended way to initialise is to call [`Snapshot`](@ref)`(<number of spins>, <simulation>, [bounding_box])`.
+When a full spin state is needed, the recommended way to initialise is to call [`Snapshot`](@ref)`(<number of spins>, <simulation>, [bounding_box])`.
 This will create randomly distributed spins within some [`BoundingBox`](@ref).
 By default this bounding box is an isotropic voxel with a size of 1 mm centered on the origin.
 
@@ -92,29 +91,36 @@ Finally, one could start a simulation using a [`Snapshot`](@ref) from a previous
 !!! note "Deterministic spins"
     Each [`Spin`](@ref) is assigned a random number state at creation, which will be used for its future evolution. This means that after creation of a spin or a [`Snapshot`](@ref) its future is fully determined. This ensures that when a spin is evolved through the same simulation multiple times, it sill follow the same path each time. This allows improved comparisons between simulations with the same geometry, but different sequences/physics. However, it can lead to confusing results (e.g., a simulation initialised with `fill(Spin(), 500)` will contain 500 spins all following the exact same path).
 ## Running the simulation
-The main way to run a simulation is by calling [`readout`](@ref).
-This function takes a [`Snapshot`](@ref) and a [`Simulation`](@ref) as input (or a number of spins, which will be used to generate a new [`Snapshot`](@ref) on the fly).
+The main way to run a signal simulation is by calling [`readout`](@ref) with a target SNR.
+The simulator then generates independent batches of spins until the requested precision is reached.
+Fixed-spin readouts are also available when an explicit number of spins is required.
 There are various ways to define when the output will be read out (as described in the [`readout`](@ref) documentation).
 
 Here, we will illustrate various examples of using this function:
 
-## Simple signal readouts
+## Adaptive signal readouts
 Most sequences will contain one or more ADC events, which define when the sequence will be read out during each repetition time (TR).
 To get the signal at this time, we can simply call:
 ```@example tutorial
-readout(1000, simulation)
+signal = readout(simulation; target_snr=10)
+```
+
+The returned [`MCMRSimulator.SpinOrientationSum`](@ref) stores the total signal and the number of contributing spins.
+For values that are easier to compare between simulations with different number of spins, request the per-spin mean:
+```@example tutorial
+transverse(signal; mean=true), longitudinal(signal; mean=true)
 ```
 
 This signal is not truely representative from what we expect in a true diffusion-weighted MRI sequence,
 because the longitudinal signal has not had a chance to relax across multiple repetition times.
 To see what the signal will look like after such equilibriation, we can delay our readout with several TRs:
 ```@example tutorial
-readout(1000, simulation, skip_TR=2)
+readout(simulation; target_snr=10, skip_TR=2)
 ```
 
 In addition, to the total signal, we can also get the signal associated with individual compartments:
 ```@example tutorial
-readout(1000, simulation, subset=[Subset(inside=true), Subset(inside=false)])
+signals_by_subset = readout(simulation; target_snr=10, subset=[Subset(inside=true), Subset(inside=false)])
 ```
 Note that we now get two signal outputs.
 The first respresents the signal within the cylinders, which is very close to number of spins, 
@@ -126,7 +132,7 @@ All the spins are either inside or outside the cylinders, so in this case the fi
 Instead of just running the simulation for multiple TRs without readouts, 
 we could also visualise the equilibriation process by outputting the signal for multiple TRs:
 ```@example tutorial
-signals = readout(1000, simulation, nTR=6)
+signals = readout(simulation; target_snr=10, nTR=6)
 f = lines(longitudinal.(signals))
 lines!(transverse.(signals))
 f
@@ -134,7 +140,8 @@ save("tutorial_equil.png") # hide
 nothing # hide
 ```
 
-At each timepoint [`readout`](@ref) by default will return the total MR signal (for each sequence) as a [`MCMRSimulator.SpinOrientationSum`](@ref) object.
+At each timepoint [`readout`](@ref) returns the total MR signal (for each sequence) as a [`MCMRSimulator.SpinOrientationSum`](@ref) object.
+The `snr` field contains the independently estimated SNR for the `Sx`, `Sy`, and `Sz` components when using adaptive readout.
 From this one can estimate the [`transverse`](@ref) component, the [`longitudinal`](@ref) component, and the [`phase`](@ref).
 The [`longitudinal`](@ref) and [`transverse`](@ref) functions are used above to get those respective components.
 
@@ -143,12 +150,20 @@ Here we use this to plot the actual transverse signal evolution.
 ```@example tutorial
 times = 0:0.1:100
 # simulate 3000 spins for a single repetition time
-average_signals = readout(3000, simulation, times)
-f = lines(times, transverse.(average_signals)/3000.)
+average_signals = readout(simulation; target_snr=10, max_spins=10000, readout_times=times)
+f = lines(times, transverse.(average_signals; mean=true))
 save("tutorial_transverse.png", f) # hide
 nothing # hide
 ```
 ![](tutorial_transverse.png)
+
+## Fixed-spin simulations
+When an exact number of spins is needed, pass that number explicitly:
+```@example tutorial
+fixed_signal = readout(1000, simulation)
+transverse(fixed_signal; mean=true)
+```
+This is useful for controlled comparisons with a more predictable runtime or benchmarking. Adaptive readout is preferable for ordinary signal simulations because it controls the Monte Carlo noise directly.
 
 
 ## Reading out the full snapshot

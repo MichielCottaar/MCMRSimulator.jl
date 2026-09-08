@@ -57,18 +57,18 @@ run_main_docs("run --help")
 
 We can see that in addition to defining the geometry and the sequence, we can also control the simulation properties such as the `--diffusivity`, `--R1`, and `--R2`.
 
-The simulation is initialised by randomly distributing a number of spins (set by `--Nspins`) uniformly across a bounding box with size given by `--voxel-size`.
-This initial state might also contain bound spins (if the `--density` flag was set to a non-zero value during the geometry generation).
+The recommended approach is to set a target SNR and let the simulator determine how many spins are needed. Spins are randomly distributed uniformly across a bounding box with size given by `--voxel-size`.
+The initial state might also contain bound spins (if the `--density` flag was set to a non-zero value during the geometry generation).
 
 We will use a pre-defined diffusion-weighted MRI sequence with an echo time of 80 ms and a b-value of 2 mm^2/s.
 
 The DWI sequence defined above contains a single ADC event at the echo time (80 ms). By default, this is used for readout:
 ```bash
-mcmr run geometry.json dwi_te_80_bval_2.seq -o signal.csv
+mcmr run geometry.json dwi_te_80_bval_2.seq --target-snr 10 -o signal.csv
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run geometry.json dwi_te_80_bval_2.seq -o signal.csv --seed=1")
+run_main_docs("run geometry.json dwi_te_80_bval_2.seq --target-snr 10 -o signal.csv --seed=1")
 ```
 
 This produces the CSV file, which looks like
@@ -90,14 +90,21 @@ The columns in this file store the following information:
 - "phase": average phase of the signal (in degrees)
 - "Sx": signal strength in the x-direction
 - "Sy": signal strength in the y-direction
+- "Sz": signal strength in the z-direction
+- "SE_Sx", "SE_Sy", "SE_Sz": estimated standard errors of the signal components
+- "SNR_Sx", "SNR_Sy", "SNR_Sz": estimated signal-to-noise ratios of the signal components
+
+The signal and magnetisation values in adaptive CLI output are reported per contributing spin. The `nspins` column reports the number of spins in the corresponding subset. If a finite `--max-spins` limit is reached before the target SNR, the program emits a warning.
+
+The CLI has an `--Nspins` option for fixed-spin simulations as an alternative to defining the `--target-snr`. These options cannot be combined; use `--max-spins` to cap an adaptive run.
 
 We can also output the signal of specific subsets of spins. For example, in the following we request to separately the output for just the spins inside the cylinders and just the spins outside of the cylinders.
 ```bash
-mcmr run geometry.json dwi_te_80_bval_2.seq -o signal.csv --subset inside --subset outside
+mcmr run geometry.json dwi_te_80_bval_2.seq --target-snr 10 -o signal.csv --subset inside --subset outside
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run geometry.json dwi_te_80_bval_2.seq -o signal2.csv --subset inside --subset outside --seed=2")
+run_main_docs("run geometry.json dwi_te_80_bval_2.seq --target-snr 10 -o signal2.csv --subset inside --subset outside --seed=2")
 ```
 
 We can see two additional rows in the output. 
@@ -109,8 +116,8 @@ Markdown.parse("```\n$(text)\n```")
 ```
 We can see in the second row that inside the cylinders the transverse signal is very close to the number of spins, 
 indicating that there has been very little dephasing due to the diffusion weighting inside the cylinders.
-On the other hand, we did lose most of the signal outside of the cylinders (i.e., the transverse signal is much lower than the number of spins in the third row).
-All the spins are either inside or outside the cylinders, so in this case the first row is simply the sum of the next two.
+On the other hand, we did lose most of the signal outside of the cylinders (i.e., the transverse signal is much lower in the third row).
+The reported values are per-spin means, so the first row is not the sum of the next two. To recover total signals, multiply each row by its `nspins` value.
 
 A more complete state of all the spins can be produced using the `--output-snapshot` flag.
 For example, the command

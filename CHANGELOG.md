@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - 2D plotting support using a `PlotPlane` is added for `BendyCylinder`, meshes and spheres (and any future objects that can be converted into a mesh).
+- Adaptive signal readout using `target_snr`, with optional `batch_size` and `max_spins` controls.
+- Per-component, per-subset SNR and standard-error information for accumulated signal readouts.
+- `mean=true` support for `longitudinal`, `transverse`, and `orientation`.
+
+### Changed
+- CLI signal output now reports per-spin magnetisation values and includes component SNR information.
+- Fixed-spin and adaptive total-signal readouts now expose SNR information through `SpinOrientationSum.snr`.
+- `--target-snr` and `--Nspins` are mutually exclusive; `--max-spins` is the adaptive upper-bound option.
+- Adaptive readout emits a warning when a finite `max_spins` limit is reached before the target SNR.
 
 ### Optimisation
 - Collision detection algorithm has been sped up, especially for small geometries
