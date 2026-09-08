@@ -38,8 +38,27 @@ end
 Base.length(geometry::FixedGeometry) =
     geometry.geometry isa GeometryTuple ? length(geometry.geometry) : 1
 
-bound_intersection_type(geometry::FixedGeometry) =
-    bound_intersection_type(geometry.geometry, geometry.surface.density)
+function bound_intersection_type(geometry::FixedGeometry)
+    indices_type = bound_intersection_type(
+        geometry.geometry,
+        geometry.surface.density,
+    )
+    indices_type === Union{} && return Union{}
+
+    index_types = indices_type isa Union ? Base.uniontypes(indices_type) : (indices_type,)
+    Union{
+        (
+            Intersection{
+                index_type,
+                Core.Compiler.return_type(
+                    to_property_index,
+                    Tuple{typeof(geometry.geometry), index_type},
+                ),
+            }
+            for index_type in index_types
+        )...
+    }
+end
 
 distance_to_surface(geometry::FixedGeometry, position::SVector{3, Float64}) =
     distance_to_surface(geometry.geometry, position)

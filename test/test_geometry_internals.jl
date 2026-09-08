@@ -99,7 +99,7 @@ end
 
     fixed_geometry = mr.fix(mr.Spheres(radius=1., surface_density=1., dwell_time=1.))
     @test GI.bound_intersection_type(fixed_geometry) ==
-        bound_intersection_type(fixed_geometry.geometry, fixed_geometry.surface.density)
+        GI.Intersection{Tuple{Int}, Tuple{Int}}
 end
 
 @testset "projected mesh field of view" begin
