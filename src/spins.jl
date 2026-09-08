@@ -250,18 +250,18 @@ When orientations for multiple sequences are available an array of vectors is re
 function orientation end
 
 for param in (:longitudinal, :transverse)
-    @eval $param(o :: SpinOrientation) = o.$param
+    @eval $param(o :: SpinOrientation; mean=false) = o.$param
 end
-phase(o :: SpinOrientation) = norm_angle(o.phase)
-orientation(o :: SpinOrientation) = SVector{3, Float64}(
+phase(o :: SpinOrientation; mean=false) = norm_angle(o.phase)
+orientation(o :: SpinOrientation; mean=false) = SVector{3, Float64}(
     o.transverse * cosd(o.phase),
     o.transverse * sind(o.phase),
     o.longitudinal
 )
 
 for param in (:longitudinal, :transverse, :phase, :orientation)
-    @eval $param(s :: Spin{1}) = $param(s.orientations[1])
-    @eval $param(s :: Spin) = map($param, s.orientations)
+    @eval $param(s :: Spin{1}; mean=false) = $param(s.orientations[1]; mean=mean)
+    @eval $param(s :: Spin; mean=false) = map(orient -> $param(orient; mean=mean), s.orientations)
 end
 
 """
@@ -390,8 +390,9 @@ end
 
 get_time(s :: Snapshot) = s.time
 
-function orientation(s :: Snapshot)
-    sum(orientation, s.spins, init=zero(SVector{3, Float64}))
+function orientation(s :: Snapshot; mean=false)
+    result = sum(orientation, s.spins, init=zero(SVector{3, Float64}))
+    return mean && !isempty(s) ? result ./ length(s) : result
 end
 
 for symbol in (:R1, :R2)
@@ -473,19 +474,32 @@ namely by calling [`transverse`](@ref), [`longitudinal`](@ref), or [`phase`](@re
 struct SpinOrientationSum
     orient :: SpinOrientation
     nspins :: Int
+    snr :: Union{Nothing, SVector{3, Float64}}
 end
+SpinOrientationSum(orient::SpinOrientation, nspins::Int) = SpinOrientationSum(orient, nspins, nothing)
 SpinOrientationSum(s :: Snapshot) = SpinOrientationSum(SpinOrientation(orientation(s)), length(s))
 
 Base.length(s::SpinOrientationSum) = s.nspins
-Base.show(io::IO, orient::SpinOrientationSum) = print(io, "SpinOrientationSum(longitudinal=$(longitudinal(orient)), transverse=$(transverse(orient)), phase=$(phase(orient))°, nspins=$(length(orient)))")
-
-for param in (:orientation, :longitudinal, :transverse, :phase)
-    @eval $param(s :: SpinOrientationSum) = $param(s.orient)
+function Base.show(io::IO, orient::SpinOrientationSum)
+    text = "SpinOrientationSum(longitudinal=$(longitudinal(orient)), transverse=$(transverse(orient)), phase=$(phase(orient))°, nspins=$(length(orient))"
+    isnothing(orient.snr) ? print(io, text * ")") : print(io, text * ", snr=$(orient.snr))")
 end
 
 for param in (:longitudinal, :transverse, :phase)
-    @eval $param(s :: Snapshot) = $param(SpinOrientationSum(s))
+    @eval $param(s :: SpinOrientationSum; mean=false) = begin
+        value = $param(s.orient)
+        mean && !iszero(s.nspins) ? value / s.nspins : value
+    end
 end
+function orientation(s :: SpinOrientationSum; mean=false)
+    value = orientation(s.orient)
+    return mean && !iszero(s.nspins) ? value ./ s.nspins : value
+end
+
+for param in (:longitudinal, :transverse, :phase)
+    @eval $param(s :: Snapshot; mean=false) = $param(SpinOrientationSum(s); mean=mean)
+end
+snr(s :: SpinOrientationSum) = s.snr
 
 function Base.:+(sp1::SpinOrientationSum, sp2::SpinOrientationSum)
     return SpinOrientationSum(

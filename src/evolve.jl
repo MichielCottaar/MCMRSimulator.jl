@@ -297,10 +297,13 @@ has_nwrite(::FillerAccumulator, nwrite::Int) = true
 
 Return the accumulated readout results as a `SpinOrientationSum` or `Snapshot`.
 """
-fix_accumulator(acc::TotalSignalAccumulator) = SpinOrientationSum(
-    SpinOrientation(acc.as_vector),
-    acc.nspins[]
-)
+function fix_accumulator(acc::TotalSignalAccumulator; min_spins=0)
+    return SpinOrientationSum(
+        SpinOrientation(acc.as_vector),
+        acc.nspins[],
+        inv.(inverse_snr(acc, Int(min_spins))),
+    )
+end
 
 function standard_error(acc::TotalSignalAccumulator)
     n = acc.nspins[]
@@ -333,8 +336,14 @@ fix_accumulator(::FillerAccumulator) = nothing
 
 Return the accumulated readout results as an array.
 """
-function fix_accumulator(acc::GridAccumulator)
-    full_grid = fix_accumulator.(acc.grid)
+function fix_accumulator(acc::GridAccumulator; min_spins=0)
+    full_grid = map(acc.grid) do cell
+        if cell isa TotalSignalAccumulator
+            fix_accumulator(cell; min_spins=min_spins)
+        else
+            fix_accumulator(cell)
+        end
+    end
     indices = map(acc.flatten) do flatten
         flatten ? 1 : (:)
     end
@@ -432,7 +441,7 @@ function readout(simulation::Simulation; target_snr, readout_times=nothing, batc
             break
         end
     end
-    result = fix_accumulator(accumulator)
+    result = fix_accumulator(accumulator; min_spins=min_spins)
     return return_statistics ? (signal=result, statistics=fix_statistics(accumulator, Float64(target_snr), Int(min_spins))) : result
 end
 

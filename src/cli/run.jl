@@ -200,7 +200,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
             else
                 value = result[index]
             end
-            orient_as_vec = orientation(value)
+            orient_as_vec = orientation(value; mean=true)
             stat = isnothing(statistics) ? nothing : statistics[index]
             push!(df_list, (
                 sequence=sequence_names[index[1]],
@@ -209,8 +209,8 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 readout=index[2],
                 subset=index[4] - 1,
                 nspins=length(value),
-                longitudinal=longitudinal(value),
-                transverse=transverse(value),
+                longitudinal=longitudinal(value; mean=true),
+                transverse=transverse(value; mean=true),
                 phase=phase(value),
                 Sx=orient_as_vec[1],
                 Sy=orient_as_vec[2],
@@ -218,9 +218,9 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 SE_Sx=isnothing(stat) ? nothing : stat.standard_error[1],
                 SE_Sy=isnothing(stat) ? nothing : stat.standard_error[2],
                 SE_Sz=isnothing(stat) ? nothing : stat.standard_error[3],
-                SNR_Sx=isnothing(stat) ? nothing : stat.snr[1],
-                SNR_Sy=isnothing(stat) ? nothing : stat.snr[2],
-                SNR_Sz=isnothing(stat) ? nothing : stat.snr[3],
+                SNR_Sx=isnothing(value.snr) ? nothing : value.snr[1],
+                SNR_Sy=isnothing(value.snr) ? nothing : value.snr[2],
+                SNR_Sz=isnothing(value.snr) ? nothing : value.snr[3],
                 converged=isnothing(stat) ? nothing : stat.converged,
             ))
         end

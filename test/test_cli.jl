@@ -153,7 +153,7 @@ end
                 result = DataFrame(CSV.File("global.csv"))
                 @test size(result, 1) == 1
                 @test result[1, :nspins] == 100
-                @test result[1, :transverse] ≈ 100 * exp(-3.)
+            @test result[1, :transverse] ≈ exp(-3.)
             end
             @testset "Change R2 within sphere" begin
                 _, err = run_main_test("geometry create spheres 1 spheres.json --radius 1 --repeats 2.2,2.2,2.2 --R2_inside=0.2")
@@ -165,8 +165,8 @@ end
                 @test result[1, :nspins] == 100
                 @test result[2, :nspins] < 100
                 @test result[3, :nspins] < 100
-                @test result[2, :transverse] / result[2, :nspins] ≈ exp(-9.)
-                @test result[3, :transverse] / result[3, :nspins] ≈ exp(-3.)
+            @test result[2, :transverse] ≈ exp(-9.)
+            @test result[3, :transverse] ≈ exp(-3.)
                 @test all(result[!, :sequence] .== sequence_file)
                 @test all(result[!, :sequence_index] .== 1)
             end
@@ -223,8 +223,8 @@ end
         @test result[1, :nspins] == 100
         @test result[2, :nspins] < 100
         @test result[3, :nspins] < 100
-        @test result[2, :longitudinal] / result[2, :nspins] ≈ 1. - exp(-0.9)
-        @test result[3, :longitudinal] / result[3, :nspins] ≈ 1. - exp(-0.3)
+            @test result[2, :longitudinal] ≈ 1. - exp(-0.9)
+            @test result[3, :longitudinal] ≈ 1. - exp(-0.3)
         @test all(result[!, :sequence] .== sequence_file)
         @test all(result[!, :sequence_index] .== 1)
     end

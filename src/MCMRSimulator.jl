@@ -42,8 +42,8 @@ import .Methods: get_time, get_rotation
 export get_time
 @compat public get_rotation
 
-import .Spins: position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, SpinOrientationSum, isinside, stuck, stuck_to, orientation, FixedXoshiro, get_sequence
-export position, longitudinal, transverse, phase, Spin, Snapshot, isinside, stuck, stuck_to, orientation, get_sequence
+import .Spins: position, longitudinal, transverse, phase, Spin, Snapshot, SpinOrientation, SpinOrientationSum, isinside, stuck, stuck_to, orientation, snr, FixedXoshiro, get_sequence
+export position, longitudinal, transverse, phase, Spin, Snapshot, isinside, stuck, stuck_to, orientation, snr, get_sequence
 @compat public SpinOrientation, SpinOrientationSum, FixedXoshiro
 
 import .TimeSteps: TimeStep
