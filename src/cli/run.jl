@@ -221,7 +221,6 @@ function run_main(args::Dict{<:AbstractString, <:Any})
                 SNR_Sx=isnothing(value.snr) ? nothing : value.snr[1],
                 SNR_Sy=isnothing(value.snr) ? nothing : value.snr[2],
                 SNR_Sz=isnothing(value.snr) ? nothing : value.snr[3],
-                converged=isnothing(stat) ? nothing : stat.converged,
             ))
         end
         df = DataFrame(
@@ -245,7 +244,6 @@ function run_main(args::Dict{<:AbstractString, <:Any})
             df[!, :SNR_Sx] = [row.SNR_Sx for row in df_list]
             df[!, :SNR_Sy] = [row.SNR_Sy for row in df_list]
             df[!, :SNR_Sz] = [row.SNR_Sz for row in df_list]
-            df[!, :converged] = [row.converged for row in df_list]
         end
         @show df
         CSV.write(args["output-signal"], df)

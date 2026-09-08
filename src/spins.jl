@@ -214,19 +214,21 @@ macro spin_rng(spin, expr)
 end
 
 """
-    longitudinal(spin)
-    longitudinal(snapshot)
+    longitudinal(spin; mean=false)
+    longitudinal(snapshot; mean=false)
 
 Returns the longitudinal magnitude of the spin (i.e., magnitude aligned with the magnetic field) for a single particle ([`Spin`](@ref)) or averaged across a group of particles in a [`Snapshot`].
+For aggregate results, `mean=true` returns the value per contributing spin instead of the total.
 When orientations for multiple sequences are available an array of longitudinal values is returned with a value for each sequence.
 """
 function longitudinal end
 
 """
-    transverse(spin)
-    transverse(snapshot)
+    transverse(spin; mean=false)
+    transverse(snapshot; mean=false)
 
 Returns the transverse spin (i.e., magnitude in the plane perpendicular to the magnetic field) for a single particle ([`Spin`](@ref)) or averaged across a group of particles in a [`Snapshot`].
+For aggregate results, `mean=true` returns the magnitude of the mean transverse magnetisation instead of the total.
 When orientations for multiple sequences are available an array of transverse values is returned with a value for each sequence.
 """
 function transverse end
@@ -241,10 +243,11 @@ When orientations for multiple sequences are available  an array of phase values
 function phase end
 
 """
-    orientation(spin)
-    orientation(snapshot)
+    orientation(spin; mean=false)
+    orientation(snapshot; mean=false)
 
 Returns the spin orientation as a length-3 vector for a single particle ([`Spin`](@ref)) or averaged across a group of particles in a [`Snapshot`].
+For aggregate results, `mean=true` returns the orientation per contributing spin instead of the total.
 When orientations for multiple sequences are available an array of vectors is returned with a value for each sequence.
 """
 function orientation end
@@ -468,6 +471,7 @@ off_resonance(positions::AbstractVector{<:AbstractVector{<:Number}}, geometry, g
 
 Computes the total signal and the number of spins in a [`Snapshot`](@ref).
 The number of spins can be found by running `length(spin_orientation_sum)`.
+The optional `snr` field contains the component SNR when the result was produced by a signal readout with uncertainty tracking.
 The spin orientation information can be found in the same way as for [`SpinOrientation`](@ref),
 namely by calling [`transverse`](@ref), [`longitudinal`](@ref), or [`phase`](@ref).
 """

@@ -26,10 +26,16 @@
     )
     @test result.statistics[1].nspins == 10
     @test result.statistics[2].nspins == 10
-    @test all(result.statistics[1].converged)
-    @test all(result.statistics[2].converged)
     @test result.signal[1].snr == result.statistics[1].snr
     @test result.signal[2].snr == result.statistics[2].snr
+    @test !(:converged in propertynames(result.statistics[1]))
+
+    @test_logs (:warn, r"Adaptive readout did not reach target SNR") mr.readout(
+        simulation;
+        target_snr=100,
+        batch_size=1,
+        max_spins=1,
+    )
 end
 
 @testset "Adaptive readout with diffusion" begin
@@ -56,8 +62,6 @@ end
     outside_statistics = outside.statistics[1]
     @test inside_statistics.nspins < 100
     @test outside_statistics.nspins > 100
-    @test inside_statistics.converged
-    @test outside_statistics.converged
     @test all(inside_statistics.snr .>= 100)
     @test all(outside_statistics.snr .>= 100)
     @test length(inside.signal[1]) == inside_statistics.nspins

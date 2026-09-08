@@ -357,7 +357,6 @@ function fix_statistics(acc::GridAccumulator, target_snr::Float64, min_spins::In
                 standard_error=standard_error(cell),
                 snr=inv.(inverse_snr(cell, min_spins)),
                 nspins=cell.nspins[],
-                converged=converged(cell, target_snr, min_spins),
             )
         else
             nothing
@@ -377,10 +376,16 @@ end
 
 
 """
+    readout(simulation; target_snr, readout_times=nothing, batch_size=1000, max_spins=nothing)
     readout(spins, simulation[, readout_times]; bounding_box=<1x1x1 mm box>, skip_TR=0, nTR=1, return_snapshot=false, subset=<all>)
 
 Evolves a set of spins through the [`Simulation`](@ref).
 Returns the total signal or a full [`Snapshot`](@ref) at every readout time in the simulated sequences over one or more repetition times (TRs).
+
+For signal simulations, the adaptive form using `target_snr` is recommended. It
+simulates independent batches until every signal component, readout, and subset
+reaches the target SNR. `max_spins` is unlimited by default. Each batch contributes
+to every subset.
 
 # Positional arguments:
 - `spins`: Number of spins to simulate or an already existing [`Snapshot`](@ref).
@@ -394,8 +399,12 @@ Returns the total signal or a full [`Snapshot`](@ref) at every readout time in t
     if the starting snapshot is from a time past one of the sequence readouts.
     See [`get_readouts`](@ref) for details.
 - `nTR`: number of TRs for which to store the output. See [`get_readouts`](@ref) for details.
-- `return_snapshot`: set to true to output the state of all the spins as a [`Snapshot`](@ref) at each readout instead of a [`SpinOrientationSum`](@ref) with the total signal.
+- `return_snapshot`: set to true to output the state of all the spins as a [`Snapshot`](@ref) at each readout instead of a [`SpinOrientationSum`](@ref) with the total signal. This will only work for non-adaptive simulations with a fixed initial snapshot or number of spins.
 - `subset`: Return the signal/snapshot for a subset of all spins. Can be set to a single or a vector of [`Subset`](@ref) objects. If set to a vector, this will add an attional dimension to the output.
+- `target_snr`: target signal-to-noise ratio for adaptive readout. This is required when calling `readout` with only a [`Simulation`](@ref).
+- `batch_size`: number of spins simulated between adaptive convergence checks.
+- `max_spins`: optional maximum number of spins simulated in adaptive mode.
+- `return_statistics`: when true in adaptive mode, also return standard errors, SNRs, sample counts, and convergence flags.
 
 # Returns
 The function returns an up to 3-dimensional (KxLxMxN) array, with the following dimensions:
@@ -403,7 +412,7 @@ The function returns an up to 3-dimensional (KxLxMxN) array, with the following 
 - `L`: the number of readout times with a single TR. This dimension is skipped if the `readout_times` is set to a scalar number. This dimension might contain `nothing`s for sequences that contain fewer `Readout.ADC` objects than the maximum (`M`).
 - `M`: the number of TRs (controlled by the `nTR` keyword). If `nTR` is not explicitly set by the user, this dimension is skipped.
 - `N`: the number of subsets (controlled by the `subset` keyword). If `subset` is set to a single value (<all> by default), this dimension is skipped.
-By default each element of this matrix is either a [`SpinOrientationSum`](@ref) with the total signal.
+By default each element of this matrix is either a [`SpinOrientationSum`](@ref) with the total signal and the achieved SNR.
 If `return_snapshot=true` is set, each element is the full [`Snapshot`](@ref) instead.
 """
 readout(spins, simulation::Simulation, new_readout_times=nothing; bounding_box=500, kwargs...) = readout_internal(_to_snapshot(spins, simulation, bounding_box), simulation, new_readout_times; kwargs...)
@@ -415,10 +424,11 @@ Adaptively simulates independent batches of spins until the requested target SNR
 reached for every signal component and subset. Each batch contributes to every
 subset before convergence is checked. Set `max_spins` to limit the total number of
 spins; it is unlimited by default. A zero transverse signal is accepted after at
-least `target_snr^2` spins have contributed to that subset.
+least `target_snr^2` spins have contributed to that subset. If a finite
+`max_spins` limit is reached without convergence, a warning is emitted.
 
 Set `return_statistics=true` to return the signal together with standard errors,
-SNRs, spin counts, and convergence flags.
+SNRs, and spin counts.
 """
 function readout(simulation::Simulation; target_snr, readout_times=nothing, batch_size=1000, max_spins=nothing, return_statistics=false, bounding_box=500, kwargs...)
     iszero(length(simulation.sequences)) && error("Adaptive readout requires at least one sequence.")
@@ -440,6 +450,9 @@ function readout(simulation::Simulation; target_snr, readout_times=nothing, batc
         if converged(accumulator, Float64(target_snr), Int(min_spins))
             break
         end
+    end
+    if !converged(accumulator, Float64(target_snr), Int(min_spins))
+        @warn "Adaptive readout did not reach target SNR $(target_snr) after $(nspins) spins."
     end
     result = fix_accumulator(accumulator; min_spins=min_spins)
     return return_statistics ? (signal=result, statistics=fix_statistics(accumulator, Float64(target_snr), Int(min_spins))) : result

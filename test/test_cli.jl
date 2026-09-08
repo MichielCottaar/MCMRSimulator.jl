@@ -206,6 +206,7 @@ end
         @test length(err) == 0
         result = DataFrame(CSV.File("adaptive.csv"))
         @test all(name in propertynames(result) for name in (:SNR_Sx, :SNR_Sy, :SNR_Sz))
+        @test !(:converged in propertynames(result))
         @test !(:inverse_snr_x in propertynames(result))
         @test all((10 .<= result[!, :nspins]) .& (result[!, :nspins] .<= 20))
     end
