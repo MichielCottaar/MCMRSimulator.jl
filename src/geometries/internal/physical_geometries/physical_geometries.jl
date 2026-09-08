@@ -10,6 +10,12 @@ Represents a physical geometry in N-dimensional space. This is an abstract type 
 """
 abstract type PhysicalGeometry{N} end
 
+struct IntersectionParams{N}
+    inside::Bool
+    normal::SVector{N, Float64}
+    hit_gap::Bool
+end
+
 function size_scale end
 function geometry_mesh end
 function distance_to_surface end
@@ -54,7 +60,7 @@ function child_type end
 
 
 """
-    get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, indices) -> (inside=true/false, normal=SVector{N, Float64}, hit_gap=true/false)
+     get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, indices) -> IntersectionParams{N}
 
 Gets the `inside`, `normal`, and `hit_gap` properties of the intersection after it has been identified by `find_intersection`.
 
@@ -65,10 +71,10 @@ function get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N
     start_child = to_child_coordinates(geometry, start)
     dest_child = to_child_coordinates(geometry, dest)
     result = get_intersection_params(child, start_child, dest_child, remaining_indices)
-    return (
-        inside=result.inside,
-        normal=from_child_coordinates_normal(geometry, result.normal),
-        hit_gap=result.hit_gap,
+    return IntersectionParams{N}(
+        result.inside,
+        from_child_coordinates_normal(geometry, result.normal),
+        result.hit_gap,
     )
 end
 

@@ -5,7 +5,7 @@ import LinearAlgebra: cross, norm, svd, ⋅
 import DelaunayTriangulation: triangulate, get_triangles
 import NearestNeighbors: KDTree, nn
 
-import ..PhysicalGeometries: PhysicalGeometry, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, intersection_type, isinside_single, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, intersection_type, isinside_single, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ...Properties: GeometryLeafProperties
 import ..Groups
@@ -205,10 +205,10 @@ function get_intersection_params(
         destination,
         indices[2:end],
     )
-    (
-        inside=result.inside,
-        normal=result.normal,
-        hit_gap=triangle_index >= mesh.first_index_of_gap,
+    IntersectionParams{3}(
+        result.inside,
+        result.normal,
+        triangle_index >= mesh.first_index_of_gap,
     )
 end
 

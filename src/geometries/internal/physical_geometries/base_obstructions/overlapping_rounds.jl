@@ -50,10 +50,10 @@ function get_intersection_params(
 ) where {N}
     params = get_intersection_params(Round{N}(round.radius), start, destination, intersection)
     position = start + intersection[end] .* (destination - start)
-    (
-        inside=params.inside,
-        normal=params.normal,
-        hit_gap=_inside_other_rounds(round, position),
+    IntersectionParams{N}(
+        params.inside,
+        params.normal,
+        _inside_other_rounds(round, position),
     )
 end
 

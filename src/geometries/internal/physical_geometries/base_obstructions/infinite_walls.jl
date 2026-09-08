@@ -31,10 +31,10 @@ function get_intersection_params(
     intersection::Tuple,
 )
     inside, _ = intersection
-    (
-        inside=inside,
-        normal=inside ? _positive_wall_normal : _negative_wall_normal,
-        hit_gap=false,
+    IntersectionParams{1}(
+        inside,
+        inside ? _positive_wall_normal : _negative_wall_normal,
+        false,
     )
 end
 

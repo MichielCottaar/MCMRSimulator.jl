@@ -56,10 +56,10 @@ function get_intersection_params(
 ) where {N}
     inside, solution = intersection
     normal = (solution .* destination .+ (1 - solution) .* start) ./ round.radius
-    (
-        inside=inside,
-        normal=inside ? -normal : normal,
-        hit_gap=false,
+    IntersectionParams{N}(
+        inside,
+        inside ? -normal : normal,
+        false,
     )
 end
 

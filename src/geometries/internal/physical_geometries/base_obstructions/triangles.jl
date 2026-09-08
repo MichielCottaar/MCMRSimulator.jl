@@ -116,10 +116,10 @@ function get_intersection_params(
 )
     inside, _ = intersection
     triangle_normal = normal(triangle)
-    (
-        inside=inside,
-        normal=inside ? -triangle_normal : triangle_normal,
-        hit_gap=false,
+    IntersectionParams{3}(
+        inside,
+        inside ? -triangle_normal : triangle_normal,
+        false,
     )
 end
 
