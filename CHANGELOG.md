@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adaptive signal readout using `target_snr`, with optional `batch_size` and `max_spins` controls.
 - Per-component, per-subset SNR and standard-error information for accumulated signal readouts.
 - `mean=true` support for `longitudinal`, `transverse`, and `orientation`.
+- `susceptiblity` option added for `Spheres`. The magnetic susceptiblity is assumed to be uniform throughout the sphere.
 
 ### Changed
 - CLI signal output now reports per-spin magnetisation values and includes component SNR information.
