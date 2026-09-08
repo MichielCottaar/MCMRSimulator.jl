@@ -4,7 +4,7 @@ import StaticArrays: SVector
 import ..BoundingBoxes: BoundingBox
 import .InternalBoundingBoxes: InternalBoundingBox
 import .InternalBoundingBoxes
-import .PhysicalGeometries: PhysicalGeometry, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, distance_to_surface, to_property_index, inside_indices_eltype
+import .PhysicalGeometries: PhysicalGeometry, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, distance_to_surface, to_property_index, inside_indices_eltype, bound_intersection_type
 import .PhysicalGeometries.Groups: GeometryTuple, inside_indices_for_any_type
 import .PhysicalGeometries.Transparents: SizeScaleOverride
 import .Properties: all_property_values, get_value
@@ -16,6 +16,7 @@ export FixedGeometry, Intersection, flip, IsInside, collision_normal,
     ray_grid_intersections,
     size_scale, SizeScaleOverride, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
+    bound_intersection_type,
     permeability, surface_relaxation, surface_density, dwell_time,
     R1, R2, off_resonance,
     susceptibility_off_resonance, off_resonance_gradient
@@ -36,6 +37,9 @@ end
 # A fixed geometry represents one user geometry unless it is a tuple of groups.
 Base.length(geometry::FixedGeometry) =
     geometry.geometry isa GeometryTuple ? length(geometry.geometry) : 1
+
+bound_intersection_type(geometry::FixedGeometry) =
+    bound_intersection_type(geometry.geometry, geometry.surface.density)
 
 distance_to_surface(geometry::FixedGeometry, position::SVector{3, Float64}) =
     distance_to_surface(geometry.geometry, position)

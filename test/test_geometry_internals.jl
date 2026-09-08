@@ -96,6 +96,10 @@ end
     nested_group = GeometryVector([nested, nested])
     nested_densities = Properties.GeometryVectorProperties([nested_density_a, nested_density_b])
     @test bound_intersection_type(nested_group, nested_densities) == Union{Tuple{Int, Int}, Tuple{Int, Int, Int}}
+
+    fixed_geometry = mr.fix(mr.Spheres(radius=1., surface_density=1., dwell_time=1.))
+    @test GI.bound_intersection_type(fixed_geometry) ==
+        bound_intersection_type(fixed_geometry.geometry, fixed_geometry.surface.density)
 end
 
 @testset "projected mesh field of view" begin
