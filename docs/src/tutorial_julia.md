@@ -102,7 +102,7 @@ Here, we will illustrate various examples of using this function:
 Most sequences will contain one or more ADC events, which define when the sequence will be read out during each repetition time (TR).
 To get the signal at this time, we can simply call:
 ```@example tutorial
-signal = readout(simulation; target_snr=10)
+signal = readout(simulation; target_snr=1, max_spins=100)
 ```
 
 The returned [`MCMRSimulator.SpinOrientationSum`](@ref) stores the total signal and the number of contributing spins.
@@ -115,12 +115,12 @@ This signal is not truely representative from what we expect in a true diffusion
 because the longitudinal signal has not had a chance to relax across multiple repetition times.
 To see what the signal will look like after such equilibriation, we can delay our readout with several TRs:
 ```@example tutorial
-readout(simulation; target_snr=10, skip_TR=2)
+readout(simulation; target_snr=1, max_spins=100, skip_TR=2)
 ```
 
 In addition, to the total signal, we can also get the signal associated with individual compartments:
 ```@example tutorial
-signals_by_subset = readout(simulation; target_snr=10, subset=[Subset(inside=true), Subset(inside=false)])
+signals_by_subset = readout(simulation; target_snr=1, max_spins=100, subset=[Subset(inside=true), Subset(inside=false)])
 ```
 Note that we now get two signal outputs.
 The first respresents the signal within the cylinders, which is very close to number of spins, 
@@ -132,7 +132,7 @@ All the spins are either inside or outside the cylinders, so in this case the fi
 Instead of just running the simulation for multiple TRs without readouts, 
 we could also visualise the equilibriation process by outputting the signal for multiple TRs:
 ```@example tutorial
-signals = readout(simulation; target_snr=10, nTR=6)
+signals = readout(simulation; target_snr=1, max_spins=100, nTR=6)
 f = lines(longitudinal.(signals))
 lines!(transverse.(signals))
 f
@@ -150,7 +150,7 @@ Here we use this to plot the actual transverse signal evolution.
 ```@example tutorial
 times = 0:0.1:100
 # simulate 3000 spins for a single repetition time
-average_signals = readout(simulation; target_snr=10, max_spins=10000, readout_times=times)
+average_signals = readout(simulation; target_snr=1, max_spins=100, readout_times=times)
 f = lines(times, transverse.(average_signals; mean=true))
 save("tutorial_transverse.png", f) # hide
 nothing # hide

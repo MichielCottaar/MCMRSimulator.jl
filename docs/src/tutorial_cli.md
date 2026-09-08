@@ -68,7 +68,7 @@ mcmr run geometry.json dwi_te_80_bval_2.seq --target-snr 10 -o signal.csv
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run geometry.json dwi_te_80_bval_2.seq --target-snr 10 -o signal.csv --seed=1")
+run_main_docs("run geometry.json dwi_te_80_bval_2.seq --target-snr 1 --max-spins 100 -o signal.csv --seed=1")
 ```
 
 This produces the CSV file, which looks like
@@ -104,7 +104,7 @@ mcmr run geometry.json dwi_te_80_bval_2.seq --target-snr 10 -o signal.csv --subs
 ```
 ```@eval
 import MCMRSimulator.CLI: run_main_docs
-run_main_docs("run geometry.json dwi_te_80_bval_2.seq --target-snr 10 -o signal2.csv --subset inside --subset outside --seed=2")
+run_main_docs("run geometry.json dwi_te_80_bval_2.seq --target-snr 1 --max-spins 100 -o signal2.csv --subset inside --subset outside --seed=2")
 ```
 
 We can see two additional rows in the output. 
