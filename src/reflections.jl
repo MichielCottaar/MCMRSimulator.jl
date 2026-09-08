@@ -6,8 +6,8 @@ import LinearAlgebra: ⋅, norm
 import ..Geometries.Internal: Intersection, flip
 
 """State carried by a spin while it is reflecting from or bound to a surface."""
-struct Reflection
-    intersection::Union{Nothing, Intersection}
+struct Reflection{I<:Intersection}
+    intersection::I
     inside::Bool
     direction::SVector{3, Float64}
     ratio_displaced::Float64
@@ -35,7 +35,7 @@ function Reflection(
     end
 
     normalized_direction = reflection_direction / norm(reflection_direction)
-    Reflection(
+    Reflection{typeof(updated_collision)}(
         updated_collision,
         inside,
         normalized_direction,
@@ -44,16 +44,6 @@ function Reflection(
         distance_moved,
     )
 end
-
-"""Create movement state for a free spin at the start of a timestep."""
-Reflection(ratio_displaced) = Reflection(
-    nothing,
-    false,
-    zero(SVector{3, Float64}),
-    ratio_displaced,
-    0.,
-    0.,
-)
 
 """Temporary constructor for surface samplers that still return flat indices."""
 function Reflection(
@@ -72,10 +62,12 @@ end
 
 has_intersection(reflection::Reflection) = !isnothing(reflection.intersection)
 has_intersection(intersection::Intersection) = true
+has_intersection(::Nothing) = false
 
 has_hit(reflection::Reflection) = isnothing(reflection.intersection) ? () : reflection.intersection.indices
+has_hit(::Nothing) = ()
 previous_hit(reflection::Reflection) = reflection.intersection
-
+previous_hit(::Nothing) = nothing
 function direction(reflection::Reflection, new_time, diffusivity)
     displacement_size =
         reflection.ratio_displaced *
@@ -84,7 +76,5 @@ function direction(reflection::Reflection, new_time, diffusivity)
     @assert displacement_size > 0
     reflection.direction * displacement_size
 end
-
-const empty_reflection = Reflection(0.)
 
 end

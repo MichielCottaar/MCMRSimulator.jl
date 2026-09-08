@@ -17,7 +17,7 @@ import ..Simulations: Simulation, _to_snapshot
 import ..Relax: relax!
 import ..Properties: GlobalProperties, stick_probability
 import ..Subsets: Subset, get_subset
-import ..Reflections: Reflection, empty_reflection, previous_hit, direction
+import ..Reflections: Reflection, previous_hit, direction
 import ..Geometries.Internal: Intersection, detect_intersection, surface_relaxation, permeability, surface_density, dwell_time, FixedGeometry
 
 """
@@ -58,14 +58,15 @@ by setting `return_snapshot=false` in [`readout`](@ref).
 
 After the simulation a [`Snapshot`](@ref) will be returned.
 """
-struct SnapshotAccumulator{N, ST} <: SingleAccumulator
-    spins :: Vector{Vector{Spin{N, ST}}}
+struct SnapshotAccumulator{N, ST, R} <: SingleAccumulator
+    spins :: Vector{Vector{Spin{N, ST, R}}}
     time :: Float64
     nwrite :: Ref{Int}
     function SnapshotAccumulator{N}(time::Number) where {N}
         st = static_vector_type(N){SpinOrientation}
-        return new{N, st}(
-            Vector{Spin{N, st}}[],
+        reflection_type = Union{Nothing, Reflection}
+        return new{N, st, reflection_type}(
+            Vector{Spin{N, st, reflection_type}}[],
             Float64(time),
             Ref(0)
         )
@@ -506,7 +507,8 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
             else
                 new_pos = SVector{3, Float64}(test_new_pos)
             end
-            reflection = Reflection(norm(new_pos - current_pos) / sqrt(2 * simulation.diffusivity * timestep))
+            ratio_displaced = norm(new_pos - current_pos) / sqrt(2 * simulation.diffusivity * timestep)
+            reflection = nothing
             phit = nothing
         end
         for _ in 1:1000000
@@ -521,10 +523,11 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 end
                 phit = previous_hit(spin.reflection)
                 reflection = spin.reflection
+                ratio_displaced = reflection.ratio_displaced
                 displacement = direction(reflection, (1 - fraction_timestep) * timestep, simulation.diffusivity)
                 new_pos = current_pos .+ displacement
 
-                spin.reflection = empty_reflection
+                spin.reflection = nothing
                 is_stuck = false
             end
 
@@ -564,9 +567,9 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
             normed_rate = sqrt(timestep) * permeability(simulation.geometry, collision)
             permeability_prob = isinf(normed_rate) ? 1. : (1. - exp(-normed_rate) * besseli0(normed_rate))
             passes_through = isone(permeability_prob) || !(iszero(permeability_prob) || rand() > permeability_prob)
-            reflection = Reflection(collision, new_pos - current_pos, reflection.ratio_displaced, 
-                reflection.time_moved + (1 - fraction_timestep) * use_distance * timestep, 
-                reflection.distance_moved + norm(new_pos - current_pos) * use_distance, 
+            reflection = Reflection(collision, new_pos - current_pos, ratio_displaced,
+                isnothing(reflection) ? (1 - fraction_timestep) * use_distance * timestep : reflection.time_moved + (1 - fraction_timestep) * use_distance * timestep,
+                isnothing(reflection) ? norm(new_pos - current_pos) * use_distance : reflection.distance_moved + norm(new_pos - current_pos) * use_distance,
                 passes_through
             )
             current_pos = spin.position = collision_pos

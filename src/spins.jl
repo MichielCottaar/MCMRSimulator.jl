@@ -21,7 +21,7 @@ import Random
 import StaticArrays: SVector
 import LinearAlgebra: ⋅, norm
 import ..Geometries.BoundingBoxes: BoundingBox, lower, upper
-import ..Reflections: Reflection, empty_reflection, has_intersection, has_hit, previous_hit
+import ..Reflections: Reflection, has_intersection, has_hit, previous_hit
 import ..Geometries.Internal:
     random_surface_positions,
     FixedGeometry,
@@ -115,21 +115,21 @@ Create a new spin with the same position as `reference_spin` with the orientatio
 - [`orientation`](@ref) to get a (`nsequences`x3) matrix with the spin orientations in 3D space
 - [`position`](@ref) to get a length-3 vector with spin location
 """
-mutable struct Spin{N, ST<:AbstractVector{SpinOrientation}}
+mutable struct Spin{N, ST<:AbstractVector{SpinOrientation}, R<:Union{Nothing, Reflection}}
     position :: SVector{3, Float64}
     orientations :: ST
-    reflection :: Reflection
+    reflection :: R
     rng :: FixedXoshiro
 end
 
 static_vector_type(N) = N < 50 ? SVector{N} : Vector
 
-function Spin(position::AbstractArray{<:Real}, orientations::AbstractVector{SpinOrientation}, reflection=empty_reflection, rng::FixedXoshiro=FixedXoshiro()) 
+function Spin(position::AbstractArray{<:Real}, orientations::AbstractVector{SpinOrientation}, reflection=nothing, rng::FixedXoshiro=FixedXoshiro()) 
     st = static_vector_type(length(orientations)){SpinOrientation}
-    Spin{length(orientations), st}(SVector{3, Float64}(position), st(SpinOrientation.(orientations)), reflection, rng)
+    Spin{length(orientations), st, Union{Nothing, Reflection}}(SVector{3, Float64}(position), st(SpinOrientation.(orientations)), reflection, rng)
 end
 
-function Spin(;nsequences=1, position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., reflection=empty_reflection, rng=FixedXoshiro()) 
+function Spin(;nsequences=1, position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., reflection=nothing, rng=FixedXoshiro()) 
     base = Spin(SVector{3, Float64}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), reflection, rng)
     return nsequences == 1 ? base : Spin(base, nsequences)
 end
@@ -147,7 +147,7 @@ function Base.show(io::IO, spin::Spin)
     show_helper(io, spin)
 end
 
-Base.deepcopy_internal(spin::Spin{N, ST}, stackdict::IdDict) where {N, ST} = Spin{N, ST}(
+Base.deepcopy_internal(spin::Spin{N, ST, R}, stackdict::IdDict) where {N, ST, R} = Spin{N, ST, R}(
     spin.position, map(spin.orientations) do orient 
         Base.deepcopy_internal(orient, stackdict)
     end, Base.deepcopy_internal(spin.reflection, stackdict), spin.rng
@@ -324,10 +324,10 @@ Replicates the positions and orientations for a single sequence in the input sna
 
 Information for a single sequence can be extracted by calling [`get_sequence`](@ref) first.
 """
-struct Snapshot{N, ST} <: AbstractVector{Spin{N, ST}}
-    spins :: AbstractVector{Spin{N, ST}}
+struct Snapshot{N, ST, R} <: AbstractVector{Spin{N, ST, R}}
+    spins :: AbstractVector{Spin{N, ST, R}}
     time :: Float64
-    Snapshot(spins :: AbstractVector{Spin{N, ST}}, time=0.) where {N, ST} = new{N, ST}(spins, Float64(time))
+    Snapshot(spins :: AbstractVector{Spin{N, ST, R}}, time=0.) where {N, ST, R} = new{N, ST, R}(spins, Float64(time))
 end
 
 function Snapshot(positions :: AbstractMatrix{<:Real}; time :: Real=0., kwargs...) 
@@ -341,7 +341,7 @@ end
 function Snapshot(nspins::Integer, bounding_box=500, geometry=(); time::Real=0., kwargs...)
     if iszero(nspins)
         nseq = get(kwargs, :nsequences, 1)
-        return Snapshot(Spin{nseq, static_vector_type(nseq){SpinOrientation}}[], time)
+        return Snapshot(Spin{nseq, static_vector_type(nseq){SpinOrientation}, Union{Nothing, Reflection}}[], time)
     end
     bounding_box = BoundingBox(bounding_box)
     sz = (upper(bounding_box) - lower(bounding_box))
@@ -366,7 +366,7 @@ Base.show(io::IO, snap::Snapshot{N}) where {N} = print(io, "Snapshot($(length(sn
 
 
 function random_surface_spins(geometry::FixedGeometry, bounding_box::BoundingBox, volume_density::Number; nsequences=1, kwargs...)
-    spins = Spin{nsequences, static_vector_type(nsequences){SpinOrientation}}[]
+    spins = Spin{nsequences, static_vector_type(nsequences){SpinOrientation}, Union{Nothing, Reflection}}[]
     positions, intersections = random_surface_positions(geometry, bounding_box, volume_density)
     for (position, intersection) in zip(positions, intersections)
         use_normal = intersection.normal
