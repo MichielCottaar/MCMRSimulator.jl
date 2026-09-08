@@ -270,7 +270,14 @@ end
 
 Extracts the spin orientation corresponding to a specific sequence, where the sequence index uses the order in which the sequences where provided in the `Simulation`.
 """
-get_sequence(spin::Spin, index) = Spin(spin.position, SVector{1}([spin.orientations[index]]), spin.reflection, spin.rng)
+function get_sequence(spin::Spin{N, ST, R}, index) where {N, ST, R}
+    Spin{1, SVector{1, SpinOrientation}, R}(
+        spin.position,
+        SVector{1}([spin.orientations[index]]),
+        spin.reflection,
+        spin.rng,
+    )
+end
 
 
 """
