@@ -71,11 +71,7 @@ function get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N
     start_child = to_child_coordinates(geometry, start)
     dest_child = to_child_coordinates(geometry, dest)
     result = get_intersection_params(child, start_child, dest_child, remaining_indices)
-    return IntersectionParams{N}(
-        result.inside,
-        from_child_coordinates_normal(geometry, result.normal),
-        result.hit_gap,
-    )
+    return from_child_coordinates(geometry, result)
 end
 
 """
@@ -96,23 +92,10 @@ This should be overwritten for transformations. It should not be called for base
 """
 from_child_coordinates(::PhysicalGeometry{N}, object) where {N} = object
 
-"""
-    to_child_coordinates_normal(geometry, normal)
-
-Converts the `normal` from `geometry` coordinates to the coordinates from the child of `geometry`.
-
-This should be overwritten for transformations. It should not be called for base obstructions.
-"""
 to_child_coordinates_normal(::PhysicalGeometry{N}, object) where {N} = object
 
-"""
-    from_child_coordinates_normal(geometry, normal)
-
-Converts the `normal` from child of `geometry` coordinates to the coordinates from the `geometry`.
-
-This should be overwritten for transformations. It should not be called for base obstructions.
-"""
-from_child_coordinates_normal(::PhysicalGeometry{N}, object) where {N} = object
+"""Convert intersection parameters from child to parent coordinates."""
+from_child_coordinates(::PhysicalGeometry, params::IntersectionParams) = params
 
 """Return whether a geometry has an inside region."""
 function has_inside end

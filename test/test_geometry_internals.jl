@@ -681,11 +681,12 @@ end
     shift = Shift(geometry_3d, [1.0, 2.0, 3.0])
     position = SVector(4.0, 5.0, 6.0)
     normal = SVector(0.0, 1.0, 0.0)
+    params = GI.PhysicalGeometries.IntersectionParams{3}(true, normal, false)
     @test shift isa Transformations.Transformation{3, 3, typeof(geometry_3d)}
     @test Transformations.to_child_coordinates(shift, position) == SVector(3.0, 3.0, 3.0)
     @test Transformations.from_child_coordinates(shift, SVector(3.0, 3.0, 3.0)) == position
     @test Transformations.to_child_coordinates_normal(shift, normal) == normal
-    @test Transformations.from_child_coordinates_normal(shift, normal) == normal
+    @test Transformations.from_child_coordinates(shift, params) === params
 
     infinite_wall = BaseObstructions.InfiniteWall()
     @test infinite_wall isa PhysicalGeometry{1}
@@ -908,7 +909,7 @@ end
     @test Transformations.to_child_coordinates(scale, position) == SVector(2.0, 2.5, 3.0)
     @test Transformations.from_child_coordinates(scale, SVector(2.0, 2.5, 3.0)) == position
     @test GI.PhysicalGeometries.to_child_coordinates_normal(scale, normal) == normal
-    @test GI.PhysicalGeometries.from_child_coordinates_normal(scale, normal) == normal
+    @test GI.PhysicalGeometries.from_child_coordinates(scale, params) === params
     @test_throws ArgumentError Scale(geometry_3d, 0.0)
     @test_throws ArgumentError Scale(geometry_3d, -1.0)
     rotation = Rotate(geometry_2d, SMatrix{2, 2, Float64}([0.0 -1.0; 1.0 0.0]))
@@ -920,11 +921,15 @@ end
     @test Transformations.to_child_coordinates(reflection, position_2d) == SVector(-1.0, 2.0)
 
     projection = Rotate(geometry_2d, SMatrix{3, 2, Float64}([1.0 0.0; 0.0 1.0; 0.0 0.0]))
+    projection_params = GI.PhysicalGeometries.IntersectionParams{2}(true, position_2d, false)
     @test projection isa Transformations.Transformation{3, 2, typeof(geometry_2d)}
     @test Transformations.to_child_coordinates(projection, SVector(1.0, 2.0, 3.0)) == SVector(1.0, 2.0)
     @test Transformations.from_child_coordinates(projection, SVector(1.0, 2.0)) == SVector(1.0, 2.0, 0.0)
     @test_throws ArgumentError GI.PhysicalGeometries.to_child_coordinates_normal(projection, SVector(1.0, 2.0, 3.0))
-    @test GI.PhysicalGeometries.from_child_coordinates_normal(projection, SVector(1.0, 2.0)) ≈ SVector(1.0, 2.0, 0.0) / sqrt(5)
+    projected_params = GI.PhysicalGeometries.from_child_coordinates(projection, projection_params)
+    @test projected_params.inside
+    @test projected_params.normal ≈ SVector(1.0, 2.0, 0.0) / sqrt(5)
+    @test !projected_params.hit_gap
     @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(projection)
 
     geometry_1d = TestGeometry{1}(0)

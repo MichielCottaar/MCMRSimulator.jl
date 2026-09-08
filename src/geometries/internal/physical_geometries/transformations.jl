@@ -7,7 +7,7 @@ import Random: rand
 import ...InternalBoundingBoxes
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result, _translate_native
-import ..PhysicalGeometries: to_child_coordinates, from_child_coordinates, to_child_coordinates_normal, from_child_coordinates_normal
+import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
 import ...Properties: GeometryProperties
 
 """
@@ -144,13 +144,13 @@ function from_child_coordinates end
 
 to_child_coordinates(transformation::Shift, position) = position - transformation.shift
 from_child_coordinates(transformation::Shift, position) = position + transformation.shift
+from_child_coordinates(::Shift, params::IntersectionParams) = params
 to_child_coordinates_normal(::Shift, normal) = normal
-from_child_coordinates_normal(::Shift, normal) = normal
 
 to_child_coordinates(transformation::Scale, position) = position / transformation.scale
 from_child_coordinates(transformation::Scale, position) = transformation.scale * position
+from_child_coordinates(::Scale, params::IntersectionParams) = params
 to_child_coordinates_normal(::Scale, normal) = normal
-from_child_coordinates_normal(::Scale, normal) = normal
 
 distance_to_surface(
     transformation::Transformation,
@@ -201,9 +201,16 @@ to_child_coordinates(transformation::Rotate, position) = transformation.matrix' 
 from_child_coordinates(transformation::Rotate, position) = transformation.matrix * position
 to_child_coordinates_normal(transformation::Rotate{N, M}, normal) where {N, M} =
     N == M ? transformation.matrix' * normal : throw(ArgumentError("normal_to_child_coordinates is not defined for dimension-reducing Rotate transformations"))
-from_child_coordinates_normal(transformation::Rotate, normal) = begin
-    result = transformation.matrix * normal
-    result ./ norm(result)
+function from_child_coordinates(
+    transformation::Rotate{N, M},
+    params::IntersectionParams{M},
+) where {N, M}
+    normal = transformation.matrix * params.normal
+    IntersectionParams{N}(
+        params.inside,
+        normal ./ norm(normal),
+        params.hit_gap,
+    )
 end
 
 function _rotate_box(transformation::Rotate{N, M}, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N, M}
