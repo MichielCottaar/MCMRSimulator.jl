@@ -11,6 +11,8 @@
     mr.Evolve.readout!(accumulator, spins)
     @test accumulator.nspins[] == 2
     @test mr.Evolve.standard_error(accumulator)[3] ≈ 2.
+    fixed_signal = mr.Evolve.fix_accumulator(accumulator)
+    @test fixed_signal.snr[3] ≈ 2.
 
     result = mr.readout(
         simulation;
@@ -24,6 +26,8 @@
     @test result.statistics[2].nspins == 10
     @test all(result.statistics[1].converged)
     @test all(result.statistics[2].converged)
+    @test result.signal[1].snr == result.statistics[1].snr
+    @test result.signal[2].snr == result.statistics[2].snr
 end
 
 @testset "Adaptive readout with diffusion" begin
