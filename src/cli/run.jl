@@ -80,10 +80,6 @@ function add_readout_flags!(parser)
             help = "Number of spins added per batch in adaptive simulations."
             arg_type = Int
             default = 1000
-        "--min-spins"
-            help = "Minimum number of spins per subset before a zero transverse signal can be considered converged."
-            arg_type = Int
-            default = 1000
         "--subset"
             help = """Can be provided multiple times. For each time it is provided, the signal will be computed at each readout for a specific subset of spins. This subset is defined by one or two values from bound/free/inside/outside. Afterwards they can include an integer value to select a specific geometry, and an additional integer value to select a specific obstruction within that geometry. The selected user geometry is passed to the subset.
             For example:
@@ -184,7 +180,7 @@ function run_main(args::Dict{<:AbstractString, <:Any})
         error("`--output-snapshot` cannot be used together with `--target-snr`.")
     end
     if adaptive
-        result = readout(simulation; target_snr=args["target-snr"], readout_times=readout_times, max_spins=args["max-spins"], min_spins=args["min-spins"], batch_size=args["batch-size"], noflatten=true, return_statistics=!isnothing(args["output-signal"]), skip_TR=args["skip-TR"], nTR=args["nTR"], subset=subsets)
+        result = readout(simulation; target_snr=args["target-snr"], readout_times=readout_times, max_spins=args["max-spins"], batch_size=args["batch-size"], noflatten=true, return_statistics=!isnothing(args["output-signal"]), skip_TR=args["skip-TR"], nTR=args["nTR"], subset=subsets)
         statistics = isnothing(args["output-signal"]) ? nothing : result.statistics
         result = result.signal
     else

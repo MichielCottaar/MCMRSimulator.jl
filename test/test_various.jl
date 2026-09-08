@@ -14,8 +14,7 @@
 
     result = mr.readout(
         simulation;
-        target_snr=10,
-        min_spins=10,
+        target_snr=1,
         batch_size=10,
         max_spins=20,
         return_statistics=true,
@@ -25,6 +24,38 @@
     @test result.statistics[2].nspins == 10
     @test all(result.statistics[1].converged)
     @test all(result.statistics[2].converged)
+end
+
+@testset "Adaptive readout with diffusion" begin
+    sequence = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_0.3_gradient_δ_10_Δ_30.0.seq"))
+    spheres = mr.Spheres(radius=1., repeats=(2, 2, 2))
+    simulation = mr.Simulation(sequence, geometry=spheres, timestep=1.)
+
+    inside = mr.readout(
+        simulation;
+        target_snr=100,
+        return_statistics=true,
+        batch_size=100,
+        subset=[mr.Subset(inside=true)],
+    )
+    outside = mr.readout(
+        simulation;
+        target_snr=100,
+        return_statistics=true,
+        batch_size=100,
+        subset=[mr.Subset(inside=false)],
+    )
+
+    inside_statistics = inside.statistics[1]
+    outside_statistics = outside.statistics[1]
+    @test inside_statistics.nspins < 100
+    @test outside_statistics.nspins > 100
+    @test inside_statistics.converged
+    @test outside_statistics.converged
+    @test all(inside_statistics.snr .>= 100)
+    @test all(outside_statistics.snr .>= 100)
+    @test length(inside.signal[1]) == inside_statistics.nspins
+    @test length(outside.signal[1]) == outside_statistics.nspins
 end
 
 @testset "Pulseq repetition time override" begin

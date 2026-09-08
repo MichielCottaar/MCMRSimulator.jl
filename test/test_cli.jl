@@ -202,7 +202,7 @@ end
     in_tmpdir() do
         run_main_test("geometry create spheres 1 spheres.json --radius 1 --repeats 2.2,2.2,2.2")
         sequence_file = joinpath(@__DIR__, "pulseq", "gradient_echo_TE_30.seq")
-        _, err = run_main_test("run spheres.json $sequence_file --target-snr 1 --min-spins 10 --batch-size 10 --max-spins 20 -o adaptive.csv")
+        _, err = run_main_test("run spheres.json $sequence_file --target-snr 1 --batch-size 10 --max-spins 20 -o adaptive.csv")
         @test length(err) == 0
         result = DataFrame(CSV.File("adaptive.csv"))
         @test all(name in propertynames(result) for name in (:SNR_Sx, :SNR_Sy, :SNR_Sz))

@@ -400,23 +400,24 @@ If `return_snapshot=true` is set, each element is the full [`Snapshot`](@ref) in
 readout(spins, simulation::Simulation, new_readout_times=nothing; bounding_box=500, kwargs...) = readout_internal(_to_snapshot(spins, simulation, bounding_box), simulation, new_readout_times; kwargs...)
 
 """
-    readout(simulation; target_snr, readout_times=nothing, min_spins=1000, batch_size=1000, max_spins=nothing)
+    readout(simulation; target_snr, readout_times=nothing, batch_size=1000, max_spins=nothing, return_statistics=false)
 
 Adaptively simulates independent batches of spins until the requested target SNR is
 reached for every signal component and subset. Each batch contributes to every
 subset before convergence is checked. Set `max_spins` to limit the total number of
-spins; it is unlimited by default.
+spins; it is unlimited by default. A zero transverse signal is accepted after at
+least `target_snr^2` spins have contributed to that subset.
 
 Set `return_statistics=true` to return the signal together with standard errors,
 SNRs, spin counts, and convergence flags.
 """
-function readout(simulation::Simulation; target_snr, readout_times=nothing, min_spins=1000, batch_size=1000, max_spins=nothing, return_statistics=false, bounding_box=500, kwargs...)
+function readout(simulation::Simulation; target_snr, readout_times=nothing, batch_size=1000, max_spins=nothing, return_statistics=false, bounding_box=500, kwargs...)
     iszero(length(simulation.sequences)) && error("Adaptive readout requires at least one sequence.")
     target_snr > 0 || error("`target_snr` should be positive.")
-    min_spins > 0 || error("`min_spins` should be positive.")
     batch_size > 0 || error("`batch_size` should be positive.")
+    min_spins = ceil(Int, target_snr^2)
     if !isnothing(max_spins)
-        max_spins >= min_spins || error("`max_spins` should be at least `min_spins`.")
+        max_spins > 0 || error("`max_spins` should be positive.")
     end
 
     return_snapshot = get(kwargs, :return_snapshot, false)
@@ -427,7 +428,7 @@ function readout(simulation::Simulation; target_snr, readout_times=nothing, min_
         nrun = isnothing(max_spins) ? batch_size : min(batch_size, max_spins - nspins)
         run_readout!(_to_snapshot(nrun, simulation, bounding_box), simulation, accumulator; readouts=readout_times, kwargs...)
         nspins += nrun
-        if nspins >= min_spins && converged(accumulator, Float64(target_snr), Int(min_spins))
+        if converged(accumulator, Float64(target_snr), Int(min_spins))
             break
         end
     end
