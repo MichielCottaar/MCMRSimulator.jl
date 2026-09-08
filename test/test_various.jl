@@ -12,7 +12,9 @@
     @test accumulator.nspins[] == 2
     @test mr.Evolve.standard_error(accumulator)[3] ≈ 2.
     fixed_signal = mr.Evolve.fix_accumulator(accumulator)
-    @test fixed_signal.snr[3] ≈ 2.
+    @test fixed_signal.snr[3] ≈ 1.
+    @test mr.longitudinal(fixed_signal; mean=true) ≈ 2.
+    @test mr.orientation(fixed_signal; mean=true) ≈ [0., 0., 2.]
 
     result = mr.readout(
         simulation;
