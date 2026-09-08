@@ -4,9 +4,10 @@ module Groups
 import StaticArrays: SVector
 import ...InternalBoundingBoxes
 import ..GridDispatch: IntersectionGrid, GridIterator
-import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, intersection_type, isinside_single, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, _merge_types, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
+import ...Properties: all_property_values
 
 abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
@@ -43,11 +44,31 @@ function inside_indices_eltype(::Type{T}) where {T}
     Union{(inside_indices_eltype(element) for element in Base.uniontypes(T))...}
 end
 
+function intersection_type(::Type{T}) where {T}
+    T isa Union || throw(MethodError(intersection_type, (Type{T},)))
+    Union{(intersection_type(element) for element in Base.uniontypes(T))...}
+end
+
 inside_indices_eltype(::Type{<:GroupGeometry{N, P}}) where {N, P} =
     _prepend_type(Int, inside_indices_eltype(P))
 
 intersection_type(::Type{<:GroupGeometry{N, P}}) where {N, P} =
     _prepend_type(Int, intersection_type(P))
+
+function bound_intersection_type(geometry::GeometryVectorLike, density)
+    children = group_geometries(geometry; include_gap=false)
+    _merge_types(
+        (
+            _prepend_type(
+                Int,
+                bound_intersection_type(children[index], child_density),
+            )
+            for index in eachindex(children)
+            for child_density in (_density_child(density, index),)
+            if any(!iszero, all_property_values(child_density))
+        )
+    )
+end
 
 
 function find_intersection(group::GroupGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, previous_hit=nothing) where {N}
@@ -131,6 +152,19 @@ inside_indices_eltype(::Type{<:GeometryTuple{N, P}}) where {N, P} =
 
 intersection_type(::Type{<:GeometryTuple{N, P}}) where {N, P} =
     _prepend_type(Int, intersection_type(Union{P.parameters...}))
+
+function bound_intersection_type(geometry::GeometryTuple, density)
+    _merge_types(
+        (
+            _prepend_type(
+                Int,
+                bound_intersection_type(child, _density_child(density, index)),
+            )
+            for (index, child) in enumerate(group_geometries(geometry))
+            if any(!iszero, all_property_values(_density_child(density, index)))
+        )
+    )
+end
 
 function inside_candidates end
 

@@ -1,7 +1,7 @@
 module Transparents
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, intersection_type, isinside_single, inside_indices, InternalBoundingBox, size_scale
+import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox, size_scale
 import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ...Properties: GeometryProperties
 
@@ -16,6 +16,8 @@ end
 child_type(::Type{<:Transparent{N, P}}) where {N, P} = P
 inside_indices_eltype(::Type{<:Transparent{N, P}}) where {N, P} = inside_indices_eltype(P)
 intersection_type(::Type{<:Transparent{N, P}}) where {N, P} = intersection_type(P)
+bound_intersection_type(wrapper::Transparent, density) =
+    bound_intersection_type(transparent_geometry(wrapper), density)
 
 struct SizeScaleOverride{N, P <: PhysicalGeometry{N}} <: Transparent{N, P}
     geometry::P

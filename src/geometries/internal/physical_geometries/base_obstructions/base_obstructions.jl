@@ -1,11 +1,12 @@
 module BaseObstructions
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, intersection_type, isinside_single
+import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single
 import ..PhysicalGeometries: to_property_index
 import ...InternalBoundingBoxes: InternalBoundingBox
 import ...InternalBoundingBoxes
 import ...Properties: GeometryLeafProperties
+import ...Properties: all_property_values
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result
 import Distributions: Poisson
 import Random: rand
@@ -21,6 +22,10 @@ child_type(::Type{<:BaseObstruction}) =
 
 inside_indices_eltype(::Type{<:BaseObstruction}) = Tuple{}
 intersection_type(::Type{<:BaseObstruction}) = Tuple{}
+
+function bound_intersection_type(::BaseObstruction, density)
+    any(!iszero, all_property_values(density)) ? Union{Tuple{}} : Union{}
+end
 
 function surface_sampling end
 

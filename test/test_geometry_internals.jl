@@ -25,6 +25,7 @@ const has_single_inside = GI.PhysicalGeometries.has_single_inside
 const isinside_single = GI.PhysicalGeometries.isinside_single
 const inside_indices = GI.PhysicalGeometries.inside_indices
 const intersection_type = GI.PhysicalGeometries.intersection_type
+const bound_intersection_type = GI.PhysicalGeometries.bound_intersection_type
 const Properties = GI.Properties
 const Plot = mr.Plot
 
@@ -70,6 +71,31 @@ end
     @test intersection_type(Shift{3, sphere_type}) == Tuple{}
     @test intersection_type(SizeScaleOverride{3, sphere_type}) == Tuple{}
     @test intersection_type(GeometryTuple{3, Tuple{BaseObstructions.Sphere, Mesh}}) == Union{Tuple{Int}, Tuple{Int, Int}}
+end
+
+@testset "bound intersection types" begin
+    sphere = BaseObstructions.Sphere(1.)
+    zero_density = Properties.GeometryLeafProperties(0.)
+    density = Properties.GeometryLeafProperties(1.)
+
+    @test bound_intersection_type(sphere, zero_density) == Union{}
+    @test bound_intersection_type(sphere, density) == Tuple{}
+
+    sphere_group = GeometryVector([sphere, sphere])
+    group_density = Properties.GeometryVectorProperties([0., 1.])
+    @test bound_intersection_type(sphere_group, group_density) == Tuple{Int}
+    @test bound_intersection_type(sphere_group, Properties.GeometryVectorProperties([0., 0.])) == Union{}
+
+    repeated_sphere = Repeat(sphere, [4., 4., 4.])
+    @test bound_intersection_type(repeated_sphere, density) == Tuple{SVector{3, Int}}
+    @test bound_intersection_type(Shift(sphere, zero(SVector{3})), density) == Tuple{}
+
+    nested = GeometryTuple((sphere, GeometryTuple((sphere, sphere))))
+    nested_density_a = Properties.GeometryTupleProperties((1., Properties.GeometryTupleProperties((0., 0.))))
+    nested_density_b = Properties.GeometryTupleProperties((0., Properties.GeometryTupleProperties((1., 0.))))
+    nested_group = GeometryVector([nested, nested])
+    nested_densities = Properties.GeometryVectorProperties([nested_density_a, nested_density_b])
+    @test bound_intersection_type(nested_group, nested_densities) == Union{Tuple{Int, Int}, Tuple{Int, Int, Int}}
 end
 
 @testset "projected mesh field of view" begin

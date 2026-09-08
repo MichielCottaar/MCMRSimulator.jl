@@ -126,6 +126,20 @@ inside_indices_eltype(::Type{Union{}}) = Union{}
 function intersection_type end
 intersection_type(::Type{Union{}}) = Union{}
 
+"""Return intersection index types for surfaces with nonzero density."""
+function bound_intersection_type end
+
+function _merge_types(types)
+    unique_types = Set{Type}()
+    for type in types
+        type === Union{} && continue
+        type isa Union ?
+            union!(unique_types, Base.uniontypes(type)) :
+            push!(unique_types, type)
+    end
+    Union{unique_types...}
+end
+
 """Return the obstruction indices containing a position."""
 function inside_indices end
 
