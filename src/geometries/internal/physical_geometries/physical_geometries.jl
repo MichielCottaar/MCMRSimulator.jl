@@ -71,7 +71,7 @@ function get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N
     start_child = to_child_coordinates(geometry, start)
     dest_child = to_child_coordinates(geometry, dest)
     result = get_intersection_params(child, start_child, dest_child, remaining_indices)
-    return from_child_coordinates(geometry, result)
+    return from_child_coordinates(geometry, result) :: IntersectionParams{N}
 end
 
 """
