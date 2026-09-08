@@ -100,6 +100,10 @@ end
     fixed_geometry = mr.fix(mr.Spheres(radius=1., surface_density=1., dwell_time=1.))
     @test GI.bound_intersection_type(fixed_geometry) ==
         GI.Intersection{Tuple{Int}, Tuple{Int}}
+    @test mr.Reflections.possible_reflection_types(fixed_geometry) ==
+        Union{Nothing, mr.Reflections.Reflection{GI.Intersection{Tuple{Int}, Tuple{Int}}}}
+    zero_fixed_geometry = mr.fix(mr.Spheres(radius=1.))
+    @test mr.Reflections.possible_reflection_types(zero_fixed_geometry) === Nothing
 end
 
 @testset "projected mesh field of view" begin
@@ -149,7 +153,7 @@ const all_property_values = Properties.all_property_values
     index = (1, 2)
     collision = GI.Intersection(0.5, index, index, SVector(1.0, 0.0, 0.0), false, false)
 
-    free = Reflections.Reflection(1.0)
+    free = nothing
     @test !Reflections.has_intersection(free)
     @test isnothing(Reflections.previous_hit(free))
 

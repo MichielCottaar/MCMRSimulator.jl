@@ -5,6 +5,7 @@ module Simulations
 import StaticArrays: SVector, SizedVector
 import ..Geometries: ObstructionGroup, fix
 import ..Geometries.Internal: FixedGeometry, susceptibility_off_resonance
+import ..Reflections: possible_reflection_types
 import ..Spins: Spin, Snapshot, SpinOrientation, stuck
 import ..Methods: get_time
 import ..Properties: GlobalProperties, R1, R2, off_resonance
@@ -146,7 +147,21 @@ end
 function Snapshot(nspins::Integer, simulation::Simulation{N}, bounding_box=500; kwargs...) where {N}
     Snapshot(nspins, bounding_box, simulation.geometry; nsequences=N, kwargs...)
 end
-_to_snapshot(spins::Int, simulation::Simulation, bounding_box) = Snapshot(spins, simulation, bounding_box)
+function _constrain_snapshot(snapshot::Snapshot{N}, simulation::Simulation) where {N}
+    reflection_type = possible_reflection_types(simulation.geometry)
+    spins = map(snapshot.spins) do spin
+        Spin{N, typeof(spin.orientations), reflection_type}(
+            spin.position,
+            deepcopy(spin.orientations),
+            deepcopy(spin.reflection),
+            spin.rng,
+        )
+    end
+    Snapshot(spins, snapshot.time)
+end
+
+_to_snapshot(spins::Int, simulation::Simulation, bounding_box) =
+    _to_snapshot(Snapshot(spins, simulation, bounding_box), simulation, bounding_box)
 _to_snapshot(spins::AbstractVector{<:Real}, simulation::Simulation, bounding_box) = _to_snapshot(Spin(position=spins), simulation, bounding_box)
 _to_snapshot(spins::AbstractVector{<:AbstractVector{<:Real}}, simulation::Simulation, bounding_box) = _to_snapshot([Spin(position=pos) for pos in spins], simulation, bounding_box)
 function _to_snapshot(spins::AbstractMatrix{<:Real}, simulation::Simulation, bounding_box) 
@@ -158,8 +173,13 @@ function _to_snapshot(spins::AbstractMatrix{<:Real}, simulation::Simulation, bou
 end
 _to_snapshot(spins::Spin, simulation::Simulation, bounding_box) = _to_snapshot([spins], simulation, bounding_box)
 _to_snapshot(spins::AbstractVector{<:Spin}, simulation::Simulation, bounding_box) = _to_snapshot(Snapshot(spins), simulation, bounding_box)
-_to_snapshot(spins::Snapshot{1}, simulation::Simulation{nseq}, bounding_box) where {nseq} = nseq == 1 ? deepcopy(spins) : Snapshot(spins, nseq)
-_to_snapshot(spins::Snapshot{N}, simulation::Simulation{N}, bounding_box) where {N} = deepcopy(spins)
+function _to_snapshot(spins::Snapshot{1}, simulation::Simulation{nseq}, bounding_box) where {nseq}
+    snapshot = nseq == 1 ? deepcopy(spins) : Snapshot(spins, nseq)
+    _constrain_snapshot(snapshot, simulation)
+end
+function _to_snapshot(spins::Snapshot{N}, simulation::Simulation{N}, bounding_box) where {N}
+    _constrain_snapshot(deepcopy(spins), simulation)
+end
 
 produces_off_resonance(sim::Simulation) = produces_off_resonance(sim.geometry)
 propose_times(sim::Simulation, t_start, t_end) = propose_times(sim.time_controller, t_start, t_end, sim.sequences, sim.diffusivity)

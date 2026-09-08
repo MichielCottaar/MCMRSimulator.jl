@@ -3,7 +3,7 @@ module Reflections
 
 import StaticArrays: SVector
 import LinearAlgebra: ⋅, norm
-import ..Geometries.Internal: Intersection, flip
+import ..Geometries.Internal: FixedGeometry, Intersection, bound_intersection_type, flip
 
 """State carried by a spin while it is reflecting from or bound to a surface."""
 struct Reflection{I<:Intersection}
@@ -13,6 +13,14 @@ struct Reflection{I<:Intersection}
     ratio_displaced::Float64
     time_moved::Float64
     distance_moved::Float64
+end
+
+function possible_reflection_types(geometry::FixedGeometry)
+    intersection_types = bound_intersection_type(geometry)
+    intersection_types === Union{} && return Nothing
+
+    types = intersection_types isa Union ? Base.uniontypes(intersection_types) : (intersection_types,)
+    Union{Nothing, (Reflection{I} for I in types)...}
 end
 
 function Reflection(

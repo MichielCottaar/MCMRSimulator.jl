@@ -17,7 +17,7 @@ import ..Simulations: Simulation, _to_snapshot
 import ..Relax: relax!
 import ..Properties: GlobalProperties, stick_probability
 import ..Subsets: Subset, get_subset
-import ..Reflections: Reflection, previous_hit, direction
+import ..Reflections: Reflection, possible_reflection_types, previous_hit, direction
 import ..Geometries.Internal: Intersection, detect_intersection, surface_relaxation, permeability, surface_density, dwell_time, FixedGeometry
 
 """
@@ -62,9 +62,8 @@ struct SnapshotAccumulator{N, ST, R} <: SingleAccumulator
     spins :: Vector{Vector{Spin{N, ST, R}}}
     time :: Float64
     nwrite :: Ref{Int}
-    function SnapshotAccumulator{N}(time::Number) where {N}
+    function SnapshotAccumulator{N}(time::Number, reflection_type::Type{R}) where {N, R}
         st = static_vector_type(N){SpinOrientation}
-        reflection_type = Union{Nothing, Reflection}
         return new{N, st, reflection_type}(
             Vector{Spin{N, st, reflection_type}}[],
             Float64(time),
@@ -122,11 +121,12 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
         end
         flatten_readouts = readouts isa Number
         use_readouts = flatten_readouts ? [readouts] : readouts
+        reflection_type = possible_reflection_types(simulation.geometry)
 
         grid = Array{SnapshotAccumulator{0}}(undef, 1, length(readouts), 1, length(subset))
         for i_r in 1:length(use_readouts)
             for i_s in 1:length(subset)
-                grid[1, i_r, 1, i_s] = SnapshotAccumulator{0}(use_readouts[i_r])
+                grid[1, i_r, 1, i_s] = SnapshotAccumulator{0}(use_readouts[i_r], reflection_type)
             end
         end
         to_flatten = SVector{4, Bool}(
@@ -182,13 +182,19 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
         (sequence, ro.readout, ro.TR) => ro
         for sequence in 1:N for ro in actual_readouts[sequence]
     )
-    acc_type = return_snapshot ? SnapshotAccumulator{1} : TotalSignalAccumulator
+    reflection_type = return_snapshot ? possible_reflection_types(simulation.geometry) : nothing
+    acc_type = return_snapshot ?
+        SnapshotAccumulator{1, static_vector_type(1){SpinOrientation}, reflection_type} :
+        TotalSignalAccumulator
 
     grid = Array{SingleAccumulator}(undef, grid_size...)
     for index in eachindex(IndexCartesian(), grid)
         i_seq, i_readout, i_TR, _ = Tuple(index)
         if (i_seq, i_readout, i_TR + first_TR) in keys(as_dict)
-            grid[index] = acc_type(as_dict[(i_seq, i_readout, i_TR + first_TR)].time)
+            time = as_dict[(i_seq, i_readout, i_TR + first_TR)].time
+            grid[index] = return_snapshot ?
+                SnapshotAccumulator{1}(time, reflection_type) :
+                TotalSignalAccumulator(time)
         else
             grid[index] = FillerAccumulator()
         end
@@ -348,7 +354,8 @@ function readout_internal(snapshot::Snapshot{0}, simulation::Simulation{0}, new_
         error("readout timings should be set as the 3rd positional argument, not a keyword argument.")
     end
     sim_1 = Simulation([empty_sequence()], simulation.diffusivity, simulation.properties, simulation.geometry, simulation.timestep, true, simulation.verbose)
-    return Snapshot(readout_internal(Snapshot(snapshot, 1), sim_1, new_readout_times; kwargs...), 0)
+    snapshot_1 = _to_snapshot(Snapshot(snapshot, 1), sim_1, 500)
+    return Snapshot(readout_internal(snapshot_1, sim_1, new_readout_times; kwargs...), 0)
 end
 
 
