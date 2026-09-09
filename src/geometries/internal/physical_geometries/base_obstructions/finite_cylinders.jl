@@ -114,7 +114,7 @@ function find_intersection(
     previous_hit=nothing,
 )
     previous = !isnothing(previous_hit)
-    inside = previous ? previous_hit[1] : isinside_single(cylinder, start)
+    inside = previous ? previous_hit[2] : isinside_single(cylinder, start)
     !inside && previous && return nothing
 
     displacement = destination - start
