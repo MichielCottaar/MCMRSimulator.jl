@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Optimisation
 - Collision detection algorithm has been sped up, especially for small geometries
+- Whether spins are inside/outside of a specific geometry is now cached.
 
 ## [v1.1.0]
 `v1.1.0` requires Julia 1.12 or later! This is a big change from `v1.0.0` which only supports Julia 1.11.
