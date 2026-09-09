@@ -3,7 +3,7 @@ module FixTransformations
 import LinearAlgebra: I, isapprox
 import StaticArrays: SMatrix, SVector
 
-import ...User.Obstructions: Walls, Cylinders, Spheres, Annuli, Mesh
+import ...User.Obstructions: Walls, Cylinders, Spheres, FiniteCylinders, Annuli, Mesh
 import ...User.Obstructions: isglobal
 import ...Internal.PhysicalGeometries: PhysicalGeometry
 import ...Internal.PhysicalGeometries.Groups: GeometryVector, GeometryTuple
@@ -24,6 +24,17 @@ end
 
 function _vector_geometry(group, geometry::Vector{P}) where {N, P<:PhysicalGeometry{N}}
     geometry = _shift_obstructions(group, geometry)
+    resolution = group.grid_resolution.value
+    if !isnothing(resolution)
+        return GeometryVector(geometry; grid=true, grid_resolution=resolution)
+    elseif group.use_boundingbox.value
+        return GeometryVector(geometry; bounding_box=true)
+    end
+    GeometryVector(geometry)
+end
+
+function _vector_geometry_unshifted(group, geometry::Vector{P}) where {N, P<:PhysicalGeometry{N}}
+    isempty(geometry) && return GeometryVector(geometry)
     resolution = group.grid_resolution.value
     if !isnothing(resolution)
         return GeometryVector(geometry; grid=true, grid_resolution=resolution)
@@ -66,6 +77,22 @@ end
 function fix_transformations(group::Union{Walls, Cylinders, Spheres, Mesh}, geometry::Vector)
     geometry = _apply_local_transformations(group, geometry)
     geometry = _apply_global_shift(group, geometry)
+    _apply_rotation(group, geometry)
+end
+
+function fix_transformations(group::FiniteCylinders, geometries::Tuple)
+    endpoint_geometries, cylinder_geometries = geometries
+    endpoint_geometries = _vector_geometry_unshifted(group, endpoint_geometries)
+    cylinder_geometries = _vector_geometry_unshifted(group, cylinder_geometries)
+    use_spherical_endpoint = _values(group.use_spherical_endpoint, length(group))
+    geometry = if any(use_spherical_endpoint)
+        GeometryTuple((endpoint_geometries, cylinder_geometries))
+    else
+        cylinder_geometries
+    end
+    if !isnothing(group.repeats.value)
+        geometry = Repeat(geometry, group.repeats.value)
+    end
     _apply_rotation(group, geometry)
 end
 

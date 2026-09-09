@@ -414,7 +414,7 @@ end
         @test intersection_type(typeof(cylinder)) == Tuple{Int}
         @test isinside_single(cylinder, SVector(0., 0., 1.))
         @test !isinside_single(cylinder, SVector(1.1, 0., 1.))
-        @test isinside_single(cylinder, SVector(1.1, 0., 1.), (1, true, 0.5))
+        @test isinside_single(cylinder, SVector(1.1, 0., 1.), (true, 0.5))
         @test BoundingBoxes.lower(BoundingBoxes.InternalBoundingBox(cylinder)) == SVector(-1., -1., 0.)
         @test BoundingBoxes.upper(BoundingBoxes.InternalBoundingBox(cylinder)) == SVector(1., 1., 2.)
 

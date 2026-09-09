@@ -56,7 +56,7 @@ function isinside_single(
     position::SVector{3, Float64},
     previous_intersection=nothing,
 )
-    !isnothing(previous_intersection) && return previous_intersection[2]
+    !isnothing(previous_intersection) && return previous_intersection[1]
     relative = position - cylinder.first
     axial = relative ⋅ cylinder.axis
     (0 < axial < cylinder.length) || return false
@@ -114,7 +114,7 @@ function find_intersection(
     previous_hit=nothing,
 )
     previous = !isnothing(previous_hit)
-    inside = previous ? previous_hit[2] : isinside_single(cylinder, start)
+    inside = previous ? previous_hit[1] : isinside_single(cylinder, start)
     !inside && previous && return nothing
 
     displacement = destination - start

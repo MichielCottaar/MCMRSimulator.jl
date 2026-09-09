@@ -28,13 +28,30 @@ const fix = mr.Geometries.Fix.fix
     @test inner == [BaseObstructions.InfiniteCylinder(1.0)]
     @test outer == [BaseObstructions.InfiniteCylinder(2.0)]
 
-    overlapping = FixBaseGeometry.fix_base_geometry(mr.Spheres(
-        radius=[1.0, 1.0],
+    finite_cylinders = mr.FiniteCylinders(
         position=[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
-        overlapping=true,
-    ))
-    @test length(overlapping[1].overlaps_with) == 1
-    @test length(overlapping[2].overlaps_with) == 1
+        radius=[1.0, 0.5],
+        connected_to=[0, 1],
+    )
+    endpoint_geometry, cylinder_geometry = FixBaseGeometry.fix_base_geometry(finite_cylinders)
+    @test length(endpoint_geometry) == 2
+    @test endpoint_geometry[1].geometry == BaseObstructions.Sphere(1.0)
+    @test length(cylinder_geometry) == 1
+    @test cylinder_geometry[1].radius_first == 0.5
+    @test cylinder_geometry[1].radius_second == 1.0
+
+    fixed_finite_cylinders = fix(finite_cylinders)
+    @test fixed_finite_cylinders.geometry isa Transparent
+    @test fixed_finite_cylinders.geometry.geometry isa Groups.GeometryTuple
+
+    cylinder_only = mr.FiniteCylinders(
+        position=[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
+        radius=[1.0, 0.5],
+        connected_to=[0, 1],
+        use_spherical_endpoint=[false, false],
+    )
+    fixed_cylinder_only = fix(cylinder_only)
+    @test fixed_cylinder_only.geometry.geometry isa Groups.GeometryVectorLike
 
     mesh = mr.Mesh(
         vertices=[

@@ -9,7 +9,7 @@ format. Coordinates and radii retain the micrometre units used by SWC files.
 module LoadSWC
 
 import StaticArrays: SVector
-import ..Obstructions: Spheres
+import ..Obstructions: FiniteCylinders, Spheres
 
 """One row of an SWC file."""
 struct SWCNode
@@ -107,23 +107,36 @@ end
 """
     read_swc(swc_file; swc_as_spheres=false, kwargs...)
 
-Read an SWC file and return a `Spheres` object with the node positions and radii.
+Read an SWC file and return a `FiniteCylinders` object with the node positions,
+radii, and parent connections. Set `swc_as_spheres=true` to retain only an 
+overlapping `Spheres` representation.
 
 See [`Spheres`](@ref) for the available keyword arguments. 
 
-In the future, this function may be extended to return a more complete representation of the SWC file, including the links between spheres. 
-For now, it only returns the spheres themselves with the `overlapping` keyword set to `true` by default.
-
-For forwards compatibility, the `swc_as_spheres` keyword argument is provided, but it must be set to `true` to avoid an error.
-In the future, this argument may be removed when the function is extended to return a more complete representation of the SWC file.
+By default, each node is connected to its parent. Set `swc_as_spheres=true` to
+disable those connections and load only spherical endpoints.
 """
 function read_swc(swc_file::SWCFile; swc_as_spheres=false, kwargs...)
-    if !swc_as_spheres
-        throw(ArgumentError("Reading SWC files as geometries including the links between spheres is not supported yet. Set `swc_as_spheres` to true if you want to load them as individual overlapping spheres without linking cylinders."))
-    end
     radii = [node.radius for node in swc_file.nodes]
     positions = [node.position for node in swc_file.nodes]
-    return Spheres(; position=positions, radius=radii, overlapping=swc_as_spheres, kwargs...)
+    if swc_as_spheres
+        return Spheres(; position=positions, radius=radii, overlapping=true, kwargs...)
+    end
+    node_indices = Dict(node.id => index for (index, node) in enumerate(swc_file.nodes))
+    connected_to = [
+        node.parent_id == -1 ? 0 : node_indices[node.parent_id]
+        for node in swc_file.nodes
+    ]
+    values = merge(
+        (
+            position=positions,
+            radius=radii,
+            connected_to=connected_to,
+            use_spherical_endpoint=true,
+        ),
+        kwargs,
+    )
+    FiniteCylinders(; values...)
 end
 
 read_swc(in_file::Union{IO, AbstractString}; kwargs...) = read_swc(read_swc_raw(in_file); kwargs...)

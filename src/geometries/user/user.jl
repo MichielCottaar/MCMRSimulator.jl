@@ -14,6 +14,7 @@ import .Obstructions: ObstructionGroup, IndexedObstruction, nvolumes,
     Wall, Walls,
     Cylinder, Cylinders,
     Sphere, Spheres,
+    FiniteCylinder, FiniteCylinders,
     Annulus, Annuli,
     Triangle, Mesh,
     Ring, BendyCylinder

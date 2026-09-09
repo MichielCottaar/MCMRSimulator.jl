@@ -20,11 +20,16 @@
         @test swc.nodes[2].radius == 0.5
         @test swc.nodes[3].parent_id == 1
 
-        spheres = mr.read_geometry(IOBuffer(swc_text); format=:swc, swc_as_spheres=true)
-        @test spheres isa mr.Spheres
-        @test length(spheres) == 3
-        @test spheres[1].position == [0., 1., 2.]
-        @test spheres[2].radius == 0.5
+        finite_cylinders = mr.read_geometry(IOBuffer(swc_text); format=:swc)
+        @test finite_cylinders isa mr.FiniteCylinders
+        @test length(finite_cylinders) == 3
+        @test finite_cylinders[1].position == [0., 1., 2.]
+        @test finite_cylinders[2].radius == 0.5
+        @test finite_cylinders[1].connected_to == 0
+        @test finite_cylinders[2].connected_to == 1
+        spheres_only = mr.read_geometry(IOBuffer(swc_text); format=:swc, swc_as_spheres=true)
+        @test spheres_only isa mr.Spheres
+        @test length(spheres_only) == 3
 
         ply_text = """
         ply
@@ -68,23 +73,32 @@
         end
     end
 
-    @testset "reading an SWC file as spheres" begin
-        cylinder = mr.read_swc(joinpath(@__DIR__, "geometries", "cylinder.swc"), R2_inside=0.1, swc_as_spheres=true)
+    @testset "reading connected SWC geometry" begin
+        connected = mr.read_swc(joinpath(@__DIR__, "geometries", "cylinder.swc"), R2_inside=0.1)
 
-        @test cylinder isa mr.Spheres
+        @test connected isa mr.FiniteCylinders
+        @test count(==(0), connected.connected_to.value) == 1
+        @test count(!=(0), connected.connected_to.value) == length(connected) - 1
+
+        spheres = mr.read_swc(
+            joinpath(@__DIR__, "geometries", "cylinder.swc"),
+            R2_inside=0.1,
+            swc_as_spheres=true,
+        )
 
         seq = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_20.seq"))
 
-        sim = mr.Simulation(seq, geometry=cylinder, diffusivity=0.5)
+        sim = mr.Simulation(seq, geometry=spheres, diffusivity=0.5)
         snap = mr.readout(zeros(3, 300) .+ [60, 20, 20], sim, return_snapshot=true)
         @test snap.time ≈ 20.
-        @test all(mr.isinside(cylinder, snap) .> 0)
+        @test all(mr.isinside(spheres, snap) .> 0)
         @test all(mr.transverse.(snap) .≈ exp(-0.1 * 20.))
 
         
         snap_out = mr.readout(zeros(3, 300) .+ [58, 20, 20], sim, return_snapshot=true)
         @test snap_out.time ≈ 20.
-        @test all(mr.isinside(cylinder, snap_out) .== 0)
+        @test all(mr.isinside(spheres, snap_out) .== 0)
         @test all(mr.transverse.(snap_out) .≈ 1.)
+
     end
 end

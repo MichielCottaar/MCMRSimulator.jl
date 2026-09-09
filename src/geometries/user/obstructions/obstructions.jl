@@ -55,6 +55,13 @@ for obstruction_type in (
             # a cellular substrate from SWC points and radii.
             Field{Bool}(:overlapping, "Whether overlapping spheres should be treated as permeable in the overlapping region.", false),
         ]),
+    ObstructionType(
+        :FiniteCylinder; ndim=3, include_shift=false, fields=[
+            Field{MVector{3, Float64}}(:position, "Position of the spherical/cylindrical endpoint.", required=true),
+            Field{Float64}(:radius, "Radius at the endpoint.", required=true),
+            Field{Int}(:connected_to, "One-based index of the endpoint connected to this one, or 0 for a root endpoint.", required=true),
+            Field{Bool}(:use_spherical_endpoint, "Whether to include a spherical endpoint at this position.", true),
+        ]),
     
     ObstructionType(
         :Triangle; plural=:Mesh, ndim=3, include_shift=false, group_volumes=true, fields=[
