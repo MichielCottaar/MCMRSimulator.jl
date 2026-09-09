@@ -108,8 +108,8 @@ end
     read_swc(swc_file; swc_as_spheres=false, kwargs...)
 
 Read an SWC file and return a `FiniteCylinders` object with the node positions,
-radii, and parent connections. Set `swc_as_spheres=true` to retain only an 
-overlapping `Spheres` representation.
+radii, and parent connections. Set `swc_as_spheres=true` to load overlapping
+spheres without connecting cylinders.
 
 See [`Spheres`](@ref) for the available keyword arguments. 
 

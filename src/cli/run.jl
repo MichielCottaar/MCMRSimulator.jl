@@ -21,7 +21,7 @@ function add_simulation_definition!(parser)
     @add_arg_table! parser begin
         "geometry"
             required = true
-            help = "Geometry input file. JSON files describe obstructions and their biophysical properties; PLY files provide meshes; SWC files are converted to overlapping spheres."
+            help = "Geometry input file. JSON files describe obstructions and their biophysical properties; PLY files provide meshes; SWC files are loaded as connected spheres and cylinders by default. Use --swc-as-spheres to load overlapping spheres without connecting cylinders."
         "sequence"
             nargs = '*'
             help = "One of more pulseq .seq files describing the sequences to be run."
