@@ -392,6 +392,67 @@ end
         @test to_inside(repeated_mesh, (SVector(0, 0, 0), 2)) == (SVector(0, 0, 0),)
     end
 
+    @testset "Finite cylinders" begin
+        cylinder = BaseObstructions.FiniteCylinder(
+            SVector(0., 0., 0.), SVector(0., 0., 2.), 1.,
+        )
+        variable = BaseObstructions.FiniteCylinder(
+            SVector(0., 0., 0.), SVector(0., 0., 2.), 1., 2.,
+        )
+        keyword_variable = BaseObstructions.FiniteCylinder(
+            SVector(0., 0., 0.), SVector(0., 0., 2.), 1.; radius_second=2.,
+        )
+        @test keyword_variable == variable
+        @test_throws ArgumentError BaseObstructions.FiniteCylinder(
+            SVector(0., 0., 0.), SVector(0., 0., 0.), 1.,
+        )
+        @test_throws ArgumentError BaseObstructions.FiniteCylinder(
+            SVector(0., 0., 0.), SVector(0., 0., 2.), 0.,
+        )
+        @test has_inside(typeof(cylinder))
+        @test has_single_inside(typeof(cylinder))
+        @test intersection_type(typeof(cylinder)) == Tuple{Int}
+        @test isinside_single(cylinder, SVector(0., 0., 1.))
+        @test !isinside_single(cylinder, SVector(1.1, 0., 1.))
+        @test isinside_single(cylinder, SVector(1.1, 0., 1.), (1, true, 0.5))
+        @test BoundingBoxes.lower(BoundingBoxes.InternalBoundingBox(cylinder)) == SVector(-1., -1., 0.)
+        @test BoundingBoxes.upper(BoundingBoxes.InternalBoundingBox(cylinder)) == SVector(1., 1., 2.)
+
+        side_hit = GI.PhysicalGeometries.find_intersection(
+            cylinder, SVector(2., 0., 1.), SVector(-2., 0., 1.),
+        )
+        @test side_hit == (1, false, 0.25)
+        cap_hit = GI.PhysicalGeometries.find_intersection(
+            cylinder, SVector(0., 0., 1.), SVector(0., 0., 3.),
+        )
+        @test cap_hit == (3, true, 0.5)
+        variable_hit = GI.PhysicalGeometries.find_intersection(
+            variable, SVector(2., 0., 1.), SVector(-3., 0., 1.),
+        )
+        @test variable_hit == (1, false, 0.1)
+        @test isnothing(GI.PhysicalGeometries.find_intersection(
+            cylinder, SVector(2., 0., 3.), SVector(-2., 0., 3.),
+        ))
+
+        side_params = GI.PhysicalGeometries.get_intersection_params(
+            cylinder, SVector(2., 0., 1.), SVector(-2., 0., 1.), side_hit, nothing,
+        )
+        @test side_params.normal == SVector(1., 0., 0.)
+        gap_cylinder = BaseObstructions.FiniteCylinder(
+            SVector(0., 0., 0.), SVector(0., 0., 2.), 1.; caps_are_gaps=true,
+        )
+        gap_params = GI.PhysicalGeometries.get_intersection_params(
+            gap_cylinder, SVector(0., 0., 1.), SVector(0., 0., 3.), cap_hit, nothing,
+        )
+        @test gap_params.normal == SVector(0., 0., -1.)
+        @test gap_params.hit_gap
+        @test !GI.PhysicalGeometries.get_intersection_params(
+            cylinder, SVector(0., 0., 1.), SVector(0., 0., 3.), cap_hit, nothing,
+        ).hit_gap
+        @test length(GI.geometry_mesh(variable; nsamples=8)[1].vertices) == 18
+        @test length(GI.geometry_mesh(variable; nsamples=8)[1].triangles) == 32
+    end
+
     equal_depth_tuple = GeometryTuple{3}((
         BaseObstructions.Sphere(1.0),
         BaseObstructions.Sphere(2.0),

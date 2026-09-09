@@ -31,6 +31,7 @@ function surface_sampling end
 
 include("infinite_walls.jl")
 include("rounds.jl")
+include("finite_cylinders.jl")
 include("triangles.jl")
 
 function random_surface_positions(
