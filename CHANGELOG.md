@@ -10,12 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Per-component, per-subset SNR and standard-error information for accumulated signal readouts.
 - `mean=true` support for `longitudinal`, `transverse`, and `orientation`.
 - `susceptiblity` option added for `Spheres`. The magnetic susceptiblity is assumed to be uniform throughout the sphere.
+- `FiniteCylinders` geometry support for representing connected SWC nodes with spherical endpoints and finite cylindrical connections.
+- SWC files now load as connected sphere-and-cylinder geometries by default; `swc_as_spheres=true` remains available for sphere-only loading.
+- Pre-filtering support for adaptive readouts using `filter=Subset(...)`.
+- CLI `--filter-inside` option for adaptive simulations.
 
 ### Changed
 - CLI signal output now reports per-spin magnetisation values and includes component SNR information.
 - Fixed-spin and adaptive total-signal readouts now expose SNR information through `SpinOrientationSum.snr`.
 - `--target-snr` and `--Nspins` are mutually exclusive; `--max-spins` is the adaptive upper-bound option.
 - Adaptive readout emits a warning when a finite `max_spins` limit is reached before the target SNR.
+- The default spin-sampling bounding box now uses the bounds of finite, non-repeating geometries. Empty, repeating, and unbounded geometries continue to use the default 1 mm^3 box.
+- Adaptive `max_spins` now counts accepted spins after pre-filtering.
 
 ### Optimisation
 - Collision detection algorithm has been sped up, especially for small geometries

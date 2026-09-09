@@ -4,7 +4,9 @@
     read_swc
 
 Representation and loading of files in the standard SWC neuron morphology
-format. Coordinates and radii retain the micrometre units used by SWC files.
+format. See the [SWC specification](https://swc-specification.readthedocs.io/en/latest/)
+for details of the file format. Coordinates and radii retain the micrometre
+units used by SWC files.
 """
 module LoadSWC
 

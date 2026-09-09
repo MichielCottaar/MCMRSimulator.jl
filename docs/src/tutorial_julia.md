@@ -68,6 +68,34 @@ By default there is no T1 or T2 relaxation and a diffusivity of 3 um^2/ms.
 Enabling spin relaxation and diffusion requires setting the appropriate parameters in the [`Simulation`](@ref) as seen here.
 The spin relaxation rates can be different in different compartments as described [here](@ref properties).
 
+## Simulating a cell from an SWC file
+The [SWC specification](https://swc-specification.readthedocs.io/en/latest/)
+defines a standard text format for digital reconstructions. SWC files can be
+loaded directly as connected sphere-and-cylinder geometries. For example, the
+tutorial includes a small branched cell morphology:
+```@example tutorial
+cell_geometry = read_swc("cell.swc")
+cell_simulation = Simulation(sequence, diffusivity=2., geometry=cell_geometry)
+nothing # hide
+```
+
+The default sampling box for this finite, non-repeating geometry is calculated
+from the cell itself. To simulate only initially intracellular spins, use a
+`Subset` as the adaptive readout filter:
+```@example tutorial
+intracellular_signal = readout(
+    cell_simulation;
+    target_snr=1,
+    max_spins=100,
+    filter=Subset(inside=true),
+)
+transverse(intracellular_signal; mean=true)
+```
+
+The `filter` is applied before the random walks start, so spins outside the cell
+are not simulated. This differs from `subset`, which selects spins from the
+signal after they have been simulated.
+
 ## Initialising the simulation
 The current state of the simulation at any time is given by a [`Snapshot`](@ref) object.
 This is essentially a vector of [`Spin`](@ref) objects with a time stamp.
@@ -76,7 +104,7 @@ Besides containing its current position, it also contains its contribution to th
 
 When a full spin state is needed, the recommended way to initialise is to call [`Snapshot`](@ref)`(<number of spins>, <simulation>, [bounding_box])`.
 This will create randomly distributed spins within some [`BoundingBox`](@ref).
-By default this bounding box is an isotropic voxel with a size of 1 mm centered on the origin.
+By default this bounding box is the finite geometry bounds for non-repeating geometries, or an isotropic voxel with a size of 1 mm centered on the origin otherwise.
 
 After initialisation or after running the simulation, the [`Snapshot`](@ref) can be later filtered to include only spins inside/outside specific compartments or only include free/bound spins using [`get_subset`].
 

@@ -45,6 +45,27 @@ How these various properties affect the simulation is described [here](@ref prop
 The procedure to create [`Walls`](@ref), [`Spheres`](@ref), or [`Annuli`](@ref) is very similar as for the [`Cylinders`](@ref) illustrated above.
 Randomly distributed cylinders, annuli, and spheres can be created using `mcmr geometry create-random`.
 
+## Simulating a cell from an SWC file
+The [SWC specification](https://swc-specification.readthedocs.io/en/latest/)
+defines a standard text format for digital reconstructions. An SWC morphology
+can be passed directly to `mcmr run`; no intermediate JSON geometry file is
+needed. The tutorial includes a small branched cell morphology in `cell.swc`.
+SWC nodes are loaded as connected spheres and cylinders by default, and the
+adaptive `--filter-inside` option restricts the simulation to spins that start
+inside the cell:
+```bash
+mcmr run cell.swc dwi_te_80_bval_2.seq --target-snr 10 --filter-inside -o intracellular_signal.csv
+```
+```@eval
+import MCMRSimulator.CLI: run_main_docs
+run_main_docs("run cell.swc dwi_te_80_bval_2.seq --target-snr 1 --max-spins 100 --filter-inside -o intracellular_signal.csv --seed=1")
+```
+
+For finite, non-repeating geometries, adaptive spin initialisation uses the
+geometry bounds by default. The `--filter-inside` option is only available for
+adaptive simulations, because it filters each generated batch before it is
+simulated.
+
 ## Running the simulation
 To get instructions on running the simulations, we can check the help message of `mcmr run`:
 ```bash
@@ -57,7 +78,7 @@ run_main_docs("run --help")
 
 We can see that in addition to defining the geometry and the sequence, we can also control the simulation properties such as the `--diffusivity`, `--R1`, and `--R2`.
 
-The recommended approach is to set a target SNR and let the simulator determine how many spins are needed. Spins are randomly distributed uniformly across a bounding box with size given by `--voxel-size`.
+The recommended approach is to set a target SNR and let the simulator determine how many spins are needed. For adaptive simulations, spins are randomly distributed within the geometry bounds for finite, non-repeating geometries, or within the default 1 mm voxel otherwise. Fixed-spin simulations use the voxel size given by `--voxel-size`.
 The initial state might also contain bound spins (if the `--density` flag was set to a non-zero value during the geometry generation).
 
 We will use a pre-defined diffusion-weighted MRI sequence with an echo time of 80 ms and a b-value of 2 mm^2/s.
