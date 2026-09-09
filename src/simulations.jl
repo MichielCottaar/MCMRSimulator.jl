@@ -4,9 +4,9 @@ Defines the main [`Simulation`](@ref) object.
 module Simulations
 import StaticArrays: SVector, SizedVector
 import ..Geometries: ObstructionGroup, fix
-import ..Geometries.Internal: FixedGeometry, susceptibility_off_resonance
-import ..Reflections: possible_reflection_types
-import ..Spins: Spin, Snapshot, SpinOrientation, stuck
+import ..Geometries.Internal: FixedGeometry, susceptibility_off_resonance, isinside, inside_cache_type
+import ..Reflections: possible_reflection_types, previous_hit
+import ..Spins: Spin, Snapshot, SpinOrientation, static_vector_type, stuck
 import ..Methods: get_time
 import ..Properties: GlobalProperties, R1, R2, off_resonance
 import ..TimeSteps: TimeStep
@@ -88,6 +88,15 @@ struct Simulation{N, NG, G<:FixedGeometry}
     end
 end
 
+function spin_type(simulation::Simulation{N}, nsequences::Integer=N) where {N}
+    Spin{
+        nsequences,
+        static_vector_type(nsequences){SpinOrientation},
+        possible_reflection_types(simulation.geometry),
+        inside_cache_type(simulation.geometry),
+    }
+end
+
 function Simulation(
     sequences;
     diffusivity=3.,
@@ -148,13 +157,16 @@ function Snapshot(nspins::Integer, simulation::Simulation{N}, bounding_box=500; 
     Snapshot(nspins, bounding_box, simulation.geometry; nsequences=N, kwargs...)
 end
 function _constrain_snapshot(snapshot::Snapshot{N}, simulation::Simulation) where {N}
-    reflection_type = possible_reflection_types(simulation.geometry)
+    S = spin_type(simulation, N)
+    inside_type = inside_cache_type(simulation.geometry)
     spins = map(snapshot.spins) do spin
-        Spin{N, typeof(spin.orientations), reflection_type}(
+        inside = inside_type(isinside(simulation.geometry, spin.position, previous_hit(spin.reflection)).inside_of)
+        S(
             spin.position,
             deepcopy(spin.orientations),
             deepcopy(spin.reflection),
             spin.rng,
+            inside,
         )
     end
     Snapshot(spins, snapshot.time)

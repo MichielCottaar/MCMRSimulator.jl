@@ -12,7 +12,7 @@ import .Susceptibility: susceptibility_off_resonance, off_resonance_gradient
 import .RayGridIntersection: ray_grid_intersections
 
 export FixedGeometry, Intersection, flip, IsInside, collision_normal,
-    isinside, detect_intersection, random_surface_positions, geometry_mesh, distance_to_surface,
+    isinside, inside_cache_type, detect_intersection, random_surface_positions, geometry_mesh, distance_to_surface,
     ray_grid_intersections,
     size_scale, SizeScaleOverride, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
@@ -33,6 +33,8 @@ struct FixedGeometry{G <: PhysicalGeometry{3}, V, S, O}
     surface::S
     susceptibility::O
 end
+
+inside_cache_type(geometry::FixedGeometry) = Vector{inside_indices_eltype(typeof(geometry.geometry))}
 
 # A fixed geometry represents one user geometry unless it is a tuple of groups.
 Base.length(geometry::FixedGeometry) =

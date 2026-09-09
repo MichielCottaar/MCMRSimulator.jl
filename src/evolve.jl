@@ -12,13 +12,25 @@ import Rotations
 import Bessels: besseli0
 import ..SequenceParts: SequencePart, MultSequencePart, InstantSequencePart, get_readouts, IndexedReadout, empty_sequence, GradientEvent, PulseEvent, parts, repetition_time
 import ..Methods: get_time
-import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation, static_vector_type
-import ..Simulations: Simulation, _to_snapshot
+import ..Spins: @spin_rng, Spin, Snapshot, stuck, SpinOrientationSum, get_sequence, orientation, SpinOrientation, static_vector_type, isinside
+import ..Simulations: Simulation, _to_snapshot, spin_type
 import ..Relax: relax!
 import ..Properties: GlobalProperties, stick_probability
 import ..Subsets: Subset, get_subset
 import ..Reflections: Reflection, possible_reflection_types, previous_hit, direction
 import ..Geometries.Internal: Intersection, detect_intersection, surface_relaxation, permeability, surface_density, dwell_time, FixedGeometry
+
+function _update_isinside!(spin::Spin, reflection::Reflection)
+    isnothing(spin.isinside) && return
+    indices = reflection.intersection.indices
+    existing = findfirst(isequal(indices), spin.isinside)
+    if reflection.inside
+        isnothing(existing) && push!(spin.isinside, indices)
+    elseif !isnothing(existing)
+        deleteat!(spin.isinside, existing)
+    end
+    sort!(spin.isinside)
+end
 
 """
 Supertype for any Readout accumulator.
@@ -62,14 +74,13 @@ by setting `return_snapshot=false` in [`readout`](@ref).
 
 After the simulation a [`Snapshot`](@ref) will be returned.
 """
-struct SnapshotAccumulator{N, ST, R} <: SingleAccumulator
-    spins :: Vector{Vector{Spin{N, ST, R}}}
+struct SnapshotAccumulator{N, S<:Spin{N}} <: SingleAccumulator
+    spins :: Vector{Vector{S}}
     time :: Float64
     nwrite :: Ref{Int}
-    function SnapshotAccumulator{N}(time::Number, reflection_type::Type{R}) where {N, R}
-        st = static_vector_type(N){SpinOrientation}
-        return new{N, st, reflection_type}(
-            Vector{Spin{N, st, reflection_type}}[],
+    function SnapshotAccumulator{N}(time::Number, spin_type::Type{S}) where {N, S<:Spin{N}}
+        return new{N, S}(
+            Vector{S}[],
             Float64(time),
             Ref(0)
         )
@@ -125,12 +136,12 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
         end
         flatten_readouts = readouts isa Number
         use_readouts = flatten_readouts ? [readouts] : readouts
-        reflection_type = possible_reflection_types(simulation.geometry)
+        S = spin_type(simulation, 0)
 
         grid = Array{SnapshotAccumulator{0}}(undef, 1, length(readouts), 1, length(subset))
         for i_r in 1:length(use_readouts)
             for i_s in 1:length(subset)
-                grid[1, i_r, 1, i_s] = SnapshotAccumulator{0}(use_readouts[i_r], reflection_type)
+                grid[1, i_r, 1, i_s] = SnapshotAccumulator{0}(use_readouts[i_r], S)
             end
         end
         to_flatten = SVector{4, Bool}(
@@ -186,9 +197,9 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
         (sequence, ro.readout, ro.TR) => ro
         for sequence in 1:N for ro in actual_readouts[sequence]
     )
-    reflection_type = return_snapshot ? possible_reflection_types(simulation.geometry) : nothing
+    S = return_snapshot ? spin_type(simulation, 1) : nothing
     acc_type = return_snapshot ?
-        SnapshotAccumulator{1, static_vector_type(1){SpinOrientation}, reflection_type} :
+        SnapshotAccumulator{1, S} :
         TotalSignalAccumulator
 
     grid = Array{SingleAccumulator}(undef, grid_size...)
@@ -197,7 +208,7 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
         if (i_seq, i_readout, i_TR + first_TR) in keys(as_dict)
             time = as_dict[(i_seq, i_readout, i_TR + first_TR)].time
             grid[index] = return_snapshot ?
-                SnapshotAccumulator{1}(time, reflection_type) :
+                SnapshotAccumulator{1}(time, S) :
                 TotalSignalAccumulator(time)
         else
             grid[index] = FillerAccumulator()
@@ -698,6 +709,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 isnothing(reflection) ? norm(new_pos - current_pos) * use_distance : reflection.distance_moved + norm(new_pos - current_pos) * use_distance,
                 passes_through
             )
+            passes_through && _update_isinside!(spin, reflection)
             current_pos = spin.position = collision_pos
             if ~isnothing(test_new_pos)
                 push!(all_positions, current_pos)

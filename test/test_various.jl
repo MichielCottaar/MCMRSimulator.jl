@@ -68,6 +68,30 @@ end
     @test length(outside.signal[1]) == outside_statistics.nspins
 end
 
+@testset "Cached inside state" begin
+    Random.seed!(1234)
+    geometry = mr.Spheres(radius=1., repeats=(2, 2, 2))
+    simulation = mr.Simulation(
+        [],
+        geometry=geometry,
+        permeability=Inf,
+        diffusivity=3.,
+        timestep=1.,
+    )
+    initial = mr.Snapshot(100, 3.)
+    @test all(isnothing(spin.isinside) for spin in initial)
+
+    final = mr.evolve(initial, simulation, 100.)
+    for spin in final
+        fresh = mr.Geometries.Internal.isinside(
+            simulation.geometry,
+            spin.position,
+            mr.Reflections.previous_hit(spin.reflection),
+        ).inside_of
+        @test sort(copy(spin.isinside)) == sort(copy(fresh))
+    end
+end
+
 @testset "Pulseq repetition time override" begin
     filename = joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2.seq")
     sequence = mr.read_pulseq(filename; TR=300)

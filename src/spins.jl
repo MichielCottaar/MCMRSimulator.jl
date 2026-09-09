@@ -115,26 +115,27 @@ Create a new spin with the same position as `reference_spin` with the orientatio
 - [`orientation`](@ref) to get a (`nsequences`x3) matrix with the spin orientations in 3D space
 - [`position`](@ref) to get a length-3 vector with spin location
 """
-mutable struct Spin{N, ST<:AbstractVector{SpinOrientation}, R<:Union{Nothing, Reflection}}
+mutable struct Spin{N, ST<:AbstractVector{SpinOrientation}, R<:Union{Nothing, Reflection}, I<:Union{Nothing, AbstractVector}}
     position :: SVector{3, Float64}
     orientations :: ST
     reflection :: R
     rng :: FixedXoshiro
+    isinside :: I
 end
 
 static_vector_type(N) = N < 50 ? SVector{N} : Vector
 
-function Spin(position::AbstractArray{<:Real}, orientations::AbstractVector{SpinOrientation}, reflection=nothing, rng::FixedXoshiro=FixedXoshiro()) 
+function Spin(position::AbstractArray{<:Real}, orientations::AbstractVector{SpinOrientation}, reflection=nothing, rng::FixedXoshiro=FixedXoshiro(), isinside=nothing)
     st = static_vector_type(length(orientations)){SpinOrientation}
-    Spin{length(orientations), st, Union{Nothing, Reflection}}(SVector{3, Float64}(position), st(SpinOrientation.(orientations)), reflection, rng)
+    Spin{length(orientations), st, Union{Nothing, Reflection}, typeof(isinside)}(SVector{3, Float64}(position), st(SpinOrientation.(orientations)), reflection, rng, isinside)
 end
 
-function Spin(;nsequences=1, position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., reflection=nothing, rng=FixedXoshiro()) 
-    base = Spin(SVector{3, Float64}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), reflection, rng)
+function Spin(;nsequences=1, position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., reflection=nothing, rng=FixedXoshiro(), isinside=nothing)
+    base = Spin(SVector{3, Float64}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), reflection, rng, isinside)
     return nsequences == 1 ? base : Spin(base, nsequences)
 end
-Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.reflection, reference_spin.rng)
-Spin(reference_spin::Spin{0}, nsequences::Int) = Spin(reference_spin.position, repeat([SpinOrientation()], nsequences), reference_spin.reflection, reference_spin.rng)
+Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.reflection, reference_spin.rng, deepcopy(reference_spin.isinside))
+Spin(reference_spin::Spin{0}, nsequences::Int) = Spin(reference_spin.position, repeat([SpinOrientation()], nsequences), reference_spin.reflection, reference_spin.rng, deepcopy(reference_spin.isinside))
 
 show_helper(io::IO, spin::Spin{0}) = print(io, "with no magnetisation information)")
 show_helper(io::IO, spin::Spin{1}) = print(io, "with $(repr(spin.orientations[1], context=io)))")
@@ -147,10 +148,11 @@ function Base.show(io::IO, spin::Spin)
     show_helper(io, spin)
 end
 
-Base.deepcopy_internal(spin::Spin{N, ST, R}, stackdict::IdDict) where {N, ST, R} = Spin{N, ST, R}(
+Base.deepcopy_internal(spin::Spin{N, ST, R, I}, stackdict::IdDict) where {N, ST, R, I} = Spin{N, ST, R, I}(
     spin.position, map(spin.orientations) do orient 
         Base.deepcopy_internal(orient, stackdict)
-    end, Base.deepcopy_internal(spin.reflection, stackdict), spin.rng
+    end, Base.deepcopy_internal(spin.reflection, stackdict), spin.rng,
+    Base.deepcopy_internal(spin.isinside, stackdict)
 )
 
 function Base.deepcopy_internal(spins::Vector{<:Spin}, stackdict::IdDict)
@@ -273,12 +275,13 @@ end
 
 Extracts the spin orientation corresponding to a specific sequence, where the sequence index uses the order in which the sequences where provided in the `Simulation`.
 """
-function get_sequence(spin::Spin{N, ST, R}, index) where {N, ST, R}
-    Spin{1, SVector{1, SpinOrientation}, R}(
+function get_sequence(spin::Spin{N, ST, R, I}, index) where {N, ST, R, I}
+    Spin{1, SVector{1, SpinOrientation}, R, I}(
         spin.position,
         SVector{1}([spin.orientations[index]]),
         spin.reflection,
         spin.rng,
+        deepcopy(spin.isinside),
     )
 end
 
@@ -334,10 +337,10 @@ Replicates the positions and orientations for a single sequence in the input sna
 
 Information for a single sequence can be extracted by calling [`get_sequence`](@ref) first.
 """
-struct Snapshot{N, ST, R} <: AbstractVector{Spin{N, ST, R}}
-    spins :: AbstractVector{Spin{N, ST, R}}
+struct Snapshot{N, S<:Spin{N}} <: AbstractVector{S}
+    spins :: AbstractVector{S}
     time :: Float64
-    Snapshot(spins :: AbstractVector{Spin{N, ST, R}}, time=0.) where {N, ST, R} = new{N, ST, R}(spins, Float64(time))
+    Snapshot(spins :: AbstractVector{S}, time=0.) where {N, S<:Spin{N}} = new{N, S}(spins, Float64(time))
 end
 
 function Snapshot(positions :: AbstractMatrix{<:Real}; time :: Real=0., kwargs...) 
@@ -351,7 +354,7 @@ end
 function Snapshot(nspins::Integer, bounding_box=500, geometry=(); time::Real=0., kwargs...)
     if iszero(nspins)
         nseq = get(kwargs, :nsequences, 1)
-        return Snapshot(Spin{nseq, static_vector_type(nseq){SpinOrientation}, Union{Nothing, Reflection}}[], time)
+        return Snapshot(Spin{nseq, static_vector_type(nseq){SpinOrientation}, Union{Nothing, Reflection}, Nothing}[], time)
     end
     bounding_box = BoundingBox(bounding_box)
     sz = (upper(bounding_box) - lower(bounding_box))
@@ -376,7 +379,7 @@ Base.show(io::IO, snap::Snapshot{N}) where {N} = print(io, "Snapshot($(length(sn
 
 
 function random_surface_spins(geometry::FixedGeometry, bounding_box::BoundingBox, volume_density::Number; nsequences=1, kwargs...)
-    spins = Spin{nsequences, static_vector_type(nsequences){SpinOrientation}, Union{Nothing, Reflection}}[]
+    spins = Spin{nsequences, static_vector_type(nsequences){SpinOrientation}, Union{Nothing, Reflection}, Nothing}[]
     positions, intersections = random_surface_positions(geometry, bounding_box, volume_density)
     for (position, intersection) in zip(positions, intersections)
         use_normal = intersection.normal
