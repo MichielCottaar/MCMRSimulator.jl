@@ -56,7 +56,7 @@ function isinside_single(
     position::SVector{3, Float64},
     previous_intersection=nothing,
 )
-    !isnothing(previous_intersection) && return previous_intersection[1]
+    !isnothing(previous_intersection) && return previous_intersection[2]
     relative = position - cylinder.first
     axial = relative ⋅ cylinder.axis
     (0 < axial < cylinder.length) || return false
