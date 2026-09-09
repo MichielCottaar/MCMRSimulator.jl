@@ -221,7 +221,9 @@ end
         @test isempty(err)
         @test size(DataFrame(CSV.File("spheres.csv")), 1) == 1
 
-        _, err = run_main_test("run geometry.swc $sequence_file --target-snr 1 --max-spins 10 --batch-size 10 --filter-inside -o filtered.csv")
+        _, err = run_main_test("geometry create spheres 1 large_sphere.json --radius 1000000")
+        @test isempty(err)
+        _, err = run_main_test("run large_sphere.json $sequence_file --target-snr 1 --max-spins 10 --batch-size 10 --filter-inside -o filtered.csv")
         @test isempty(err)
         filtered = DataFrame(CSV.File("filtered.csv"))
         @test size(filtered, 1) == 1
