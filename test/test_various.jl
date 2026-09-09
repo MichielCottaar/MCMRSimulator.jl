@@ -30,6 +30,16 @@
     @test result.signal[2].snr == result.statistics[2].snr
     @test !(:converged in propertynames(result.statistics[1]))
 
+    filtered = mr.readout(
+        simulation;
+        target_snr=100,
+        batch_size=10,
+        max_spins=20,
+        return_statistics=true,
+        filter=mr.Subset(inside=false),
+    )
+    @test filtered.statistics.nspins == 20
+
     @test_logs (:warn, r"Adaptive readout did not reach target SNR") mr.readout(
         simulation;
         target_snr=100,

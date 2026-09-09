@@ -415,7 +415,8 @@ to every subset.
 - `subset`: Return the signal/snapshot for a subset of all spins. Can be set to a single or a vector of [`Subset`](@ref) objects. If set to a vector, this will add an attional dimension to the output.
 - `target_snr`: target signal-to-noise ratio for adaptive readout. This is required when calling `readout` with only a [`Simulation`](@ref).
 - `batch_size`: number of spins simulated between adaptive convergence checks.
-- `max_spins`: optional maximum number of spins simulated in adaptive mode.
+- `max_spins`: optional maximum number of accepted spins in adaptive mode.
+- `filter`: an optional [`Subset`](@ref) used to select spins before they are simulated in adaptive mode.
 - `return_statistics`: when true in adaptive mode, also return standard errors, SNRs, sample counts, and convergence flags.
 
 # Returns
@@ -430,22 +431,23 @@ If `return_snapshot=true` is set, each element is the full [`Snapshot`](@ref) in
 readout(spins, simulation::Simulation, new_readout_times=nothing; bounding_box=500, kwargs...) = readout_internal(_to_snapshot(spins, simulation, bounding_box), simulation, new_readout_times; kwargs...)
 
 """
-    readout(simulation; target_snr, readout_times=nothing, batch_size=1000, max_spins=nothing, return_statistics=false)
+    readout(simulation; target_snr, readout_times=nothing, batch_size=1000, max_spins=nothing, return_statistics=false, filter=nothing)
 
 Adaptively simulates independent batches of spins until the requested target SNR is
 reached for every signal component and subset. Each batch contributes to every
 subset before convergence is checked. Set `max_spins` to limit the total number of
-spins; it is unlimited by default. A zero transverse signal is accepted after at
+accepted spins; it is unlimited by default. A zero transverse signal is accepted after at
 least `target_snr^2` spins have contributed to that subset. If a finite
 `max_spins` limit is reached without convergence, a warning is emitted.
 
 Set `return_statistics=true` to return the signal together with standard errors,
 SNRs, and spin counts.
 """
-function readout(simulation::Simulation; target_snr, readout_times=nothing, batch_size=1000, max_spins=nothing, return_statistics=false, bounding_box=500, kwargs...)
+function readout(simulation::Simulation; target_snr, readout_times=nothing, batch_size=1000, max_spins=nothing, return_statistics=false, bounding_box=500, filter=nothing, kwargs...)
     iszero(length(simulation.sequences)) && error("Adaptive readout requires at least one sequence.")
     target_snr > 0 || error("`target_snr` should be positive.")
     batch_size > 0 || error("`batch_size` should be positive.")
+    isnothing(filter) || filter isa Subset || error("`filter` should be a Subset or nothing.")
     min_spins = ceil(Int, target_snr^2)
     if !isnothing(max_spins)
         max_spins > 0 || error("`max_spins` should be positive.")
@@ -457,8 +459,14 @@ function readout(simulation::Simulation; target_snr, readout_times=nothing, batc
     nspins = 0
     while isnothing(max_spins) || nspins < max_spins
         nrun = isnothing(max_spins) ? batch_size : min(batch_size, max_spins - nspins)
-        run_readout!(_to_snapshot(nrun, simulation, bounding_box), simulation, accumulator; readouts=readout_times, kwargs...)
-        nspins += nrun
+        snapshot = _to_snapshot(nrun, simulation, bounding_box)
+        if !isnothing(filter)
+            snapshot = get_subset(snapshot, simulation, filter)
+        end
+        if !isempty(snapshot)
+            run_readout!(snapshot, simulation, accumulator; readouts=readout_times, kwargs...)
+            nspins += length(snapshot)
+        end
         if converged(accumulator, Float64(target_snr), Int(min_spins))
             break
         end
