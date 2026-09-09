@@ -43,7 +43,7 @@ function fix_base_geometry(group::FiniteCylinders)
         FiniteCylinder(
             positions[index], positions[connected_to[index]],
             radii[index], radii[connected_to[index]];
-            caps_are_gaps=true,
+            caps_are_gaps=false,
         )
         for index in 1:number if connected_to[index] != 0
     ]
