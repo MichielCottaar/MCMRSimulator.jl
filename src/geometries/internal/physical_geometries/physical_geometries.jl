@@ -160,6 +160,17 @@ function to_property_index(geometry::PhysicalGeometry, indices)
     return (indices[1:nremoved]..., cleaned...)
 end
 
+"""Convert a surface intersection path into an inside-region path."""
+function to_inside_index(geometry::PhysicalGeometry, indices)
+    has_inside(typeof(geometry)) || return nothing
+    has_single_inside(typeof(geometry)) && return ()
+    child, child_indices = get_child(geometry, indices)
+    converted = to_inside_index(child, child_indices)
+    isnothing(converted) && return nothing
+    n_consumed = length(indices) - length(child_indices)
+    (indices[1:n_consumed]..., converted...)
+end
+
 """Sample surface positions together with initialized collision states."""
 function random_surface_positions end
 

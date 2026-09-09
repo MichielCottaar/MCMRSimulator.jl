@@ -374,6 +374,24 @@ end
         @test (@inferred requires_inside(typeof(nested))) === Val(true)
     end
 
+    @testset "Inside index conversion" begin
+        sphere = BaseObstructions.Sphere(1.0)
+        triangle = BaseObstructions.FullTriangle(
+            SVector(0., 0., 0.), SVector(1., 0., 0.), SVector(0., 1., 0.),
+        )
+        mesh = Mesh(
+            [SVector(0., 0., 0.), SVector(1., 0., 0.), SVector(0., 1., 0.), SVector(0., 0., 1.)],
+            [SVector(1, 2, 3), SVector(1, 2, 4), SVector(1, 3, 4)],
+        )
+        to_inside = GI.PhysicalGeometries.to_inside_index
+        @test to_inside(sphere, ()) == ()
+        @test to_inside(triangle, ()) === nothing
+        @test to_inside(mesh, (2,)) == ()
+        @test to_inside(GeometryVector([mesh]), (1, 2)) == (1,)
+        repeated_mesh = Repeat(mesh, [2., 2., 2.])
+        @test to_inside(repeated_mesh, (SVector(0, 0, 0), 2)) == (SVector(0, 0, 0),)
+    end
+
     equal_depth_tuple = GeometryTuple{3}((
         BaseObstructions.Sphere(1.0),
         BaseObstructions.Sphere(2.0),

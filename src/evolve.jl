@@ -18,11 +18,12 @@ import ..Relax: relax!
 import ..Properties: GlobalProperties, stick_probability
 import ..Subsets: Subset, get_subset
 import ..Reflections: Reflection, possible_reflection_types, previous_hit, direction
-import ..Geometries.Internal: Intersection, detect_intersection, surface_relaxation, permeability, surface_density, dwell_time, FixedGeometry
+import ..Geometries.Internal: Intersection, detect_intersection, surface_relaxation, permeability, surface_density, dwell_time, FixedGeometry, to_inside_index
 
-function _update_isinside!(spin::Spin, reflection::Reflection)
+function _update_isinside!(spin::Spin, reflection::Reflection, geometry::FixedGeometry)
     isnothing(spin.isinside) && return
-    indices = reflection.intersection.indices
+    indices = to_inside_index(geometry.geometry, reflection.intersection.indices)
+    isnothing(indices) && return
     existing = findfirst(isequal(indices), spin.isinside)
     if reflection.inside
         isnothing(existing) && push!(spin.isinside, indices)
@@ -710,7 +711,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 isnothing(reflection) ? norm(new_pos - current_pos) * use_distance : reflection.distance_moved + norm(new_pos - current_pos) * use_distance,
                 passes_through
             )
-            passes_through && _update_isinside!(spin, reflection)
+            passes_through && _update_isinside!(spin, reflection, simulation.geometry)
             current_pos = spin.position = collision_pos
             if ~isnothing(test_new_pos)
                 push!(all_positions, current_pos)

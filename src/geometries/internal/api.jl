@@ -4,7 +4,7 @@ import StaticArrays: SVector
 import ..BoundingBoxes: BoundingBox
 import .InternalBoundingBoxes: InternalBoundingBox
 import .InternalBoundingBoxes
-import .PhysicalGeometries: PhysicalGeometry, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, distance_to_surface, to_property_index, inside_indices_eltype, bound_intersection_type
+import .PhysicalGeometries: PhysicalGeometry, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, distance_to_surface, to_property_index, to_inside_index, inside_indices_eltype, bound_intersection_type
 import .PhysicalGeometries.Groups: GeometryTuple, inside_indices_for_any_type
 import .PhysicalGeometries.Transparents: IgnoreOverlapping
 import .InsideViews: InsideView
