@@ -113,6 +113,7 @@ function get_intersection_params(
     start::SVector{3, Float64},
     destination::SVector{3, Float64},
     intersection::Tuple,
+    isinside=nothing,
 )
     inside, _ = intersection
     triangle_normal = normal(triangle)

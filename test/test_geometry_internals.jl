@@ -335,7 +335,6 @@ end
     @test length(GeometryVector{3}(TestGeometry{3}[])) == 0
     @test length(GeometryTuple{3}(())) == 0
     @test has_inside(typeof(BaseObstructions.Sphere(1.0)))
-    @test has_inside(typeof(BaseObstructions.OverlappingSphere(1.0)))
     @test !has_inside(typeof(BaseObstructions.InfiniteWall()))
     @test !has_inside(typeof(BaseObstructions.FullTriangle(
         SVector(0.0, 0.0, 0.0),
@@ -1107,8 +1106,6 @@ end
     sphere = mr.fix(mr.Spheres(radius=1.0))
     @test GI.distance_to_surface(sphere, position) == 1.0
     @test GI.distance_to_surface(sphere, SVector(1.5, 0.0, 0.0)) == 0.5
-    overlapping_sphere = BaseObstructions.OverlappingRound{3}(1.0)
-    @test GI.distance_to_surface(overlapping_sphere, position) == 1.0
 
     triangle = BaseObstructions.FullTriangle(
         SVector(0.0, 0.0, 0.0),

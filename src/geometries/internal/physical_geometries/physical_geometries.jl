@@ -60,17 +60,25 @@ function child_type end
 
 
 """
-     get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, indices) -> IntersectionParams{N}
+     get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, indices[, isinside]) -> IntersectionParams{N}
 
-Gets the `inside`, `normal`, and `hit_gap` properties of the intersection after it has been identified by `find_intersection`.
+Gets the `inside`, `normal`, and `hit_gap` properties of the intersection after it has been identified by `find_intersection`. When provided, `isinside` contains the cached obstruction indices for the current particle and is converted to child-local indices during recursion.
 
 This should be overwritten for base obstructions, but should work as is for any composite geometries, which override `get_child` instead.
 """
-function get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, indices::Tuple) where {N}
+function _child_inside(isinside, prefix::Tuple)
+    isnothing(isinside) && return nothing
+    isempty(prefix) && return isinside
+    prefix_length = length(prefix)
+    [index[(prefix_length + 1):end] for index in isinside if length(index) >= prefix_length && index[1:prefix_length] == prefix]
+end
+
+function get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, indices::Tuple, isinside=nothing) where {N}
     (child, remaining_indices) = get_child(geometry, indices)
     start_child = to_child_coordinates(geometry, start)
     dest_child = to_child_coordinates(geometry, dest)
-    result = get_intersection_params(child, start_child, dest_child, remaining_indices)
+    prefix = indices[1:(length(indices) - length(remaining_indices))]
+    result = get_intersection_params(child, start_child, dest_child, remaining_indices, _child_inside(isinside, prefix))
     return from_child_coordinates(geometry, result) :: IntersectionParams{N}
 end
 
@@ -179,6 +187,6 @@ include("repeats.jl")
 include("transparent.jl")
 include("base_obstructions/base_obstructions.jl")
 include("meshes.jl")
-import .Transparents: Transparent, transparent_geometry
+import .Transparents: Transparent, IgnoreOverlapping, transparent_geometry
 
 end

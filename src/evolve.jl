@@ -673,6 +673,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 current_pos,
                 new_pos,
                 phit,
+                spin.isinside,
             )
 
             use_distance = isnothing(collision) ? 1. : max(prevfloat(collision.distance), 0.)

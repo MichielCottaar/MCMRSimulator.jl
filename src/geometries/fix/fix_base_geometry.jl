@@ -1,11 +1,9 @@
 module FixBaseGeometry
 
-import StaticArrays: SVector
-
 import ...User.Obstructions: Walls, Cylinders, Spheres, Annuli, Mesh
 import ...User.SplitMesh: components
 import ...User.Obstructions: isglobal
-import ...Internal.PhysicalGeometries.BaseObstructions: InfiniteWall, InfiniteCylinder, Sphere, OverlappingSphere
+import ...Internal.PhysicalGeometries.BaseObstructions: InfiniteWall, InfiniteCylinder, Sphere
 import ...Internal.PhysicalGeometries: Meshes
 
 function _values(field_value, number)
@@ -22,19 +20,7 @@ end
 
 function fix_base_geometry(group::Spheres)
     radii = _values(group.radius, length(group))
-    group.overlapping.value || return [Sphere(radius) for radius in radii]
-
-    positions = [SVector{3, Float64}(position) for position in _values(group.position, length(group))]
-    spheres = [OverlappingSphere(radius) for radius in radii]
-
-    for i in eachindex(spheres), j in 1:(i - 1)
-        offset = positions[j] - positions[i]
-        if sum(offset .* offset) < (radii[i] + radii[j])^2
-            push!(spheres[i].overlaps_with, (offset, radii[j]))
-            push!(spheres[j].overlaps_with, (-offset, radii[i]))
-        end
-    end
-    spheres
+    [Sphere(radius) for radius in radii]
 end
 
 function fix_base_geometry(group::Annuli)

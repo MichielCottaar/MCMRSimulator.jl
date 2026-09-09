@@ -1,11 +1,16 @@
 module Transparents
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox, size_scale
+import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, find_intersection, get_child, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox, size_scale
 import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ...Properties: GeometryProperties
 
 abstract type Transparent{N, P <: PhysicalGeometry{N}} <: PhysicalGeometry{N} end
+
+"""Treat intersections inside another obstruction as gaps."""
+struct IgnoreOverlapping{N, P <: PhysicalGeometry{N}} <: Transparent{N, P}
+    geometry::P
+end
 
 function Base.show(io::IO, ::Type{T}) where {N, P, T <: Transparent{N, P}}
     print(io, nameof(T), "{")
@@ -57,6 +62,25 @@ function find_intersection(
 end
 
 get_child(wrapper::Transparent, indices) = (transparent_geometry(wrapper), indices)
+
+function get_intersection_params(
+    wrapper::IgnoreOverlapping{N},
+    start::SVector{N, Float64},
+    destination::SVector{N, Float64},
+    indices::Tuple,
+    isinside=nothing,
+) where {N}
+    result = get_intersection_params(
+        transparent_geometry(wrapper),
+        start,
+        destination,
+        indices,
+        isinside,
+    )
+    obstruction_indices = indices[1:(end - 2)]
+    overlapping = !isnothing(isinside) && any(other != obstruction_indices for other in isinside)
+    IntersectionParams{N}(result.inside, result.normal, result.hit_gap || overlapping)
+end
 
 size_scale(wrapper::SizeScaleOverride) = wrapper.size_scale
 size_scale(wrapper::Transparent) = size_scale(transparent_geometry(wrapper))

@@ -53,6 +53,7 @@ function get_intersection_params(
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
     intersection::Tuple,
+    isinside=nothing,
 ) where {N}
     inside, solution = intersection
     normal = (solution .* destination .+ (1 - solution) .* start) ./ round.radius

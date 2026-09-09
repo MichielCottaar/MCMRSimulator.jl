@@ -31,7 +31,6 @@ function surface_sampling end
 
 include("infinite_walls.jl")
 include("rounds.jl")
-include("overlapping_rounds.jl")
 include("triangles.jl")
 
 function random_surface_positions(

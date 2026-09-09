@@ -8,6 +8,7 @@ include("fix_susceptibility.jl")
 import ..User.Obstructions: ObstructionGroup, IndexedObstruction, Walls, Cylinders, Spheres, Annuli, BendyCylinder, Mesh
 import ..Internal.PhysicalGeometries: PhysicalGeometry
 import ..Internal: SizeScaleOverride
+import ..Internal.PhysicalGeometries.Transparents: IgnoreOverlapping
 import ..Internal.PhysicalGeometries.Groups: GeometryTuple
 import ..Internal.Properties: GeometryTupleProperties
 import ..Internal: FixedGeometry
@@ -48,6 +49,9 @@ function fix(
 )
     base_geometry = fix_base_geometry(group)
     physical_geometry = fix_transformations(group, base_geometry)
+    if group isa Spheres && group.overlapping.value
+        physical_geometry = IgnoreOverlapping(physical_geometry)
+    end
     size_scale = group.size_scale.value
     if isnothing(size_scale) && group isa Annuli
         size_scale = annuli_size_scale(group)

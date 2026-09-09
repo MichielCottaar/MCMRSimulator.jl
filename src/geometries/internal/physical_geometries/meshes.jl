@@ -197,6 +197,7 @@ function get_intersection_params(
     start::SVector{3, Float64},
     destination::SVector{3, Float64},
     indices::Tuple,
+    isinside=nothing,
 )
     triangle_index = indices[1]
     result = get_intersection_params(
@@ -204,6 +205,7 @@ function get_intersection_params(
         start,
         destination,
         indices[2:end],
+        isinside,
     )
     IntersectionParams{3}(
         result.inside,
