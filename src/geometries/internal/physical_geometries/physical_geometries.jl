@@ -2,6 +2,7 @@ module PhysicalGeometries
 import StaticArrays: SVector
 import ..InternalBoundingBoxes: InternalBoundingBox
 import ...BoundingBoxes: BoundingBox
+import ..InsideViews: InsideView, child_view
 
 """
     PhysicalGeometry{N}
@@ -66,19 +67,12 @@ Gets the `inside`, `normal`, and `hit_gap` properties of the intersection after 
 
 This should be overwritten for base obstructions, but should work as is for any composite geometries, which override `get_child` instead.
 """
-function _child_inside(isinside, prefix::Tuple)
-    isnothing(isinside) && return nothing
-    isempty(prefix) && return isinside
-    prefix_length = length(prefix)
-    [index[(prefix_length + 1):end] for index in isinside if length(index) >= prefix_length && index[1:prefix_length] == prefix]
-end
-
 function get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, indices::Tuple, isinside=nothing) where {N}
     (child, remaining_indices) = get_child(geometry, indices)
     start_child = to_child_coordinates(geometry, start)
     dest_child = to_child_coordinates(geometry, dest)
     prefix = indices[1:(length(indices) - length(remaining_indices))]
-    result = get_intersection_params(child, start_child, dest_child, remaining_indices, _child_inside(isinside, prefix))
+    result = get_intersection_params(child, start_child, dest_child, remaining_indices, child_view(isinside, prefix))
     return from_child_coordinates(geometry, result) :: IntersectionParams{N}
 end
 

@@ -18,6 +18,7 @@ const Mesh = Meshes.Mesh
 const IntersectionGrid = GI.PhysicalGeometries.GridDispatch.IntersectionGrid
 const Transparents = GI.PhysicalGeometries.Transparents
 const Transparent = GI.PhysicalGeometries.Transparent
+const InsideViews = GI.InsideViews
 const SizeScaleOverride = GI.SizeScaleOverride
 const size_scale = GI.size_scale
 const has_inside = GI.PhysicalGeometries.has_inside
@@ -341,6 +342,24 @@ end
         SVector(1.0, 0.0, 0.0),
         SVector(0.0, 1.0, 0.0),
     )))
+
+    @testset "Inside views" begin
+        indices = [(1,), (2, 1), (2, 2)]
+        view = InsideViews.InsideView(indices)
+        @test collect(view) == indices
+
+        first_child = InsideViews.child_view(view, (1,))
+        second_child = InsideViews.child_view(view, (2,))
+        @test collect(first_child) == [()]
+        @test collect(second_child) == [(1,), (2,)]
+        @test !InsideViews.has_other(first_child, ())
+        @test InsideViews.has_other(second_child, (1,))
+
+        properties = Properties.GeometryTupleProperties((1., Properties.GeometryTupleProperties((2., 3.))))
+        @test Properties.get_value(properties, view) == 6.
+        @test Properties.get_value(properties.properties[2], second_child) == 5.
+    end
+
     equal_depth_tuple = GeometryTuple{3}((
         BaseObstructions.Sphere(1.0),
         BaseObstructions.Sphere(2.0),

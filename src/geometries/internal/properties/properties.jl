@@ -2,6 +2,7 @@
 module Properties
 
 import StaticArrays: SVector
+import ..InsideViews: InsideView, child_view
 
 """
 MRI properties assigned to obstructions or groups of obstructions of type `S`.
@@ -119,6 +120,44 @@ function get_value(properties::GeometryProperties, indices::AbstractVector{<:Tup
     1 <= child_index <= length(properties.properties) ||
         throw(BoundsError(properties.properties, child_index))
     value = get_value(properties.properties[child_index], child_indices)
+    total === nothing ? value : total + value
+end
+
+function get_value(property, view::InsideView)
+    isempty(view) && return 0
+    property
+end
+
+function get_value(properties::GeometryProperties, view::InsideView)
+    isempty(view) && return 0
+    properties isa GeometryLeafProperties && return properties.value
+
+    total = nothing
+    child_index = nothing
+    group_first = view.first
+    for index_index in view.first:view.last
+        index = view.indices[index_index]
+        length(index) > view.depth || throw(ArgumentError("inside indices must not be empty"))
+        next_child_index = index[view.depth + 1]
+        next_child_index isa Int || throw(ArgumentError("property child indices must be integers"))
+        if child_index !== nothing && next_child_index < child_index
+            throw(ArgumentError("inside indices must be sorted"))
+        end
+        if child_index !== nothing && next_child_index != child_index
+            value = get_value(
+                properties.properties[child_index],
+                child_view(view, group_first, index_index - 1, view.depth + 1),
+            )
+            total = total === nothing ? value : total + value
+            group_first = index_index
+        end
+        child_index = next_child_index
+    end
+
+    value = get_value(
+        properties.properties[child_index],
+        child_view(view, group_first, view.last, view.depth + 1),
+    )
     total === nothing ? value : total + value
 end
 
