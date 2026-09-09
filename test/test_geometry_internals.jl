@@ -449,6 +449,29 @@ end
         @test !GI.PhysicalGeometries.get_intersection_params(
             cylinder, SVector(0., 0., 1.), SVector(0., 0., 3.), cap_hit, nothing,
         ).hit_gap
+
+        cylinder_geometry = mr.FiniteCylinders(
+            position=[[0., 0., 0.], [0., 0., 2.]],
+            radius=[1., 1.],
+            connected_to=[0, 1],
+            use_spherical_endpoint=[false, false],
+        )
+        template = mr.fix(cylinder_geometry)
+        fixed_cylinder = GI.FixedGeometry(
+            cylinder, template.volume, template.surface, template.susceptibility,
+        )
+        side_detection = GI.detect_intersection(
+            fixed_cylinder, SVector(0., 0., 1.), SVector(2., 0., 1.),
+        )
+        @test side_detection.distance ≈ 0.5
+        @test side_detection.inside
+        cap_detection = GI.detect_intersection(
+            fixed_cylinder, SVector(0., 0., 1.), SVector(0., 0., 3.),
+        )
+        @test cap_detection.distance ≈ 0.5
+        @test cap_detection.inside
+        @test !cap_detection.hit_gap
+
         @test length(GI.geometry_mesh(variable; nsamples=8)[1].vertices) == 18
         @test length(GI.geometry_mesh(variable; nsamples=8)[1].triangles) == 32
     end
