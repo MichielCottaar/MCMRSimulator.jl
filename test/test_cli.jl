@@ -198,6 +198,30 @@ end
     ])
 end
 
+@testset "SWC geometry input" begin
+    in_tmpdir() do
+        open("geometry.swc", "w") do io
+            write(io, "1 1 0 0 0 1 -1\n")
+            write(io, "2 3 1 0 0 0.5 1\n")
+        end
+        sequence_file = joinpath(@__DIR__, "pulseq", "gradient_echo_TE_30.seq")
+
+        output, err = run_main_test("run geometry.swc $sequence_file -N 10 -o signal.csv")
+        @test isempty(err)
+        @test occursin("DataFrame", output)
+        @test size(DataFrame(CSV.File("signal.csv")), 1) == 1
+
+        output, err = run_main_test("run --help")
+        @test isempty(err)
+        @test occursin("connected spheres and cylinders", output)
+        @test occursin("without connecting cylinders", output)
+
+        _, err = run_main_test("run geometry.swc $sequence_file --swc-as-spheres -N 10 -o spheres.csv")
+        @test isempty(err)
+        @test size(DataFrame(CSV.File("spheres.csv")), 1) == 1
+    end
+end
+
 @testset "Adaptive readout output" begin
     in_tmpdir() do
         run_main_test("geometry create spheres 1 spheres.json --radius 1 --repeats 2.2,2.2,2.2")
