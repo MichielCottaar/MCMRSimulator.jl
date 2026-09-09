@@ -11,6 +11,16 @@
         @test length(mr.get_subset(snapshot, sim, inside=false)) == 1000
     end
 end
+@testset "Non-repeating geometry defines the default sampling box" begin
+    geometry = mr.Spheres(position=[10., 20., 30.], radius=1.)
+    simulation = mr.Simulation([], geometry=geometry)
+    box = mr.BoundingBox(simulation.geometry)
+    @test box.lower == [9., 19., 29.]
+    @test box.upper == [11., 21., 31.]
+
+    snapshot = mr.Snapshot(1000, simulation)
+    @test all(all(mr.position(spin) .>= box.lower) && all(mr.position(spin) .<= box.upper) for spin in snapshot)
+end
 @testset "In repeated walled environment with surface density some spins are bound" begin
     geometry = mr.Walls(position=0., repeats=1., density=1., dwell_time=1.)
     sim = mr.Simulation([], geometry=geometry)

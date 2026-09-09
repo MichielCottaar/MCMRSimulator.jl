@@ -37,6 +37,12 @@ struct FixedGeometry{G <: PhysicalGeometry{3}, V, S, O}
     susceptibility::O
 end
 
+"""Return the finite public bounding box of a fixed geometry."""
+function BoundingBox(geometry::FixedGeometry)
+    box = InternalBoundingBox(geometry.geometry)
+    BoundingBox(InternalBoundingBoxes.lower(box), InternalBoundingBoxes.upper(box))
+end
+
 inside_cache_type(geometry::FixedGeometry) = Vector{inside_indices_eltype(typeof(geometry.geometry))}
 
 # A fixed geometry represents one user geometry unless it is a tuple of groups.

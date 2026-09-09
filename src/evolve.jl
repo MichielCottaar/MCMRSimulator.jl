@@ -389,7 +389,7 @@ end
 
 """
     readout(simulation; target_snr, readout_times=nothing, batch_size=1000, max_spins=nothing)
-    readout(spins, simulation[, readout_times]; bounding_box=<1x1x1 mm box>, skip_TR=0, nTR=1, return_snapshot=false, subset=<all>)
+    readout(spins, simulation[, readout_times]; bounding_box=<geometry bounds>, skip_TR=0, nTR=1, return_snapshot=false, subset=<all>)
 
 Evolves a set of spins through the [`Simulation`](@ref).
 Returns the total signal or a full [`Snapshot`](@ref) at every readout time in the simulated sequences over one or more repetition times (TRs).
@@ -405,7 +405,7 @@ to every subset.
 - `times` (optional): time of the readouts relative to the start of the TR (in ms). If not provided, the times of any `MRIBuilder.ADC` objects in the sequence will be used (see [`get_readouts`](@ref) for details).
 
 # Keyword arguments:
-- `bounding_box`: size of the voxel in which the spins are initiated in um (default is 1000, corresponding to a 1x1x1 mm box centered on zero). Can be set to a [`BoundingBox`](@ref MCMRSimulator.Geometries.BoundingBoxes.BoundingBox) object for more control.
+- `bounding_box`: size of the voxel in which the spins are initiated in um. For non-repeating geometries, the finite geometry bounding box is used by default; otherwise the default is 1000, corresponding to a 1x1x1 mm box centered on zero. Can be set to a [`BoundingBox`](@ref MCMRSimulator.Geometries.BoundingBoxes.BoundingBox) object for more control.
 - `skip_TR`: Number of repetition times to skip before starting the readout. 
     Even if set to zero (the default), the simulator will still skip the current TR before starting the readout 
     if the starting snapshot is from a time past one of the sequence readouts.
@@ -428,7 +428,7 @@ The function returns an up to 3-dimensional (KxLxMxN) array, with the following 
 By default each element of this matrix is either a [`SpinOrientationSum`](@ref) with the total signal and the achieved SNR.
 If `return_snapshot=true` is set, each element is the full [`Snapshot`](@ref) instead.
 """
-readout(spins, simulation::Simulation, new_readout_times=nothing; bounding_box=500, kwargs...) = readout_internal(_to_snapshot(spins, simulation, bounding_box), simulation, new_readout_times; kwargs...)
+readout(spins, simulation::Simulation, new_readout_times=nothing; bounding_box=nothing, kwargs...) = readout_internal(_to_snapshot(spins, simulation, bounding_box), simulation, new_readout_times; kwargs...)
 
 """
     readout(simulation; target_snr, readout_times=nothing, batch_size=1000, max_spins=nothing, return_statistics=false, filter=nothing)
@@ -443,7 +443,7 @@ least `target_snr^2` spins have contributed to that subset. If a finite
 Set `return_statistics=true` to return the signal together with standard errors,
 SNRs, and spin counts.
 """
-function readout(simulation::Simulation; target_snr, readout_times=nothing, batch_size=1000, max_spins=nothing, return_statistics=false, bounding_box=500, filter=nothing, kwargs...)
+function readout(simulation::Simulation; target_snr, readout_times=nothing, batch_size=1000, max_spins=nothing, return_statistics=false, bounding_box=nothing, filter=nothing, kwargs...)
     iszero(length(simulation.sequences)) && error("Adaptive readout requires at least one sequence.")
     target_snr > 0 || error("`target_snr` should be positive.")
     batch_size > 0 || error("`batch_size` should be positive.")
@@ -500,7 +500,7 @@ end
 
 # Special case when `spins` is an integer value
 # Only run a limited number of spins at a time to save memory
-function readout(spins::Integer, simulation::Simulation{N}, new_readout_times=nothing; bounding_box=500, return_snapshot=false, kwargs...) where {N}
+function readout(spins::Integer, simulation::Simulation{N}, new_readout_times=nothing; bounding_box=nothing, return_snapshot=false, kwargs...) where {N}
     if :readouts in keys(kwargs)
         error("readout timings should be set as the 3rd positional argument, not a keyword argument.")
     end
@@ -555,12 +555,12 @@ end
 
 
 """
-    evolve(snapshot, simulation[, new_time]; bounding_box=<1x1x1 mm box>)
+    evolve(snapshot, simulation[, new_time]; bounding_box=<geometry bounds>)
 
 Evolves the [`Snapshot`](@ref) through the [`Simulation`](@ref) to a new time.
 Returns a [`Snapshot`](@ref) at the new time, which can be used as a basis for further simulation.
 """
-function evolve(spins, simulation::Simulation{N}, new_time; TR=nothing, bounding_box=500) where {N}
+function evolve(spins, simulation::Simulation{N}, new_time; TR=nothing, bounding_box=nothing) where {N}
     snapshot = _to_snapshot(spins, simulation, bounding_box)
     if isnothing(TR)
         if snapshot.time > new_time

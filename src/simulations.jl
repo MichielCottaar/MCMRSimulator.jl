@@ -4,6 +4,7 @@ Defines the main [`Simulation`](@ref) object.
 module Simulations
 import StaticArrays: SVector, SizedVector
 import ..Geometries: ObstructionGroup, fix
+import ..Geometries: BoundingBox
 import ..Geometries.Internal: FixedGeometry, susceptibility_off_resonance, isinside, inside_cache_type
 import ..Reflections: possible_reflection_types, previous_hit
 import ..Spins: Spin, Snapshot, SpinOrientation, static_vector_type, stuck
@@ -153,7 +154,17 @@ function Base.show(io::IO, sim::Simulation{N}) where {N}
     end
 end
 
-function Snapshot(nspins::Integer, simulation::Simulation{N}, bounding_box=500; kwargs...) where {N}
+function _default_bounding_box(simulation::Simulation)
+    try
+        return BoundingBox(simulation.geometry)
+    catch error
+        (error isa ArgumentError || error isa DimensionMismatch) || rethrow()
+        return BoundingBox(500)
+    end
+end
+
+function Snapshot(nspins::Integer, simulation::Simulation{N}, bounding_box=nothing; kwargs...) where {N}
+    bounding_box = isnothing(bounding_box) ? _default_bounding_box(simulation) : bounding_box
     Snapshot(nspins, bounding_box, simulation.geometry; nsequences=N, kwargs...)
 end
 function _constrain_snapshot(snapshot::Snapshot{N}, simulation::Simulation) where {N}

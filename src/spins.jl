@@ -320,7 +320,7 @@ The equilibrium longitudinal spin (after T1 relaxation) is always 1.
 Creates a new Snapshot at the given `time` with spins initialised for simulating `nsequences` sequences.
 All spins will start out in equilibrium, but that can be changed using the `longitudinal`, `transverse`, and/or `phase` flags.
 This initial spin locations are given by `positions` (Nx3 matrix or sequence of vectors of size 3).
-Alternatively the number of spins can be given in which case the spins are randomly distributed in the given `bounding_box` (default: 1x1x1 mm box centered on origin).
+Alternatively the number of spins can be given in which case the spins are randomly distributed in the given `bounding_box`. For a simulation, the default is the finite geometry bounding box for non-repeating geometries and a 1x1x1 mm box centered on the origin otherwise.
 The bounding_box can be a [`BoundingBox`](@ref) object, a tuple with the lower and upper bounds (i.e., two vectors of length 3) or a number `r` (resulting in spins filling a cube from `-r` to `+r`)
 
     Snapshot(snap::Snapshot{1}, nsequences)
