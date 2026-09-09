@@ -101,4 +101,27 @@
         @test all(mr.transverse.(snap_out) .≈ 1.)
 
     end
+
+    @testset "diffusion through connected SWC branches" begin
+        swc_text = """
+        # id type x y z radius parent
+        1 1 -20 0 0 10 -1
+        2 3 20 0 0 10 1
+        3 3 20 40 0 10 2
+        4 3 20 -40 0 10 2
+        """
+        geometry = mr.read_swc(IOBuffer(swc_text))
+        sequence = build_sequence([100., :readout])
+        simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=3., timestep=1.)
+        initial = mr.Snapshot(fill([0., 0., 0.], 1000))
+
+        @test all(mr.isinside(geometry, initial) .> 0)
+
+        Random.seed!(1234)
+        final = mr.readout(initial, simulation, return_snapshot=true)
+        final_positions = mr.position.(final)
+        @test any(position[2] > 15 for position in final_positions)
+        @test any(position[2] < -15 for position in final_positions)
+        @test all(mr.isinside(geometry, final) .> 0)
+    end
 end
