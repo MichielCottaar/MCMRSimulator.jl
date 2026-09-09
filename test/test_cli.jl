@@ -215,10 +215,21 @@ end
         @test isempty(err)
         @test occursin("connected spheres and cylinders", output)
         @test occursin("without connecting cylinders", output)
+        @test occursin("--filter-inside", output)
 
         _, err = run_main_test("run geometry.swc $sequence_file --swc-as-spheres -N 10 -o spheres.csv")
         @test isempty(err)
         @test size(DataFrame(CSV.File("spheres.csv")), 1) == 1
+
+        _, err = run_main_test("run geometry.swc $sequence_file --target-snr 1 --max-spins 10 --batch-size 10 --filter-inside -o filtered.csv")
+        @test isempty(err)
+        filtered = DataFrame(CSV.File("filtered.csv"))
+        @test size(filtered, 1) == 1
+        @test filtered[1, :nspins] > 0
+
+        @test_throws ErrorException mr.CLI.run_main([
+            "run", "geometry.swc", sequence_file, "--filter-inside", "-N", "10", "-o", "invalid.csv"
+        ])
     end
 end
 

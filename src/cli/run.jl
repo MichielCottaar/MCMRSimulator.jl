@@ -80,6 +80,9 @@ function add_readout_flags!(parser)
             help = "Number of spins added per batch in adaptive simulations."
             arg_type = Int
             default = 1000
+        "--filter-inside"
+            help = "In adaptive simulations, only simulate spins that are initially inside the geometry."
+            action = :store_true
         "--subset"
             help = """Can be provided multiple times. For each time it is provided, the signal will be computed at each readout for a specific subset of spins. This subset is defined by one or two values from bound/free/inside/outside. Afterwards they can include an integer value to select a specific geometry, and an additional integer value to select a specific obstruction within that geometry. The selected user geometry is passed to the subset.
             For example:
@@ -159,6 +162,9 @@ function run_main(args::Dict{<:AbstractString, <:Any})
     if isnothing(args["target-snr"]) && !isnothing(args["max-spins"])
         error("`--max-spins` can only be used together with `--target-snr`.")
     end
+    if args["filter-inside"] && isnothing(args["target-snr"])
+        error("`--filter-inside` can only be used together with `--target-snr`.")
+    end
     if "seed" in keys(args)
         Random.seed!(args["seed"])
     end
@@ -180,7 +186,8 @@ function run_main(args::Dict{<:AbstractString, <:Any})
         error("`--output-snapshot` cannot be used together with `--target-snr`.")
     end
     if adaptive
-        result = readout(simulation; target_snr=args["target-snr"], readout_times=readout_times, max_spins=args["max-spins"], batch_size=args["batch-size"], noflatten=true, return_statistics=!isnothing(args["output-signal"]), skip_TR=args["skip-TR"], nTR=args["nTR"], subset=subsets)
+        filter = args["filter-inside"] ? Subset(inside=true) : nothing
+        result = readout(simulation; target_snr=args["target-snr"], readout_times=readout_times, max_spins=args["max-spins"], batch_size=args["batch-size"], filter=filter, noflatten=true, return_statistics=!isnothing(args["output-signal"]), skip_TR=args["skip-TR"], nTR=args["nTR"], subset=subsets)
         statistics = isnothing(args["output-signal"]) ? nothing : result.statistics
         result = result.signal
     else
