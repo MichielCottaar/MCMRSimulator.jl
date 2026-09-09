@@ -8,6 +8,7 @@ import .PhysicalGeometries: PhysicalGeometry, find_intersection, get_intersectio
 import .PhysicalGeometries.Groups: GeometryTuple, inside_indices_for_any_type
 import .PhysicalGeometries.Transparents: IgnoreOverlapping
 import .InsideViews: InsideView
+import .PhysicalGeometries: get_intersection_params_requires_inside
 import .PhysicalGeometries.Transparents: SizeScaleOverride
 import .Properties: all_property_values, get_value
 import .Susceptibility: susceptibility_off_resonance, off_resonance_gradient
@@ -133,7 +134,11 @@ function detect_intersection(fixed_geometry::FixedGeometry, start::SVector{3, Fl
     if isnothing(full_indices)
         return nothing
     end
-    inside_view = isnothing(isinside) ? nothing : InsideView(isinside)
+    inside_view = if isnothing(isinside) || get_intersection_params_requires_inside(typeof(fixed_geometry.geometry)) === Val(false)
+        nothing
+    else
+        InsideView(isinside)
+    end
     params = get_intersection_params(fixed_geometry.geometry, start, dest, full_indices, inside_view)
     inside = full_indices[end - 1]
     distance = full_indices[end]

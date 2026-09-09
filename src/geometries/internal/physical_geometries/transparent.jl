@@ -1,17 +1,22 @@
 module Transparents
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, find_intersection, get_child, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox, size_scale
+import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, find_intersection, get_child, get_intersection_params, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox, size_scale
 import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ...Properties: GeometryProperties
 import ...InsideViews: has_other
 
 abstract type Transparent{N, P <: PhysicalGeometry{N}} <: PhysicalGeometry{N} end
 
+get_intersection_params_requires_inside(::Type{<:Transparent{N, P}}) where {N, P} =
+    get_intersection_params_requires_inside(P)
+
 """Treat intersections inside another obstruction as gaps."""
 struct IgnoreOverlapping{N, P <: PhysicalGeometry{N}} <: Transparent{N, P}
     geometry::P
 end
+
+get_intersection_params_requires_inside(::Type{<:IgnoreOverlapping}) = Val(true)
 
 function Base.show(io::IO, ::Type{T}) where {N, P, T <: Transparent{N, P}}
     print(io, nameof(T), "{")

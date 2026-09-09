@@ -72,9 +72,17 @@ function get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N
     start_child = to_child_coordinates(geometry, start)
     dest_child = to_child_coordinates(geometry, dest)
     prefix = indices[1:(length(indices) - length(remaining_indices))]
-    result = get_intersection_params(child, start_child, dest_child, remaining_indices, child_view(isinside, prefix))
+    result = get_intersection_params(
+        child,
+        start_child,
+        dest_child,
+        remaining_indices,
+        child_view(get_intersection_params_requires_inside(typeof(child)), isinside, prefix),
+    )
     return from_child_coordinates(geometry, result) :: IntersectionParams{N}
 end
+
+get_intersection_params_requires_inside(::Type{<:PhysicalGeometry}) = Val(false)
 
 """
     to_child_coordinates(geometry, position/bounding_box)

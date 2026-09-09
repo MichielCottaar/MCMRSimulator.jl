@@ -146,7 +146,7 @@ function get_value(properties::GeometryProperties, view::InsideView)
         if child_index !== nothing && next_child_index != child_index
             value = get_value(
                 properties.properties[child_index],
-                child_view(view, group_first, index_index - 1, view.depth + 1),
+                child_view(Val(true), view, group_first, index_index - 1, view.depth + 1),
             )
             total = total === nothing ? value : total + value
             group_first = index_index
@@ -156,7 +156,7 @@ function get_value(properties::GeometryProperties, view::InsideView)
 
     value = get_value(
         properties.properties[child_index],
-        child_view(view, group_first, view.last, view.depth + 1),
+        child_view(Val(true), view, group_first, view.last, view.depth + 1),
     )
     total === nothing ? value : total + value
 end

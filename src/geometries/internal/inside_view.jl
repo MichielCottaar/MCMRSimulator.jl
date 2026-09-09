@@ -31,7 +31,11 @@ function _matches(view::InsideView, index, prefix)
     all(_local_component(view, index, level) == prefix[level] for level in eachindex(prefix))
 end
 
-function child_view(view::InsideView, prefix::Tuple)
+child_view(::Val{false}, _, _) = nothing
+
+child_view(::Val{true}, ::Nothing, ::Tuple) = nothing
+
+function child_view(::Val{true}, view::InsideView, prefix::Tuple)
     isempty(prefix) && return view
     isempty(view) && return InsideView(view.indices, 1, 0, view.depth + length(prefix))
 
@@ -46,12 +50,15 @@ function child_view(view::InsideView, prefix::Tuple)
     InsideView(view.indices, first, last - 1, view.depth + length(prefix))
 end
 
-function child_view(view::InsideView, first::Int, last::Int, depth::Int)
+child_view(view::InsideView, prefix::Tuple) = child_view(Val(true), view, prefix)
+child_view(::Nothing, prefix::Tuple) = nothing
+child_view(indices::AbstractVector, prefix::Tuple) = child_view(Val(true), InsideView(indices), prefix)
+
+function child_view(::Val{true}, view::InsideView, first::Int, last::Int, depth::Int)
     InsideView(view.indices, first, last, depth)
 end
 
-child_view(::Nothing, ::Tuple) = nothing
-child_view(indices::AbstractVector, prefix::Tuple) = child_view(InsideView(indices), prefix)
+child_view(view::InsideView, first::Int, last::Int, depth::Int) = child_view(Val(true), view, first, last, depth)
 
 function has_other(view::InsideView, obstruction_indices::Tuple)
     for index in view

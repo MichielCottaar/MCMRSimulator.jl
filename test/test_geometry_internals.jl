@@ -19,6 +19,7 @@ const IntersectionGrid = GI.PhysicalGeometries.GridDispatch.IntersectionGrid
 const Transparents = GI.PhysicalGeometries.Transparents
 const Transparent = GI.PhysicalGeometries.Transparent
 const InsideViews = GI.InsideViews
+const IgnoreOverlapping = Transparents.IgnoreOverlapping
 const SizeScaleOverride = GI.SizeScaleOverride
 const size_scale = GI.size_scale
 const has_inside = GI.PhysicalGeometries.has_inside
@@ -358,6 +359,19 @@ end
         properties = Properties.GeometryTupleProperties((1., Properties.GeometryTupleProperties((2., 3.))))
         @test Properties.get_value(properties, view) == 6.
         @test Properties.get_value(properties.properties[2], second_child) == 5.
+    end
+
+    @testset "Intersection inside requirements" begin
+        sphere = BaseObstructions.Sphere(1.0)
+        requires_inside = GI.PhysicalGeometries.get_intersection_params_requires_inside
+        @test (@inferred requires_inside(typeof(sphere))) === Val(false)
+        @test (@inferred requires_inside(typeof(IgnoreOverlapping(sphere)))) === Val(true)
+        @test (@inferred requires_inside(typeof(Shift(IgnoreOverlapping(sphere), zero(SVector{3}))))) === Val(true)
+        @test (@inferred requires_inside(typeof(GeometryTuple{3}(())))) === Val(false)
+        @test (@inferred requires_inside(typeof(GeometryTuple((sphere, sphere))))) === Val(false)
+        @test (@inferred requires_inside(typeof(GeometryTuple((sphere, IgnoreOverlapping(sphere)))))) === Val(true)
+        nested = GeometryTuple((sphere, Shift(GeometryTuple((sphere, IgnoreOverlapping(sphere))), zero(SVector{3}))))
+        @test (@inferred requires_inside(typeof(nested))) === Val(true)
     end
 
     equal_depth_tuple = GeometryTuple{3}((

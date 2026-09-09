@@ -4,13 +4,27 @@ module Groups
 import StaticArrays: SVector
 import ...InternalBoundingBoxes
 import ..GridDispatch: IntersectionGrid, GridIterator
-import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, _merge_types, isinside_single, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, _merge_types, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 import ...Properties: all_property_values
 
 abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
+
+get_intersection_params_requires_inside(::Type{<:GeometryVectorLike{N, P}}) where {N, P} =
+    get_intersection_params_requires_inside(P)
+
+_requires_inside(::Type{Tuple{}}) = Val(false)
+
+_requires_inside(::Type{P}) where {P<:Tuple} =
+    _requires_inside(
+        get_intersection_params_requires_inside(Base.tuple_type_head(P)),
+        Base.tuple_type_tail(P),
+    )
+
+_requires_inside(::Val{true}, ::Type) = Val(true)
+_requires_inside(::Val{false}, remaining::Type{<:Tuple}) = _requires_inside(remaining)
 
 function Base.show(io::IO, ::Type{T}) where {N, P, T <: GeometryVectorLike{N, P}}
     print(io, "GeometryVector{")
@@ -132,6 +146,8 @@ end
 struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} <: GroupGeometry{N, P}
     geometries::P
 end
+
+get_intersection_params_requires_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = _requires_inside(P)
 
 group_geometries(group::GeometryTuple; include_gap=true) = group.geometries
 
