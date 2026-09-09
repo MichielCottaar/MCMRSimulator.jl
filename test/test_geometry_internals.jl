@@ -1141,8 +1141,20 @@ end
     @test GI.susceptibility_off_resonance(walls, susceptibility_position, true) == 0.0
     @test GI.off_resonance_gradient(walls, 1.0) == 0.0
 
+    z_cylinder = mr.Cylinders(
+        radius=1.0,
+        g_ratio=0.8,
+        susceptibility_iso=1.0,
+        susceptibility_aniso=0.0,
+        grid_resolution=Inf,
+    )
+    fixed_z_cylinder = mr.fix(z_cylinder)
+    @test fixed_z_cylinder.susceptibility == ()
+    @test GI.susceptibility_off_resonance(fixed_z_cylinder, susceptibility_position) == 0.0
+
     cylinder = mr.Cylinders(
         radius=1.0,
+        rotation=:x,
         g_ratio=0.8,
         susceptibility_iso=1.0,
         susceptibility_aniso=0.0,
