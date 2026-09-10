@@ -1,7 +1,7 @@
 module Transparents
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, find_intersection, get_child, get_intersection_params, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox, size_scale
+import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, find_intersection, get_child, get_intersection_params, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox, size_scale, to_inside_index
 import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ...Properties: GeometryProperties
 import ...InsideViews: has_other
@@ -83,8 +83,9 @@ function get_intersection_params(
         indices,
         isinside,
     )
-    obstruction_indices = indices[1:(end - 2)]
-    overlapping = has_other(isinside, obstruction_indices)
+    collision_indices = indices[1:(end - 2)]
+    obstruction_indices = to_inside_index(transparent_geometry(wrapper), collision_indices)
+    overlapping = !isnothing(obstruction_indices) && has_other(isinside, obstruction_indices)
     IntersectionParams{N}(result.inside, result.normal, result.hit_gap || overlapping)
 end
 

@@ -450,6 +450,16 @@ end
             cylinder, SVector(0., 0., 1.), SVector(0., 0., 3.), cap_hit, nothing,
         ).hit_gap
 
+        overlapping_cylinder = IgnoreOverlapping(cylinder)
+        overlapping_params = GI.PhysicalGeometries.get_intersection_params(
+            overlapping_cylinder,
+            SVector(0., 0., 1.),
+            SVector(0., 0., 3.),
+            cap_hit,
+            [()],
+        )
+        @test !overlapping_params.hit_gap
+
         cylinder_geometry = mr.FiniteCylinders(
             position=[[0., 0., 0.], [0., 0., 2.]],
             radius=[1., 1.],
