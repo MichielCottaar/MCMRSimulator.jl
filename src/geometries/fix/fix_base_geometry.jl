@@ -44,6 +44,7 @@ function fix_base_geometry(group::FiniteCylinders)
         begin 
             displacement = positions[connected_to[index]] - positions[index]
             norm_displacement = norm(displacement)
+            # Separate coincident caps at opposing SWC branches from rounding ties.
             additional_displacement = displacement / norm_displacement * sqrt(eps(norm_displacement))
             FiniteCylinder(
                 positions[index] - additional_displacement, positions[connected_to[index]] + additional_displacement,
