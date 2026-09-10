@@ -111,14 +111,13 @@
         4 3 20 -40 0 10 2
         """
         geometry = mr.read_swc(IOBuffer(swc_text))
-        sequence = build_sequence([100., :readout])
-        simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=3., timestep=1.)
+        simulation = mr.Simulation([], geometry=geometry, diffusivity=3., timestep=1.)
         initial = mr.Snapshot(fill([0., 0., 0.], 1000))
 
         @test all(mr.isinside(geometry, initial) .> 0)
 
         Random.seed!(1234)
-        final = mr.readout(initial, simulation, return_snapshot=true)
+        final = mr.readout(initial, simulation, 100, return_snapshot=true)
         final_positions = mr.position.(final)
         @test any(position[2] > 15 for position in final_positions)
         @test any(position[2] < -15 for position in final_positions)

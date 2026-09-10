@@ -1,6 +1,7 @@
 module FixBaseGeometry
 
 import StaticArrays: SVector
+import LinearAlgebra: norm
 import ...User.Obstructions: Walls, Cylinders, Spheres, FiniteCylinders, Annuli, Mesh
 import ...User.SplitMesh: components
 import ...User.Obstructions: isglobal
@@ -40,11 +41,16 @@ function fix_base_geometry(group::FiniteCylinders)
         for index in 1:number if use_spherical_endpoint[index]
     ]
     cylinders = [
-        FiniteCylinder(
-            positions[index], positions[connected_to[index]],
-            radii[index], radii[connected_to[index]];
-            caps_are_gaps=false,
-        )
+        begin 
+            displacement = positions[connected_to[index]] - positions[index]
+            norm_displacement = norm(displacement)
+            additional_displacement = displacement / norm_displacement * sqrt(eps(norm_displacement))
+            FiniteCylinder(
+                positions[index] - additional_displacement, positions[connected_to[index]] + additional_displacement,
+                radii[index], radii[connected_to[index]];
+                caps_are_gaps=false,
+            )
+        end
         for index in 1:number if connected_to[index] != 0
     ]
     spheres, cylinders
