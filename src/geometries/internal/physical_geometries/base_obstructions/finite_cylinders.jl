@@ -104,12 +104,6 @@ function _finite_cylinder_candidate(current, index, distance)
         (index, distance) : current
 end
 
-function _finite_cylinder_side_candidate(current, cylinder, axial_start, axial_displacement, distance)
-    axial = axial_start + distance * axial_displacement
-    0 <= axial <= cylinder.length || return current
-    _finite_cylinder_candidate(current, 1, distance)
-end
-
 function find_intersection(
     cylinder::FiniteCylinder,
     start::SVector{3, Float64},
@@ -140,17 +134,18 @@ function find_intersection(
     c = radial_start ⋅ radial_start - radius_start^2
     best = nothing
     if abs(a) < 1e-12
-        abs(b) > 1e-12 && (best = _finite_cylinder_side_candidate(
-            best, cylinder, axial_start, axial_displacement, -c / b,
-        ))
+        if abs(b) > 1e-12
+            side_distance = -c / b
+            axial = axial_start + side_distance * axial_displacement
+            0 <= axial <= cylinder.length && (best = _finite_cylinder_candidate(best, 1, side_distance))
+        end
     else
         determinant = b^2 - 4 * a * c
         if determinant >= 0
             root = sqrt(determinant)
             side_distance = inside ? (-b + root) / (2 * a) : (-b - root) / (2 * a)
-            best = _finite_cylinder_side_candidate(
-                best, cylinder, axial_start, axial_displacement, side_distance,
-            )
+            axial = axial_start + side_distance * axial_displacement
+            0 <= axial <= cylinder.length && (best = _finite_cylinder_candidate(best, 1, side_distance))
         end
     end
 
