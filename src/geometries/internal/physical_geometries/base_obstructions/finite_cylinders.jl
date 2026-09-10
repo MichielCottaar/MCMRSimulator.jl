@@ -121,6 +121,7 @@ function find_intersection(
         previous_index, previous_inside, previous_distance = previous_intersection
         inside = previous_inside
     else
+        previous_index = nothing
         inside = isinside_single(cylinder, start)
     end
     !inside && previous && return nothing
@@ -139,13 +140,17 @@ function find_intersection(
     c = radial_start ⋅ radial_start - radius_start^2
     best = nothing
     if abs(a) < 1e-12
-        abs(b) > 1e-12 && (best = _finite_cylinder_side_candidate(best, cylinder, axial_start, axial_displacement, -c / b))
+        abs(b) > 1e-12 && (best = _finite_cylinder_side_candidate(
+            best, cylinder, axial_start, axial_displacement, -c / b,
+        ))
     else
         determinant = b^2 - 4 * a * c
         if determinant >= 0
             root = sqrt(determinant)
-            best = _finite_cylinder_side_candidate(best, cylinder, axial_start, axial_displacement, (-b - root) / (2 * a))
-            best = _finite_cylinder_side_candidate(best, cylinder, axial_start, axial_displacement, (-b + root) / (2 * a))
+            side_distance = inside ? (-b + root) / (2 * a) : (-b - root) / (2 * a)
+            best = _finite_cylinder_side_candidate(
+                best, cylinder, axial_start, axial_displacement, side_distance,
+            )
         end
     end
 
@@ -154,10 +159,10 @@ function find_intersection(
         second_cap = (cylinder.length - axial_start) / axial_displacement
         radial_first = radial_start + first_cap * radial_displacement
         radial_second = radial_start + second_cap * radial_displacement
-        if radial_first ⋅ radial_first <= cylinder.radius_first^2
+        if previous_index != 2 && radial_first ⋅ radial_first <= cylinder.radius_first^2
             best = _finite_cylinder_candidate(best, 2, first_cap)
         end
-        if radial_second ⋅ radial_second <= cylinder.radius_second^2
+        if previous_index != 3 && radial_second ⋅ radial_second <= cylinder.radius_second^2
             best = _finite_cylinder_candidate(best, 3, second_cap)
         end
     end

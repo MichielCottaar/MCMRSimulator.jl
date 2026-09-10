@@ -422,10 +422,17 @@ end
             cylinder, SVector(2., 0., 1.), SVector(-2., 0., 1.),
         )
         @test side_hit == (1, false, 0.25)
+        inside_side_hit = GI.PhysicalGeometries.find_intersection(
+            cylinder, SVector(0., 0., 1.), SVector(2., 0., 1.),
+        )
+        @test inside_side_hit == (1, true, 0.5)
         cap_hit = GI.PhysicalGeometries.find_intersection(
             cylinder, SVector(0., 0., 1.), SVector(0., 0., 3.),
         )
         @test cap_hit == (3, true, 0.5)
+        @test isnothing(GI.PhysicalGeometries.find_intersection(
+            cylinder, SVector(0., 0., 2.), SVector(0., 0., 3.), (3, true, 0.5),
+        ))
         variable_hit = GI.PhysicalGeometries.find_intersection(
             variable, SVector(2., 0., 1.), SVector(-3., 0., 1.),
         )
