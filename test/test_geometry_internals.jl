@@ -569,7 +569,7 @@ end
         @test fixed_cells.volume.R1 isa GI.Properties.GeometryVectorProperties
         @test length(fixed_cells.volume.R1.properties) == 2
         @test GI.PhysicalGeometries.child_type(typeof(fixed_cells.geometry)) ===
-            eltype(fixed_cells.geometry.geometries)
+            Core.apply_type(Transformations.Shift, 3, eltype(fixed_cells.geometry.geometries))
         @test GI.PhysicalGeometries.has_inside(typeof(fixed_cells.geometry))
         @test !GI.PhysicalGeometries.has_single_inside(typeof(fixed_cells.geometry))
         error = try
@@ -581,9 +581,9 @@ end
         @test error isa ArgumentError
         @test occursin("use the cached inside indices instead", error.msg)
         @test GI.PhysicalGeometries.inside_indices_eltype(typeof(fixed_cells.geometry)) ==
-            Tuple{Int, Int}
+            Tuple{Int, SVector{3, Float64}, Int, Int}
         @test GI.PhysicalGeometries.intersection_type(typeof(fixed_cells.geometry)) ==
-            Tuple{Int, Int}
+            Tuple{Int, SVector{3, Float64}, Int, Int}
         @test_throws ArgumentError mr.LiminalGeometry(geometries=[])
         @test_throws ArgumentError mr.LiminalGeometry(geometries=[(0., mr.Spheres(radius=1.))])
         @test_throws ArgumentError mr.LiminalGeometry(
@@ -604,13 +604,13 @@ end
             BaseObstructions.Sphere, BaseObstructions.FiniteCylinder,
         }
         @test GI.PhysicalGeometries.child_type(typeof(heterogeneous)) ===
-            eltype(heterogeneous.geometries)
+            Core.apply_type(Transformations.Shift, 3, eltype(heterogeneous.geometries))
         @test GI.PhysicalGeometries.has_inside(typeof(heterogeneous))
         @test !GI.PhysicalGeometries.has_single_inside(typeof(heterogeneous))
         @test GI.PhysicalGeometries.inside_indices_eltype(typeof(heterogeneous)) ==
-            Tuple{Int}
+            Tuple{Int, SVector{3, Float64}, Int}
         @test GI.PhysicalGeometries.intersection_type(typeof(heterogeneous)) ==
-            Tuple{Int}
+            Union{Tuple{Int, SVector{3, Float64}, Int}, Tuple{Int, SVector{3, Float64}, Int, Int}}
     end
 
     equal_depth_tuple = GeometryTuple{3}((

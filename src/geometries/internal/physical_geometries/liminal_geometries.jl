@@ -3,9 +3,11 @@ module LiminalGeometries
 
 import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_single_inside,
-    get_intersection_params_requires_inside, inside_indices_eltype, intersection_type
-import ..PhysicalGeometries: inside_indices
+    get_intersection_params_requires_inside, inside_indices_eltype, intersection_type,
+    inside_indices, find_intersection, find_intersection_requires_inside, get_child
 import ..Groups: GeometryTuple
+import ..Transformations: Shift
+import ...InsideViews: InsideView, child_view
 
 export FixedLiminalGeometry
 
@@ -44,18 +46,66 @@ function inside_indices(
     ))
 end
 
-child_type(::Type{<:FixedLiminalGeometry{P}}) where {P} = P
+child_type(::Type{<:FixedLiminalGeometry{P}}) where {P} = Shift{3, P}
 has_single_inside(::Type{<:FixedLiminalGeometry}) = false
 
 _child_types(::Type{P}) where {P} = P isa Union ? Base.uniontypes(P) : (P,)
-_geometry_tuple_type(::Type{P}) where {P} = Core.apply_type(Tuple, _child_types(P)...)
+_shifted_child_type(::Type{P}) where {P} = Shift{3, P}
+_geometry_tuple_type(::Type{P}) where {P} =
+    Core.apply_type(Tuple, (_shifted_child_type(child) for child in _child_types(P))...)
+
+find_intersection_requires_inside(::Type{<:FixedLiminalGeometry}) = Val(true)
+
+function _prepend_liminal_index(::Type{T}) where {T}
+    T === Union{} && return Union{}
+    T isa Union && return Union{(_prepend_liminal_index(type) for type in Base.uniontypes(T))...}
+    T <: Tuple || throw(MethodError(_prepend_liminal_index, (Type{T},)))
+    Tuple{Int, SVector{3, Float64}, T.parameters...}
+end
+
+inside_indices_eltype(::Type{<:FixedLiminalGeometry{P}}) where {P} =
+    _prepend_liminal_index(inside_indices_eltype(GeometryTuple{3, _geometry_tuple_type(P)}))
+
+intersection_type(::Type{<:FixedLiminalGeometry{P}}) where {P} =
+    _prepend_liminal_index(intersection_type(GeometryTuple{3, _geometry_tuple_type(P)}))
+
+function get_child(geometry::FixedLiminalGeometry, indices::Tuple)
+    index, offset = indices[1:2]
+    Shift(geometry.geometries[index], offset), indices[3:end]
+end
+
+function find_intersection(
+    geometry::FixedLiminalGeometry,
+    start::SVector{3, Float64},
+    destination::SVector{3, Float64},
+    previous_hit=nothing,
+    inside=nothing,
+)
+    if !isnothing(inside)
+        isempty(inside) && throw(ArgumentError("cached inside indices are empty for FixedLiminalGeometry"))
+        cached_index = first(inside)
+        index, offset = cached_index[1:2]
+        child_inside = child_view(inside, (index, offset))
+        child_previous = nothing
+    elseif !isnothing(previous_hit)
+        index, offset = previous_hit[1:2]
+        child_inside = nothing
+        child_previous = previous_hit[3:end]
+    else
+        throw(ArgumentError(
+            "find_intersection for FixedLiminalGeometry requires cached inside indices " *
+            "or a previous intersection",
+        ))
+    end
+
+    child = Shift(geometry.geometries[index], offset)
+    intersection = find_intersection(child, start, destination, child_previous, child_inside)
+    isnothing(intersection) ? nothing : (index, offset, intersection...)
+end
 
 for trait in (
     :has_inside,
     :get_intersection_params_requires_inside,
-    :find_intersection_requires_inside,
-    :inside_indices_eltype,
-    :intersection_type,
 )
     @eval function $trait(::Type{<:FixedLiminalGeometry{P}}) where {P}
         $trait(GeometryTuple{3, _geometry_tuple_type(P)})
