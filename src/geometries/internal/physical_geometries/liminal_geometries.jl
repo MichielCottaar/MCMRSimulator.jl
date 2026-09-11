@@ -1,8 +1,10 @@
 """Physical geometry for a collection of independently placed cell templates."""
 module LiminalGeometries
 
+import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_single_inside,
     get_intersection_params_requires_inside, inside_indices_eltype, intersection_type
+import ..PhysicalGeometries: inside_indices
 import ..Groups: GeometryTuple
 
 export FixedLiminalGeometry
@@ -29,6 +31,17 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
             Float64(extracellular_fraction),
         )
     end
+end
+
+function inside_indices(
+    ::FixedLiminalGeometry,
+    ::SVector{3, Float64},
+    intersection=nothing,
+)
+    throw(ArgumentError(
+        "inside_indices is not defined for FixedLiminalGeometry without cell context; " *
+        "use the cached inside indices instead",
+    ))
 end
 
 child_type(::Type{<:FixedLiminalGeometry{P}}) where {P} = P

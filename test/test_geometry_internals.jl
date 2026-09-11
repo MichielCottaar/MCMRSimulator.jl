@@ -572,6 +572,14 @@ end
             eltype(fixed_cells.geometry.geometries)
         @test GI.PhysicalGeometries.has_inside(typeof(fixed_cells.geometry))
         @test !GI.PhysicalGeometries.has_single_inside(typeof(fixed_cells.geometry))
+        error = try
+            GI.PhysicalGeometries.inside_indices(fixed_cells.geometry, SVector(0., 0., 0.))
+            nothing
+        catch exception
+            exception
+        end
+        @test error isa ArgumentError
+        @test occursin("use the cached inside indices instead", error.msg)
         @test GI.PhysicalGeometries.inside_indices_eltype(typeof(fixed_cells.geometry)) ==
             Tuple{Int, Int}
         @test GI.PhysicalGeometries.intersection_type(typeof(fixed_cells.geometry)) ==
