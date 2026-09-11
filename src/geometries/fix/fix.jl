@@ -5,14 +5,17 @@ include("fix_transformations.jl")
 include("fix_properties.jl")
 include("fix_susceptibility.jl")
 
+import ..User: LiminalGeometry
 import ..User.Obstructions: ObstructionGroup, IndexedObstruction, Walls, Cylinders, Spheres, FiniteCylinders, Annuli, BendyCylinder, Mesh
 import ..Internal.PhysicalGeometries: PhysicalGeometry
 import ..Internal: SizeScaleOverride
 import ..Internal.PhysicalGeometries.Transparents: IgnoreOverlapping
 import ..Internal.PhysicalGeometries.Groups: GeometryTuple
+import ..Internal.PhysicalGeometries: FixedLiminalGeometry
 import ..Internal.Properties: GeometryTupleProperties
+import ..Internal.Properties: GeometryVectorProperties
 import ..Internal: FixedGeometry
-
+import ..Internal: contains_repeat
 import .FixBaseGeometry: fix_base_geometry, annuli_size_scale
 import .FixTransformations: fix_transformations
 import .FixProperties: fix_properties, _zero_volume, _zero_surface
@@ -28,6 +31,47 @@ function fix(
     (permeability == 0. && dwell_time == 0. && surface_relaxation == 0. && density == 0.) ||
         throw(ArgumentError("cannot apply fix keywords to an already fixed geometry"))
     geometry
+end
+
+function _merge_vector_properties(fixed, field_name::Symbol)
+    first_properties = getproperty(first(fixed), field_name)
+    fields = propertynames(first_properties)
+    NamedTuple{fields}(
+        Tuple(
+            GeometryVectorProperties([
+                getproperty(getproperty(geometry, field_name), field)
+                for geometry in fixed
+            ])
+            for field in fields
+        ),
+    )
+end
+
+function fix(collection::LiminalGeometry)
+    fixed = [
+        geometry isa FixedGeometry ? geometry : fix(geometry)
+        for (_, geometry) in collection.geometries
+    ]
+    for geometry in fixed
+        contains_repeat(typeof(geometry.geometry)) &&
+            throw(ArgumentError("repeating geometries are not supported in LiminalGeometry"))
+    end
+
+    fractions = [fraction for (fraction, _) in collection.geometries]
+    fractions .*= (1 - collection.extracellular_fraction) / sum(fractions)
+    physical_geometry = FixedLiminalGeometry(
+        [geometry.geometry for geometry in fixed],
+        fractions,
+        collection.extracellular_fraction,
+    )
+    volume = _merge_vector_properties(fixed, :volume)
+    surface = _merge_vector_properties(fixed, :surface)
+    FixedGeometry{typeof(physical_geometry), typeof(volume), typeof(surface), Tuple}(
+        physical_geometry,
+        volume,
+        surface,
+        (),
+    )
 end
 
 function fix(group::BendyCylinder; kwargs...)
