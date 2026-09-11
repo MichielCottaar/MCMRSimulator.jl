@@ -42,7 +42,7 @@ function estimate_volume(
     geometry::PhysicalGeometry{N};
     bounding_box=nothing,
     nsamples::Integer=100_000,
-    minimum_samples::Integer=1_000,
+    minimum_samples::Integer=10_000,
     maximum_attempts::Integer=5,
     rng::AbstractRNG=default_rng(),
 ) where {N}
@@ -75,7 +75,7 @@ function estimate_surface(
     geometry::PhysicalGeometry{N};
     bounding_box=nothing,
     density::Real=1.0,
-    minimum_samples::Integer=1_000,
+    minimum_samples::Integer=10_000,
     maximum_attempts::Integer=5,
     outer::Bool=false,
 ) where {N}
