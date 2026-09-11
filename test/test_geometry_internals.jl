@@ -563,6 +563,7 @@ end
         @test fixed_cells isa GI.FixedGeometry
         @test fixed_cells.geometry isa GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry
         @test fixed_cells.geometry.geometries isa Vector{<:GI.PhysicalGeometry}
+        @test eltype(fixed_cells.geometry.geometries) !== GI.PhysicalGeometry
         @test fixed_cells.geometry.volume_fractions ≈ [0.2666666667, 0.5333333333]
         @test sum(fixed_cells.geometry.volume_fractions) + fixed_cells.geometry.extracellular_fraction ≈ 1.
         @test fixed_cells.volume.R1 isa GI.Properties.GeometryVectorProperties
@@ -575,6 +576,17 @@ end
         @test_throws ArgumentError mr.fix(mr.LiminalGeometry(
             geometries=[(1., repeating_sphere)],
         ))
+
+        heterogeneous = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(
+            [BaseObstructions.Sphere(1.), BaseObstructions.FiniteCylinder(
+                SVector(0., 0., 0.), SVector(0., 0., 1.), 1.,
+            )],
+            [0.5, 0.5],
+            0.,
+        )
+        @test eltype(heterogeneous.geometries) == Union{
+            BaseObstructions.Sphere, BaseObstructions.FiniteCylinder,
+        }
     end
 
     equal_depth_tuple = GeometryTuple{3}((

@@ -5,8 +5,8 @@ import ..PhysicalGeometries: PhysicalGeometry
 
 export FixedLiminalGeometry
 
-struct FixedLiminalGeometry <: PhysicalGeometry{3}
-    geometries::Vector{PhysicalGeometry{3}}
+struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
+    geometries::Vector{P}
     volume_fractions::Vector{Float64}
     extracellular_fraction::Float64
 
@@ -17,8 +17,12 @@ struct FixedLiminalGeometry <: PhysicalGeometry{3}
     )
         length(geometries) == length(volume_fractions) ||
             throw(ArgumentError("geometries and volume_fractions must have the same length"))
-        new(
-            PhysicalGeometry{3}[geometries...],
+        isempty(geometries) && throw(ArgumentError("at least one liminal geometry is required"))
+        child_types = unique(typeof.(geometries))
+        child_type = length(child_types) == 1 ?
+            only(child_types) : Core.apply_type(Union, child_types...)
+        new{child_type}(
+            convert(Vector{child_type}, collect(geometries)),
             Float64[volume_fractions...],
             Float64(extracellular_fraction),
         )
