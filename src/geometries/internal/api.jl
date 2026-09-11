@@ -4,7 +4,7 @@ import StaticArrays: SVector
 import ..BoundingBoxes: BoundingBox
 import .InternalBoundingBoxes: InternalBoundingBox
 import .InternalBoundingBoxes
-import .PhysicalGeometries: PhysicalGeometry, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, distance_to_surface, to_property_index, to_inside_index, inside_indices_eltype, bound_intersection_type
+import .PhysicalGeometries: PhysicalGeometry, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, distance_to_surface, to_property_index, to_inside_index, inside_indices_eltype, bound_intersection_type, contains_repeat, estimate_volume, estimate_surface
 import .PhysicalGeometries.Groups: GeometryTuple, inside_indices_for_any_type
 import .PhysicalGeometries.Transparents: IgnoreOverlapping
 import .InsideViews: InsideView
@@ -20,6 +20,7 @@ export FixedGeometry, Intersection, flip, IsInside, collision_normal,
     size_scale, SizeScaleOverride, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
     bound_intersection_type,
+    volume, surface,
     permeability, surface_relaxation, surface_density, dwell_time,
     R1, R2, off_resonance,
     susceptibility_off_resonance, off_resonance_gradient
@@ -234,6 +235,25 @@ function random_surface_positions(
         )
     end
     return (positions, intersections)
+end
+
+function volume(fixed_geometry::FixedGeometry; bounding_box=nothing, kwargs...)
+    contains_repeat(typeof(fixed_geometry.geometry)) &&
+        throw(ArgumentError("Monte Carlo volume estimates do not support repeating geometries"))
+    geometry = fixed_geometry.geometry
+    isnothing(bounding_box) ?
+        estimate_volume(geometry; kwargs...) :
+        estimate_volume(geometry; bounding_box=InternalBoundingBox(bounding_box), kwargs...)
+end
+
+function surface(fixed_geometry::FixedGeometry; bounding_box=nothing, kwargs...)
+    contains_repeat(typeof(fixed_geometry.geometry)) &&
+        throw(ArgumentError("Monte Carlo surface estimates do not support repeating geometries"))
+    geometry = fixed_geometry.geometry
+    estimate = isnothing(bounding_box) ?
+        estimate_surface(geometry; kwargs...) :
+        estimate_surface(geometry; bounding_box=InternalBoundingBox(bounding_box), kwargs...)
+    estimate.area
 end
 
 function random_surface_positions(

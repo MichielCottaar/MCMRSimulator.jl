@@ -493,6 +493,67 @@ end
         @test length(GI.geometry_mesh(variable; nsamples=8)[1].triangles) == 32
     end
 
+    @testset "Monte Carlo geometry measures" begin
+        sphere = BaseObstructions.Sphere(1.)
+        volume = GI.PhysicalGeometries.estimate_volume(
+            sphere; nsamples=100_000, rng=Random.MersenneTwister(1234),
+        )
+        @test volume ≈ 4π / 3 atol=0.2
+        @test GI.PhysicalGeometries.estimate_volume(
+            sphere; nsamples=10, minimum_samples=1, maximum_attempts=2,
+            rng=Random.MersenneTwister(1234),
+        ) isa Float64
+        @test_throws ArgumentError GI.PhysicalGeometries.estimate_volume(sphere; minimum_samples=-1)
+        @test_throws ArgumentError GI.PhysicalGeometries.estimate_volume(sphere; maximum_attempts=0)
+
+        Random.seed!(1234)
+        surface = GI.PhysicalGeometries.estimate_surface(
+            sphere; density=100., minimum_samples=1_000,
+        )
+        @test surface.area ≈ 4π rtol=0.1
+        @test length(surface.positions) == length(surface.normals)
+        @test length(surface.positions) == length(surface.indices)
+        @test length(surface.positions) == length(surface.weights)
+
+        cylinder = BaseObstructions.FiniteCylinder(
+            SVector(0., 0., 0.), SVector(0., 0., 2.), 1.,
+        )
+        volume = GI.PhysicalGeometries.estimate_volume(
+            cylinder; nsamples=100_000, rng=Random.MersenneTwister(1234),
+        )
+        @test volume ≈ 2π atol=0.2
+
+        Random.seed!(1234)
+        surface = GI.PhysicalGeometries.estimate_surface(
+            cylinder; density=100., minimum_samples=1_000,
+        )
+        @test surface.area ≈ 6π rtol=0.1
+
+        overlapping = GeometryTuple((
+            Shift(BaseObstructions.Sphere(1.), SVector(0., 0., 0.)),
+            Shift(BaseObstructions.Sphere(1.), SVector(0.5, 0., 0.)),
+        ))
+        Random.seed!(1234)
+        all_surface = GI.PhysicalGeometries.estimate_surface(
+            overlapping; density=100., minimum_samples=1_000,
+        )
+        Random.seed!(1234)
+        outer_surface = GI.PhysicalGeometries.estimate_surface(
+            overlapping; density=100., minimum_samples=1_000, outer=true,
+        )
+        @test outer_surface.area < all_surface.area
+        @test length(outer_surface.positions) < length(all_surface.positions)
+
+        fixed_sphere = mr.fix(mr.Spheres(radius=1.))
+        @test mr.volume(fixed_sphere; nsamples=100_000, rng=Random.MersenneTwister(1234)) ≈ 4π / 3 atol=0.2
+        Random.seed!(1234)
+        @test mr.surface(fixed_sphere; density=100., minimum_samples=1_000) ≈ 4π rtol=0.1
+
+        repeating_sphere = mr.fix(mr.Spheres(radius=1., repeats=[3., 3., 3.]))
+        @test_throws ArgumentError mr.volume(repeating_sphere)
+        @test_throws ArgumentError mr.surface(repeating_sphere)
+    end
+
     equal_depth_tuple = GeometryTuple{3}((
         BaseObstructions.Sphere(1.0),
         BaseObstructions.Sphere(2.0),
