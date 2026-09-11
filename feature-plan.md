@@ -158,7 +158,7 @@ existing geometry naming conventions. It should contain:
 Possible conceptual API:
 
 ```julia
-cells = CellCollection(
+cells = LiminalGeometry(
     geometries=[read_swc("cell_a.swc"), read_swc("cell_b.swc")],
     volume_fraction=[1.0, 2.0],
     extracellular_fraction=0.2,

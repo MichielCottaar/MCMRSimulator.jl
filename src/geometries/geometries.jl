@@ -12,6 +12,7 @@ import .Fix:
 import .Internal: FixedGeometry, Intersection
 import .BoundingBoxes: BoundingBox
 import .User:
+    LiminalGeometry,
     ObstructionGroup, IndexedObstruction,
     Wall, Walls,
     Cylinder, Cylinders,

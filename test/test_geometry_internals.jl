@@ -552,6 +552,25 @@ end
         repeating_sphere = mr.fix(mr.Spheres(radius=1., repeats=[3., 3., 3.]))
         @test_throws ArgumentError mr.volume(repeating_sphere)
         @test_throws ArgumentError mr.surface(repeating_sphere)
+
+        cells = mr.LiminalGeometry(
+            geometries=[(1., mr.Spheres(radius=1.)), (2., mr.fix(mr.Spheres(radius=2.)))],
+            extracellular_fraction=0.2,
+        )
+        @test cells.geometries[1][2] isa mr.Spheres
+        @test cells.geometries[2][2] isa GI.FixedGeometry
+        fixed_cells = mr.fix(cells)
+        @test fixed_cells.geometries isa Vector{<:GI.FixedGeometry}
+        @test fixed_cells.volume_fractions ≈ [0.2666666667, 0.5333333333]
+        @test sum(fixed_cells.volume_fractions) + fixed_cells.extracellular_fraction ≈ 1.
+        @test_throws ArgumentError mr.LiminalGeometry(geometries=[])
+        @test_throws ArgumentError mr.LiminalGeometry(geometries=[(0., mr.Spheres(radius=1.))])
+        @test_throws ArgumentError mr.LiminalGeometry(
+            geometries=[(1., mr.Spheres(radius=1.))], extracellular_fraction=1.1,
+        )
+        @test_throws ArgumentError mr.fix(mr.LiminalGeometry(
+            geometries=[(1., repeating_sphere)],
+        ))
     end
 
     equal_depth_tuple = GeometryTuple{3}((
