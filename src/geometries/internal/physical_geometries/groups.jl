@@ -155,7 +155,7 @@ struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} <: GroupGeometry{
 end
 
 function find_intersection_requires_inside(::Type{<:GeometryTuple{N, P}}) where {N, P}
-    any(find_intersection_requires_inside, P.parameters) ? Val(true) : Val(false)
+    any(type -> find_intersection_requires_inside(type) === Val(true), P.parameters) ? Val(true) : Val(false)
 end
 
 get_intersection_params_requires_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = _requires_inside(P)
