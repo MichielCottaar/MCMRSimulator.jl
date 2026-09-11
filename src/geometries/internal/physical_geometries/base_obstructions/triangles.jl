@@ -86,6 +86,7 @@ function find_intersection(
     start::SVector{3, Float64},
     destination::SVector{3, Float64},
     previous_hit=nothing,
+    inside=nothing,
 )
     !isnothing(previous_hit) && return nothing
     triangle_normal = normal(triangle)

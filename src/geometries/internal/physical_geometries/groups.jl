@@ -4,10 +4,11 @@ module Groups
 import StaticArrays: SVector
 import ...InternalBoundingBoxes
 import ..GridDispatch: IntersectionGrid, GridIterator
-import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, _merge_types, isinside_single, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, _merge_types, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 import ...Properties: all_property_values
+import ...InsideViews: child_view
 
 abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
@@ -85,14 +86,20 @@ function bound_intersection_type(geometry::GeometryVectorLike, density)
 end
 
 
-function find_intersection(group::GroupGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, previous_hit=nothing) where {N}
+find_intersection_requires_inside(::Type{<:GroupGeometry{N, P}}) where {N, P} =
+    find_intersection_requires_inside(P)
+
+function find_intersection(group::GroupGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, previous_hit=nothing, inside=nothing) where {N}
     current = nothing
     for (index, candidate, dist_all_checked) in intersection_candidates(group, start, dest)
         if !isnothing(current) && current[end] < dist_all_checked
             return current
         end
         candidate_previous_hit = isnothing(previous_hit) || previous_hit[1] != index ? nothing : previous_hit[2:end]
-        intersect = find_intersection(candidate, start, dest, candidate_previous_hit)
+        candidate_inside = child_view(
+            find_intersection_requires_inside(typeof(candidate)), inside, (index,)
+        )
+        intersect = find_intersection(candidate, start, dest, candidate_previous_hit, candidate_inside)
         if isnothing(intersect)
             continue
         end
@@ -145,6 +152,10 @@ end
 
 struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} <: GroupGeometry{N, P}
     geometries::P
+end
+
+function find_intersection_requires_inside(::Type{<:GeometryTuple{N, P}}) where {N, P}
+    any(find_intersection_requires_inside, P.parameters) ? Val(true) : Val(false)
 end
 
 get_intersection_params_requires_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = _requires_inside(P)

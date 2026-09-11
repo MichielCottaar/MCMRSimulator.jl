@@ -4,7 +4,7 @@ import StaticArrays: SVector
 import ..BoundingBoxes: BoundingBox
 import .InternalBoundingBoxes: InternalBoundingBox
 import .InternalBoundingBoxes
-import .PhysicalGeometries: PhysicalGeometry, find_intersection, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, distance_to_surface, to_property_index, to_inside_index, inside_indices_eltype, bound_intersection_type, contains_repeat, estimate_volume, estimate_surface
+import .PhysicalGeometries: PhysicalGeometry, find_intersection, find_intersection_requires_inside, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, distance_to_surface, to_property_index, to_inside_index, inside_indices_eltype, bound_intersection_type, contains_repeat, estimate_volume, estimate_surface
 import .PhysicalGeometries.Groups: GeometryTuple, inside_indices_for_any_type
 import .PhysicalGeometries.Transparents: IgnoreOverlapping
 import .InsideViews: InsideView
@@ -130,6 +130,7 @@ If no intersection is found, `nothing` is returned instead.
 """
 function detect_intersection(fixed_geometry::FixedGeometry, start::SVector{3, Float64}, dest::SVector{3, Float64}, previous_intersection=nothing, isinside=nothing)
     length(fixed_geometry) == 0 && return nothing
+    inside_view = isnothing(isinside) ? nothing : InsideView(isinside)
     full_indices = find_intersection(
         fixed_geometry.geometry,
         start,
@@ -137,16 +138,13 @@ function detect_intersection(fixed_geometry::FixedGeometry, start::SVector{3, Fl
         isnothing(previous_intersection) ?
         nothing :
         (previous_intersection.indices..., previous_intersection.inside, previous_intersection.distance),
+        find_intersection_requires_inside(typeof(fixed_geometry.geometry)) === Val(true) ? inside_view : nothing,
     )
     if isnothing(full_indices)
         return nothing
     end
-    inside_view = if isnothing(isinside) || get_intersection_params_requires_inside(typeof(fixed_geometry.geometry)) === Val(false)
-        nothing
-    else
-        InsideView(isinside)
-    end
-    params = get_intersection_params(fixed_geometry.geometry, start, dest, full_indices, inside_view)
+    params_inside = get_intersection_params_requires_inside(typeof(fixed_geometry.geometry)) === Val(true) ? inside_view : nothing
+    params = get_intersection_params(fixed_geometry.geometry, start, dest, full_indices, params_inside)
     inside = full_indices[end - 1]
     distance = full_indices[end]
     indices = full_indices[1:end - 2]

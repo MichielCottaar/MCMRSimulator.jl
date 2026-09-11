@@ -38,6 +38,7 @@ The final two elements therefore always have the form `(..., inside, distance)`.
 Return `nothing` if there is no intersection between `start` and `dest`.
 """
 function find_intersection end
+find_intersection_requires_inside(::Type{<:PhysicalGeometry}) = Val(false)
 
 """
     get_child(geometry::PhysicalGeometry, indices) -> (PhysicalGeometry, remaining_indices)

@@ -109,6 +109,7 @@ function find_intersection(
     start::SVector{3, Float64},
     destination::SVector{3, Float64},
     previous_intersection=nothing,
+    inside=nothing,
 )
     previous = !isnothing(previous_intersection)
     if previous

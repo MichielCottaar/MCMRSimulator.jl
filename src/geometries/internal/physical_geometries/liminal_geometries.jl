@@ -53,6 +53,7 @@ _geometry_tuple_type(::Type{P}) where {P} = Core.apply_type(Tuple, _child_types(
 for trait in (
     :has_inside,
     :get_intersection_params_requires_inside,
+    :find_intersection_requires_inside,
     :inside_indices_eltype,
     :intersection_type,
 )

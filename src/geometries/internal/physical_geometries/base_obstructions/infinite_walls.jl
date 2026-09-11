@@ -15,6 +15,7 @@ function find_intersection(
     start::SVector{1, Float64},
     destination::SVector{1, Float64},
     previous_hit=nothing,
+    inside=nothing,
 )
     !isnothing(previous_hit) && return nothing
     origin = start[1]

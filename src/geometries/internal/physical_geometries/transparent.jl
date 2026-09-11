@@ -1,7 +1,7 @@
 module Transparents
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, find_intersection, get_child, get_intersection_params, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox, size_scale, to_inside_index
+import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox, size_scale, to_inside_index
 import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ...Properties: GeometryProperties
 import ...InsideViews: has_other
@@ -63,9 +63,13 @@ function find_intersection(
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
     previous_hit=nothing,
+    inside=nothing,
 ) where {N}
-    find_intersection(transparent_geometry(wrapper), start, destination, previous_hit)
+    find_intersection(transparent_geometry(wrapper), start, destination, previous_hit, inside)
 end
+
+find_intersection_requires_inside(::Type{<:Transparent{N, P}}) where {N, P} =
+    find_intersection_requires_inside(P)
 
 get_child(wrapper::Transparent, indices) = (transparent_geometry(wrapper), indices)
 

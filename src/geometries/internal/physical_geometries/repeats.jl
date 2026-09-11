@@ -4,10 +4,11 @@ module Repeats
 import StaticArrays: SVector
 import Random: rand
 import ...InternalBoundingBoxes
-import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _translate_native, to_property_index
 import ...Properties: GeometryProperties
 import ..Groups
+import ...InsideViews: child_view
 import ..Transformations: Shift
 
 struct Repeat{N, P<:PhysicalGeometry{N}} <: Groups.GroupGeometry{N, Shift{N, P}}
@@ -91,6 +92,7 @@ function find_intersection(
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
     previous_hit=nothing,
+    inside=nothing,
 ) where {N}
     current = nothing
     direction = SVector{N, Bool}(destination .>= start)
@@ -110,6 +112,11 @@ function find_intersection(
             start - displacement,
             destination - displacement,
             candidate_previous_hit,
+            child_view(
+                find_intersection_requires_inside(typeof(repeat.geometry)),
+                inside,
+                (copy_shift,),
+            ),
         )
         isnothing(intersect) && continue
         candidate = (copy_shift, intersect...)
@@ -119,6 +126,9 @@ function find_intersection(
     end
     current
 end
+
+find_intersection_requires_inside(::Type{<:Repeat{N, P}}) where {N, P} =
+    find_intersection_requires_inside(P)
 
 function get_child(repeat::Repeat{N}, indices::Tuple) where {N}
     copy_shift = indices[1]

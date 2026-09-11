@@ -31,6 +31,7 @@ function find_intersection(
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
     previous_hit=nothing,
+    inside=nothing,
 ) where {N}
     previous = !isnothing(previous_hit)
     inside = previous ? previous_hit[1] : isinside_single(round, start)

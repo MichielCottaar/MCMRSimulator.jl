@@ -5,7 +5,7 @@ import StaticArrays: SMatrix, SVector
 import LinearAlgebra: norm, nullspace, cross
 import Random: rand
 import ...InternalBoundingBoxes
-import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox
+import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result, _translate_native
 import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
 import ...Properties: GeometryProperties
@@ -241,14 +241,19 @@ function find_intersection(
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
     previous_hit=nothing,
+    inside=nothing,
 ) where {N, M, P}
     find_intersection(
         transformation.geometry,
         to_child_coordinates(transformation, start),
         to_child_coordinates(transformation, destination),
         previous_hit,
+        inside,
     )
 end
+
+find_intersection_requires_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} =
+    find_intersection_requires_inside(P)
 
 get_child(transformation::Transformation, indices) = (transformation.geometry, indices)
 
