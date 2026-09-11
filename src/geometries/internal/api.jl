@@ -4,7 +4,7 @@ import StaticArrays: SVector
 import ..BoundingBoxes: BoundingBox
 import .InternalBoundingBoxes: InternalBoundingBox
 import .InternalBoundingBoxes
-import .PhysicalGeometries: PhysicalGeometry, find_intersection, find_intersection_requires_inside, get_intersection_params, random_surface_positions, inside_indices, size_scale, geometry_mesh, distance_to_surface, to_property_index, to_inside_index, inside_indices_eltype, bound_intersection_type, contains_repeat, estimate_volume, estimate_surface
+import .PhysicalGeometries: PhysicalGeometry, find_intersection, find_intersection_requires_inside, get_intersection_params, random_surface_positions, volume_sampling, inside_indices, size_scale, geometry_mesh, distance_to_surface, to_property_index, to_inside_index, inside_indices_eltype, bound_intersection_type, contains_repeat, estimate_volume, estimate_surface
 import .PhysicalGeometries.Groups: GeometryTuple, inside_indices_for_any_type
 import .PhysicalGeometries.Transparents: IgnoreOverlapping
 import .InsideViews: InsideView
@@ -15,7 +15,7 @@ import .Susceptibility: susceptibility_off_resonance, off_resonance_gradient
 import .RayGridIntersection: ray_grid_intersections
 
 export FixedGeometry, Intersection, flip, IsInside, collision_normal,
-    isinside, inside_cache_type, IgnoreOverlapping, detect_intersection, random_surface_positions, geometry_mesh, distance_to_surface,
+    isinside, inside_cache_type, IgnoreOverlapping, detect_intersection, random_surface_positions, volume_sampling, geometry_mesh, distance_to_surface,
     ray_grid_intersections,
     size_scale, SizeScaleOverride, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
@@ -45,6 +45,17 @@ function BoundingBox(geometry::FixedGeometry)
 end
 
 inside_cache_type(geometry::FixedGeometry) = Vector{inside_indices_eltype(typeof(geometry.geometry))}
+
+function volume_sampling(
+    fixed_geometry::FixedGeometry,
+    bounding_box::InternalBoundingBox{3},
+    volume_density::Number,
+)
+    volume_sampling(fixed_geometry.geometry, bounding_box, volume_density)
+end
+
+volume_sampling(geometry::FixedGeometry, bounding_box::BoundingBox, volume_density::Number) =
+    volume_sampling(geometry, InternalBoundingBox(bounding_box), volume_density)
 
 # A fixed geometry represents one user geometry unless it is a tuple of groups.
 Base.length(geometry::FixedGeometry) =

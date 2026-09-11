@@ -17,15 +17,17 @@ Methods:
 """
 module Spins
 
+export spin_sampling, spin_type
+
 import Random
 import StaticArrays: SVector
 import LinearAlgebra: ⋅, norm
 import ..Geometries.BoundingBoxes: BoundingBox, lower, upper
-import ..Reflections: Reflection, has_intersection, has_hit, previous_hit
+import ..Reflections: Reflection, has_intersection, has_hit, previous_hit, possible_reflection_types
 import ..Geometries.Internal:
-    random_surface_positions,
+    random_surface_positions, volume_sampling,
     FixedGeometry,
-    isinside, R1, R2, off_resonance, susceptibility_off_resonance
+    isinside, inside_cache_type, R1, R2, off_resonance, susceptibility_off_resonance
 import ..Methods: get_time, norm_angle
 import ..Properties: GlobalProperties
 import ..Geometries: fix, fix_susceptibility
@@ -351,27 +353,69 @@ function Snapshot(positions :: AbstractVector{<:AbstractVector{<:Real}}; time ::
     Snapshot(map(p -> Spin(; position=p, kwargs...), positions), time)
 end
 
+function spin_type(geometry::FixedGeometry, nsequences::Integer=1)
+    Spin{
+        nsequences,
+        static_vector_type(nsequences){SpinOrientation},
+        possible_reflection_types(geometry),
+        inside_cache_type(geometry),
+    }
+end
+
+function spin_sampling(geometry::FixedGeometry, bounding_box::BoundingBox, volume_density::Number)
+    volume_positions, volume_indices = volume_sampling(geometry, bounding_box, volume_density)
+    S = spin_type(geometry, 0)
+    cache_type = inside_cache_type(geometry)
+    orientations = static_vector_type(0){SpinOrientation}()
+    spins = S[
+        S(position, orientations, nothing, FixedXoshiro(), cache_type(indices))
+        for (position, indices) in zip(volume_positions, volume_indices)
+    ]
+
+    surface_positions, intersections = random_surface_positions(geometry, bounding_box, volume_density)
+    for (position, intersection) in zip(surface_positions, intersections)
+        direction = Random.randn(SVector{3, Float64})
+        direction ⋅ intersection.normal < 0 && (direction = -direction)
+        reflection = Reflection(intersection, -direction, norm(direction), 0., 0.)
+        indices = cache_type(isinside(geometry, position, intersection).inside_of)
+        push!(spins, S(position, orientations, reflection, FixedXoshiro(), indices))
+    end
+    spins
+end
+
+function _expand_sample(sample::Spin{0}, geometry::FixedGeometry, nsequences::Integer; kwargs...)
+    orientation = SpinOrientation(
+        get(kwargs, :longitudinal, 1.),
+        get(kwargs, :transverse, 0.),
+        get(kwargs, :phase, 0.),
+    )
+    S = spin_type(geometry, nsequences)
+    S(
+        sample.position,
+        static_vector_type(nsequences)(fill(orientation, nsequences)),
+        sample.reflection,
+        sample.rng,
+        sample.isinside,
+    )
+end
+
 function Snapshot(nspins::Integer, bounding_box=500, geometry=(); time::Real=0., kwargs...)
     if iszero(nspins)
         nseq = get(kwargs, :nsequences, 1)
         return Snapshot(Spin{nseq, static_vector_type(nseq){SpinOrientation}, Union{Nothing, Reflection}, Nothing}[], time)
     end
+    geometry = geometry isa FixedGeometry ? geometry : fix(geometry)
     bounding_box = BoundingBox(bounding_box)
     sz = (upper(bounding_box) - lower(bounding_box))
-    free_spins = map(i->Spin(; position=rand(SVector{3, Float64}) .* sz .+ lower(bounding_box), kwargs...), 1:nspins)
-    geometry = geometry isa FixedGeometry ? geometry : fix(geometry)
-    if iszero(length(geometry))
-        return Snapshot(free_spins, time)
-    end
     volume = prod(sz)
-    density = nspins / volume
-    stuck_spins = random_surface_spins(geometry, bounding_box, density; kwargs...)
-    if length(stuck_spins) == 0
-        spins = free_spins
-    else
-        spins = Random.shuffle(vcat(free_spins, stuck_spins))[1:nspins]
+    density = nspins / volume * 1.2 # take a slightly higher density to ensure enough spins are sampled
+    samples = Spin{0}[]
+    while length(samples) < nspins
+        append!(samples, spin_sampling(geometry, bounding_box, density))
     end
-    return Snapshot(spins, time)
+    samples = Random.shuffle(samples)[1:nspins]
+    nsequences = get(kwargs, :nsequences, 1)
+    Snapshot(map(sample -> _expand_sample(sample, geometry, nsequences; kwargs...), samples), time)
 end
 
 Base.show(io::IO, snap::Snapshot{1}) = print(io, "Snapshot($(length(snap)) spins with total magnetisation of $(repr(SpinOrientationSum(snap), context=io)) at t=$(get_time(snap))ms)")

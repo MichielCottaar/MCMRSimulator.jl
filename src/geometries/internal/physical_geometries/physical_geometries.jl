@@ -1,5 +1,8 @@
 module PhysicalGeometries
 import StaticArrays: SVector
+import Random: rand
+import Distributions: Poisson
+import ..InternalBoundingBoxes
 import ..InternalBoundingBoxes: InternalBoundingBox
 import ...BoundingBoxes: BoundingBox
 import ..InsideViews: InsideView, child_view
@@ -142,6 +145,29 @@ end
 
 """Return the obstruction indices containing a position."""
 function inside_indices end
+
+"""Sample volume positions together with their cached inside indices."""
+function volume_sampling end
+
+function _volume_inside_indices(geometry::PhysicalGeometry, position)
+    has_inside(typeof(geometry)) || return Tuple{}[]
+    has_single_inside(typeof(geometry)) &&
+        return isinside_single(geometry, position) ? [()] : Tuple{}[]
+    inside_indices(geometry, position)
+end
+
+function volume_sampling(
+    geometry::PhysicalGeometry{N},
+    bounding_box::InternalBoundingBox{N},
+    volume_density::Number,
+) where {N}
+    volume_density >= 0 || throw(ArgumentError("volume density must be non-negative"))
+    lower_bound = InternalBoundingBoxes.lower(bounding_box)
+    size = 2 .* InternalBoundingBoxes.half_size(bounding_box)
+    nsamples = rand(Poisson(volume_density * prod(size)))
+    positions = [SVector{N, Float64}(rand(N) .* size .+ lower_bound) for _ in 1:nsamples]
+    positions, [_volume_inside_indices(geometry, position) for position in positions]
+end
 
 """Whether the geometry is within the single inside."""
 function isinside_single end

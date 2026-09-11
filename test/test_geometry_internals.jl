@@ -44,6 +44,22 @@ const Plot = mr.Plot
     @test_throws ArgumentError PublicBoundingBoxes.BoundingBox(-1.0)
 end
 
+@testset "Volume and spin sampling" begin
+    fixed_sphere = mr.Geometries.fix(mr.Spheres(radius=1., surface_density=1.))
+    bounding_box = mr.BoundingBox(4.)
+    positions, inside = GI.volume_sampling(fixed_sphere, bounding_box, 1.)
+    @test length(positions) == length(inside)
+    @test all(indices isa Vector for indices in inside)
+
+    samples = mr.spin_sampling(fixed_sphere, bounding_box, 1.)
+    @test all(typeof(sample).parameters[1] == 0 for sample in samples)
+    @test all(sample.isinside isa Vector for sample in samples)
+
+    snapshot = mr.Snapshot(10, bounding_box, fixed_sphere; longitudinal=0.5)
+    @test length(snapshot) == 10
+    @test all(mr.longitudinal(snapshot) .== 5.0)
+end
+
 @testset "intersection grids" begin
     grid_box = BoundingBoxes.InternalBoundingBox([2.0, 1.0, 1.0])
     child_boxes = [

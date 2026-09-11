@@ -6,8 +6,8 @@ import StaticArrays: SVector, SizedVector
 import ..Geometries: ObstructionGroup, fix
 import ..Geometries: BoundingBox
 import ..Geometries.Internal: FixedGeometry, susceptibility_off_resonance, isinside, inside_cache_type
-import ..Reflections: possible_reflection_types, previous_hit
-import ..Spins: Spin, Snapshot, SpinOrientation, static_vector_type, stuck
+import ..Reflections: previous_hit
+import ..Spins: Spin, Snapshot, SpinOrientation, static_vector_type, stuck, spin_type
 import ..Methods: get_time
 import ..Properties: GlobalProperties, R1, R2, off_resonance
 import ..TimeSteps: TimeStep
@@ -90,12 +90,7 @@ struct Simulation{N, NG, G<:FixedGeometry}
 end
 
 function spin_type(simulation::Simulation{N}, nsequences::Integer=N) where {N}
-    Spin{
-        nsequences,
-        static_vector_type(nsequences){SpinOrientation},
-        possible_reflection_types(simulation.geometry),
-        inside_cache_type(simulation.geometry),
-    }
+    spin_type(simulation.geometry, nsequences)
 end
 
 function Simulation(
