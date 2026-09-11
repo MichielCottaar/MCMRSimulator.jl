@@ -225,6 +225,21 @@ function surface_sampling(
     positions
 end
 
+function random_surface_positions(
+    cylinder::FiniteCylinder,
+    density::GeometryLeafProperties,
+    bounding_box::InternalBoundingBoxes.InternalBoundingBox{3},
+    scale_density,
+)
+    positions = surface_sampling(cylinder, density, scale_density)
+    indices = map(positions) do position
+        axial = (position - cylinder.first) ⋅ cylinder.axis
+        surface_index = axial == 0. ? 2 : axial == cylinder.length ? 3 : 1
+        (surface_index, rand(Bool))
+    end
+    positions, indices
+end
+
 function _geometry_mesh(cylinder::FiniteCylinder; nsamples=100, kwargs...)
     nsamples >= 3 || throw(ArgumentError("nsamples must be at least 3"))
     first_basis, second_basis = _finite_cylinder_basis(cylinder.axis)
