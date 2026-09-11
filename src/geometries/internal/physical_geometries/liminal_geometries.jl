@@ -1,7 +1,9 @@
 """Physical geometry for a collection of independently placed cell templates."""
 module LiminalGeometries
 
-import ..PhysicalGeometries: PhysicalGeometry
+import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_single_inside,
+    get_intersection_params_requires_inside, inside_indices_eltype, intersection_type
+import ..Groups: GeometryTuple
 
 export FixedLiminalGeometry
 
@@ -26,6 +28,23 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
             Float64[volume_fractions...],
             Float64(extracellular_fraction),
         )
+    end
+end
+
+child_type(::Type{<:FixedLiminalGeometry{P}}) where {P} = P
+has_single_inside(::Type{<:FixedLiminalGeometry}) = false
+
+_child_types(::Type{P}) where {P} = P isa Union ? Base.uniontypes(P) : (P,)
+_geometry_tuple_type(::Type{P}) where {P} = Core.apply_type(Tuple, _child_types(P)...)
+
+for trait in (
+    :has_inside,
+    :get_intersection_params_requires_inside,
+    :inside_indices_eltype,
+    :intersection_type,
+)
+    @eval function $trait(::Type{<:FixedLiminalGeometry{P}}) where {P}
+        $trait(GeometryTuple{3, _geometry_tuple_type(P)})
     end
 end
 

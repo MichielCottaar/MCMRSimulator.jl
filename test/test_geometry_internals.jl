@@ -568,6 +568,14 @@ end
         @test sum(fixed_cells.geometry.volume_fractions) + fixed_cells.geometry.extracellular_fraction ≈ 1.
         @test fixed_cells.volume.R1 isa GI.Properties.GeometryVectorProperties
         @test length(fixed_cells.volume.R1.properties) == 2
+        @test GI.PhysicalGeometries.child_type(typeof(fixed_cells.geometry)) ===
+            eltype(fixed_cells.geometry.geometries)
+        @test GI.PhysicalGeometries.has_inside(typeof(fixed_cells.geometry))
+        @test !GI.PhysicalGeometries.has_single_inside(typeof(fixed_cells.geometry))
+        @test GI.PhysicalGeometries.inside_indices_eltype(typeof(fixed_cells.geometry)) ==
+            Tuple{Int, Int}
+        @test GI.PhysicalGeometries.intersection_type(typeof(fixed_cells.geometry)) ==
+            Tuple{Int, Int}
         @test_throws ArgumentError mr.LiminalGeometry(geometries=[])
         @test_throws ArgumentError mr.LiminalGeometry(geometries=[(0., mr.Spheres(radius=1.))])
         @test_throws ArgumentError mr.LiminalGeometry(
@@ -587,6 +595,14 @@ end
         @test eltype(heterogeneous.geometries) == Union{
             BaseObstructions.Sphere, BaseObstructions.FiniteCylinder,
         }
+        @test GI.PhysicalGeometries.child_type(typeof(heterogeneous)) ===
+            eltype(heterogeneous.geometries)
+        @test GI.PhysicalGeometries.has_inside(typeof(heterogeneous))
+        @test !GI.PhysicalGeometries.has_single_inside(typeof(heterogeneous))
+        @test GI.PhysicalGeometries.inside_indices_eltype(typeof(heterogeneous)) ==
+            Tuple{Int}
+        @test GI.PhysicalGeometries.intersection_type(typeof(heterogeneous)) ==
+            Tuple{Int}
     end
 
     equal_depth_tuple = GeometryTuple{3}((
