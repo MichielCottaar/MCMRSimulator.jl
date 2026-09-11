@@ -580,8 +580,9 @@ end
         @test fixed_cells.geometry isa GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry
         @test fixed_cells.geometry.geometries isa Vector{<:GI.PhysicalGeometry}
         @test eltype(fixed_cells.geometry.geometries) !== GI.PhysicalGeometry
-        @test fixed_cells.geometry.volume_fractions ≈ [0.2666666667, 0.5333333333]
-        @test sum(fixed_cells.geometry.volume_fractions) + fixed_cells.geometry.extracellular_fraction ≈ 1.
+        @test fixed_cells.geometry.number_fractions ≈ [1 / 3, 2 / 3]
+        @test sum(fixed_cells.geometry.number_fractions) ≈ 1.
+        @test fixed_cells.geometry.extracellular_fraction == 0.2
         @test fixed_cells.volume.R1 isa GI.Properties.GeometryVectorProperties
         @test length(fixed_cells.volume.R1.properties) == 2
         @test GI.PhysicalGeometries.child_type(typeof(fixed_cells.geometry)) ===

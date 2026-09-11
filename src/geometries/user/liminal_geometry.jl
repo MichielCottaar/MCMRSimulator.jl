@@ -2,7 +2,7 @@ module LiminalGeometries
 
 export LiminalGeometry
 
-"""User-facing collection of cell geometry templates and volume fractions."""
+"""User-facing collection of cell geometry templates and number fractions."""
 struct LiminalGeometry
     geometries::Vector{Tuple{Float64, Any}}
     extracellular_fraction::Float64
@@ -19,10 +19,10 @@ function LiminalGeometry(
     entries = Tuple{Float64, Any}[]
     for entry in geometries
         entry isa Tuple && length(entry) == 2 ||
-            throw(ArgumentError("each cell geometry must be a (volume_fraction, geometry) tuple"))
+            throw(ArgumentError("each cell geometry must be a (number_fraction, geometry) tuple"))
         fraction, geometry = entry
         fraction isa Real && isfinite(fraction) && fraction > 0 ||
-            throw(ArgumentError("cell volume fractions must be finite and positive"))
+            throw(ArgumentError("cell number fractions must be finite and positive"))
         push!(entries, (Float64(fraction), geometry))
     end
     LiminalGeometry(entries, Float64(extracellular_fraction))

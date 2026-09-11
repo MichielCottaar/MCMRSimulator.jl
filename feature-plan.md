@@ -18,17 +18,17 @@ encounter also receives an offset unique to that spin.
 The user provides:
 
 - A collection of cell geometry templates.
-- One normalized volume fraction per cell geometry.
+- One cell number fraction per cell geometry. Fractions are normalized by their sum.
 - An extracellular volume fraction `f_ext`.
 - Optionally, a laboratory-frame bounding box.
 
-The normalized intracellular fractions are scaled as:
+The cell number fractions are normalized as:
 
 ```text
-f_i = (1 - f_ext) * w_i / sum(w)
+n_i = w_i / sum(w)
 ```
 
-where `w_i` is the user-provided normalized fraction for cell geometry `i`.
+where `w_i` is the user-provided number fraction for cell geometry `i`.
 
 The extracellular fraction is:
 
@@ -64,12 +64,15 @@ geometry collision detection until an encounter is sampled.
 For a travel direction `u`, calculate the inverse mean free path as:
 
 ```text
-lambda_inv(u) = sum_i f_i * A_projected_i(u) / V_i
+rho_cell = (1 - f_ext) / sum_i(n_i * V_i)
+lambda_inv(u) = rho_cell * sum_i n_i * A_projected_i(u)
 ```
 
 where:
 
-- `f_i` is the intracellular volume fraction of cell geometry `i`;
+- `n_i` is the normalized cell number fraction of cell geometry `i`;
+- `rho_cell` is the total cell number density implied by the intracellular volume
+  fraction;
 - `A_projected_i(u)` is the total outer surface area projected onto `u`;
 - `V_i` is the volume of cell geometry `i`.
 
@@ -150,7 +153,7 @@ Introduce a user-facing collection type, with a name chosen to match the package
 existing geometry naming conventions. It should contain:
 
 - Cell geometry templates.
-- Normalized volume fractions.
+- Normalized cell number fractions.
 - Extracellular volume fraction.
 - Optional bounding box.
 - Optional surface preprocessing size/seed settings.
@@ -160,7 +163,7 @@ Possible conceptual API:
 ```julia
 cells = LiminalGeometry(
     geometries=[read_swc("cell_a.swc"), read_swc("cell_b.swc")],
-    volume_fraction=[1.0, 2.0],
+    number_fraction=[1.0, 2.0],
     extracellular_fraction=0.2,
     bounding_box=BoundingBox(500),
 )
@@ -176,7 +179,7 @@ entry should contain:
 
 - A fixed physical geometry.
 - Its fixed property metadata.
-- Its normalized/normalized-to-total volume fraction.
+- Its normalized cell number fraction.
 - Its outer-surface samples.
 - Its local volume and projected-area data.
 

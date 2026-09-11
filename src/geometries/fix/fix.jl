@@ -58,7 +58,7 @@ function fix(collection::LiminalGeometry)
     end
 
     fractions = [fraction for (fraction, _) in collection.geometries]
-    fractions .*= (1 - collection.extracellular_fraction) / sum(fractions)
+    fractions ./= sum(fractions)
     physical_geometry = FixedLiminalGeometry(
         [geometry.geometry for geometry in fixed],
         fractions,
