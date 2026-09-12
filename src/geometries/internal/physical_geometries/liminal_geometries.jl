@@ -27,7 +27,7 @@ mutable struct OuterSurfaceSampling
     normals::Vector{SVector{3, Float64}}
     cell_indices::Vector{Int}
     surface_indices::Vector{Tuple}
-    weights::Vector{Float64}
+    weight::Float64
 end
 
 function projected_surface_area(
@@ -37,10 +37,11 @@ function projected_surface_area(
     direction_norm = norm(direction)
     iszero(direction_norm) && throw(ArgumentError("direction must be non-zero"))
     unit_direction = direction / direction_norm
-    sum(
-        weight * abs(normal ⋅ unit_direction)
-        for (weight, normal) in zip(sampling.weights, sampling.normals)
+    projected_sum = sum(
+        abs(normal ⋅ unit_direction)
+        for normal in sampling.normals
     ) / 2
+    sampling.weight * projected_sum
 end
 
 struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
@@ -85,7 +86,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
                 SVector{3, Float64}[],
                 Int[],
                 Tuple[],
-                Float64[],
+                0.,
             ),
         )
         sample!(fixed.outer_surface_sampling, fixed)
@@ -120,11 +121,11 @@ function sample!(
     empty!(sampling.normals)
     empty!(sampling.cell_indices)
     empty!(sampling.surface_indices)
-    empty!(sampling.weights)
     iszero(N) && return sampling
     iszero(geometry.total_surface_area) && return sampling
 
     sample_density = N / geometry.total_surface_area
+    sampling.weight = inv(sample_density)
     density = GeometryLeafProperties(1.0)
     for (cell_index, child) in enumerate(geometry.geometries)
         scale_density = sample_density * geometry.number_fractions[cell_index]
@@ -147,7 +148,6 @@ function sample!(
             push!(sampling.normals, params.normal)
             push!(sampling.cell_indices, cell_index)
             push!(sampling.surface_indices, to_property_index(child, collision_indices))
-            push!(sampling.weights, inv(sample_density))
         end
     end
     sampling

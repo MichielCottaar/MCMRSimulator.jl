@@ -599,7 +599,8 @@ end
         GI.PhysicalGeometries.LiminalGeometries.sample!(sampling, fixed_cells.geometry, 100)
         @test !isempty(sampling.positions)
         @test length(sampling.positions) == length(sampling.normals) ==
-            length(sampling.cell_indices) == length(sampling.surface_indices) == length(sampling.weights)
+            length(sampling.cell_indices) == length(sampling.surface_indices)
+        @test sampling.weight > 0
         direction = SVector(1., 2., 3.)
         @test GI.projected_surface_area(sampling, direction) ≈
             GI.projected_surface_area(sampling, -direction)
