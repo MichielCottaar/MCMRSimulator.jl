@@ -112,7 +112,9 @@ function inverse_mean_free_path(
     geometry::FixedLiminalGeometry,
     direction::SVector{3, Float64},
 )
-    cell_number_density = (1 - geometry.extracellular_fraction) / geometry.weighted_cell_volume
+    iszero(geometry.extracellular_fraction) && return Inf
+    cell_number_density = (1 - geometry.extracellular_fraction) /
+        (geometry.extracellular_fraction * geometry.weighted_cell_volume)
     cell_number_density * projected_surface_area(geometry.outer_surface_sampling, direction)
 end
 

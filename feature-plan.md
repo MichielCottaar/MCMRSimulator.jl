@@ -64,15 +64,15 @@ geometry collision detection until an encounter is sampled.
 For a travel direction `u`, calculate the inverse mean free path as:
 
 ```text
-rho_cell = (1 - f_ext) / sum_i(n_i * V_i)
+rho_cell = (1 - f_ext) / (f_ext * sum_i(n_i * V_i))
 lambda_inv(u) = rho_cell * sum_i n_i * A_projected_i(u)
 ```
 
 where:
 
 - `n_i` is the normalized cell number fraction of cell geometry `i`;
-- `rho_cell` is the total cell number density implied by the intracellular volume
-  fraction;
+- `rho_cell` is the cell number density per extracellular volume, implied by the
+  intracellular and extracellular volume fractions;
 - `A_projected_i(u)` is the total outer surface area projected onto `u`;
 - `V_i` is the volume of cell geometry `i`.
 
