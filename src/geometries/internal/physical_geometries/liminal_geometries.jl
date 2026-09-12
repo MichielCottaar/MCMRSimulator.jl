@@ -8,20 +8,32 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_singl
     get_intersection_params_requires_inside, inside_indices_eltype, intersection_type,
     inside_indices, find_intersection, find_intersection_requires_inside, get_child,
     volume_sampling, random_surface_positions, bound_intersection_type,
-    _merge_types, InternalBoundingBox
+    _merge_types, InternalBoundingBox, estimate_surface, get_intersection_params,
+    to_inside_index, to_property_index
 import ..Groups: GeometryTuple
 import ..Groups: inside_indices_for_any_type
 import ..Transformations: Shift
 import ...InsideViews: InsideView, child_view
 import ...InternalBoundingBoxes
-import ...Properties: GeometryProperties
+import ...Properties: GeometryProperties, GeometryLeafProperties
 
-export FixedLiminalGeometry
+export FixedLiminalGeometry, OuterSurfaceSampling, sample!
+
+"""Mutable library of sampled outer-surface data for liminal cells."""
+mutable struct OuterSurfaceSampling
+    positions::Vector{SVector{3, Float64}}
+    normals::Vector{SVector{3, Float64}}
+    cell_indices::Vector{Int}
+    surface_indices::Vector{Tuple}
+    weights::Vector{Float64}
+end
 
 struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
     geometries::Vector{P}
     number_fractions::Vector{Float64}
     extracellular_fraction::Float64
+    total_surface_area::Float64
+    outer_surface_sampling::OuterSurfaceSampling
 
     function FixedLiminalGeometry(
         geometries::AbstractVector{<:PhysicalGeometry{3}},
@@ -35,15 +47,81 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
         all(isfinite, fractions) && all(>(0), fractions) ||
             throw(ArgumentError("cell number fractions must be finite and positive"))
         fractions ./= sum(fractions)
+        total_surface_area = sum(
+            fraction * estimate_surface(child; outer=true).area
+            for (fraction, child) in zip(fractions, geometries)
+        )
         child_types = unique(typeof.(geometries))
         child_type = length(child_types) == 1 ?
             only(child_types) : Core.apply_type(Union, child_types...)
-        new{child_type}(
+        fixed = new{child_type}(
             convert(Vector{child_type}, collect(geometries)),
             fractions,
             Float64(extracellular_fraction),
+            total_surface_area,
+            OuterSurfaceSampling(
+                SVector{3, Float64}[],
+                SVector{3, Float64}[],
+                Int[],
+                Tuple[],
+                Float64[],
+            ),
         )
+        sample!(fixed.outer_surface_sampling, fixed)
+        fixed
     end
+end
+
+function _is_outer_surface_sample(geometry::PhysicalGeometry, position, full_index)
+    collision_indices = full_index[1:(end - 1)]
+    current_inside = to_inside_index(geometry, collision_indices)
+    all(
+        inside_index == current_inside
+        for inside_index in inside_indices_for_any_type(geometry, position, nothing)
+    )
+end
+
+function sample!(
+    sampling::OuterSurfaceSampling,
+    geometry::FixedLiminalGeometry,
+    N::Integer=10_000,
+)
+    N >= 0 || throw(ArgumentError("number of surface samples must be non-negative"))
+    empty!(sampling.positions)
+    empty!(sampling.normals)
+    empty!(sampling.cell_indices)
+    empty!(sampling.surface_indices)
+    empty!(sampling.weights)
+    iszero(N) && return sampling
+    iszero(geometry.total_surface_area) && return sampling
+
+    sample_density = N / geometry.total_surface_area
+    density = GeometryLeafProperties(1.0)
+    for (cell_index, child) in enumerate(geometry.geometries)
+        scale_density = sample_density * geometry.number_fractions[cell_index]
+        positions, indices = random_surface_positions(
+            child,
+            density,
+            InternalBoundingBox(child),
+            scale_density,
+        )
+        for (position, full_index) in zip(positions, indices)
+            _is_outer_surface_sample(child, position, full_index) || continue
+            collision_indices = full_index[1:(end - 1)]
+            params = get_intersection_params(
+                child,
+                position,
+                position,
+                (full_index..., 0.0),
+            )
+            push!(sampling.positions, position)
+            push!(sampling.normals, params.normal)
+            push!(sampling.cell_indices, cell_index)
+            push!(sampling.surface_indices, to_property_index(child, collision_indices))
+            push!(sampling.weights, inv(sample_density))
+        end
+    end
+    sampling
 end
 
 function inside_indices(

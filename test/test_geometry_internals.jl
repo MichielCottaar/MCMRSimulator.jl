@@ -592,6 +592,14 @@ end
         fixed_cells = mr.fix(cells)
         @test fixed_cells isa GI.FixedGeometry
         @test fixed_cells.geometry isa GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry
+        @test fixed_cells.geometry.outer_surface_sampling isa
+            GI.PhysicalGeometries.LiminalGeometries.OuterSurfaceSampling
+        @test fixed_cells.geometry.total_surface_area > 0
+        sampling = fixed_cells.geometry.outer_surface_sampling
+        GI.PhysicalGeometries.LiminalGeometries.sample!(sampling, fixed_cells.geometry, 100)
+        @test !isempty(sampling.positions)
+        @test length(sampling.positions) == length(sampling.normals) ==
+            length(sampling.cell_indices) == length(sampling.surface_indices) == length(sampling.weights)
         @test fixed_cells.geometry.geometries isa Vector{<:GI.PhysicalGeometry}
         @test eltype(fixed_cells.geometry.geometries) !== GI.PhysicalGeometry
         @test fixed_cells.geometry.number_fractions ≈ [1 / 3, 2 / 3]

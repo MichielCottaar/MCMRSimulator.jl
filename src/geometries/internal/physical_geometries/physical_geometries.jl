@@ -227,10 +227,10 @@ include("repeats.jl")
 include("transparent.jl")
 include("base_obstructions/base_obstructions.jl")
 include("meshes.jl")
-include("liminal_geometries.jl")
 include("monte_carlo_measures.jl")
+import .MonteCarloMeasures: SurfaceEstimate, contains_repeat, estimate_volume, estimate_surface
+include("liminal_geometries.jl")
 import .Transparents: Transparent, IgnoreOverlapping, transparent_geometry
 import .LiminalGeometries: FixedLiminalGeometry
-import .MonteCarloMeasures: SurfaceEstimate, contains_repeat, estimate_volume, estimate_surface
 
 end
