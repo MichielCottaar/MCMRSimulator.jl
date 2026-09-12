@@ -139,7 +139,7 @@
             counts = zeros(Int, 2)
             for spin in snapshot.spins
                 isempty(spin.isinside) ?
-                    (counts[1] += 1) : (counts[first(spin.isinside)[1] + 1] += 1)
+                    (counts[1] += 1) : (counts[first(spin.isinside)[1][1] + 1] += 1)
             end
             counts
         end

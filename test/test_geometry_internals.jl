@@ -660,15 +660,15 @@ end
         @test error isa ArgumentError
         @test occursin("use the cached inside indices instead", error.msg)
         @test GI.PhysicalGeometries.inside_indices_eltype(typeof(fixed_cells.geometry)) ==
-            Tuple{Int, SVector{3, Float64}, Int}
+            Tuple{Tuple{Int, SVector{3, Float64}}, Int}
         @test GI.PhysicalGeometries.intersection_type(typeof(fixed_cells.geometry)) ==
-            Tuple{Int, SVector{3, Float64}, Int}
+            Tuple{Tuple{Int, SVector{3, Float64}}, Int}
         sampling_box = mr.BoundingBox(5.)
         volume_positions, volume_indices = GI.volume_sampling(fixed_cells, sampling_box, 0.2)
         @test length(volume_positions) == length(volume_indices)
         @test all(all(position .>= -5) && all(position .<= 5) for position in volume_positions)
         @test all(
-            isempty(index) || all(length(cell_index) == 3 for cell_index in index)
+            isempty(index) || all(length(cell_index) == 2 for cell_index in index)
             for index in volume_indices
         )
 
@@ -684,8 +684,8 @@ end
         )
         @test length(surface_positions) == length(surface_intersections)
         @test all(all(position .>= -5) && all(position .<= 5) for position in surface_positions)
-        @test all(length(intersection.indices) == 3 for intersection in surface_intersections)
-        @test all(length(intersection.indices[2]) == 3 for intersection in surface_intersections)
+        @test all(length(intersection.indices) == 2 for intersection in surface_intersections)
+        @test all(length(intersection.indices[1][2]) == 3 for intersection in surface_intersections)
         surface_samples = mr.spin_sampling(surface_cells, sampling_box, 0.2)
         @test all(sample isa mr.Spin for sample in surface_samples)
         @test all(
@@ -746,9 +746,12 @@ end
         @test GI.PhysicalGeometries.has_inside(typeof(heterogeneous))
         @test !GI.PhysicalGeometries.has_single_inside(typeof(heterogeneous))
         @test GI.PhysicalGeometries.inside_indices_eltype(typeof(heterogeneous)) ==
-            Tuple{Int, SVector{3, Float64}}
+            Tuple{Tuple{Int, SVector{3, Float64}}}
         @test GI.PhysicalGeometries.intersection_type(typeof(heterogeneous)) ==
-            Tuple{Int, SVector{3, Float64}}
+            Union{
+                Tuple{Tuple{Int, SVector{3, Float64}}},
+                Tuple{Tuple{Int, SVector{3, Float64}}, Int},
+            }
     end
 
     equal_depth_tuple = GeometryTuple{3}((

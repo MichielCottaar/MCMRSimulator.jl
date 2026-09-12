@@ -83,7 +83,10 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
         child_types = unique(typeof.(geometries))
         child_type = length(child_types) == 1 ?
             only(child_types) : Core.apply_type(Union, child_types...)
-        surface_index_type = _append_type(intersection_type(child_type), Bool)
+        surface_index_type = _append_type(
+            _merge_types(intersection_type(child) for child in _child_types(child_type)),
+            Bool,
+        )
         fixed = new{child_type}(
             convert(Vector{child_type}, collect(geometries)),
             fractions,
@@ -196,10 +199,10 @@ function inside_indices(
         "inside_indices is not defined for FixedLiminalGeometry without cell context; " *
         "use the cached inside indices instead",
     ))
-    cell_index, offset = intersection[1:2]
+    cell_index, offset = intersection[1]
     child = Shift(geometry.geometries[cell_index], offset)
-    child_indices = inside_indices_for_any_type(child, position - offset, intersection[3:end])
-    [(cell_index, offset, index...) for index in child_indices]
+    child_indices = inside_indices_for_any_type(child, position - offset, intersection[2:end])
+    [tuple((cell_index, offset), index...) for index in child_indices]
 end
 
 child_type(::Type{<:FixedLiminalGeometry{P}}) where {P} = Shift{3, P}
@@ -215,14 +218,18 @@ function _prepend_liminal_index(::Type{T}) where {T}
     T === Union{} && return Union{}
     T isa Union && return Union{(_prepend_liminal_index(type) for type in Base.uniontypes(T))...}
     T <: Tuple || throw(MethodError(_prepend_liminal_index, (Type{T},)))
-    Tuple{Int, SVector{3, Float64}, T.parameters...}
+    Tuple{Tuple{Int, SVector{3, Float64}}, T.parameters...}
 end
 
 inside_indices_eltype(::Type{<:FixedLiminalGeometry{P}}) where {P} =
-    _prepend_liminal_index(inside_indices_eltype(_shifted_child_type(P)))
+    _prepend_liminal_index(
+        _merge_types(inside_indices_eltype(_shifted_child_type(child)) for child in _child_types(P)),
+    )
 
 intersection_type(::Type{<:FixedLiminalGeometry{P}}) where {P} =
-    _prepend_liminal_index(intersection_type(_shifted_child_type(P)))
+    _prepend_liminal_index(
+        _merge_types(intersection_type(_shifted_child_type(child)) for child in _child_types(P)),
+    )
 
 function bound_intersection_type(geometry::FixedLiminalGeometry, density::GeometryProperties)
     _merge_types(
@@ -232,8 +239,14 @@ function bound_intersection_type(geometry::FixedLiminalGeometry, density::Geomet
 end
 
 function get_child(geometry::FixedLiminalGeometry, indices::Tuple)
-    index, offset = indices[1:2]
-    Shift(geometry.geometries[index], offset), indices[3:end]
+    index, offset = indices[1]
+    Shift(geometry.geometries[index], offset), indices[2:end]
+end
+
+function to_property_index(geometry::FixedLiminalGeometry, indices::Tuple)
+    child, child_indices = get_child(geometry, indices)
+    cleaned = to_property_index(child, child_indices)
+    (indices[1][1], cleaned...)
 end
 
 function _wrapped_offset(
@@ -270,7 +283,7 @@ function volume_sampling(
             isempty(child_index) && continue
             offset = _wrapped_offset(position, bounding_box)
             push!(positions, position + offset)
-            push!(indices, [(cell_index, offset, index...) for index in child_index])
+            push!(indices, [tuple((cell_index, offset), index...) for index in child_index])
         end
     end
 
@@ -302,7 +315,7 @@ function random_surface_positions(
         for (position, child_index) in zip(child_positions, child_indices)
             offset = _wrapped_offset(position, bounding_box)
             push!(positions, position + offset)
-            push!(indices, (cell_index, offset, child_index...))
+            push!(indices, tuple((cell_index, offset), child_index...))
         end
     end
     positions, indices
@@ -354,8 +367,10 @@ function find_intersection(
         encounter_position = start + encounter_distance * direction
         offset = encounter_position - sample_position
         return (
-            sample_cell_index,
-            offset,
+            (
+                sample_cell_index,
+                offset,
+            ),
             sample_surface_index[1:(end - 1)]...,
             false,
             encounter_distance / distance,
@@ -363,20 +378,20 @@ function find_intersection(
     elseif !isnothing(inside)
         isempty(inside) && throw(ArgumentError("cached inside indices are empty for FixedLiminalGeometry"))
         cached_index = first(inside)
-        index, offset = cached_index[1:2]
-        child_inside = child_view(inside, (index, offset))
-        child_previous = isnothing(previous_hit) ? nothing : previous_hit[3:end]
+        index, offset = cached_index[1]
+        child_inside = child_view(inside, (cached_index[1],))
+        child_previous = isnothing(previous_hit) ? nothing : previous_hit[2:end]
     elseif !isnothing(previous_hit)
-        index, offset = previous_hit[1:2]
+        index, offset = previous_hit[1]
         child_inside = nothing
-        child_previous = previous_hit[3:end]
+        child_previous = previous_hit[2:end]
     else
         throw(ArgumentError("invalid FixedLiminalGeometry intersection state"))
     end
 
     child = Shift(geometry.geometries[index], offset)
     intersection = find_intersection(child, start, destination, child_previous, child_inside)
-    isnothing(intersection) ? nothing : (index, offset, intersection...)
+    isnothing(intersection) ? nothing : ((index, offset), intersection...)
 end
 
 for trait in (
