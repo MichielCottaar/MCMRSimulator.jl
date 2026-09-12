@@ -106,7 +106,7 @@ function find_intersection(group::GroupGeometry{N}, start::SVector{N, Float64}, 
         end
         candidate_previous_hit = isnothing(previous_hit) || previous_hit[1] != index ? nothing : previous_hit[2:end]
         candidate_inside = child_view(
-            find_intersection_requires_inside(typeof(candidate)), inside, (index,)
+            find_intersection_requires_inside(typeof(candidate)), inside, index
         )
         intersect = find_intersection(candidate, start, dest, candidate_previous_hit, candidate_inside)
         if isnothing(intersect)

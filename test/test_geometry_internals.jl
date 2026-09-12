@@ -365,8 +365,8 @@ end
         view = InsideViews.InsideView(indices)
         @test collect(view) == indices
 
-        first_child = InsideViews.child_view(view, (1,))
-        second_child = InsideViews.child_view(view, (2,))
+        first_child = InsideViews.child_view(view, 1)
+        second_child = InsideViews.child_view(view, 2)
         @test collect(first_child) == [()]
         @test collect(second_child) == [(1,), (2,)]
         @test !InsideViews.has_other(first_child, ())
@@ -375,6 +375,12 @@ end
         properties = Properties.GeometryTupleProperties((1., Properties.GeometryTupleProperties((2., 3.))))
         @test Properties.get_value(properties, view) == 6.
         @test Properties.get_value(properties.properties[2], second_child) == 5.
+
+        liminal_view = InsideViews.InsideView([
+            ((1, :offset_a), 1),
+            ((2, :offset_b), 1),
+        ])
+        @test collect(InsideViews.child_view(liminal_view, (1, :offset_a))) == [(1,)]
     end
 
     @testset "Intersection inside requirements" begin

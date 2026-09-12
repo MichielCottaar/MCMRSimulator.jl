@@ -116,7 +116,7 @@ function find_intersection(
             child_view(
                 find_intersection_requires_inside(typeof(repeat.geometry)),
                 inside,
-                (copy_shift,),
+                copy_shift,
             ),
         )
         isnothing(intersect) && continue

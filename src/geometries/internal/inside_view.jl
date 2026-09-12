@@ -15,10 +15,6 @@ InsideView(indices::V) where {V<:AbstractVector} = InsideView(indices, 1, length
 Base.length(view::InsideView) = max(view.last - view.first + 1, 0)
 Base.isempty(view::InsideView) = view.first > view.last
 
-function _local_component(view::InsideView, index, level)
-    index[view.depth + level]
-end
-
 function Base.iterate(view::InsideView, state=view.first)
     state > view.last && return nothing
     index = view.indices[state]
@@ -26,33 +22,33 @@ function Base.iterate(view::InsideView, state=view.first)
     local_index, state + 1
 end
 
-function _matches(view::InsideView, index, prefix)
-    length(index) >= view.depth + length(prefix) || return false
-    all(_local_component(view, index, level) == prefix[level] for level in eachindex(prefix))
+function _matches(view::InsideView, index, component)
+    length(index) > view.depth || return false
+    index[view.depth + 1] == component
 end
 
 child_view(::Val{false}, _, _) = nothing
 
-child_view(::Val{true}, ::Nothing, ::Tuple) = nothing
+child_view(::Val{true}, ::Nothing, _) = nothing
 
-function child_view(::Val{true}, view::InsideView, prefix::Tuple)
-    isempty(prefix) && return view
-    isempty(view) && return InsideView(view.indices, 1, 0, view.depth + length(prefix))
+function child_view(::Val{true}, view::InsideView, component)
+    component === nothing && return view
+    isempty(view) && return InsideView(view.indices, 1, 0, view.depth + 1)
 
     first = view.first
-    while first <= view.last && !_matches(view, view.indices[first], prefix)
+    while first <= view.last && !_matches(view, view.indices[first], component)
         first += 1
     end
     last = first
-    while last <= view.last && _matches(view, view.indices[last], prefix)
+    while last <= view.last && _matches(view, view.indices[last], component)
         last += 1
     end
-    InsideView(view.indices, first, last - 1, view.depth + length(prefix))
+    InsideView(view.indices, first, last - 1, view.depth + 1)
 end
 
-child_view(view::InsideView, prefix::Tuple) = child_view(Val(true), view, prefix)
-child_view(::Nothing, prefix::Tuple) = nothing
-child_view(indices::AbstractVector, prefix::Tuple) = child_view(Val(true), InsideView(indices), prefix)
+child_view(view::InsideView, component) = child_view(Val(true), view, component)
+child_view(::Nothing, component) = nothing
+child_view(indices::AbstractVector, component) = child_view(Val(true), InsideView(indices), component)
 
 function child_view(::Val{true}, view::InsideView, first::Int, last::Int, depth::Int)
     InsideView(view.indices, first, last, depth)
