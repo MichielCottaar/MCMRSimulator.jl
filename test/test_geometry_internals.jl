@@ -630,6 +630,36 @@ end
             sample.isinside == mr.isinside(surface_cells, sample.position, sample.reflection.intersection).inside_of
             for sample in surface_samples if !isnothing(sample.reflection)
         )
+
+        Random.seed!(1234)
+        annulus = mr.Geometries.fix(mr.Annuli(
+            inner=0.5,
+            outer=1.,
+            inner_surface_density=1.,
+            outer_surface_density=1.,
+        ))
+        annulus_samples = filter(
+            sample -> !isnothing(sample.reflection),
+            mr.spin_sampling(annulus, mr.BoundingBox(4.), 1.),
+        )
+        inner_samples = filter(
+            sample -> sample.reflection.intersection.indices[1] == 1,
+            annulus_samples,
+        )
+        @test !isempty(inner_samples)
+        @test all(
+            sample.isinside == mr.isinside(
+                annulus,
+                sample.position,
+                sample.reflection.intersection,
+            ).inside_of
+            for sample in inner_samples
+        )
+        @test all(any(index -> index[1] == 2, sample.isinside) for sample in inner_samples)
+        @test all(
+            any(index -> index == (1, 1), sample.isinside) == sample.reflection.intersection.inside
+            for sample in inner_samples
+        )
         @test_throws ArgumentError mr.LiminalGeometry(geometries=[])
         @test_throws ArgumentError mr.LiminalGeometry(geometries=[(0., mr.Spheres(radius=1.))])
         @test_throws ArgumentError mr.LiminalGeometry(
