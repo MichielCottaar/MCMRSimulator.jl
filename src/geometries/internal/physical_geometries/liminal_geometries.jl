@@ -5,6 +5,7 @@ import StaticArrays: SVector
 import LinearAlgebra: norm, ⋅
 import Random: rand, randperm
 import Distributions: Poisson
+import SphericalHarmonics
 import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_single_inside,
     get_intersection_params_requires_inside, inside_indices_eltype, intersection_type,
     inside_indices, find_intersection, find_intersection_requires_inside, get_child,
@@ -20,7 +21,122 @@ import ...InternalBoundingBoxes
 import ....BoundingBoxes: BoundingBoxNotSupported
 import ...Properties: GeometryProperties, GeometryLeafProperties
 
-export FixedLiminalGeometry, OuterSurfaceSampling, sample!
+export FixedLiminalGeometry, OuterSurfaceSampling, SphericalSurfaceArea, sample!
+
+const SPHERICAL_SURFACE_AREA_SAMPLE_COUNT = 100_000
+
+struct SphericalSurfaceArea{C}
+    degree::Int
+    coefficients::Vector{Float64}
+    legendre_coefficients::C
+end
+
+function _abs_dot_legendre_coefficients(degree::Int)
+    polynomials = [Float64[1.]]
+    degree == 0 && return [1.]
+    push!(polynomials, Float64[0., 1.])
+    for l in 2:degree
+        polynomial = zeros(Float64, l + 1)
+        for power in eachindex(polynomial)
+            power > 1 && (polynomial[power] += (2l - 1) * polynomials[l][power - 1])
+            power <= l - 1 && (polynomial[power] -= (l - 1) * polynomials[l - 1][power])
+            polynomial[power] /= l
+        end
+        push!(polynomials, polynomial)
+    end
+    coefficients = zeros(Float64, degree + 1)
+    for l in 0:2:degree
+        coefficients[l + 1] = 2 * sum(
+            coefficient / (power + 1)
+            for (power, coefficient) in enumerate(polynomials[l + 1])
+        )
+    end
+    coefficients
+end
+
+function SphericalSurfaceArea(
+    normals::AbstractVector{<:SVector{3, <:Real}};
+    degree::Integer=8,
+    sample_weight::Real=1.,
+)
+    degree >= 0 || throw(ArgumentError("degree must be non-negative"))
+    isfinite(sample_weight) || throw(ArgumentError("sample weight must be finite"))
+    degree = Int(degree)
+    legendre_coefficients = SphericalHarmonics.compute_coefficients(Float64, degree)
+    legendre_polynomials = SphericalHarmonics.allocate_p(Float64, degree)
+    harmonics = SphericalHarmonics.allocate_y(
+        Float64,
+        degree,
+        SphericalHarmonics.FullRange,
+    )
+    coefficients = zeros(Float64, (degree + 1)^2)
+    kernel_coefficients = _abs_dot_legendre_coefficients(degree)
+    for normal in normals
+        radius = norm(normal)
+        iszero(radius) && throw(ArgumentError("normals must be non-zero"))
+        unit_normal = normal / radius
+        θ = acos(unit_normal[3])
+        ϕ = atan(unit_normal[2], unit_normal[1])
+        SphericalHarmonics.computePlmcostheta!(
+            legendre_polynomials,
+            θ,
+            degree,
+            legendre_coefficients,
+        )
+        SphericalHarmonics.computeYlm!(
+            harmonics,
+            legendre_polynomials,
+            θ,
+            ϕ,
+            degree,
+            nothing,
+            SphericalHarmonics.FullRange,
+            SphericalHarmonics.RealHarmonics(),
+        )
+        for l in 0:degree
+            factor = π * kernel_coefficients[l + 1] * sample_weight
+            offset = l^2
+            for mode in 1:(2l + 1)
+                coefficients[offset + mode] += factor * harmonics[offset + mode]
+            end
+        end
+    end
+    SphericalSurfaceArea(degree, coefficients, legendre_coefficients)
+end
+
+function projected_surface_area(
+    surface_area::SphericalSurfaceArea,
+    direction::SVector{3, <:Real},
+)
+    radius = norm(direction)
+    iszero(radius) && throw(ArgumentError("direction must be non-zero"))
+    unit_direction = direction / radius
+    θ = acos(unit_direction[3])
+    ϕ = atan(unit_direction[2], unit_direction[1])
+    legendre_polynomials = SphericalHarmonics.allocate_p(Float64, surface_area.degree)
+    SphericalHarmonics.computePlmcostheta!(
+        legendre_polynomials,
+        θ,
+        surface_area.degree,
+        surface_area.legendre_coefficients,
+    )
+    harmonics = SphericalHarmonics.allocate_y(
+        Float64,
+        surface_area.degree,
+        SphericalHarmonics.FullRange,
+    )
+    SphericalHarmonics.computeYlm!(
+        harmonics,
+        legendre_polynomials,
+        θ,
+        ϕ,
+        surface_area.degree,
+        nothing,
+        SphericalHarmonics.FullRange,
+        SphericalHarmonics.RealHarmonics(),
+    )
+    sum(surface_area.coefficients[index] * harmonics[index] for index in eachindex(harmonics))
+end
 
 """Mutable library of sampled outer-surface data for liminal cells.
 
@@ -58,6 +174,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
     extracellular_fraction::Float64
     total_surface_area::Float64
     weighted_cell_volume::Float64
+    spherical_surface_area::SphericalSurfaceArea
     outer_surface_sampling::OuterSurfaceSampling{I}
 
     function FixedLiminalGeometry(
@@ -87,12 +204,23 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
             _merge_types(intersection_type(child) for child in _child_types(child_type)),
             Bool,
         )
+        spherical_sampling = _sample_outer_surface(
+            geometries,
+            fractions,
+            total_surface_area,
+            SPHERICAL_SURFACE_AREA_SAMPLE_COUNT,
+            surface_index_type,
+        )
         fixed = new{child_type, surface_index_type}(
             convert(Vector{child_type}, collect(geometries)),
             fractions,
             Float64(extracellular_fraction),
             total_surface_area,
             weighted_cell_volume,
+            SphericalSurfaceArea(
+                spherical_sampling.normals;
+                sample_weight=spherical_sampling.weight,
+            ),
             OuterSurfaceSampling{surface_index_type}(
                 SVector{3, Float64}[],
                 SVector{3, Float64}[],
@@ -119,7 +247,7 @@ function inverse_mean_free_path(
     iszero(geometry.extracellular_fraction) && return Inf
     cell_number_density = (1 - geometry.extracellular_fraction) /
         (geometry.extracellular_fraction * geometry.weighted_cell_volume)
-    cell_number_density * projected_surface_area(geometry.outer_surface_sampling, direction)
+    cell_number_density * projected_surface_area(geometry.spherical_surface_area, direction)
 end
 
 function _is_outer_surface_sample(geometry::PhysicalGeometry, position, full_index)
@@ -137,20 +265,47 @@ function sample!(
     N::Integer=1000,
 )
     N >= 0 || throw(ArgumentError("number of surface samples must be non-negative"))
-    empty!(sampling.positions)
-    empty!(sampling.normals)
-    empty!(sampling.cell_indices)
-    empty!(sampling.surface_indices)
-    sampling.weight = 0.
+    sampled = _sample_outer_surface(
+        geometry.geometries,
+        geometry.number_fractions,
+        geometry.total_surface_area,
+        N,
+        eltype(geometry.outer_surface_sampling.surface_indices),
+    )
+    sampling.positions = sampled.positions
+    sampling.normals = sampled.normals
+    sampling.cell_indices = sampled.cell_indices
+    sampling.surface_indices = sampled.surface_indices
+    sampling.weight = sampled.weight
     sampling.index_to_sample = 1
-    iszero(N) && return sampling
-    iszero(geometry.total_surface_area) && return sampling
+    sampling
+end
 
-    sample_density = N / geometry.total_surface_area
+function _sample_outer_surface(
+    geometries,
+    number_fractions,
+    total_surface_area::Float64,
+    N::Integer,
+    ::Type{I},
+) where {I}
+    sampling = OuterSurfaceSampling{I}(
+        SVector{3, Float64}[],
+        SVector{3, Float64}[],
+        Int[],
+        I[],
+        0.,
+        1,
+        ReentrantLock(),
+    )
+    N >= 0 || throw(ArgumentError("number of surface samples must be non-negative"))
+    iszero(N) && return sampling
+    iszero(total_surface_area) && return sampling
+
+    sample_density = N / total_surface_area
     sampling.weight = inv(sample_density)
     density = GeometryLeafProperties(1.0)
-    for (cell_index, child) in enumerate(geometry.geometries)
-        scale_density = sample_density * geometry.number_fractions[cell_index]
+    for (cell_index, child) in enumerate(geometries)
+        scale_density = sample_density * number_fractions[cell_index]
         positions, indices = random_surface_positions(
             child,
             density,

@@ -383,6 +383,36 @@ end
         @test collect(InsideViews.child_view(liminal_view, (1, :offset_a))) == [(1,)]
     end
 
+    @testset "Spherical surface area" begin
+        Random.seed!(1234)
+        N = 10_000
+        normals = [
+            let normal = SVector(randn(), randn(), randn())
+                normal / norm(normal)
+            end
+            for _ in 1:N
+        ]
+        sample_weight = 4π / N
+        spherical_area = GI.PhysicalGeometries.LiminalGeometries.SphericalSurfaceArea(
+            normals;
+            degree=8,
+            sample_weight=sample_weight,
+        )
+        @test length(spherical_area.coefficients) == 81
+        for direction in (SVector(1., 0., 0.), SVector(1., 2., 3.))
+            unit_direction = direction / norm(direction)
+            expected = sample_weight * sum(abs(normal ⋅ unit_direction) for normal in normals) / 2
+            @test GI.PhysicalGeometries.LiminalGeometries.projected_surface_area(
+                spherical_area,
+                direction,
+            ) ≈ expected atol=0.01
+        end
+        @test_throws ArgumentError GI.PhysicalGeometries.LiminalGeometries.projected_surface_area(
+            spherical_area,
+            zero(SVector{3}),
+        )
+    end
+
     @testset "Intersection inside requirements" begin
         sphere = BaseObstructions.Sphere(1.0)
         requires_inside = GI.PhysicalGeometries.get_intersection_params_requires_inside
@@ -601,6 +631,8 @@ end
         @test fixed_cells.geometry.outer_surface_sampling isa
             GI.PhysicalGeometries.LiminalGeometries.OuterSurfaceSampling
         @test fixed_cells.geometry.total_surface_area > 0
+        spherical_surface_area = fixed_cells.geometry.spherical_surface_area
+        spherical_coefficients = copy(spherical_surface_area.coefficients)
         sampling = fixed_cells.geometry.outer_surface_sampling
         GI.PhysicalGeometries.LiminalGeometries.sample!(sampling, fixed_cells.geometry, 100)
         @test !isempty(sampling.positions)
@@ -612,6 +644,11 @@ end
             GI.projected_surface_area(sampling, -direction)
         @test GI.inverse_mean_free_path(fixed_cells.geometry, direction) ≈
             mr.inverse_mean_free_path(fixed_cells, direction)
+        @test spherical_surface_area.coefficients == spherical_coefficients
+        @test GI.inverse_mean_free_path(fixed_cells.geometry, direction) ≈
+            (1 - fixed_cells.geometry.extracellular_fraction) /
+            (fixed_cells.geometry.extracellular_fraction * fixed_cells.geometry.weighted_cell_volume) *
+            GI.projected_surface_area(spherical_surface_area, direction)
         @test_throws ArgumentError GI.projected_surface_area(sampling, zero(SVector{3}))
         @test fixed_cells.geometry.geometries isa Vector{<:GI.PhysicalGeometry}
         @test eltype(fixed_cells.geometry.geometries) !== GI.PhysicalGeometry
