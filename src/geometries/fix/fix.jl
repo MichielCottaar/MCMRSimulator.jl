@@ -47,9 +47,9 @@ function _merge_vector_properties(fixed, field_name::Symbol)
     )
 end
 
-function fix(collection::LiminalGeometry)
+function fix(collection::LiminalGeometry; kwargs...)
     fixed = [
-        geometry isa FixedGeometry ? geometry : fix(geometry)
+        geometry isa FixedGeometry ? geometry : fix(geometry; kwargs...)
         for (_, geometry) in collection.geometries
     ]
     for geometry in fixed
