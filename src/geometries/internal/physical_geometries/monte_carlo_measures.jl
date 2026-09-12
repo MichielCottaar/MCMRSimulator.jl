@@ -71,6 +71,16 @@ function estimate_volume(
     box_volume * inside_count / current_nsamples
 end
 
+"""
+    estimate_surface(geometry; bounding_box=nothing, density=1.0,
+        minimum_samples=10_000, maximum_attempts=5, outer=false)
+
+Estimate the surface area of a physical geometry using Monte Carlo sampling.
+When `outer=true`, retain only surfaces exposed to the outside of the union of
+the geometry's obstructions. Enclosed surfaces, such as the inner surface of
+an annulus, are excluded. Both sides of retained boundary surfaces remain
+represented by the samples.
+"""
 function estimate_surface(
     geometry::PhysicalGeometry{N};
     bounding_box=nothing,

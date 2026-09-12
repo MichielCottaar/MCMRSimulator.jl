@@ -259,8 +259,10 @@ end
     surface(fixed_geometry; bounding_box=nothing, outer=false, kwargs...)
 
 Estimate the total surface area of a fixed geometry using Monte Carlo sampling.
-When `outer=true`, only surfaces exposed to the outside of the geometry are
-included; surfaces enclosed by another obstruction are excluded.
+When `outer=true`, only surfaces exposed to the outside of the union of the
+geometry's obstructions are included. Enclosed surfaces, such as the inner
+surface of an annulus, are excluded. Both sides of retained boundary surfaces
+remain represented by the samples.
 """
 function surface(fixed_geometry::FixedGeometry; bounding_box=nothing, outer=false, kwargs...)
     contains_repeat(typeof(fixed_geometry.geometry)) &&
