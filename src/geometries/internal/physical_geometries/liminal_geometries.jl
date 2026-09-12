@@ -182,6 +182,10 @@ function inside_indices(
     position::SVector{3, Float64},
     intersection,
 )
+    isnothing(intersection) && throw(ArgumentError(
+        "inside_indices is not defined for FixedLiminalGeometry without cell context; " *
+        "use the cached inside indices instead",
+    ))
     cell_index, offset = intersection[1:2]
     child = Shift(geometry.geometries[cell_index], offset)
     child_indices = inside_indices_for_any_type(child, position - offset, intersection[3:end])
@@ -302,7 +306,7 @@ function find_intersection(
     displacement = destination - start
     distance = norm(displacement)
     iszero(distance) && return nothing
-    liminal_step = isnothing(inside) &&
+    liminal_step = (isnothing(inside) || isempty(inside)) &&
         (isnothing(previous_hit) || !previous_hit[end - 1])
 
     if liminal_step
