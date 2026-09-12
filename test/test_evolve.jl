@@ -127,8 +127,6 @@
         f_extra = 0.2
         number_fraction = 1.
         radius = 1.
-        rho = 10.
-        bounding_box = mr.BoundingBox(2.)
         geometry = mr.LiminalGeometry(
             geometries=[(1., mr.Spheres(radius=radius, permeability=Inf))],
             extracellular_fraction=f_extra,
@@ -154,8 +152,8 @@
         end
         mean_counts = vec(mean(reduce(hcat, compartment_history), dims=2))
         expected = [
-            f_extra * prod(bounding_box.upper - bounding_box.lower) * rho,
-            (1 - f_extra) * number_fraction * (4π * radius^3 / 3) * rho,
+            f_extra * length(snapshot),
+            (1 - f_extra) * number_fraction * length(snapshot),
         ]
         @test mean_counts ≈ expected rtol=0.2
     end
