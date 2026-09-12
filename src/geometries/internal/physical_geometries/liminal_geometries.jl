@@ -534,7 +534,12 @@ function find_intersection(
         isempty(inside) && throw(ArgumentError("cached inside indices are empty for FixedLiminalGeometry"))
         cached_index = inside.indices[inside.first][inside.depth + 1] :: Tuple{Int, SVector{3, Float64}}
         index, offset = cached_index
-        child_inside = child_view(inside, cached_index)
+        child_inside = InsideView(
+            inside.indices,
+            inside.first,
+            inside.last,
+            inside.depth + 1,
+        )
         child_previous = isnothing(previous_hit) ? nothing : previous_hit[2:end]
     elseif !isnothing(previous_hit)
         index, offset = previous_hit[1]

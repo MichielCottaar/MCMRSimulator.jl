@@ -381,6 +381,16 @@ end
             ((2, :offset_b), 1),
         ])
         @test collect(InsideViews.child_view(liminal_view, (1, :offset_a))) == [(1,)]
+
+        narrowed_view = InsideViews.InsideView(indices, 2, 3, 0)
+        deeper_view = InsideViews.InsideView(
+            narrowed_view.indices,
+            narrowed_view.first,
+            narrowed_view.last,
+            narrowed_view.depth + 1,
+        )
+        @test (deeper_view.first, deeper_view.last, deeper_view.depth) == (2, 3, 1)
+        @test collect(deeper_view) == [(1,), (2,)]
     end
 
     @testset "Spherical surface area" begin
