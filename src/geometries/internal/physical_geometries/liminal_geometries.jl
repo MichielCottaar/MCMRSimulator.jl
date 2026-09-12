@@ -3,7 +3,7 @@ module LiminalGeometries
 
 import StaticArrays: SVector
 import LinearAlgebra: norm, ⋅
-import Random: rand
+import Random: rand, randperm
 import Distributions: Poisson
 import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_single_inside,
     get_intersection_params_requires_inside, inside_indices_eltype, intersection_type,
@@ -121,6 +121,7 @@ function sample!(
     empty!(sampling.normals)
     empty!(sampling.cell_indices)
     empty!(sampling.surface_indices)
+    sampling.weight = 0.
     iszero(N) && return sampling
     iszero(geometry.total_surface_area) && return sampling
 
@@ -150,6 +151,11 @@ function sample!(
             push!(sampling.surface_indices, to_property_index(child, collision_indices))
         end
     end
+    permutation = randperm(length(sampling.positions))
+    sampling.positions .= sampling.positions[permutation]
+    sampling.normals .= sampling.normals[permutation]
+    sampling.cell_indices .= sampling.cell_indices[permutation]
+    sampling.surface_indices .= sampling.surface_indices[permutation]
     sampling
 end
 
