@@ -10,7 +10,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_singl
     inside_indices, find_intersection, find_intersection_requires_inside, get_child,
     volume_sampling, random_surface_positions, bound_intersection_type,
     _merge_types, InternalBoundingBox, estimate_surface, estimate_volume,
-    get_intersection_params, to_inside_index, to_property_index,
+    get_intersection_params, to_inside_index,
     projected_surface_area, inverse_mean_free_path
 import ..Groups: GeometryTuple
 import ..Groups: inside_indices_for_any_type
@@ -21,7 +21,11 @@ import ...Properties: GeometryProperties, GeometryLeafProperties
 
 export FixedLiminalGeometry, OuterSurfaceSampling, sample!
 
-"""Mutable library of sampled outer-surface data for liminal cells."""
+"""Mutable library of sampled outer-surface data for liminal cells.
+
+`surface_indices` stores raw intersection indices followed by the sampled
+inside-side flag.
+"""
 mutable struct OuterSurfaceSampling
     positions::Vector{SVector{3, Float64}}
     normals::Vector{SVector{3, Float64}}
@@ -138,7 +142,6 @@ function sample!(
         )
         for (position, full_index) in zip(positions, indices)
             _is_outer_surface_sample(child, position, full_index) || continue
-            collision_indices = full_index[1:(end - 1)]
             params = get_intersection_params(
                 child,
                 position,
@@ -149,7 +152,7 @@ function sample!(
             push!(sampling.positions, position)
             push!(sampling.normals, normal)
             push!(sampling.cell_indices, cell_index)
-            push!(sampling.surface_indices, to_property_index(child, collision_indices))
+            push!(sampling.surface_indices, full_index)
         end
     end
     permutation = randperm(length(sampling.positions))
@@ -292,7 +295,39 @@ function find_intersection(
     previous_hit=nothing,
     inside=nothing,
 )
-    if !isnothing(inside)
+    displacement = destination - start
+    distance = norm(displacement)
+    iszero(distance) && return nothing
+    liminal_step = isnothing(inside) &&
+        (isnothing(previous_hit) || !previous_hit[end - 1])
+
+    if liminal_step
+        direction = displacement / distance
+        inverse_path = inverse_mean_free_path(geometry, direction)
+        iszero(inverse_path) && return nothing
+        encounter_probability = -expm1(-inverse_path * distance)
+        rand() < encounter_probability || return nothing
+
+        encounter_distance = -log1p(-rand() * encounter_probability) / inverse_path
+        sampling = geometry.outer_surface_sampling
+        sample_weights = [abs(normal ⋅ direction) for normal in sampling.normals]
+        target = rand() * sum(sample_weights)
+        selected = 1
+        cumulative = sample_weights[1]
+        while cumulative < target
+            selected += 1
+            cumulative += sample_weights[selected]
+        end
+        encounter_position = start + encounter_distance * direction
+        offset = encounter_position - sampling.positions[selected]
+        return (
+            sampling.cell_indices[selected],
+            offset,
+            sampling.surface_indices[selected][1:(end - 1)]...,
+            false,
+            encounter_distance / distance,
+        )
+    elseif !isnothing(inside)
         isempty(inside) && throw(ArgumentError("cached inside indices are empty for FixedLiminalGeometry"))
         cached_index = first(inside)
         index, offset = cached_index[1:2]
@@ -303,10 +338,7 @@ function find_intersection(
         child_inside = nothing
         child_previous = previous_hit[3:end]
     else
-        throw(ArgumentError(
-            "find_intersection for FixedLiminalGeometry requires cached inside indices " *
-            "or a previous intersection",
-        ))
+        throw(ArgumentError("invalid FixedLiminalGeometry intersection state"))
     end
 
     child = Shift(geometry.geometries[index], offset)

@@ -628,6 +628,21 @@ end
             position ⋅ normal > 0
             for (position, normal) in zip(sphere_sampling.positions, sphere_sampling.normals)
         )
+        Random.seed!(1234)
+        liminal_intersection = GI.PhysicalGeometries.find_intersection(
+            sphere_geometry,
+            SVector(0., 0., 0.),
+            SVector(10., 0., 0.),
+        )
+        @test liminal_intersection !== nothing
+        @test liminal_intersection[end - 1] === false
+        @test 0 < liminal_intersection[end] < 1
+        @test GI.PhysicalGeometries.find_intersection(
+            sphere_geometry,
+            SVector(0., 0., 0.),
+            SVector(10., 0., 0.),
+            liminal_intersection,
+        ) !== nothing
         @test fixed_cells.volume.R1 isa GI.Properties.GeometryVectorProperties
         @test length(fixed_cells.volume.R1.properties) == 2
         @test GI.PhysicalGeometries.child_type(typeof(fixed_cells.geometry)) ===
