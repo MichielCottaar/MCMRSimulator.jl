@@ -565,6 +565,20 @@ end
         Random.seed!(1234)
         @test mr.surface(fixed_sphere; density=100., minimum_samples=1_000) ≈ 4π rtol=0.1
 
+        annulus = mr.fix(mr.Annuli(inner=0.5, outer=1.))
+        annulus_box = mr.BoundingBox(2.)
+        Random.seed!(1234)
+        all_annulus_surface = mr.surface(
+            annulus; bounding_box=annulus_box, density=100., minimum_samples=1_000,
+        )
+        Random.seed!(1234)
+        outer_annulus_surface = mr.surface(
+            annulus; bounding_box=annulus_box, density=100., minimum_samples=1_000, outer=true,
+        )
+        axial_length = 2 * annulus_box.upper[3]
+        @test all_annulus_surface ≈ axial_length * 2π * (0.5 + 1.) rtol=0.1
+        @test outer_annulus_surface ≈ axial_length * 2π rtol=0.1
+
         repeating_sphere = mr.fix(mr.Spheres(radius=1., repeats=[3., 3., 3.]))
         @test_throws ArgumentError mr.volume(repeating_sphere)
         @test_throws ArgumentError mr.surface(repeating_sphere)

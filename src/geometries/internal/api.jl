@@ -255,13 +255,20 @@ function volume(fixed_geometry::FixedGeometry; bounding_box=nothing, kwargs...)
         estimate_volume(geometry; bounding_box=InternalBoundingBox(bounding_box), kwargs...)
 end
 
-function surface(fixed_geometry::FixedGeometry; bounding_box=nothing, kwargs...)
+"""
+    surface(fixed_geometry; bounding_box=nothing, outer=false, kwargs...)
+
+Estimate the total surface area of a fixed geometry using Monte Carlo sampling.
+When `outer=true`, only surfaces exposed to the outside of the geometry are
+included; surfaces enclosed by another obstruction are excluded.
+"""
+function surface(fixed_geometry::FixedGeometry; bounding_box=nothing, outer=false, kwargs...)
     contains_repeat(typeof(fixed_geometry.geometry)) &&
         throw(ArgumentError("Monte Carlo surface estimates do not support repeating geometries"))
     geometry = fixed_geometry.geometry
     estimate = isnothing(bounding_box) ?
-        estimate_surface(geometry; kwargs...) :
-        estimate_surface(geometry; bounding_box=InternalBoundingBox(bounding_box), kwargs...)
+        estimate_surface(geometry; outer, kwargs...) :
+        estimate_surface(geometry; bounding_box=InternalBoundingBox(bounding_box), outer, kwargs...)
     estimate.area
 end
 
