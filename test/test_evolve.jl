@@ -86,6 +86,79 @@
             end
         end
     end
+    @testset "Liminal extracellular encounters" begin
+        geometry = mr.fix(mr.LiminalGeometry(
+            geometries=[(1., mr.Spheres(radius=1., permeability=Inf))],
+            extracellular_fraction=0.2,
+        ))
+        internal = mr.Geometries.Internal
+        Random.seed!(1234)
+        collision = internal.detect_intersection(
+            geometry,
+            SA[0., 0., 0.],
+            SA[10., 0., 0.],
+        )
+        @test collision !== nothing
+        @test 0 < collision.distance < 1
+        @test !collision.inside
+
+        simulation = mr.Simulation([], geometry=geometry, diffusivity=0.1, timestep=0.2)
+        sampling = mr.spin_sampling(geometry, mr.BoundingBox(2.), 1.)
+        @test any(isempty, getfield.(sampling, :isinside))
+        @test any(!isempty, getfield.(sampling, :isinside))
+        snapshot = mr.Snapshot(sampling, 0.)
+        evolved = mr.evolve(snapshot, simulation, 0.2)
+        @test length(evolved.spins) == length(snapshot.spins)
+    end
+    @testset "Fallback bounding box for unsupported geometry" begin
+        liminal = mr.fix(mr.LiminalGeometry(
+            geometries=[(1., mr.Spheres(radius=1.))],
+            extracellular_fraction=0.2,
+        ))
+        simulation = mr.Simulation([], geometry=liminal, diffusivity=0.)
+        snapshot = mr.Snapshot(1000, simulation)
+        @test length(snapshot) == 1000
+        @test all(
+            all(position .>= -500.) && all(position .<= 500.)
+            for position in mr.position.(snapshot)
+        )
+    end
+    @testset "Liminal compartment density remains stable" begin
+        f_extra = 0.2
+        number_fraction = 1.
+        radius = 1.
+        rho = 10.
+        bounding_box = mr.BoundingBox(2.)
+        geometry = mr.LiminalGeometry(
+            geometries=[(1., mr.Spheres(radius=radius, permeability=Inf))],
+            extracellular_fraction=f_extra,
+        )
+        simulation = mr.Simulation([], geometry=geometry, diffusivity=0.1, timestep=0.2)
+        Random.seed!(4321)
+        snapshot = mr.Snapshot(1000, simulation)
+
+        function compartment_counts(snapshot)
+            counts = zeros(Int, 2)
+            for spin in snapshot.spins
+                isempty(spin.isinside) ?
+                    (counts[1] += 1) : (counts[first(spin.isinside)[1] + 1] += 1)
+            end
+            counts
+        end
+
+        compartment_history = Vector{Vector{Int}}()
+        push!(compartment_history, compartment_counts(snapshot))
+        for time in 1:6
+            snapshot = mr.evolve(snapshot, simulation, time * 0.2)
+            push!(compartment_history, compartment_counts(snapshot))
+        end
+        mean_counts = vec(mean(reduce(hcat, compartment_history), dims=2))
+        expected = [
+            f_extra * prod(bounding_box.upper - bounding_box.lower) * rho,
+            (1 - f_extra) * number_fraction * (4π * radius^3 / 3) * rho,
+        ]
+        @test mean_counts ≈ expected rtol=0.2
+    end
     @testset "Run simulation with multiple sequences at once" begin
         sequences = [
             build_sequence([mr.PulseEvent(flip_angle=0, phase=0.), 2., :readout, 1.]),
