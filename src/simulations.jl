@@ -4,7 +4,7 @@ Defines the main [`Simulation`](@ref) object.
 module Simulations
 import StaticArrays: SVector, SizedVector
 import ..Geometries: ObstructionGroup, fix
-import ..Geometries: BoundingBox
+import ..Geometries: BoundingBox, BoundingBoxNotSupported
 import ..Geometries.Internal: FixedGeometry, susceptibility_off_resonance, isinside, inside_cache_type
 import ..Reflections: previous_hit
 import ..Spins: Spin, Snapshot, SpinOrientation, static_vector_type, stuck, spin_type
@@ -153,7 +153,7 @@ function _default_bounding_box(simulation::Simulation)
     try
         return BoundingBox(simulation.geometry)
     catch error
-        (error isa ArgumentError || error isa DimensionMismatch) || rethrow()
+        error isa BoundingBoxNotSupported || rethrow()
         return BoundingBox(500)
     end
 end

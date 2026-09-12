@@ -4,6 +4,7 @@ module Repeats
 import StaticArrays: SVector
 import Random: rand
 import ...InternalBoundingBoxes
+import ....BoundingBoxes: BoundingBoxNotSupported
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _translate_native, to_property_index
 import ...Properties: GeometryProperties
@@ -226,7 +227,9 @@ function distance_to_surface(
     )
 end
 
-InternalBoundingBox(::Repeat) = throw(ArgumentError("repeated geometries do not have a finite bounding box"))
+InternalBoundingBox(::Repeat) = throw(BoundingBoxNotSupported(
+    "repeated geometries do not have a finite bounding box",
+))
 
 size_scale(repeat::Repeat) = min(size_scale(repeat.geometry), minimum(repeat.repeats))
 

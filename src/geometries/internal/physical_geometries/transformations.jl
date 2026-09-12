@@ -5,6 +5,7 @@ import StaticArrays: SMatrix, SVector
 import LinearAlgebra: norm, nullspace, cross
 import Random: rand
 import ...InternalBoundingBoxes
+import ....BoundingBoxes: BoundingBoxNotSupported
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result, _translate_native
 import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
@@ -137,7 +138,9 @@ end
 
 InternalBoundingBox(transformation::Rotate{N, M}) where {N, M} =
     N == M ? from_child_coordinates(transformation, InternalBoundingBox(transformation.geometry)) :
-        throw(ArgumentError("dimension-reducing Rotate transformations do not have a finite bounding box"))
+        throw(BoundingBoxNotSupported(
+            "dimension-reducing Rotate transformations do not have a finite bounding box",
+        ))
 
 """Transform a value from parent coordinates to child coordinates."""
 function to_child_coordinates end

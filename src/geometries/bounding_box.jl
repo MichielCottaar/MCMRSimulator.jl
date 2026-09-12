@@ -3,6 +3,15 @@ module BoundingBoxes
 
 import StaticArrays: SVector
 
+export BoundingBox, BoundingBoxNotSupported, lower, upper
+
+"""Raised when a geometry intentionally has no finite bounding box."""
+struct BoundingBoxNotSupported <: Exception
+    message::String
+end
+
+Base.showerror(io::IO, error::BoundingBoxNotSupported) = print(io, error.message)
+
 """An axis-aligned bounding box with three-dimensional bounds."""
 struct BoundingBox
     lower::SVector{3, Float64}

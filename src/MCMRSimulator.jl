@@ -83,9 +83,9 @@ import .Geometries:
 export Annuli, Cylinders, Walls, Spheres, FiniteCylinders, Mesh, load_mesh, read_swc, read_swc_raw, random_positions_radii, BendyCylinder, write_geometry, read_geometry_json, read_geometry, LiminalGeometry
 @compat public ObstructionGroup, IndexedObstruction, Annulus, Cylinder, Wall, Sphere, FiniteCylinder, Ring, Triangle, nvolumes, fix_susceptibility, fix, SWCFile, SWCNode 
 
-import .Geometries: BoundingBox
+import .Geometries: BoundingBox, BoundingBoxNotSupported
 import .Geometries.Internal: FixedGeometry, surface_relaxation, surface_density, dwell_time, permeability, volume, surface, inverse_mean_free_path
-export BoundingBox 
+export BoundingBox, BoundingBoxNotSupported
 @compat public FixedGeometry, surface_relaxation, surface_density, dwell_time, permeability, volume, surface, inverse_mean_free_path
 
 import .Properties: GlobalProperties, R1, R2, off_resonance

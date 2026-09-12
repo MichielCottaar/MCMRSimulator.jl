@@ -581,7 +581,7 @@ end
 
         repeating_sphere = mr.fix(mr.Spheres(radius=1., repeats=[3., 3., 3.]))
         @test_throws ArgumentError mr.volume(repeating_sphere)
-        @test_throws ArgumentError mr.surface(repeating_sphere)
+        @test_throws mr.BoundingBoxNotSupported mr.surface(repeating_sphere)
 
         cells = mr.LiminalGeometry(
             geometries=[(1., mr.Spheres(radius=1.)), (2., mr.fix(mr.Spheres(radius=2.)))],
@@ -969,7 +969,7 @@ end
         Shift(BaseObstructions.Sphere(1.0), [3.0, 0.0, 0.0]),
         [2.0, 4.0, 4.0],
     )
-    @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(repeated_sphere)
+        @test_throws mr.BoundingBoxNotSupported BoundingBoxes.InternalBoundingBox(repeated_sphere)
     repeated_hit = GI.PhysicalGeometries.find_intersection(
         repeated_sphere,
         SVector(-5.0, 0.0, 0.0),
@@ -1339,7 +1339,7 @@ end
     @test projected_params.inside
     @test projected_params.normal ≈ SVector(1.0, 2.0, 0.0) / sqrt(5)
     @test !projected_params.hit_gap
-    @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(projection)
+    @test_throws mr.BoundingBoxNotSupported BoundingBoxes.InternalBoundingBox(projection)
 
     geometry_1d = TestGeometry{1}(0)
     projection_z = Rotate(geometry_1d, SMatrix{3, 1, Float64}([0.0; 0.0; 1.0]))

@@ -17,6 +17,7 @@ import ..Groups: inside_indices_for_any_type
 import ..Transformations: Shift
 import ...InsideViews: InsideView, child_view
 import ...InternalBoundingBoxes
+import ....BoundingBoxes: BoundingBoxNotSupported
 import ...Properties: GeometryProperties, GeometryLeafProperties
 
 export FixedLiminalGeometry, OuterSurfaceSampling, sample!
@@ -102,6 +103,10 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
         fixed
     end
 end
+
+InternalBoundingBox(::FixedLiminalGeometry) = throw(BoundingBoxNotSupported(
+    "liminal geometries do not have a finite bounding box",
+))
 
 function inverse_mean_free_path(
     geometry::FixedLiminalGeometry,
