@@ -130,7 +130,7 @@ end
 function sample!(
     sampling::OuterSurfaceSampling,
     geometry::FixedLiminalGeometry,
-    N::Integer=10_000,
+    N::Integer=1000,
 )
     N >= 0 || throw(ArgumentError("number of surface samples must be non-negative"))
     empty!(sampling.positions)
