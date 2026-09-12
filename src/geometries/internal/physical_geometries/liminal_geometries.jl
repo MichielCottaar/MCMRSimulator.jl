@@ -362,7 +362,7 @@ function find_intersection(
         cached_index = first(inside)
         index, offset = cached_index[1:2]
         child_inside = child_view(inside, (index, offset))
-        child_previous = nothing
+        child_previous = isnothing(previous_hit) ? nothing : previous_hit[3:end]
     elseif !isnothing(previous_hit)
         index, offset = previous_hit[1:2]
         child_inside = nothing
