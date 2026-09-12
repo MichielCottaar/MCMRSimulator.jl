@@ -581,7 +581,7 @@ end
 
         repeating_sphere = mr.fix(mr.Spheres(radius=1., repeats=[3., 3., 3.]))
         @test_throws ArgumentError mr.volume(repeating_sphere)
-        @test_throws mr.BoundingBoxNotSupported mr.surface(repeating_sphere)
+        @test_throws ArgumentError mr.surface(repeating_sphere)
 
         cells = mr.LiminalGeometry(
             geometries=[(1., mr.Spheres(radius=1.)), (2., mr.fix(mr.Spheres(radius=2.)))],
@@ -623,7 +623,7 @@ end
             ReentrantLock(),
         )
         sphere_geometry = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(
-            [BaseObstructions.Sphere(1.)], [1.], 0.,
+            [BaseObstructions.Sphere(1.)], [1.], 0.2,
         )
         GI.PhysicalGeometries.LiminalGeometries.sample!(sphere_sampling, sphere_geometry, 100)
         @test all(
