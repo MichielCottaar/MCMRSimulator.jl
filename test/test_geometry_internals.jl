@@ -637,7 +637,7 @@ end
             for (position, normal) in zip(sphere_sampling.positions, sphere_sampling.normals)
         )
         Random.seed!(1234)
-        liminal_intersection = GI.PhysicalGeometries.find_intersection(
+        liminal_intersection = @inferred GI.PhysicalGeometries.find_intersection(
             sphere_geometry,
             SVector(0., 0., 0.),
             SVector(10., 0., 0.),

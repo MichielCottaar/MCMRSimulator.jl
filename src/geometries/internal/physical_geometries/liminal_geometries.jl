@@ -52,13 +52,13 @@ function projected_surface_area(
     sampling.weight * projected_sum
 end
 
-struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
+struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
     geometries::Vector{P}
     number_fractions::Vector{Float64}
     extracellular_fraction::Float64
     total_surface_area::Float64
     weighted_cell_volume::Float64
-    outer_surface_sampling::OuterSurfaceSampling
+    outer_surface_sampling::OuterSurfaceSampling{I}
 
     function FixedLiminalGeometry(
         geometries::AbstractVector{<:PhysicalGeometry{3}},
@@ -87,7 +87,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
             _merge_types(intersection_type(child) for child in _child_types(child_type)),
             Bool,
         )
-        fixed = new{child_type}(
+        fixed = new{child_type, surface_index_type}(
             convert(Vector{child_type}, collect(geometries)),
             fractions,
             Float64(extracellular_fraction),
