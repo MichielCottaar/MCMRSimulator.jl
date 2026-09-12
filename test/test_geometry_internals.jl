@@ -600,6 +600,12 @@ end
         @test !isempty(sampling.positions)
         @test length(sampling.positions) == length(sampling.normals) ==
             length(sampling.cell_indices) == length(sampling.surface_indices) == length(sampling.weights)
+        direction = SVector(1., 2., 3.)
+        @test GI.projected_surface_area(sampling, direction) ≈
+            GI.projected_surface_area(sampling, -direction)
+        @test GI.inverse_mean_free_path(fixed_cells.geometry, direction) ≈
+            mr.inverse_mean_free_path(fixed_cells, direction)
+        @test_throws ArgumentError GI.projected_surface_area(sampling, zero(SVector{3}))
         @test fixed_cells.geometry.geometries isa Vector{<:GI.PhysicalGeometry}
         @test eltype(fixed_cells.geometry.geometries) !== GI.PhysicalGeometry
         @test fixed_cells.geometry.number_fractions ≈ [1 / 3, 2 / 3]

@@ -2,14 +2,16 @@
 module LiminalGeometries
 
 import StaticArrays: SVector
+import LinearAlgebra: norm, ⋅
 import Random: rand
 import Distributions: Poisson
 import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_single_inside,
     get_intersection_params_requires_inside, inside_indices_eltype, intersection_type,
     inside_indices, find_intersection, find_intersection_requires_inside, get_child,
     volume_sampling, random_surface_positions, bound_intersection_type,
-    _merge_types, InternalBoundingBox, estimate_surface, get_intersection_params,
-    to_inside_index, to_property_index
+    _merge_types, InternalBoundingBox, estimate_surface, estimate_volume,
+    get_intersection_params, to_inside_index, to_property_index,
+    projected_surface_area, inverse_mean_free_path
 import ..Groups: GeometryTuple
 import ..Groups: inside_indices_for_any_type
 import ..Transformations: Shift
@@ -28,11 +30,25 @@ mutable struct OuterSurfaceSampling
     weights::Vector{Float64}
 end
 
+function projected_surface_area(
+    sampling::OuterSurfaceSampling,
+    direction::SVector{3, Float64},
+)
+    direction_norm = norm(direction)
+    iszero(direction_norm) && throw(ArgumentError("direction must be non-zero"))
+    unit_direction = direction / direction_norm
+    sum(
+        weight * abs(normal ⋅ unit_direction)
+        for (weight, normal) in zip(sampling.weights, sampling.normals)
+    ) / 2
+end
+
 struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
     geometries::Vector{P}
     number_fractions::Vector{Float64}
     extracellular_fraction::Float64
     total_surface_area::Float64
+    weighted_cell_volume::Float64
     outer_surface_sampling::OuterSurfaceSampling
 
     function FixedLiminalGeometry(
@@ -51,6 +67,10 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
             fraction * estimate_surface(child; outer=true).area
             for (fraction, child) in zip(fractions, geometries)
         )
+        weighted_cell_volume = sum(
+            fraction * estimate_volume(child)
+            for (fraction, child) in zip(fractions, geometries)
+        )
         child_types = unique(typeof.(geometries))
         child_type = length(child_types) == 1 ?
             only(child_types) : Core.apply_type(Union, child_types...)
@@ -59,6 +79,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
             fractions,
             Float64(extracellular_fraction),
             total_surface_area,
+            weighted_cell_volume,
             OuterSurfaceSampling(
                 SVector{3, Float64}[],
                 SVector{3, Float64}[],
@@ -70,6 +91,14 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
         sample!(fixed.outer_surface_sampling, fixed)
         fixed
     end
+end
+
+function inverse_mean_free_path(
+    geometry::FixedLiminalGeometry,
+    direction::SVector{3, Float64},
+)
+    cell_number_density = (1 - geometry.extracellular_fraction) / geometry.weighted_cell_volume
+    cell_number_density * projected_surface_area(geometry.outer_surface_sampling, direction)
 end
 
 function _is_outer_surface_sample(geometry::PhysicalGeometry, position, full_index)

@@ -84,9 +84,9 @@ export Annuli, Cylinders, Walls, Spheres, FiniteCylinders, Mesh, load_mesh, read
 @compat public ObstructionGroup, IndexedObstruction, Annulus, Cylinder, Wall, Sphere, FiniteCylinder, Ring, Triangle, nvolumes, fix_susceptibility, fix, SWCFile, SWCNode 
 
 import .Geometries: BoundingBox
-import .Geometries.Internal: FixedGeometry, surface_relaxation, surface_density, dwell_time, permeability, volume, surface
+import .Geometries.Internal: FixedGeometry, surface_relaxation, surface_density, dwell_time, permeability, volume, surface, inverse_mean_free_path
 export BoundingBox 
-@compat public FixedGeometry, surface_relaxation, surface_density, dwell_time, permeability, volume, surface
+@compat public FixedGeometry, surface_relaxation, surface_density, dwell_time, permeability, volume, surface, inverse_mean_free_path
 
 import .Properties: GlobalProperties, R1, R2, off_resonance
 @compat public GlobalProperties, R1, R2, off_resonance
