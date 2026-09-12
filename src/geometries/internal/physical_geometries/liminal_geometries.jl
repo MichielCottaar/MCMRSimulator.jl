@@ -305,10 +305,8 @@ function find_intersection(
         direction = displacement / distance
         inverse_path = inverse_mean_free_path(geometry, direction)
         iszero(inverse_path) && return nothing
-        encounter_probability = -expm1(-inverse_path * distance)
-        rand() < encounter_probability || return nothing
-
-        encounter_distance = -log1p(-rand() * encounter_probability) / inverse_path
+        encounter_distance = -log1p(-rand()) / inverse_path
+        encounter_distance > distance && return nothing
         sampling = geometry.outer_surface_sampling
         sample_weights = [abs(normal ⋅ direction) for normal in sampling.normals]
         target = rand() * sum(sample_weights)
