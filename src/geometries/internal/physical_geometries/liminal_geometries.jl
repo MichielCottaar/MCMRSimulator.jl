@@ -24,7 +24,8 @@ export FixedLiminalGeometry, OuterSurfaceSampling, sample!
 """Mutable library of sampled outer-surface data for liminal cells.
 
 `surface_indices` stores raw intersection indices followed by the sampled
-inside-side flag.
+inside-side flag. Samples are consumed in order starting at
+`index_to_sample`.
 """
 mutable struct OuterSurfaceSampling
     positions::Vector{SVector{3, Float64}}
@@ -32,6 +33,7 @@ mutable struct OuterSurfaceSampling
     cell_indices::Vector{Int}
     surface_indices::Vector{Tuple}
     weight::Float64
+    index_to_sample::Int
 end
 
 function projected_surface_area(
@@ -91,6 +93,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
                 Int[],
                 Tuple[],
                 0.,
+                1,
             ),
         )
         sample!(fixed.outer_surface_sampling, fixed)
@@ -126,6 +129,7 @@ function sample!(
     empty!(sampling.cell_indices)
     empty!(sampling.surface_indices)
     sampling.weight = 0.
+    sampling.index_to_sample = 1
     iszero(N) && return sampling
     iszero(geometry.total_surface_area) && return sampling
 
@@ -308,13 +312,17 @@ function find_intersection(
         encounter_distance = -log1p(-rand()) / inverse_path
         encounter_distance > distance && return nothing
         sampling = geometry.outer_surface_sampling
-        sample_weights = [abs(normal ⋅ direction) for normal in sampling.normals]
-        target = rand() * sum(sample_weights)
-        selected = 1
-        cumulative = sample_weights[1]
-        while cumulative < target
-            selected += 1
-            cumulative += sample_weights[selected]
+        selected = 0
+        while true
+            if sampling.index_to_sample > length(sampling.positions)
+                sample!(sampling, geometry)
+            end
+            selected = sampling.index_to_sample
+            sampling.index_to_sample += 1
+            acceptance_probability = max(0., -direction ⋅ sampling.normals[selected])
+            if rand() < acceptance_probability
+                break
+            end
         end
         encounter_position = start + encounter_distance * direction
         offset = encounter_position - sampling.positions[selected]

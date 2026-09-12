@@ -619,6 +619,7 @@ end
             Int[],
             Tuple[],
             0.,
+            1,
         )
         sphere_geometry = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(
             [BaseObstructions.Sphere(1.)], [1.], 0.,
