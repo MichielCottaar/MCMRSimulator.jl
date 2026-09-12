@@ -386,7 +386,11 @@ for symbol in (:R1, :R2, :off_resonance)
             inside::IsInside,
             intersection=nothing,
         )
-            volume = get_value(geometry.volume.$symbol, inside.inside_of)
+            property_indices = [
+                to_property_index(geometry.geometry, index)
+                for index in inside.inside_of
+            ]
+            volume = get_value(geometry.volume.$symbol, property_indices)
             surface = isnothing(intersection) ?
                 0.0 :
                 get_value(geometry.surface.$symbol, intersection.property_indices)

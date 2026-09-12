@@ -27,6 +27,16 @@
             @test abs(mr.longitudinal(outside)) < 1e-8
         end
     end
+
+    @testset "repeating sphere vector property lookup" begin
+        geometry = mr.Spheres(
+            radius=1.,
+            repeats=[2, 2, 2],
+            R1_inside=[0.5],
+        )
+        @test mr.R1([2., 2, 0], geometry, defaults) == 0.5
+    end
+
     @testset "Test correct values in annuli" begin
         geometry = mr.Annuli(
             inner=0.5,
