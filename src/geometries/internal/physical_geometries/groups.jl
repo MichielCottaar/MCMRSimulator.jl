@@ -54,6 +54,15 @@ function _prepend_type(::Type{Prefix}, ::Type{T}) where {Prefix, T}
     throw(MethodError(_prepend_type, (Type{Prefix}, Type{T})))
 end
 
+function _append_type(::Type{T}, ::Type{Suffix}) where {T, Suffix}
+    T === Union{} && return Union{}
+    T isa Union && return Union{
+        (_append_type(element, Suffix) for element in Base.uniontypes(T))...,
+    }
+    T <: Tuple || throw(MethodError(_append_type, (Type{T}, Type{Suffix})))
+    Tuple{T.parameters..., Suffix}
+end
+
 function inside_indices_eltype(::Type{T}) where {T}
     T isa Union || throw(MethodError(inside_indices_eltype, (Type{T},)))
     Union{(inside_indices_eltype(element) for element in Base.uniontypes(T))...}
@@ -390,7 +399,10 @@ function random_surface_positions(geometry::GroupGeometry{N}, density::GeometryP
         (values[1], [(index, child_index...) for child_index in values[2]])
     end for (index, child) in enumerate(group_geometries(geometry; include_gap=false))),
         Val(N),
-        _prepend_type(Int, intersection_type(child_type(typeof(geometry)))),
+        _prepend_type(
+            Int,
+            _append_type(intersection_type(child_type(typeof(geometry))), Bool),
+        ),
     )
 end
 
