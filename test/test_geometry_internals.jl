@@ -612,6 +612,22 @@ end
         @test fixed_cells.geometry.number_fractions ≈ [1 / 3, 2 / 3]
         @test sum(fixed_cells.geometry.number_fractions) ≈ 1.
         @test fixed_cells.geometry.extracellular_fraction == 0.2
+
+        sphere_sampling = GI.PhysicalGeometries.LiminalGeometries.OuterSurfaceSampling(
+            SVector{3, Float64}[],
+            SVector{3, Float64}[],
+            Int[],
+            Tuple[],
+            0.,
+        )
+        sphere_geometry = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(
+            [BaseObstructions.Sphere(1.)], [1.], 0.,
+        )
+        GI.PhysicalGeometries.LiminalGeometries.sample!(sphere_sampling, sphere_geometry, 100)
+        @test all(
+            position ⋅ normal > 0
+            for (position, normal) in zip(sphere_sampling.positions, sphere_sampling.normals)
+        )
         @test fixed_cells.volume.R1 isa GI.Properties.GeometryVectorProperties
         @test length(fixed_cells.volume.R1.properties) == 2
         @test GI.PhysicalGeometries.child_type(typeof(fixed_cells.geometry)) ===

@@ -145,8 +145,9 @@ function sample!(
                 position,
                 (full_index..., 0.0),
             )
+            normal = full_index[end] ? -params.normal : params.normal
             push!(sampling.positions, position)
-            push!(sampling.normals, params.normal)
+            push!(sampling.normals, normal)
             push!(sampling.cell_indices, cell_index)
             push!(sampling.surface_indices, to_property_index(child, collision_indices))
         end
