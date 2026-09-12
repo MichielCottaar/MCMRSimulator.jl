@@ -620,6 +620,7 @@ end
             Tuple[],
             0.,
             1,
+            ReentrantLock(),
         )
         sphere_geometry = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(
             [BaseObstructions.Sphere(1.)], [1.], 0.,

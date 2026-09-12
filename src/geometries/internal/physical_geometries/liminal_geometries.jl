@@ -34,6 +34,7 @@ mutable struct OuterSurfaceSampling
     surface_indices::Vector{Tuple}
     weight::Float64
     index_to_sample::Int
+    lock::ReentrantLock
 end
 
 function projected_surface_area(
@@ -94,6 +95,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
                 Tuple[],
                 0.,
                 1,
+                ReentrantLock(),
             ),
         )
         sample!(fixed.outer_surface_sampling, fixed)
@@ -316,24 +318,35 @@ function find_intersection(
         encounter_distance = -log1p(-rand()) / inverse_path
         encounter_distance > distance && return nothing
         sampling = geometry.outer_surface_sampling
-        selected = 0
-        while true
-            if sampling.index_to_sample > length(sampling.positions)
-                sample!(sampling, geometry)
+        lock(sampling.lock)
+        sample_position = zero(SVector{3, Float64})
+        sample_cell_index = 0
+        sample_surface_index = ()
+        try
+            selected = 0
+            while true
+                if sampling.index_to_sample > length(sampling.positions)
+                    sample!(sampling, geometry)
+                end
+                selected = sampling.index_to_sample
+                sampling.index_to_sample += 1
+                acceptance_probability = max(0., -direction ⋅ sampling.normals[selected])
+                if rand() < acceptance_probability
+                    break
+                end
             end
-            selected = sampling.index_to_sample
-            sampling.index_to_sample += 1
-            acceptance_probability = max(0., -direction ⋅ sampling.normals[selected])
-            if rand() < acceptance_probability
-                break
-            end
+            sample_position = sampling.positions[selected]
+            sample_cell_index = sampling.cell_indices[selected]
+            sample_surface_index = sampling.surface_indices[selected]
+        finally
+            unlock(sampling.lock)
         end
         encounter_position = start + encounter_distance * direction
-        offset = encounter_position - sampling.positions[selected]
+        offset = encounter_position - sample_position
         return (
-            sampling.cell_indices[selected],
+            sample_cell_index,
             offset,
-            sampling.surface_indices[selected][1:(end - 1)]...,
+            sample_surface_index[1:(end - 1)]...,
             false,
             encounter_distance / distance,
         )
