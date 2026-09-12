@@ -251,6 +251,8 @@ function volume_sampling(
 )
     volume_density >= 0 || throw(ArgumentError("volume density must be non-negative"))
     intracellular_density = volume_density * (1 - geometry.extracellular_fraction)
+    density_scale = prod(2 .* InternalBoundingBoxes.half_size(bounding_box)) /
+        geometry.weighted_cell_volume
     positions = SVector{3, Float64}[]
     indices = Vector{Vector{inside_indices_eltype(typeof(geometry))}}()
 
@@ -259,7 +261,7 @@ function volume_sampling(
         child_positions, child_indices = volume_sampling(
             child,
             child_box,
-            intracellular_density * geometry.number_fractions[cell_index],
+            intracellular_density * geometry.number_fractions[cell_index] * density_scale,
         )
         for (position, child_index) in zip(child_positions, child_indices)
             isempty(child_index) && continue
