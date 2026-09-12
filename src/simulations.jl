@@ -166,7 +166,12 @@ function _constrain_snapshot(snapshot::Snapshot{N}, simulation::Simulation) wher
     S = spin_type(simulation, N)
     inside_type = inside_cache_type(simulation.geometry)
     spins = map(snapshot.spins) do spin
-        inside = inside_type(isinside(simulation.geometry, spin.position, previous_hit(spin.reflection)).inside_of)
+        previous = previous_hit(spin.reflection)
+        inside = if isnothing(previous) && !isnothing(spin.isinside)
+            inside_type(spin.isinside)
+        else
+            inside_type(isinside(simulation.geometry, spin.position, previous).inside_of)
+        end
         S(
             spin.position,
             deepcopy(spin.orientations),
