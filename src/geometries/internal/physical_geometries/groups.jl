@@ -376,10 +376,10 @@ _density_child(density::GeometryVectorProperties, index::Int) = density.properti
 _density_child(density::GeometryTupleProperties, index::Int) = density.properties[index]
 _density_child(density::GeometryProperties, ::SVector) = density
 
-function _combine(draws, ::Val{N}) where {N}
+function _combine(draws, ::Val{N}, ::Type{IndexType}) where {N, IndexType}
     draws = collect(draws)
     positions = reduce(vcat, (draw[1] for draw in draws); init=SVector{N, Float64}[])
-    indices = reduce(vcat, (draw[2] for draw in draws); init=Tuple[])
+    indices = reduce(vcat, (draw[2] for draw in draws); init=IndexType[])
     positions, indices
 end
 
@@ -388,7 +388,10 @@ function random_surface_positions(geometry::GroupGeometry{N}, density::GeometryP
     _combine((let
         values = random_surface_positions(child, _density_child(density, index), bounding_box, scale_density)
         (values[1], [(index, child_index...) for child_index in values[2]])
-    end for (index, child) in enumerate(group_geometries(geometry; include_gap=false))), Val(N))
+    end for (index, child) in enumerate(group_geometries(geometry; include_gap=false))),
+        Val(N),
+        _prepend_type(Int, intersection_type(child_type(typeof(geometry)))),
+    )
 end
 
 size_scale(geometry::GeometryVectorLike) = isempty(geometry) ? Inf : minimum(size_scale, geometry)
