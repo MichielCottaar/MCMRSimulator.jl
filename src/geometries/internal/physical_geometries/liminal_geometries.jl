@@ -13,7 +13,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_singl
     get_intersection_params, to_inside_index,
     projected_surface_area, inverse_mean_free_path
 import ..Groups: GeometryTuple
-import ..Groups: inside_indices_for_any_type
+import ..Groups: inside_indices_for_any_type, _append_type
 import ..Transformations: Shift
 import ...InsideViews: InsideView, child_view
 import ...InternalBoundingBoxes
@@ -28,11 +28,11 @@ export FixedLiminalGeometry, OuterSurfaceSampling, sample!
 inside-side flag. Samples are consumed in order starting at
 `index_to_sample`.
 """
-mutable struct OuterSurfaceSampling
+mutable struct OuterSurfaceSampling{I}
     positions::Vector{SVector{3, Float64}}
     normals::Vector{SVector{3, Float64}}
     cell_indices::Vector{Int}
-    surface_indices::Vector{Tuple}
+    surface_indices::Vector{I}
     weight::Float64
     index_to_sample::Int
     lock::ReentrantLock
@@ -83,17 +83,18 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}} <: PhysicalGeometry{3}
         child_types = unique(typeof.(geometries))
         child_type = length(child_types) == 1 ?
             only(child_types) : Core.apply_type(Union, child_types...)
+        surface_index_type = _append_type(intersection_type(child_type), Bool)
         fixed = new{child_type}(
             convert(Vector{child_type}, collect(geometries)),
             fractions,
             Float64(extracellular_fraction),
             total_surface_area,
             weighted_cell_volume,
-            OuterSurfaceSampling(
+            OuterSurfaceSampling{surface_index_type}(
                 SVector{3, Float64}[],
                 SVector{3, Float64}[],
                 Int[],
-                Tuple[],
+                surface_index_type[],
                 0.,
                 1,
                 ReentrantLock(),
