@@ -659,6 +659,15 @@ end
         end
         @test geometry_mesh_error isa ArgumentError
         @test geometry_mesh_error.msg == "geometry meshes are not supported for liminal geometries"
+        distance_error = try
+            GI.distance_to_surface(fixed_cells.geometry, SVector(0., 0., 0.))
+            nothing
+        catch exception
+            exception
+        end
+        @test distance_error isa ArgumentError
+        @test distance_error.msg == "distance_to_surface is not defined for liminal geometries"
+        @test GI.size_scale(fixed_cells.geometry) == 1.
         @test fixed_cells.geometry.outer_surface_sampling isa
             GI.PhysicalGeometries.LiminalGeometries.OuterSurfaceSampling
         @test fixed_cells.geometry.total_surface_area > 0

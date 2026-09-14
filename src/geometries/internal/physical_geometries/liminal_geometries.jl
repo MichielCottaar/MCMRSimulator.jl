@@ -12,7 +12,8 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_singl
     volume_sampling, random_surface_positions, bound_intersection_type,
     _merge_types, InternalBoundingBox, estimate_surface, estimate_volume,
     get_intersection_params, to_inside_index, to_property_index,
-    projected_surface_area, inverse_mean_free_path, _geometry_mesh
+    projected_surface_area, inverse_mean_free_path, _geometry_mesh,
+    distance_to_surface, size_scale
 import ..Groups: GeometryTuple
 import ..Groups: inside_indices_for_any_type, _append_type
 import ..Transformations: Shift
@@ -252,6 +253,12 @@ end
 _geometry_mesh(::FixedLiminalGeometry; kwargs...) = throw(ArgumentError(
     "geometry meshes are not supported for liminal geometries",
 ))
+
+distance_to_surface(::FixedLiminalGeometry, position) = throw(ArgumentError(
+    "distance_to_surface is not defined for liminal geometries",
+))
+
+size_scale(geometry::FixedLiminalGeometry) = minimum(size_scale, geometry.geometries)
 
 InternalBoundingBox(::FixedLiminalGeometry) = throw(BoundingBoxNotSupported(
     "liminal geometries do not have a finite bounding box",
