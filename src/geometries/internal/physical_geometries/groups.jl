@@ -406,7 +406,7 @@ function random_surface_positions(geometry::GroupGeometry{N}, density::GeometryP
             include_gap,
         )
         (values[1], [(index, child_index...) for child_index in values[2]])
-    end for (index, child) in enumerate(group_geometries(geometry; include_gap))),
+    end for (index, child) in enumerate(group_geometries(geometry; include_gap=include_gap))),
         Val(N),
         _prepend_type(
             Int,
