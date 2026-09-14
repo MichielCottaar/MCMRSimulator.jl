@@ -154,7 +154,8 @@ function random_surface_positions(
     repeat::Repeat{N},
     density::GeometryProperties,
     bounding_box::InternalBoundingBoxes.InternalBoundingBox{N},
-    scale_density,
+    scale_density;
+    include_gap=false,
 ) where {N}
     lower = first_repeat(repeat, InternalBoundingBoxes.lower(bounding_box))
     upper = last_repeat(repeat, InternalBoundingBoxes.upper(bounding_box))
@@ -167,6 +168,7 @@ function random_surface_positions(
         density,
         InternalBoundingBox(repeat.geometry),
         scale_density * nrepeats,
+        ; include_gap,
     )
     repeat_indices = [
         SVector{N, Int}(rand(ranges[index]) for index in 1:N)

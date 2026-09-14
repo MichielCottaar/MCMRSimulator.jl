@@ -918,6 +918,23 @@ end
     @test mesh.indices[mesh.first_index_of_gap] == SVector(4, 2, 3)
     @test BoundingBoxes.lower(mesh.bounding_box) == SVector(0.0, 0.0, 0.0)
     @test BoundingBoxes.upper(mesh.bounding_box) == SVector(1.0, 1.0, 1.0)
+    surface_density = Properties.GeometryLeafProperties(1.)
+    _, surface_indices_without_gap = GI.PhysicalGeometries.random_surface_positions(
+        mesh,
+        surface_density,
+        mesh.bounding_box,
+        10_000;
+        include_gap=false,
+    )
+    _, surface_indices_with_gap = GI.PhysicalGeometries.random_surface_positions(
+        mesh,
+        surface_density,
+        mesh.bounding_box,
+        10_000;
+        include_gap=true,
+    )
+    @test all(index[1] < mesh.first_index_of_gap for index in surface_indices_without_gap)
+    @test any(index[1] >= mesh.first_index_of_gap for index in surface_indices_with_gap)
     stability_start = SVector(-2.0, 0.0, 0.0)
     stability_destination = SVector(2.0, 0.0, 0.0)
     stable_group = GeometryVector([BaseObstructions.Sphere(1.0)])

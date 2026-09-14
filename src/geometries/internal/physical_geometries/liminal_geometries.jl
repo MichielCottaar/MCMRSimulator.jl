@@ -311,6 +311,7 @@ function _sample_outer_surface(
             density,
             InternalBoundingBox(child),
             scale_density,
+            ; include_gap=true,
         )
         for (position, full_index) in zip(positions, indices)
             _is_outer_surface_sample(child, position, full_index) || continue

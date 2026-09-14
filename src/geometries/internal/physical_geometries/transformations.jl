@@ -285,13 +285,15 @@ function _random_surface_positions_same_dimension(
     transformation::Transformation{N, N},
     density::GeometryProperties,
     bounding_box::InternalBoundingBox{N},
-    scale_density,
+    scale_density;
+    include_gap=false,
 ) where {N}
     positions, indices = random_surface_positions(
         transformation.geometry,
         density,
         to_child_coordinates(transformation, bounding_box),
         scale_density * _surface_density_scale(transformation),
+        ; include_gap,
     )
     [from_child_coordinates(transformation, position) for position in positions], indices
 end
@@ -300,25 +302,28 @@ random_surface_positions(
     transformation::Transformation{N, N},
     density::GeometryProperties,
     bounding_box::InternalBoundingBox{N},
-    scale_density,
+    scale_density;
+    include_gap=false,
 ) where {N} = _random_surface_positions_same_dimension(
-    transformation, density, bounding_box, scale_density,
+    transformation, density, bounding_box, scale_density; include_gap,
 )
 
 function random_surface_positions(
     transformation::Rotate{N, M},
     density::GeometryProperties,
     bounding_box::InternalBoundingBox{N},
-    scale_density,
+    scale_density;
+    include_gap=false,
 ) where {N, M}
     N == M && return _random_surface_positions_same_dimension(
-        transformation, density, bounding_box, scale_density,
+        transformation, density, bounding_box, scale_density; include_gap,
     )
     positions, indices = random_surface_positions(
         transformation.geometry,
         density,
         to_child_coordinates(transformation, bounding_box),
         scale_density * _projected_scale(transformation, bounding_box),
+        ; include_gap,
     )
     _deproject_positions(transformation, positions, bounding_box), indices
 end

@@ -396,11 +396,17 @@ function _combine(draws, ::Val{N}, ::Type{IndexType}) where {N, IndexType}
 end
 
 function random_surface_positions(geometry::GroupGeometry{N}, density::GeometryProperties,
-    bounding_box::InternalBoundingBox{N}, scale_density) where {N}
+    bounding_box::InternalBoundingBox{N}, scale_density; include_gap=false) where {N}
     _combine((let
-        values = random_surface_positions(child, _density_child(density, index), bounding_box, scale_density)
+        values = random_surface_positions(
+            child,
+            _density_child(density, index),
+            bounding_box,
+            scale_density;
+            include_gap,
+        )
         (values[1], [(index, child_index...) for child_index in values[2]])
-    end for (index, child) in enumerate(group_geometries(geometry; include_gap=false))),
+    end for (index, child) in enumerate(group_geometries(geometry; include_gap))),
         Val(N),
         _prepend_type(
             Int,

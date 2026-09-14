@@ -36,7 +36,8 @@ include("triangles.jl")
 
 function random_surface_positions(
     geometry::BaseObstruction{N}, density::GeometryLeafProperties,
-    bounding_box::InternalBoundingBoxes.InternalBoundingBox{N}, scale_density,
+    bounding_box::InternalBoundingBoxes.InternalBoundingBox{N}, scale_density;
+    include_gap=false,
 ) where {N}
     positions = surface_sampling(geometry, density, scale_density)
     inside = rand(Bool, length(positions))
