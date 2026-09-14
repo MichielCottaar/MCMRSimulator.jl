@@ -668,6 +668,19 @@ end
         @test distance_error isa ArgumentError
         @test distance_error.msg == "distance_to_surface is not defined for liminal geometries"
         @test GI.size_scale(fixed_cells.geometry) == 1.
+        liminal_box = mr.BoundingBox(2.)
+        @test GI.PhysicalGeometries.estimate_volume(
+            fixed_cells.geometry; bounding_box=liminal_box,
+        ) == 0.8 * 4^3
+        @test GI.PhysicalGeometries.estimate_surface(
+            fixed_cells.geometry; bounding_box=liminal_box,
+        ).area ≈ 27/17 * 4^3 * 0.8 rtol=0.1
+        @test_throws mr.BoundingBoxNotSupported GI.PhysicalGeometries.estimate_volume(
+            fixed_cells.geometry,
+        )
+        @test_throws mr.BoundingBoxNotSupported GI.PhysicalGeometries.estimate_surface(
+            fixed_cells.geometry,
+        )
         @test fixed_cells.geometry.outer_surface_sampling isa
             GI.PhysicalGeometries.LiminalGeometries.OuterSurfaceSampling
         @test fixed_cells.geometry.total_surface_area > 0
