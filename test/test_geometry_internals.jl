@@ -651,6 +651,14 @@ end
         fixed_cells = mr.fix(cells)
         @test fixed_cells isa GI.FixedGeometry
         @test fixed_cells.geometry isa GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry
+        geometry_mesh_error = try
+            GI.geometry_mesh(fixed_cells.geometry)
+            nothing
+        catch exception
+            exception
+        end
+        @test geometry_mesh_error isa ArgumentError
+        @test geometry_mesh_error.msg == "geometry meshes are not supported for liminal geometries"
         @test fixed_cells.geometry.outer_surface_sampling isa
             GI.PhysicalGeometries.LiminalGeometries.OuterSurfaceSampling
         @test fixed_cells.geometry.total_surface_area > 0

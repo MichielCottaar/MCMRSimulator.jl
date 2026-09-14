@@ -12,7 +12,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_singl
     volume_sampling, random_surface_positions, bound_intersection_type,
     _merge_types, InternalBoundingBox, estimate_surface, estimate_volume,
     get_intersection_params, to_inside_index, to_property_index,
-    projected_surface_area, inverse_mean_free_path
+    projected_surface_area, inverse_mean_free_path, _geometry_mesh
 import ..Groups: GeometryTuple
 import ..Groups: inside_indices_for_any_type, _append_type
 import ..Transformations: Shift
@@ -248,6 +248,10 @@ function Base.show(io::IO, ::Type{T}) where {T <: FixedLiminalGeometry}
     end
     print(io, "}")
 end
+
+_geometry_mesh(::FixedLiminalGeometry; kwargs...) = throw(ArgumentError(
+    "geometry meshes are not supported for liminal geometries",
+))
 
 InternalBoundingBox(::FixedLiminalGeometry) = throw(BoundingBoxNotSupported(
     "liminal geometries do not have a finite bounding box",
