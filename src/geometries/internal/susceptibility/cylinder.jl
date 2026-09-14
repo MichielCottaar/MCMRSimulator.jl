@@ -37,13 +37,13 @@ end
 Computed by the hollow cylinder fiber model from [Wharton_2012](@cite).
 The myelin sheath is presumed to be an infinitely thin cylinder.
 """
-function single_susceptibility(cylinder::CylinderSusceptibility, position::AbstractVector, distance::Number, stuck_inside::Union{Nothing, Bool}, b0_field::SVector{2, Float64})
+function single_susceptibility(cylinder::CylinderSusceptibility, position::AbstractVector, distance::Number, previous_hit, b0_field::SVector{2, Float64})
     if iszero(cylinder.internal_field) && iszero(cylinder.external_field)
         return zero(Float64)
     end
     rsq = distance * distance
-    if ~isnothing(stuck_inside) && rsq ≈ cylinder.rsq
-        inside = stuck_inside
+    if ~isnothing(previous_hit) && rsq ≈ cylinder.rsq
+        inside = previous_hit.inside
     else
         inside = rsq < cylinder.rsq
     end

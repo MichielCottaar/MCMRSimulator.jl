@@ -27,7 +27,7 @@ function single_susceptibility(
     sphere::SphereSusceptibility,
     position::AbstractVector,
     distance::Number,
-    stuck_inside::Union{Nothing, Bool},
+    previous_hit,
     b0_field::SVector{3, Float64},
 )
     sphere.internal_field

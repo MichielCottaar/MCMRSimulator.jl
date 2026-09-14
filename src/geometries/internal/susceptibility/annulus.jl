@@ -40,17 +40,17 @@ function AnnulusSusceptibility(inner_radius::Number, outer_radius::Number, chi_I
 end
 
 """
-    single_susceptibility(annulus, position, distance, stuck_inside, b0_field)
+    single_susceptibility(annulus, position, distance, previous_hit, b0_field)
 
 Computed by the hollow cylinder fiber model from [Wharton_2012](@cite).
 """
-function single_susceptibility(annulus::AnnulusSusceptibility, position::AbstractVector, distance::Number, stuck_inside::Union{Nothing, Bool}, b0_field::SVector{2, Float64})
+function single_susceptibility(annulus::AnnulusSusceptibility, position::AbstractVector, distance::Number, previous_hit, b0_field::SVector{2, Float64})
     rsq = distance * distance
 
-    if ~isnothing(stuck_inside) && rsq ≈ annulus.inner_rsq
-        inside = stuck_inside ? 2 : 1
-    elseif ~isnothing(stuck_inside) && rsq ≈ annulus.outer_rsq
-        inside = stuck_inside ? 1 : 0
+    if ~isnothing(previous_hit) && rsq ≈ annulus.inner_rsq
+        inside = previous_hit.inside ? 2 : 1
+    elseif ~isnothing(previous_hit) && rsq ≈ annulus.outer_rsq
+        inside = previous_hit.inside ? 1 : 0
     else
         inside = rsq < annulus.inner_rsq ? 2 : (rsq < annulus.outer_rsq ? 1 : 0) 
     end

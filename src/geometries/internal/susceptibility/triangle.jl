@@ -119,28 +119,28 @@ shift_direction(triangle::IsotropicTriangleSusceptibility, b0_field::SVector{3, 
 shift_direction(triangle::AnisotropicTriangleSusceptibility, b0_field::SVector{3, Float64}) = triangle.shift_direction
 
 """
-    single_susceptibility(triangle, position, distance[, stuck_inside])
+    single_susceptibility(triangle, position, distance[, previous_hit])
 
 Computed using the algorithm described in [rubeckAnalyticalCalculationMagnet2013](@cite).
 """
-function single_susceptibility(triangle::TriangleSusceptibility, position::AbstractVector, distance::Number, stuck_inside::Union{Nothing, Bool}, b0_field::SVector{3, Float64})
+function single_susceptibility(triangle::TriangleSusceptibility, position::AbstractVector, distance::Number, previous_hit, b0_field::SVector{3, Float64})
     (_, _, height) = triangle.rotation * position
     shift_size = abs(height) / 10
     shift = shift_direction(triangle, b0_field) .* shift_size
     return (
-        single_susceptibility_helper(triangle, position - shift - triangle.vertex1, stuck_inside, b0_field) - 
-        single_susceptibility_helper(triangle, position + shift - triangle.vertex1, stuck_inside, b0_field)
+        single_susceptibility_helper(triangle, position - shift - triangle.vertex1, previous_hit, b0_field) -
+        single_susceptibility_helper(triangle, position + shift - triangle.vertex1, previous_hit, b0_field)
     ) / (shift_size * 2)
 end
 
-function single_susceptibility_helper(triangle::TriangleSusceptibility, position::AbstractVector, stuck_inside::Union{Nothing, Bool}, b0_field::SVector{3, Float64})
+function single_susceptibility_helper(triangle::TriangleSusceptibility, position::AbstractVector, previous_hit, b0_field::SVector{3, Float64})
     if iszero(triangle.susceptibility)
         return 0.
     end
     (x, y, height) = triangle.rotation * position
-    if ~isnothing(stuck_inside) && abs(height) < 1e-6
+    if ~isnothing(previous_hit) && abs(height) < 1e-6
         # Shift particle by 1 picometer, so that the field calculation is appropriate
-        if stuck_inside
+        if previous_hit.inside
             height = -1e-6
         else
             height = 1e-6

@@ -422,10 +422,12 @@ end
 function susceptibility_off_resonance(
     geometry::FixedGeometry,
     position::SVector{3, Float64},
-    inside::Union{Nothing, Bool}=nothing,
+    previous_hit=nothing,
+    isinside=nothing,
 )
-    isempty(geometry.susceptibility) && return 0.0
-    susceptibility_off_resonance(geometry.susceptibility, position, inside)
+    susceptibility_off_resonance(
+        geometry.susceptibility, position, previous_hit, isinside,
+    )
 end
 
 """Return the maximum susceptibility off-resonance gradient in `geometry`."""

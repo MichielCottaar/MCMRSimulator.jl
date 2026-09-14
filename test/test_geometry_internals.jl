@@ -1744,7 +1744,7 @@ end
     @test walls.susceptibility == ()
     susceptibility_position = SVector(0.0, 0.0, 0.0)
     @test GI.susceptibility_off_resonance(walls, susceptibility_position) == 0.0
-    @test GI.susceptibility_off_resonance(walls, susceptibility_position, true) == 0.0
+    @test GI.susceptibility_off_resonance(walls, susceptibility_position) == 0.0
     @test GI.off_resonance_gradient(walls, 1.0) == 0.0
 
     z_cylinder = mr.Cylinders(
@@ -1776,11 +1776,10 @@ end
             fixed_cylinder.susceptibility,
             susceptibility_position,
         )
-    @test GI.susceptibility_off_resonance(fixed_cylinder, susceptibility_position, true) ==
+    @test GI.susceptibility_off_resonance(fixed_cylinder, susceptibility_position) ==
         GI.Susceptibility.susceptibility_off_resonance(
             fixed_cylinder.susceptibility,
             susceptibility_position,
-            true,
         )
     @test GI.off_resonance_gradient(fixed_cylinder, 1.0) ==
         GI.Susceptibility.off_resonance_gradient(fixed_cylinder.susceptibility, 1.0)
@@ -1803,5 +1802,57 @@ end
     @test all(
         susceptibility isa GI.Susceptibility.Grid.SusceptibilityGridNoRepeat
         for susceptibility in combined.susceptibility
+    )
+
+    sphere = mr.Spheres(
+        radius=1.0,
+        susceptibility=1.0,
+        grid_resolution=Inf,
+    )
+    liminal = mr.LiminalGeometry(
+        geometries=[(1.0, sphere), (1.0, cylinder)],
+        extracellular_fraction=0.2,
+    )
+    fixed_liminal = mr.fix(liminal)
+    @test fixed_liminal.susceptibility isa GI.Susceptibility.Liminal.LiminalSusceptibility
+    @test GI.susceptibility_off_resonance(
+        fixed_liminal, susceptibility_position,
+    ) == 0.0
+    offset = SVector(1.0, 2.0, 3.0)
+    sphere_hit = GI.Intersection(
+        0.0, ((1, offset),), (), zero(SVector{3, Float64}), true, false,
+    )
+    cylinder_hit = GI.Intersection(
+        0.0, ((2, offset),), (), zero(SVector{3, Float64}), true, false,
+    )
+    sphere_inside = GI.IsInside([((1, offset),)])
+    cylinder_inside = GI.IsInside([((2, offset),)])
+    sphere_field = GI.susceptibility_off_resonance(
+        mr.fix(sphere), susceptibility_position - offset,
+    )
+    sphere_surface_field = GI.susceptibility_off_resonance(
+        mr.fix(sphere), susceptibility_position - offset, sphere_hit,
+    )
+    cylinder_field = GI.susceptibility_off_resonance(
+        fixed_cylinder, susceptibility_position - offset,
+    )
+    @test GI.susceptibility_off_resonance(
+        fixed_liminal, susceptibility_position, sphere_hit, sphere_inside,
+    ) == sphere_field
+    @test GI.susceptibility_off_resonance(
+        fixed_liminal, susceptibility_position, nothing, sphere_inside,
+    ) == sphere_field
+    @test GI.susceptibility_off_resonance(
+        fixed_liminal, susceptibility_position, nothing, GI.IsInside(()),
+    ) == 0.0
+    @test GI.susceptibility_off_resonance(
+        fixed_liminal, susceptibility_position, sphere_hit, sphere_inside,
+    ) == sphere_surface_field
+    @test GI.susceptibility_off_resonance(
+        fixed_liminal, susceptibility_position, cylinder_hit, cylinder_inside,
+    ) == cylinder_field
+    @test GI.off_resonance_gradient(fixed_liminal, 1.0) == max(
+        GI.off_resonance_gradient(mr.fix(sphere), 1.0),
+        GI.off_resonance_gradient(fixed_cylinder, 1.0),
     )
 end

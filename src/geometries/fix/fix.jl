@@ -15,6 +15,7 @@ import ..Internal.PhysicalGeometries: FixedLiminalGeometry
 import ..Internal.Properties: GeometryTupleProperties
 import ..Internal.Properties: GeometryVectorProperties
 import ..Internal: FixedGeometry
+import ..Internal.Susceptibility: LiminalSusceptibility
 import ..Internal: contains_repeat
 import .FixBaseGeometry: fix_base_geometry, annuli_size_scale
 import .FixTransformations: fix_transformations
@@ -66,11 +67,12 @@ function fix(collection::LiminalGeometry; kwargs...)
     )
     volume = _merge_vector_properties(fixed, :volume)
     surface = _merge_vector_properties(fixed, :surface)
-    FixedGeometry{typeof(physical_geometry), typeof(volume), typeof(surface), Tuple}(
+    susceptibility = LiminalSusceptibility(Tuple(geometry.susceptibility for geometry in fixed))
+    FixedGeometry{typeof(physical_geometry), typeof(volume), typeof(surface), typeof(susceptibility)}(
         physical_geometry,
         volume,
         surface,
-        (),
+        susceptibility,
     )
 end
 

@@ -127,13 +127,13 @@ function get_coordinates(grid::SusceptibilityGridRepeat, position)
 end
 
 """
-    susceptibility_off_resonance(susceptibility_grid, position[, inside])
+    susceptibility_off_resonance(susceptibility_grid, position[, previous_hit])
 
 Computes the susceptibility off-resonance caused by a `SusceptibilityGrid` at given position.
 
 The field is computed in ppm. Knowledge of the scanner `B0` is needed to convert it into KHz.
 """
-function susceptibility_off_resonance(grid::SusceptibilityGrid, position::SVector{3, Float64}, inside::Union{Nothing, Bool}=nothing)
+function susceptibility_off_resonance(grid::SusceptibilityGrid, position::SVector{3, Float64}, previous_hit=nothing)
     normed = norm_position(grid, grid.rotation * position)
 
     coord_off_resonance, coord_indices = get_coordinates(grid, normed)
@@ -154,16 +154,23 @@ function susceptibility_off_resonance(grid::SusceptibilityGrid, position::SVecto
         else
             shifted = normed .- grid.shifts[index.shift]
         end
-        field += element_susceptibility(element, index.index, grid, shifted, inside)
+        field += element_susceptibility(element, index.index, grid, shifted, previous_hit)
     end
     return field
 end
 
-function susceptibility_off_resonance(fixed::FixedSusceptibility, position::SVector{3, Float64}, inside::Union{Nothing, Bool}=nothing)
-    sum(susceptibility_off_resonance(grid, position, inside) for grid in fixed)
+function susceptibility_off_resonance(fixed::FixedSusceptibility, position::SVector{3, Float64}, previous_hit=nothing)
+    sum(susceptibility_off_resonance(grid, position, previous_hit) for grid in fixed)
 end
 
-susceptibility_off_resonance(fixed::FixedSusceptibility{0}, position::SVector{3, Float64}, inside::Union{Nothing, Bool}=nothing) = 0.
+susceptibility_off_resonance(
+    fixed::FixedSusceptibility,
+    position::SVector{3, Float64},
+    previous_hit,
+    isinside,
+) = susceptibility_off_resonance(fixed, position, previous_hit)
+
+susceptibility_off_resonance(fixed::FixedSusceptibility{0}, position::SVector{3, Float64}, previous_hit=nothing) = 0.
 
 
 """
@@ -265,7 +272,7 @@ Computes the off-resonance field contribution from a [`SuscetibilityGridElement`
 For a `position` within twice the `source.radius` of `source.position`, this will call [`dipole_approximation`](@ref).
 For any closer `position` [`single_susceptibility`](@ref) will be called on the appropriate element in `grid.sources`.
 """
-function element_susceptibility(element::SusceptibilityGridElement, index::Int32, grid::SusceptibilityGrid, position::AbstractVector, stuck_inside::Union{Nothing, Bool})
+function element_susceptibility(element::SusceptibilityGridElement, index::Int32, grid::SusceptibilityGrid, position::AbstractVector, previous_hit)
     offset = position - element.position
     dist = norm(offset)
 
@@ -276,7 +283,7 @@ function element_susceptibility(element::SusceptibilityGridElement, index::Int32
             grid.sources[index],
             offset,
             dist,
-            stuck_inside,
+            previous_hit,
             grid.B0_field
         )
     end

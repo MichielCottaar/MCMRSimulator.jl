@@ -222,12 +222,35 @@ Computes the susceptibility off-resonance caused by all susceptibility sources i
 
 The field is computed in ppm. Knowledge of the scanner `B0` is needed to convert it into KHz.
 """
-susceptibility_off_resonance(simulation::Simulation, spin::Spin) = susceptibility_off_resonance(simulation, spin.position, stuck(spin) ? spin.reflection.inside : nothing)
-susceptibility_off_resonance(simulation::Simulation, position::AbstractVector, inside::Union{Nothing, Bool}=nothing) = susceptibility_off_resonance(simulation.geometry, SVector{3, Float64}(position), inside)
-function susceptibility_off_resonance(simulation::Simulation, old_pos::AbstractVector, new_pos::AbstractVector) 
-    isempty(simulation.geometry.susceptibility) && return 0.0
+susceptibility_off_resonance(simulation::Simulation, spin::Spin) =
+    susceptibility_off_resonance(
+        simulation,
+        spin.position,
+        stuck(spin) ? previous_hit(spin.reflection) : nothing,
+        isnothing(spin.isinside) ? nothing : Internal.IsInside(spin.isinside),
+    )
+susceptibility_off_resonance(
+    simulation::Simulation,
+    position::AbstractVector,
+    previous_hit=nothing,
+    isinside=nothing,
+) = susceptibility_off_resonance(
+    simulation.geometry, SVector{3, Float64}(position), previous_hit, isinside,
+)
+function susceptibility_off_resonance(
+    simulation::Simulation,
+    old_pos::AbstractVector,
+    new_pos::AbstractVector,
+    previous_hit=nothing,
+    isinside=nothing,
+)
     along_tract = rand()
-    susceptibility_off_resonance(simulation.geometry, along_tract * old_pos .+ (1 - along_tract) .* new_pos, nothing)
+    susceptibility_off_resonance(
+        simulation.geometry,
+        SVector{3, Float64}(along_tract * old_pos .+ (1 - along_tract) .* new_pos),
+        previous_hit,
+        isinside,
+    )
 end
 
 

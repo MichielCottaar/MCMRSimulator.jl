@@ -27,7 +27,7 @@ import ..Reflections: Reflection, has_intersection, has_hit, previous_hit, possi
 import ..Geometries.Internal:
     random_surface_positions, volume_sampling,
     FixedGeometry,
-    isinside, inside_cache_type, R1, R2, off_resonance, susceptibility_off_resonance
+    isinside, IsInside, inside_cache_type, R1, R2, off_resonance, susceptibility_off_resonance
 import ..Methods: get_time, norm_angle
 import ..Properties: GlobalProperties
 import ..Geometries: fix, fix_susceptibility
@@ -492,17 +492,17 @@ A tuple is returned with:
 off_resonance(snap::Snapshot, geometry, global_properties::GlobalProperties=GlobalProperties()) = off_resonance(snap.spins, geometry, global_properties)
 
 function off_resonance(spins::AbstractVector{<:Spin}, geometry, global_properties::GlobalProperties=GlobalProperties())
-    sfg = fix_susceptibility(geometry)
     fg = fix(geometry)
 
     function get_both_offresonance(spin::Spin)
-        if stuck(spin)
-            isinside = spin.reflection.inside
-        else
-            isinside = nothing
-        end
-        susc = susceptibility_off_resonance(sfg, spin.position, isinside)
-        other = off_resonance(spin.position, fg, global_properties, previous_hit(spin.reflection))
+        previous = previous_hit(spin.reflection)
+        inside_state = isnothing(spin.isinside) ?
+            isinside(fg, spin.position, previous) :
+            IsInside(spin.isinside)
+        susc = susceptibility_off_resonance(
+            fg, spin.position, previous, inside_state,
+        )
+        other = off_resonance(spin.position, fg, global_properties, previous)
         return (susc, other)
     end
     return get_both_offresonance.(spins)

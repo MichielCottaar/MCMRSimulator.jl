@@ -44,10 +44,9 @@ function relax!(spin::Spin{N}, new_pos::NewPosType, simulation::Simulation{N}, p
     )
 
     off_resonance_unscaled = if new_pos isa SVector
-        susceptibility_off_resonance(simulation, spin.position, new_pos)
+        susceptibility_off_resonance(simulation, spin.position, new_pos, previous, inside)
     else
-        inside = new_pos isa Bool ? new_pos : nothing
-        susceptibility_off_resonance(simulation, spin.position, inside)
+        susceptibility_off_resonance(simulation, spin.position, previous, inside)
     end * 1e-6 * gyromagnetic_ratio
 
     # pre-compute the R1 and R2 attenuation.
