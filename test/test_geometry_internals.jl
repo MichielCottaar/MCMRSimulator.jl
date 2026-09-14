@@ -944,6 +944,14 @@ end
         cylinder_rotation; nsamples=100_000, rng=Random.MersenneTwister(1234),
     )
     @test tilted_volume ≈ π atol=0.05
+    liminal_cylinder = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(
+        [cylinder_rotation], [1.], 0.2,
+    )
+    @test !isempty(liminal_cylinder.outer_surface_sampling.positions)
+    GI.PhysicalGeometries.LiminalGeometries.sample!(
+        liminal_cylinder.outer_surface_sampling, liminal_cylinder, 100,
+    )
+    @test !isempty(liminal_cylinder.outer_surface_sampling.positions)
     cylinder_mesh = GI.geometry_mesh(cylinder_rotation; nsamples=8, height=2.0)
     @test length(cylinder_mesh) == 1
     @test length(cylinder_mesh[1].vertices) == 16

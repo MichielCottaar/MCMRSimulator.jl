@@ -319,12 +319,19 @@ function inverse_mean_free_path(
     cell_number_density * projected_surface_area(geometry.spherical_surface_area, direction)
 end
 
-function _is_outer_surface_sample(geometry::PhysicalGeometry, position, full_index)
+function _is_outer_surface_sample(
+    geometry::PhysicalGeometry,
+    position,
+    full_index;
+    no_deproject=false,
+)
     collision_indices = full_index[1:(end - 1)]
     current_inside = to_inside_index(geometry, collision_indices)
     all(
         inside_index == current_inside
-        for inside_index in inside_indices_for_any_type(geometry, position, nothing)
+        for inside_index in inside_indices_for_any_type(
+            geometry, position, nothing; no_deproject,
+        )
     )
 end
 
@@ -378,12 +385,12 @@ function _sample_outer_surface(
         positions, indices = random_surface_positions(
             child,
             density,
-            InternalBoundingBox(child),
+            InternalBoundingBox(child; no_deproject=true),
             scale_density,
-            ; include_gap=true,
+            ; include_gap=true, no_deproject=true,
         )
         for (position, full_index) in zip(positions, indices)
-            _is_outer_surface_sample(child, position, full_index) || continue
+            _is_outer_surface_sample(child, position, full_index; no_deproject=true) || continue
             params = get_intersection_params(
                 child,
                 position,
