@@ -717,6 +717,48 @@ end
         @test sum(fixed_cells.geometry.number_fractions) ≈ 1.
         @test fixed_cells.geometry.extracellular_fraction == 0.2
 
+        sphere = BaseObstructions.Sphere(1.)
+        cylinder = Rotate(
+            BaseObstructions.InfiniteCylinder(1.),
+            [1. 0.; 0. 1.; 0. 0.],
+        )
+        mixed_cells = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(
+            [sphere, cylinder], [0.5, 0.5], 0.2,
+        )
+        @test mixed_cells.total_surface_area ≈ 3π atol=0.1
+        @test mixed_cells.weighted_cell_volume ≈ 7π / 6 atol=0.05
+
+        parallel_direction = SVector(0., 0., 1.)
+        perpendicular_direction = SVector(1., 0., 0.)
+        @test GI.inverse_mean_free_path(mixed_cells, parallel_direction) <
+            GI.inverse_mean_free_path(mixed_cells, perpendicular_direction)
+
+        Random.seed!(1234)
+        parallel_cells = Int[]
+        for _ in 1:100
+            hit = GI.PhysicalGeometries.find_intersection(
+                mixed_cells,
+                SVector(0., 0., -10.),
+                SVector(0., 0., 10.),
+            )
+            hit !== nothing && push!(parallel_cells, hit[1][1])
+        end
+        @test !isempty(parallel_cells)
+        @test all(==(1), parallel_cells)
+
+        Random.seed!(1234)
+        perpendicular_cells = Int[]
+        for _ in 1:100
+            hit = GI.PhysicalGeometries.find_intersection(
+                mixed_cells,
+                SVector(-10., 0., 0.),
+                SVector(10., 0., 0.),
+            )
+            hit !== nothing && push!(perpendicular_cells, hit[1][1])
+        end
+        @test 1 in perpendicular_cells
+        @test 2 in perpendicular_cells
+
         sphere_sampling = GI.PhysicalGeometries.LiminalGeometries.OuterSurfaceSampling(
             SVector{3, Float64}[],
             SVector{3, Float64}[],
