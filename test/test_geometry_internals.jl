@@ -518,6 +518,19 @@ end
         @test !GI.PhysicalGeometries.get_intersection_params(
             cylinder, SVector(0., 0., 1.), SVector(0., 0., 3.), cap_hit, nothing,
         ).hit_gap
+        gap_density = Properties.GeometryLeafProperties(1.)
+        Random.seed!(1234)
+        _, samples_without_gap = GI.PhysicalGeometries.random_surface_positions(
+            gap_cylinder, gap_density, BoundingBoxes.InternalBoundingBox(gap_cylinder), 100.;
+            include_gap=false,
+        )
+        Random.seed!(1234)
+        _, samples_with_gap = GI.PhysicalGeometries.random_surface_positions(
+            gap_cylinder, gap_density, BoundingBoxes.InternalBoundingBox(gap_cylinder), 100.;
+            include_gap=true,
+        )
+        @test all(index[1] == 1 for index in samples_without_gap)
+        @test any(index[1] != 1 for index in samples_with_gap)
 
         overlapping_cylinder = IgnoreOverlapping(cylinder)
         overlapping_params = GI.PhysicalGeometries.get_intersection_params(

@@ -199,12 +199,14 @@ end
 
 function surface_sampling(
     cylinder::FiniteCylinder, density::GeometryLeafProperties,
-    scale_density,
+    scale_density;
+    include_gap=false,
 )
     radius_difference = cylinder.radius_second - cylinder.radius_first
     slant = hypot(cylinder.length, radius_difference)
     side_area = π * (cylinder.radius_first + cylinder.radius_second) * slant
-    cap_area = cylinder.caps_are_gaps ? 0. : π * (cylinder.radius_first^2 + cylinder.radius_second^2)
+    cap_area = cylinder.caps_are_gaps && !include_gap ?
+        0. : π * (cylinder.radius_first^2 + cylinder.radius_second^2)
     total_area = side_area + cap_area
     nspins = rand(Poisson(total_area * density.value * scale_density))
     first_basis, second_basis = _finite_cylinder_basis(cylinder.axis)
@@ -233,7 +235,7 @@ function random_surface_positions(
     scale_density,
     ; include_gap=false,
 )
-    positions = surface_sampling(cylinder, density, scale_density)
+    positions = surface_sampling(cylinder, density, scale_density; include_gap)
     indices = map(positions) do position
         axial = (position - cylinder.first) ⋅ cylinder.axis
         surface_index = axial == 0. ? 2 : axial == cylinder.length ? 3 : 1
