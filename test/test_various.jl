@@ -91,7 +91,7 @@ end
         timestep=1.,
     )
     initial = mr.Snapshot(100, 3.)
-    @test all(isnothing(spin.isinside) for spin in initial)
+    @test all(isempty(spin.isinside) for spin in initial)
 
     final = mr.evolve(initial, simulation, 100.)
     for spin in final
