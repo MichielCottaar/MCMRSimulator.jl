@@ -36,6 +36,7 @@ Mesh
 MCMRSimulator.Triangle
 BendyCylinder
 MCMRSimulator.Ring
+LiminalGeometry
 ```
 ### Geometry helper functions
 ```@docs
