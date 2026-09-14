@@ -227,6 +227,31 @@ function get_parser(; kwargs...)
         end
     end
 
+    add_arg_table!(parser["create"], "liminal", Dict(
+        :help => "Create a liminal geometry text file from child geometry files.",
+        :action => :command,
+    ))
+    parser["create"]["liminal"].description =
+        "Create a liminal geometry text file from child geometry files."
+    add_arg_table!(parser["create"]["liminal"],
+        "output_file", Dict(
+            :help => "Liminal geometry output filename.",
+            :required => true,
+        ),
+        "--extracellular-fraction", Dict(
+            :arg_type => Float64,
+            :help => "Fraction of the liminal space that is extracellular.",
+            :required => true,
+        ),
+        "--geometry", Dict(
+            :arg_type => String,
+            :nargs => 2,
+            :action => :append_arg,
+            :required => true,
+            :help => "A cell number fraction and child geometry filename. Can be supplied multiple times.",
+        ),
+    )
+
     add_arg_table!(parser["merge"],
         "output_file", Dict(
             :help => "A new geometry JSON file containing all the obstructions from the input files.",
@@ -301,6 +326,7 @@ end
 
 function run_create(args::Dict{<:AbstractString, <:Any})
     obstruction_type = args["%COMMAND%"]
+    obstruction_type == "liminal" && return run_create_liminal(args[obstruction_type])
     flags = args[obstruction_type]
     output_file = pop!(flags, "output_file")
     constructor = Dict(
@@ -315,6 +341,31 @@ function run_create(args::Dict{<:AbstractString, <:Any})
     filtered = Dict(k=>v for (k, v) in symbol_flags if ~isnothing(v))
     result = constructor(;number=number, filtered...)
     write_geometry(output_file, result)
+end
+
+function run_create_liminal(args::Dict{<:AbstractString, <:Any})
+    output_file = args["output_file"]
+    extracellular_fraction = args["extracellular-fraction"]
+    0 <= extracellular_fraction <= 1 || throw(ArgumentError(
+        "extracellular fraction must be between 0 and 1",
+    ))
+    geometries = args["geometry"]
+    isempty(geometries) && throw(ArgumentError("at least one geometry is required"))
+
+    open(output_file, "w") do io
+        println(io, "liminal $extracellular_fraction")
+        for geometry in geometries
+            fraction = try
+                parse(Float64, geometry[1])
+            catch
+                throw(ArgumentError("could not parse cell fraction '$(geometry[1])'"))
+            end
+            isfinite(fraction) && fraction > 0 || throw(ArgumentError(
+                "cell fractions must be finite and positive",
+            ))
+            println(io, fraction, " ", geometry[2])
+        end
+    end
 end
 
 function run_create_random(args::Dict{<:AbstractString, <:Any})

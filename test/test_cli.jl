@@ -24,9 +24,16 @@ end
             "geometry create spheres 1 sphere.json --radius 1",
         )
         @test isempty(err)
-        open("cells.txt", "w") do io
-            write(io, "liminal 0.2\n1.0 sphere.json\n")
-        end
+        _, err = run_main_test(
+            "geometry create spheres 1 second_sphere.json --radius 0.5",
+        )
+        @test isempty(err)
+        _, err = run_main_test(
+            "geometry create liminal cells.txt --extracellular-fraction 0.2 --geometry 0.5 sphere.json --geometry 0.5 second_sphere.json",
+        )
+        @test isempty(err)
+        @test read("cells.txt", String) ==
+            "liminal 0.2\n0.5 sphere.json\n0.5 second_sphere.json\n"
 
         output, err = run_main_test(
             "run cells.txt $sequence_file -N 10 --voxel-size 0.01 -o signal.csv",
