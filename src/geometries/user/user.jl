@@ -8,8 +8,8 @@ include("load_mesh.jl")
 include("load_swc.jl")
 include("random_distribution.jl")
 include("json.jl")
-include("load_geometry.jl")
 include("liminal_geometry.jl")
+include("load_geometry.jl")
 include("to_mesh.jl")
 import .Obstructions: ObstructionGroup, IndexedObstruction, nvolumes,
     Wall, Walls,

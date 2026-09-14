@@ -27,6 +27,7 @@
         @test finite_cylinders[2].radius == 0.5
         @test finite_cylinders[1].connected_to == 0
         @test finite_cylinders[2].connected_to == 1
+        @test mr.read_geometry(IOBuffer(swc_text)) isa mr.FiniteCylinders
         spheres_only = mr.read_geometry(IOBuffer(swc_text); format=:swc, swc_as_spheres=true)
         @test spheres_only isa mr.Spheres
         @test length(spheres_only) == 3
@@ -50,6 +51,7 @@
         @test mesh isa mr.Mesh
         @test length(mesh.vertices.value) == 3
         @test length(mesh.triangles) == 1
+        @test mr.read_geometry(IOBuffer(ply_text)) isa mr.Mesh
 
         @test_throws ArgumentError mr.read_swc(IOBuffer("1 1 0 0 0 1 0\n"))
         @test_throws ArgumentError mr.read_swc(IOBuffer("1 1 0 0 0 1 -1\n2 3 0 0 0\n"))
@@ -70,6 +72,42 @@
             @test loaded.footer == swc.footer
         finally
             rm(filename; force=true)
+        end
+    end
+
+    @testset "reading liminal geometry files" begin
+        mktempdir() do directory
+            sphere_file = joinpath(directory, "sphere.json")
+            swc_file = joinpath(directory, "cell.swc")
+            liminal_file = joinpath(directory, "cells.txt")
+            mr.write_geometry(sphere_file, mr.Spheres(radius=1.0))
+            open(swc_file, "w") do io
+                write(io, "1 1 0.0 0.0 0.0 1.0 -1\n")
+            end
+            open(liminal_file, "w") do io
+                write(io, "liminal 0.2\n0.25 sphere.json\n0.75 cell.swc\n")
+            end
+
+            geometry = mr.read_geometry(liminal_file)
+            @test geometry isa mr.LiminalGeometry
+            @test geometry.extracellular_fraction == 0.2
+            @test first.(geometry.geometries) == [0.25, 0.75]
+            @test geometry.geometries[1][2] isa mr.Spheres
+            @test geometry.geometries[2][2] isa mr.FiniteCylinders
+
+            malformed_files = [
+                "0.2\n1 sphere.json\n",
+                "liminal nope\n1 sphere.json\n",
+                "liminal 0.2\n1\n",
+                "liminal 0.2\n1 missing.json\n",
+            ]
+            for (index, contents) in enumerate(malformed_files)
+                malformed = joinpath(directory, "malformed_$index.txt")
+                open(malformed, "w") do io
+                    write(io, contents)
+                end
+                @test_throws ArgumentError mr.read_geometry(malformed)
+            end
         end
     end
 
