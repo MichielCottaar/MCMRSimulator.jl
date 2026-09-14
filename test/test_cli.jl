@@ -14,6 +14,29 @@ function in_tmpdir(f)
             cd(curdir)
         end
     end
+
+end
+
+@testset "Liminal geometry input" begin
+    in_tmpdir() do
+        sequence_file = joinpath(@__DIR__, "pulseq", "gradient_echo_TE_30.seq")
+        _, err = run_main_test(
+            "geometry create spheres 1 sphere.json --radius 1",
+        )
+        @test isempty(err)
+        open("cells.txt", "w") do io
+            write(io, "liminal 0.2\n1.0 sphere.json\n")
+        end
+
+        output, err = run_main_test(
+            "run cells.txt $sequence_file -N 10 --voxel-size 0.01 -o signal.csv",
+        )
+        @test isempty(err)
+        @test occursin("DataFrame", output)
+        result = DataFrame(CSV.File("signal.csv"))
+        @test size(result, 1) == 1
+        @test result[1, :nspins] == 10
+    end
 end
 
 @testset "Test the creation commands do not crash" begin
