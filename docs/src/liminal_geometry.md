@@ -62,7 +62,7 @@ mcmr geometry create liminal cells.txt \
     --geometry 0.3 cell.swc
 ```
 
-This creates:
+This creates a text file "cells.txt" with:
 
 ```text
 liminal 0.2
