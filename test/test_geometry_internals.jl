@@ -518,6 +518,14 @@ end
         @test !GI.PhysicalGeometries.get_intersection_params(
             cylinder, SVector(0., 0., 1.), SVector(0., 0., 3.), cap_hit, nothing,
         ).hit_gap
+        gap_surface = GI.PhysicalGeometries.estimate_surface(
+            gap_cylinder; density=100., minimum_samples=1_000,
+        )
+        gap_surface_included = GI.PhysicalGeometries.estimate_surface(
+            gap_cylinder; density=100., minimum_samples=1_000, include_gap=true,
+        )
+        @test gap_surface.area ≈ 4π rtol=0.1
+        @test gap_surface_included.area ≈ 6π rtol=0.1
         gap_density = Properties.GeometryLeafProperties(1.)
         Random.seed!(1234)
         _, samples_without_gap = GI.PhysicalGeometries.random_surface_positions(

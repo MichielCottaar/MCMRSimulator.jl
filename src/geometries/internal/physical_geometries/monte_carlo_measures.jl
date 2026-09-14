@@ -88,6 +88,7 @@ function estimate_surface(
     minimum_samples::Integer=10_000,
     maximum_attempts::Integer=5,
     outer::Bool=false,
+    include_gap::Bool=false,
 ) where {N}
     density > 0 || throw(ArgumentError("density must be positive"))
     minimum_samples >= 0 || throw(ArgumentError("minimum_samples must be nonnegative"))
@@ -106,6 +107,8 @@ function estimate_surface(
             GeometryLeafProperties(current_density),
             bounding_box,
             1.0,
+            ;
+            include_gap=include_gap,
         )
         keep = trues(length(sampled_positions))
         if outer

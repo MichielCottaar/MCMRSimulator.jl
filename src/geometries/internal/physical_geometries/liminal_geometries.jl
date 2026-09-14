@@ -191,7 +191,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
             throw(ArgumentError("cell number fractions must be finite and positive"))
         fractions ./= sum(fractions)
         total_surface_area = sum(
-            fraction * estimate_surface(child; outer=true).area
+            fraction * estimate_surface(child; outer=true, include_gap=true).area
             for (fraction, child) in zip(fractions, geometries)
         )
         weighted_cell_volume = sum(
@@ -281,12 +281,15 @@ function estimate_surface(
     geometry::FixedLiminalGeometry;
     bounding_box=nothing,
     outer=false,
+    include_gap=false,
     kwargs...,
 )
     box = _liminal_bounding_box(bounding_box)
     box_volume = prod(2 .* InternalBoundingBoxes.half_size(box))
     weighted_surface_area = sum(
-        fraction * estimate_surface(child; outer, kwargs...).area
+        fraction * estimate_surface(
+            child; outer, include_gap, kwargs...
+        ).area
         for (fraction, child) in zip(geometry.number_fractions, geometry.geometries)
     )
     area = box_volume * (1 - geometry.extracellular_fraction) *
