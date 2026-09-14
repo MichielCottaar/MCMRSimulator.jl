@@ -227,13 +227,14 @@ function random_surface_positions(
     bounding_box::InternalBoundingBox{3},
     volume_density::Number;
     include_gap=false,
+    kwargs...,
 )
     all_positions, all_indices = random_surface_positions(
         fixed_geometry.geometry,
         fixed_geometry.surface.density,
         bounding_box,
         volume_density;
-        include_gap,
+         include_gap, kwargs...,
     )
     
     positions, indices = _filter_to_box(all_positions, all_indices, bounding_box)
@@ -287,9 +288,11 @@ function random_surface_positions(
     bounding_box::BoundingBox,
     volume_density::Number;
     include_gap=false,
+    kwargs...,
 )
     random_surface_positions(
-        geometry, InternalBoundingBox(bounding_box), volume_density; include_gap,
+        geometry, InternalBoundingBox(bounding_box), volume_density;
+        include_gap, kwargs...,
     )
 end
 

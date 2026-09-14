@@ -41,6 +41,7 @@ function random_surface_positions(
     geometry::BaseObstruction{N}, density::GeometryLeafProperties,
     bounding_box::InternalBoundingBoxes.InternalBoundingBox{N}, scale_density;
     include_gap=false,
+    kwargs...,
 ) where {N}
     positions = surface_sampling(geometry, density, scale_density)
     inside = rand(Bool, length(positions))

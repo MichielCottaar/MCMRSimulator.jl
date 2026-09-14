@@ -317,13 +317,14 @@ function _random_surface_positions_same_dimension(
     bounding_box::InternalBoundingBox{N},
     scale_density;
     include_gap=false,
+    kwargs...,
 ) where {N}
     positions, indices = random_surface_positions(
         transformation.geometry,
         density,
         to_child_coordinates(transformation, bounding_box),
         scale_density * _surface_density_scale(transformation),
-        ; include_gap,
+        ; include_gap, kwargs...,
     )
     [from_child_coordinates(transformation, position) for position in positions], indices
 end
@@ -334,8 +335,9 @@ random_surface_positions(
     bounding_box::InternalBoundingBox{N},
     scale_density;
     include_gap=false,
+    kwargs...,
 ) where {N} = _random_surface_positions_same_dimension(
-    transformation, density, bounding_box, scale_density; include_gap,
+    transformation, density, bounding_box, scale_density; include_gap, kwargs...,
 )
 
 function random_surface_positions(
@@ -344,16 +346,29 @@ function random_surface_positions(
     bounding_box::InternalBoundingBox{N},
     scale_density;
     include_gap=false,
+    no_deproject=false,
+    kwargs...,
 ) where {N, M}
     N == M && return _random_surface_positions_same_dimension(
-        transformation, density, bounding_box, scale_density; include_gap,
+        transformation, density, bounding_box, scale_density;
+        include_gap, no_deproject, kwargs...,
     )
+    if no_deproject
+        positions, indices = random_surface_positions(
+            transformation.geometry,
+            density,
+            InternalBoundingBox(transformation.geometry; no_deproject=true, kwargs...),
+            scale_density;
+            include_gap, kwargs...,
+        )
+        return [transformation.matrix * position for position in positions], indices
+    end
     positions, indices = random_surface_positions(
         transformation.geometry,
         density,
         to_child_coordinates(transformation, bounding_box),
         scale_density * _projected_scale(transformation, bounding_box),
-        ; include_gap,
+        ; include_gap, kwargs...,
     )
     _deproject_positions(transformation, positions, bounding_box), indices
 end

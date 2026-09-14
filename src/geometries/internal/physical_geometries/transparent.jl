@@ -104,9 +104,11 @@ function random_surface_positions(
     bounding_box::InternalBoundingBox{N},
     scale_density;
     include_gap=false,
+    kwargs...,
 ) where {N}
     random_surface_positions(
-        transparent_geometry(wrapper), density, bounding_box, scale_density; include_gap,
+        transparent_geometry(wrapper), density, bounding_box, scale_density;
+        include_gap, kwargs...,
     )
 end
 
@@ -116,10 +118,11 @@ function random_surface_positions(
     bounding_box::InternalBoundingBox{N},
     scale_density;
     include_gap=false,
+    kwargs...,
 ) where {N}
     geometry = transparent_geometry(wrapper)
     positions, indices = random_surface_positions(
-        geometry, density, bounding_box, scale_density; include_gap,
+        geometry, density, bounding_box, scale_density; include_gap, kwargs...,
     )
     inside_indices_at(position) = has_single_inside(typeof(geometry)) ?
         (isinside_single(geometry, position) ? [()] : Tuple{}[]) :

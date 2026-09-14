@@ -926,6 +926,14 @@ end
     @test all(isfinite, BoundingBoxes.lower(collapsed_cylinder_box))
     @test all(BoundingBoxes.upper(collapsed_cylinder_box) .>
         BoundingBoxes.lower(collapsed_cylinder_box))
+    no_deproject_positions, _ = GI.PhysicalGeometries.random_surface_positions(
+        cylinder_rotation,
+        Properties.GeometryLeafProperties(1.),
+        collapsed_cylinder_box,
+        1.;
+        no_deproject=true,
+    )
+    @test all(iszero(position[3]) for position in no_deproject_positions)
     cylinder_mesh = GI.geometry_mesh(cylinder_rotation; nsamples=8, height=2.0)
     @test length(cylinder_mesh) == 1
     @test length(cylinder_mesh[1].vertices) == 16

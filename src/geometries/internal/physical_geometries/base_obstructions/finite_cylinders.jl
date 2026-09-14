@@ -234,6 +234,7 @@ function random_surface_positions(
     bounding_box::InternalBoundingBoxes.InternalBoundingBox{3},
     scale_density,
     ; include_gap=false,
+    kwargs...,
 )
     positions = surface_sampling(cylinder, density, scale_density; include_gap)
     indices = map(positions) do position

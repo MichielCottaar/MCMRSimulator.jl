@@ -527,6 +527,8 @@ function random_surface_positions(
     bounding_box::InternalBoundingBox{3},
     scale_density,
     ; include_gap=false,
+    no_deproject=false,
+    kwargs...,
 )
     positions = SVector{3, Float64}[]
     indices = Tuple[]
@@ -535,9 +537,9 @@ function random_surface_positions(
         child_positions, child_indices = random_surface_positions(
             child,
             density.properties[cell_index],
-            InternalBoundingBox(child),
+            InternalBoundingBox(child; no_deproject, kwargs...),
             scale_density * intracellular_scale * geometry.number_fractions[cell_index],
-            ; include_gap,
+            ; include_gap, no_deproject, kwargs...,
         )
         for (position, child_index) in zip(child_positions, child_indices)
             offset = _wrapped_offset(position, bounding_box)
