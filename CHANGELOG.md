@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SWC files now load as connected sphere-and-cylinder geometries by default; `swc_as_spheres=true` remains available for sphere-only loading.
 - Pre-filtering support for adaptive readouts using `filter=Subset(...)`.
 - CLI `--filter-inside` option for adaptive simulations.
-- Liminal geometries for statistically modeling packed cell populations without explicitly solving a global packing problem. They can be created in `Julia` using `LiminialGeometry` and from the CLI using `mcmr geometry liminal <output_file> --extracellular_fraction <value> --geometry ...`.
+- Liminal geometries for statistically modeling packed cell populations without explicitly solving a global packing problem. They can be created in Julia using `LiminalGeometry` and from the CLI using `mcmr geometry create liminal <output_file> --extracellular-fraction <value> --geometry ...`.
 
 ### Changed
 - CLI signal output now reports per-spin magnetisation values and includes component SNR information.
