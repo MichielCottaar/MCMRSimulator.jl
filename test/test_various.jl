@@ -3,6 +3,7 @@
 @test length(detect_ambiguities(mr)) == 0
 
 @testset "Adaptive readout" begin
+    Random.seed!(1234)
     sequence = build_sequence([0., :readout])
     simulation = mr.Simulation(sequence; diffusivity=0.)
 
@@ -49,6 +50,7 @@
 end
 
 @testset "Adaptive readout with diffusion" begin
+    Random.seed!(1234)
     sequence = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_0.3_gradient_δ_10_Δ_30.0.seq"))
     spheres = mr.Spheres(radius=1., repeats=(2, 2, 2))
     simulation = mr.Simulation(sequence, geometry=spheres, timestep=1.)
@@ -112,6 +114,7 @@ end
 end
 
 @testset "Draw random positions and radii" begin
+    Random.seed!(1234)
     pos, rad = mr.random_positions_radii([20., 20.], 0.7, 2; variance=0.01)
     n_too_close = 0
     for i in 1:length(pos)
@@ -266,6 +269,7 @@ end
     end
 end
 @testset "Test readout formats" begin
+    Random.seed!(1234)
     sequence = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_1000.seq"))
     seq = build_sequence([10., :readout, 20., :readout, 70])
     sim_empty = mr.Simulation([])
