@@ -37,9 +37,10 @@ end
 get_intersection_params_requires_inside(::Type{<:Repeat{N, P}}) where {N, P} =
     get_intersection_params_requires_inside(P)
 
-function Base.show(io::IO, ::Type{T}) where {N, P, T <: Repeat{N, P}}
+function Base.show(io::IO, ::Type{T}) where {T <: Repeat}
+    T isa UnionAll && return print(io, nameof(T))
     print(io, "Repeat{")
-    show(io, P)
+    show(io, T.parameters[end])
     print(io, "}")
 end
 

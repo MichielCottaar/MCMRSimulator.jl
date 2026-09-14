@@ -13,8 +13,11 @@ import Random: rand
 
 abstract type BaseObstruction{N} <: PhysicalGeometry{N} end
 
-function Base.show(io::IO, ::Type{T}) where {N, T <: BaseObstruction{N}}
-    print(io, nameof(T), "{", N, "}")
+function Base.show(io::IO, ::Type{T}) where {T <: BaseObstruction}
+    print(io, nameof(T))
+    T isa UnionAll && return
+    N = isempty(T.parameters) ? Base.unwrap_unionall(supertype(T)).parameters[1] : T.parameters[1]
+    print(io, "{", N, "}")
 end
 
 child_type(::Type{<:BaseObstruction}) =

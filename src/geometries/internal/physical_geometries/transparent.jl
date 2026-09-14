@@ -18,9 +18,11 @@ end
 
 get_intersection_params_requires_inside(::Type{<:IgnoreOverlapping}) = Val(true)
 
-function Base.show(io::IO, ::Type{T}) where {N, P, T <: Transparent{N, P}}
-    print(io, nameof(T), "{")
-    show(io, P)
+function Base.show(io::IO, ::Type{T}) where {T <: Transparent}
+    print(io, nameof(T))
+    T isa UnionAll && return
+    print(io, "{")
+    show(io, T.parameters[end])
     print(io, "}")
 end
 

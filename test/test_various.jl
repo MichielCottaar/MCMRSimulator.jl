@@ -335,6 +335,25 @@ end
 end
 
 @testset "Physical geometry type display" begin
+    internal = mr.Geometries.Internal
+    @test sprint(show, internal.PhysicalGeometries.BaseObstructions.BaseObstruction) == "BaseObstruction"
+    @test sprint(show, internal.PhysicalGeometries.BaseObstructions.BaseObstruction{3}) == "BaseObstruction{3}"
+    @test sprint(show, internal.PhysicalGeometries.Groups.GeometryVectorLike) == "GeometryVector"
+    @test sprint(show, internal.PhysicalGeometries.Groups.GeometryTuple) == "GeometryTuple"
+    @test sprint(show, internal.PhysicalGeometries.Transformations.Transformation) == "Transformation"
+    liminal = internal.PhysicalGeometries.LiminalGeometries
+    @test sprint(show, liminal.FixedLiminalGeometry) == "FixedLiminalGeometry"
+    concrete_liminal = Core.apply_type(
+        liminal.FixedLiminalGeometry,
+        Core.apply_type(
+            Union,
+            internal.PhysicalGeometries.BaseObstructions.Sphere,
+            internal.PhysicalGeometries.BaseObstructions.FiniteCylinder,
+        ),
+        Tuple{},
+    )
+    @test sprint(show, concrete_liminal) == "FixedLiminalGeometry{FiniteCylinder{3}, Round{3}}"
+
     show_type(geometry) = sprint(show, typeof(mr.fix(geometry).geometry))
 
     @test show_type(mr.Spheres(radius=[1., 2.])) == "GeometryVector{Round{3}}"

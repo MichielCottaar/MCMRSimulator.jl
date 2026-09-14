@@ -26,9 +26,11 @@ abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N
 get_intersection_params_requires_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} =
     get_intersection_params_requires_inside(P)
 
-function Base.show(io::IO, ::Type{T}) where {N, M, P, T <: Transformation{N, M, P}}
-    print(io, nameof(T), "{")
-    show(io, P)
+function Base.show(io::IO, ::Type{T}) where {T <: Transformation}
+    print(io, nameof(T))
+    T isa UnionAll && return
+    print(io, "{")
+    show(io, Base.unwrap_unionall(supertype(T)).parameters[end])
     print(io, "}")
 end
 

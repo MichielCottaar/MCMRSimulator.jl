@@ -236,6 +236,19 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
     end
 end
 
+function Base.show(io::IO, ::Type{T}) where {T <: FixedLiminalGeometry}
+    print(io, nameof(T))
+    T isa UnionAll && return
+    child_type = T.parameters[1]
+    child_types = child_type isa Union ? Base.uniontypes(child_type) : (child_type,)
+    print(io, "{")
+    for (index, child) in enumerate(child_types)
+        index > 1 && print(io, ", ")
+        show(io, child)
+    end
+    print(io, "}")
+end
+
 InternalBoundingBox(::FixedLiminalGeometry) = throw(BoundingBoxNotSupported(
     "liminal geometries do not have a finite bounding box",
 ))

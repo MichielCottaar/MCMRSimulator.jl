@@ -28,9 +28,11 @@ _requires_inside(::Type{P}) where {P<:Tuple} =
 _requires_inside(::Val{true}, ::Type) = Val(true)
 _requires_inside(::Val{false}, remaining::Type{<:Tuple}) = _requires_inside(remaining)
 
-function Base.show(io::IO, ::Type{T}) where {N, P, T <: GeometryVectorLike{N, P}}
-    print(io, "GeometryVector{")
-    show(io, P)
+function Base.show(io::IO, ::Type{T}) where {T <: GeometryVectorLike}
+    print(io, "GeometryVector")
+    T isa UnionAll && return
+    print(io, "{")
+    show(io, T.parameters[end])
     print(io, "}")
 end
 
@@ -374,9 +376,11 @@ Base.iterate(geometry::GeometryTuple, state...) = iterate(group_geometries(geome
 Base.eltype(::Type{GeometryTuple{N, P}}) where {N, P} = eltype(P)
 Base.Tuple(geometry::GeometryTuple) = group_geometries(geometry)
 
-function Base.show(io::IO, ::Type{T}) where {N, P, T <: GeometryTuple{N, P}}
-    print(io, "GeometryTuple{")
-    for (index, child) in enumerate(P.parameters)
+function Base.show(io::IO, ::Type{T}) where {T <: GeometryTuple}
+    print(io, "GeometryTuple")
+    T isa UnionAll && return
+    print(io, "{")
+    for (index, child) in enumerate(T.parameters[end].parameters)
         index > 1 && print(io, ", ")
         show(io, child)
     end
