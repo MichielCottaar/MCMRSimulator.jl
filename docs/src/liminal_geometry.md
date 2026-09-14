@@ -70,7 +70,7 @@ liminal 0.2
 0.3 cell.swc
 ```
 
-The first line identifies the file as a liminal geometry and sets the extracellular volume fraction. Each following line contains a compartment-specific number fraction and a child geometry filename. Child paths are interpreted relative to the liminal file. Child files may be JSON, PLY, SWC, or another liminal file, and their formats are detected from their contents.
+The first line identifies the file as a liminal geometry and sets the extracellular volume fraction. Each following line contains a compartment-specific number fraction and a child geometry filename. Child paths are interpreted relative to the liminal file. Child files may be JSON, PLY, or SWC files, and their formats are detected from their contents.
 
 The resulting file can be used directly in a simulation:
 
