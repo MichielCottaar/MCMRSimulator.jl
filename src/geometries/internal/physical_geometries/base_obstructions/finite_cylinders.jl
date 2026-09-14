@@ -67,7 +67,7 @@ function isinside_single(
     radial ⋅ radial < _finite_cylinder_radius(cylinder, axial)^2
 end
 
-function InternalBoundingBox(cylinder::FiniteCylinder)
+function InternalBoundingBox(cylinder::FiniteCylinder; kwargs...)
     center = cylinder.first + cylinder.length / 2 * cylinder.axis
     half_size = cylinder.length / 2 .* abs.(cylinder.axis) .+
         max(cylinder.radius_first, cylinder.radius_second) .* sqrt.(1 .- cylinder.axis .* cylinder.axis)

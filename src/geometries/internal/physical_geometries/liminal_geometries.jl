@@ -305,7 +305,7 @@ function estimate_surface(
     )
 end
 
-InternalBoundingBox(::FixedLiminalGeometry) = throw(BoundingBoxNotSupported(
+InternalBoundingBox(::FixedLiminalGeometry; kwargs...) = throw(BoundingBoxNotSupported(
     "liminal geometries do not have a finite bounding box",
 ))
 

@@ -42,8 +42,11 @@ bound_intersection_type(transformation::Transformation, density) =
 
 has_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_inside(P)
 has_single_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} = has_single_inside(P)
-InternalBoundingBox(transformation::Transformation) =
-    from_child_coordinates(transformation, InternalBoundingBox(transformation.geometry))
+InternalBoundingBox(transformation::Transformation; kwargs...) =
+    from_child_coordinates(
+        transformation,
+        InternalBoundingBox(transformation.geometry; kwargs...),
+    )
 
 function isinside_single(
     transformation::Transformation{N, M},
@@ -138,11 +141,36 @@ function Rotate(geometry::P, matrix::AbstractMatrix{<:Real}) where {M, P<:Physic
     Rotate{N, M, P}(geometry, matrix)
 end
 
-InternalBoundingBox(transformation::Rotate{N, M}) where {N, M} =
-    N == M ? from_child_coordinates(transformation, InternalBoundingBox(transformation.geometry)) :
-        throw(BoundingBoxNotSupported(
-            "dimension-reducing Rotate transformations do not have a finite bounding box",
-        ))
+function InternalBoundingBox(
+    transformation::Rotate{N, M}; no_deproject=false, kwargs...
+) where {N, M}
+    if N == M
+        return from_child_coordinates(
+            transformation,
+            InternalBoundingBox(
+                transformation.geometry;
+                no_deproject,
+                kwargs...,
+            ),
+        )
+    end
+    no_deproject || throw(BoundingBoxNotSupported(
+        "dimension-reducing Rotate transformations do not have a finite bounding box",
+    ))
+    child_box = InternalBoundingBox(
+        transformation.geometry;
+        no_deproject,
+        kwargs...,
+    )
+    child_center = InternalBoundingBoxes.center(child_box)
+    child_half_size = InternalBoundingBoxes.half_size(child_box)
+    center = transformation.matrix * child_center
+    half_size = max.(
+        abs.(transformation.matrix) * child_half_size,
+        eps(Float64),
+    )
+    InternalBoundingBoxes.InternalBoundingBox{N}(half_size, center)
+end
 
 """Transform a value from parent coordinates to child coordinates."""
 function to_child_coordinates end

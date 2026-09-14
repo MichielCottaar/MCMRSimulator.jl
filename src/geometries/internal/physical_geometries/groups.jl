@@ -253,11 +253,11 @@ has_inside(::Type{<:GeometryVectorLike{N, P}}) where {N, P} = has_inside(P)
 has_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = any(has_inside, P.parameters)
 has_single_inside(::Type{<:GroupGeometry}) = false
 
-function InternalBoundingBox(geometry::GroupGeometry{N, P}) where {N, P}
+function InternalBoundingBox(geometry::GroupGeometry{N, P}; kwargs...) where {N, P}
     isempty(geometry) && throw(BoundingBoxNotSupported(
         "cannot construct a bounding box for an empty geometry group",
     ))
-    boxes = [InternalBoundingBoxes.InternalBoundingBox(child) for child in geometry]
+    boxes = [InternalBoundingBoxes.InternalBoundingBox(child; kwargs...) for child in geometry]
     lower_bound = reduce((a, b) -> min.(a, b), (InternalBoundingBoxes.lower(box) for box in boxes))
     upper_bound = reduce((a, b) -> max.(a, b), (InternalBoundingBoxes.upper(box) for box in boxes))
     InternalBoundingBoxes.InternalBoundingBox(
@@ -266,7 +266,7 @@ function InternalBoundingBox(geometry::GroupGeometry{N, P}) where {N, P}
     )
 end
 
-InternalBoundingBox(geometry::GeometryVectorGrid) = geometry.grid.bounding_box
+InternalBoundingBox(geometry::GeometryVectorGrid; kwargs...) = geometry.grid.bounding_box
 
 function inside_indices_for_any_type(geometry, position, intersection)
     geometry_type = typeof(geometry)

@@ -16,7 +16,7 @@ function FullTriangle(a::AbstractVector, b::AbstractVector, c::AbstractVector)
     FullTriangle(SVector{3, Float64}(a), SVector{3, Float64}(b), SVector{3, Float64}(c))
 end
 
-function InternalBoundingBox(triangle::FullTriangle)
+function InternalBoundingBox(triangle::FullTriangle; kwargs...)
     lower = SVector(
         min(triangle.a[1], triangle.b[1], triangle.c[1]),
         min(triangle.a[2], triangle.b[2], triangle.c[2]),

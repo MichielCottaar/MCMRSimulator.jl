@@ -8,7 +8,7 @@ has_single_inside(::Type{InfiniteWall}) = false
 const _negative_wall_normal = SVector(-1.0)
 const _positive_wall_normal = SVector(1.0)
 
-InternalBoundingBox(::InfiniteWall) = InternalBoundingBox{1}(SVector(0.0), SVector(0.0))
+InternalBoundingBox(::InfiniteWall; kwargs...) = InternalBoundingBox{1}(SVector(0.0), SVector(0.0))
 
 function find_intersection(
     ::InfiniteWall,

@@ -22,7 +22,7 @@ end
 const InfiniteCylinder = Round{2}
 const Sphere = Round{3}
 
-InternalBoundingBox(round::Round{N}) where {N} = InternalBoundingBox{N}(round.radius)
+InternalBoundingBox(round::Round{N}; kwargs...) where {N} = InternalBoundingBox{N}(round.radius)
 
 size_scale(round::Round) = round.radius
 
