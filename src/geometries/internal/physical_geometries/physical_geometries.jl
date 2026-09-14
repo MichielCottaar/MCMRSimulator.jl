@@ -184,6 +184,7 @@ function to_property_index(geometry::PhysicalGeometry, indices)
     if isnothing(indices)
         return nothing
     end
+    isempty(indices) && return ()
     child, child_indices = get_child(geometry, indices)
     cleaned = to_property_index(child, child_indices)
     nremoved = length(indices) - length(child_indices)

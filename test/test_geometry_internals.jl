@@ -1291,8 +1291,8 @@ end
         [sphere],
         BoundingBoxes.InternalBoundingBox{3}[],
     )
-    @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(GeometryVector{3}(TestGeometry{3}[]))
-    @test_throws ArgumentError BoundingBoxes.InternalBoundingBox(GeometryTuple{3}(()))
+    @test_throws mr.BoundingBoxNotSupported BoundingBoxes.InternalBoundingBox(GeometryVector{3}(TestGeometry{3}[]))
+    @test_throws mr.BoundingBoxNotSupported BoundingBoxes.InternalBoundingBox(GeometryTuple{3}(()))
     grouped_hit = GI.PhysicalGeometries.find_intersection(
         grouped_spheres,
         SVector(-5.0, 0.0, 0.0),

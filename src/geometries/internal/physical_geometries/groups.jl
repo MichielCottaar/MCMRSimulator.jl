@@ -9,6 +9,7 @@ import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_s
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 import ...Properties: all_property_values
 import ...InsideViews: child_view
+import ....BoundingBoxes: BoundingBoxNotSupported
 
 abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
@@ -251,7 +252,9 @@ has_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = any(has_inside, P.param
 has_single_inside(::Type{<:GroupGeometry}) = false
 
 function InternalBoundingBox(geometry::GroupGeometry{N, P}) where {N, P}
-    isempty(geometry) && throw(ArgumentError("cannot construct a bounding box for an empty geometry group"))
+    isempty(geometry) && throw(BoundingBoxNotSupported(
+        "cannot construct a bounding box for an empty geometry group",
+    ))
     boxes = [InternalBoundingBoxes.InternalBoundingBox(child) for child in geometry]
     lower_bound = reduce((a, b) -> min.(a, b), (InternalBoundingBoxes.lower(box) for box in boxes))
     upper_bound = reduce((a, b) -> max.(a, b), (InternalBoundingBoxes.upper(box) for box in boxes))
