@@ -91,10 +91,11 @@ function _read_geometry(io::IO, format; base_dir=pwd(), swc_as_spheres=false, kw
 end
 
 """
-    read_geometry(io::IO; format=:json, kwargs...)
+    read_geometry(io::IO; format=nothing, kwargs...)
 
-Read geometry from an open stream. Since streams do not have a filename
-extension, `format` must be provided for non-JSON input.
+Read geometry from an open stream. If `format` is omitted, the format is
+detected from the first non-empty content line. JSON, PLY, SWC, and liminal
+geometry files are supported. Use `format` to override content detection.
 """
 function read_geometry(io::IO; format=nothing, kwargs...)
     _read_geometry(io, format; kwargs...)
@@ -103,8 +104,11 @@ end
 """
     read_geometry(filename::AbstractString; format=nothing, kwargs...)
 
-Read geometry from a JSON, PLY, or SWC file. When `format` is omitted, the
-format is inferred from the filename extension.
+Read geometry from a JSON, PLY, SWC, or liminal geometry file. When `format`
+is omitted, the format is detected from the file contents rather than its
+filename extension. Liminal files contain an extracellular volume fraction
+and references to child geometry files; relative child paths are resolved
+relative to the liminal file.
 """
 function read_geometry(filename::AbstractString; format=nothing, kwargs...)
     stripped = strip(filename)
