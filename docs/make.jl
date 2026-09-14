@@ -34,6 +34,7 @@ makedocs(;
         "Tutorial (Julia)" => "tutorial_julia.md",
         "Tutorial (CLI)" => "tutorial_cli.md",
         "Geometry" => "geometry.md",
+        "Liminal geometry" => "liminal_geometry.md",
         "MRI/collision properties" => "properties.md",
         "API" => "api.md",
         "References" => "references.md",
