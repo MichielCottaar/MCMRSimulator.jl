@@ -934,6 +934,12 @@ end
         no_deproject=true,
     )
     @test all(iszero(position[3]) for position in no_deproject_positions)
+    tilted_cylinder = Rotate(cylinder, [1 / sqrt(2) 0.; 0. 1.; 1 / sqrt(2) 0.])
+    Random.seed!(1234)
+    tilted_surface = GI.PhysicalGeometries.estimate_surface(
+        tilted_cylinder; density=100., minimum_samples=1_000,
+    )
+    @test tilted_surface.area ≈ 2π rtol=0.1
     cylinder_mesh = GI.geometry_mesh(cylinder_rotation; nsamples=8, height=2.0)
     @test length(cylinder_mesh) == 1
     @test length(cylinder_mesh[1].vertices) == 16

@@ -95,7 +95,9 @@ function estimate_surface(
     maximum_attempts > 0 || throw(ArgumentError("maximum_attempts must be positive"))
     contains_repeat(typeof(geometry)) &&
         throw(ArgumentError("Monte Carlo surface estimates do not support repeating geometries"))
-    bounding_box = isnothing(bounding_box) ? InternalBoundingBox(geometry) : bounding_box
+    no_deproject = isnothing(bounding_box)
+    bounding_box = no_deproject ?
+        InternalBoundingBox(geometry; no_deproject=true) : bounding_box
 
     current_density = Float64(density)
     positions = SVector{N, Float64}[]
@@ -109,6 +111,7 @@ function estimate_surface(
             1.0,
             ;
             include_gap=include_gap,
+            no_deproject=no_deproject,
         )
         keep = trues(length(sampled_positions))
         if outer
