@@ -110,6 +110,69 @@
         evolved = mr.evolve(snapshot, simulation, 0.2)
         @test length(evolved.spins) == length(snapshot.spins)
     end
+    @testset "Liminal extracellular fraction endpoints" begin
+        internal = mr.Geometries.Internal
+        child = mr.Spheres(radius=1., permeability=Inf)
+
+        no_extracellular = mr.fix(mr.LiminalGeometry(
+            geometries=[(1., child)],
+            extracellular_fraction=0.,
+        ))
+        @test internal.inverse_mean_free_path(
+            no_extracellular.geometry, SA[1., 0., 0.],
+        ) == Inf
+        zero_distance_collision = internal.detect_intersection(
+            no_extracellular,
+            SA[0., 0., 0.],
+            SA[10., 0., 0.],
+        )
+        @test zero_distance_collision !== nothing
+        @test zero_distance_collision.distance == 0.
+
+        no_extracellular_simulation = mr.Simulation(
+            [], geometry=no_extracellular, diffusivity=0.1, timestep=0.2,
+        )
+        Random.seed!(1234)
+        no_extracellular_snapshot = mr.Snapshot(100, no_extracellular_simulation)
+        for spin in no_extracellular_snapshot.spins
+            @test !isempty(spin.isinside)
+        end
+        for time in 0.2:0.2:1.0
+            no_extracellular_snapshot = mr.evolve(
+                no_extracellular_snapshot, no_extracellular_simulation, time,
+            )
+            @test all(!isempty(spin.isinside) for spin in no_extracellular_snapshot.spins)
+        end
+
+        all_extracellular = mr.fix(mr.LiminalGeometry(
+            geometries=[(1., child)],
+            extracellular_fraction=1.,
+        ))
+        @test internal.inverse_mean_free_path(
+            all_extracellular.geometry, SA[1., 0., 0.],
+        ) == 0.
+        @test internal.detect_intersection(
+            all_extracellular,
+            SA[0., 0., 0.],
+            SA[10., 0., 0.],
+        ) === nothing
+
+        all_extracellular_simulation = mr.Simulation(
+            [], geometry=all_extracellular, diffusivity=0.1, timestep=0.2,
+        )
+        free_simulation = mr.Simulation([], diffusivity=0.1, timestep=0.2)
+        Random.seed!(4321)
+        all_extracellular_snapshot = mr.Snapshot(100, all_extracellular_simulation)
+        @test all(isempty(spin.isinside) for spin in all_extracellular_snapshot.spins)
+        Random.seed!(5678)
+        liminal_evolved = mr.evolve(
+            all_extracellular_snapshot, all_extracellular_simulation, 1.0,
+        )
+        Random.seed!(5678)
+        free_evolved = mr.evolve(all_extracellular_snapshot, free_simulation, 1.0)
+        @test all(isempty(spin.isinside) for spin in liminal_evolved.spins)
+        @test mr.position.(liminal_evolved.spins) == mr.position.(free_evolved.spins)
+    end
     @testset "Fallback bounding box for unsupported geometry" begin
         liminal = mr.fix(mr.LiminalGeometry(
             geometries=[(1., mr.Spheres(radius=1.))],
