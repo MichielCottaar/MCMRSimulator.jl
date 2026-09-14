@@ -231,6 +231,7 @@ function random_surface_positions(
     density::GeometryLeafProperties,
     bounding_box::InternalBoundingBoxes.InternalBoundingBox{3},
     scale_density,
+    ; include_gap=false,
 )
     positions = surface_sampling(cylinder, density, scale_density)
     indices = map(positions) do position
