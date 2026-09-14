@@ -408,6 +408,7 @@ end
 function inside_indices(
     ::FixedLiminalGeometry,
     ::SVector{3, Float64},
+    ; kwargs...,
 )
     throw(ArgumentError(
         "inside_indices is not defined for FixedLiminalGeometry without cell context; " *
@@ -419,6 +420,8 @@ function inside_indices(
     geometry::FixedLiminalGeometry,
     position::SVector{3, Float64},
     intersection,
+    ; no_deproject=false,
+    kwargs...,
 )
     isnothing(intersection) && throw(ArgumentError(
         "inside_indices is not defined for FixedLiminalGeometry without cell context; " *
@@ -426,7 +429,9 @@ function inside_indices(
     ))
     cell_index, offset = intersection[1]
     child = Shift(geometry.geometries[cell_index], offset)
-    child_indices = inside_indices_for_any_type(child, position - offset, intersection[2:end])
+    child_indices = inside_indices_for_any_type(
+        child, position - offset, intersection[2:end]; no_deproject, kwargs...
+    )
     [tuple((cell_index, offset), index...) for index in child_indices]
 end
 

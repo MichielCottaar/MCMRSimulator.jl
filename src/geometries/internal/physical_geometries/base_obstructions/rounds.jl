@@ -14,6 +14,7 @@ function isinside_single(
     round::Round{N},
     position::SVector{N, Float64},
     previous_intersection=nothing,
+    ; kwargs...,
 ) where {N}
     !isnothing(previous_intersection) && return previous_intersection[1]
     return sum(position .* position) < round.radius^2

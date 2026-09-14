@@ -46,19 +46,29 @@ transparent_geometry(wrapper::Transparent) = getfield(wrapper, :geometry)
 
 has_inside(::Type{<:Transparent{N, P}}) where {N, P} = has_inside(P)
 has_single_inside(::Type{<:Transparent{N, P}}) where {N, P} = has_single_inside(P)
-InternalBoundingBox(wrapper::Transparent) = InternalBoundingBox(transparent_geometry(wrapper))
+InternalBoundingBox(wrapper::Transparent; kwargs...) =
+    InternalBoundingBox(transparent_geometry(wrapper); kwargs...)
 
 inside_indices(
     wrapper::Transparent{N},
     position::SVector{N, Float64},
     intersection=nothing,
-) where {N} = inside_indices(transparent_geometry(wrapper), position, intersection)
+    ; no_deproject=false,
+    kwargs...,
+) where {N} = inside_indices(
+    transparent_geometry(wrapper), position, intersection; no_deproject, kwargs...
+)
 
 isinside_single(
     wrapper::Transparent{N},
     position::SVector{N, Float64},
     previous_intersection=nothing,
-) where {N} = isinside_single(transparent_geometry(wrapper), position, previous_intersection)
+    ; no_deproject=false,
+    kwargs...,
+) where {N} = isinside_single(
+    transparent_geometry(wrapper), position, previous_intersection;
+    no_deproject, kwargs...
+)
 
 function find_intersection(
     wrapper::Transparent{N},

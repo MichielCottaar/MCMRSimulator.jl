@@ -940,6 +940,10 @@ end
         tilted_cylinder; density=100., minimum_samples=1_000,
     )
     @test tilted_surface.area ≈ 2π rtol=0.1
+    tilted_volume = GI.PhysicalGeometries.estimate_volume(
+        cylinder_rotation; nsamples=100_000, rng=Random.MersenneTwister(1234),
+    )
+    @test tilted_volume ≈ π atol=0.05
     cylinder_mesh = GI.geometry_mesh(cylinder_rotation; nsamples=8, height=2.0)
     @test length(cylinder_mesh) == 1
     @test length(cylinder_mesh[1].vertices) == 16

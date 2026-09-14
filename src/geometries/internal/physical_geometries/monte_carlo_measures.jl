@@ -32,10 +32,10 @@ struct SurfaceEstimate{N, I <: Tuple}
     outer::Bool
 end
 
-function _inside_indices(geometry::PhysicalGeometry, position)
+function _inside_indices(geometry::PhysicalGeometry, position; no_deproject=false)
     has_single_inside(typeof(geometry)) ?
-        (isinside_single(geometry, position) ? [()] : Tuple[]) :
-        inside_indices(geometry, position)
+        (isinside_single(geometry, position; no_deproject) ? [()] : Tuple[]) :
+        inside_indices(geometry, position; no_deproject)
 end
 
 function estimate_volume(
@@ -52,7 +52,9 @@ function estimate_volume(
     has_inside(typeof(geometry)) || throw(ArgumentError("geometry has no inside volume"))
     contains_repeat(typeof(geometry)) &&
         throw(ArgumentError("Monte Carlo volume estimates do not support repeating geometries"))
-    bounding_box = isnothing(bounding_box) ? InternalBoundingBox(geometry) : bounding_box
+    no_deproject = isnothing(bounding_box)
+    bounding_box = no_deproject ?
+        InternalBoundingBox(geometry; no_deproject=true) : bounding_box
 
     box_size = upper(bounding_box) - lower(bounding_box)
     box_volume = prod(box_size)
@@ -62,7 +64,7 @@ function estimate_volume(
         inside_count = 0
         for _ in 1:current_nsamples
             position = SVector{N, Float64}(rand(rng, N)) .* box_size + lower(bounding_box)
-            inside_count += !isempty(_inside_indices(geometry, position))
+            inside_count += !isempty(_inside_indices(geometry, position; no_deproject))
         end
         outside_count = current_nsamples - inside_count
         (inside_count >= minimum_samples && outside_count >= minimum_samples) && break

@@ -270,6 +270,7 @@ function isinside_single(
     mesh::Mesh,
     position::SVector{3, Float64},
     previous_intersection=nothing,
+    ; kwargs...,
 )
     if !isnothing(previous_intersection)
         triangle_index = previous_intersection[1]

@@ -55,6 +55,7 @@ function isinside_single(
     cylinder::FiniteCylinder,
     position::SVector{3, Float64},
     previous_intersection=nothing,
+    ; kwargs...,
 )
     if !isnothing(previous_intersection)
         previous_inside, previous_distance = previous_intersection

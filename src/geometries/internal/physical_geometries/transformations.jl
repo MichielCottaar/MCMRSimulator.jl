@@ -52,11 +52,17 @@ function isinside_single(
     transformation::Transformation{N, M},
     position::SVector{N, Float64},
     previous_intersection=nothing,
+    ; no_deproject=false,
+    kwargs...,
 ) where {N, M}
+    no_deproject && transformation isa Rotate && N > M && !all(
+        abs.(nullspace(Matrix(transformation.matrix'))' * position) .<= 0.5,
+    ) && return false
     isinside_single(
         transformation.geometry,
         to_child_coordinates(transformation, position),
         previous_intersection,
+        ; no_deproject, kwargs...,
     )
 end
 
@@ -64,11 +70,17 @@ function inside_indices(
     transformation::Transformation{N, M},
     position::SVector{N, Float64},
     intersection=nothing,
+    ; no_deproject=false,
+    kwargs...,
 ) where {N, M}
+    no_deproject && transformation isa Rotate && N > M && !all(
+        abs.(nullspace(Matrix(transformation.matrix'))' * position) .<= 0.5,
+    ) && return Tuple[]
     inside_indices(
         transformation.geometry,
         to_child_coordinates(transformation, position),
         intersection,
+        ; no_deproject, kwargs...,
     )
 end
 
@@ -165,8 +177,10 @@ function InternalBoundingBox(
     child_center = InternalBoundingBoxes.center(child_box)
     child_half_size = InternalBoundingBoxes.half_size(child_box)
     center = transformation.matrix * child_center
+    null_basis = nullspace(Matrix(transformation.matrix'))
+    null_half_size = 0.5 .* vec(sum(abs.(null_basis), dims=2))
     half_size = max.(
-        abs.(transformation.matrix) * child_half_size,
+        abs.(transformation.matrix) * child_half_size + null_half_size,
         eps(Float64),
     )
     InternalBoundingBoxes.InternalBoundingBox{N}(half_size, center)

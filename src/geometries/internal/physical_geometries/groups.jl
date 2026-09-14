@@ -268,20 +268,21 @@ end
 
 InternalBoundingBox(geometry::GeometryVectorGrid; kwargs...) = geometry.grid.bounding_box
 
-function inside_indices_for_any_type(geometry, position, intersection)
+function inside_indices_for_any_type(geometry, position, intersection; no_deproject=false)
     geometry_type = typeof(geometry)
     has_inside(geometry_type) || return Tuple{}[]
     if has_single_inside(geometry_type)
-        return isinside_single(geometry, position, intersection) ?
+        return isinside_single(geometry, position, intersection; no_deproject) ?
             [()] : Tuple{}[]
     end
-    return inside_indices(geometry, position, intersection)
+    return inside_indices(geometry, position, intersection; no_deproject)
 end
 
 function inside_indices(
     geometry::GroupGeometry{N, P},
     position::SVector{N, Float64},
     intersection=nothing,
+    ; no_deproject=false,
 ) where {N, P}
     indices = Vector{inside_indices_eltype(typeof(geometry))}()
     if !has_inside(P)
@@ -291,11 +292,13 @@ function inside_indices(
     for (child_index, child) in inside_candidates(geometry, position)
         child_intersection = !isnothing(intersection) && intersection[1] == child_index ? intersection[2:end] : nothing
         if single_inside
-            if isinside_single(child, position, child_intersection)
+            if isinside_single(child, position, child_intersection; no_deproject)
                 push!(indices, (child_index, ))
             end
         else
-            append!(indices, [(child_index, new_indices...) for new_indices in inside_indices(child, position, child_intersection)])
+            append!(indices, [(child_index, new_indices...) for new_indices in inside_indices(
+                child, position, child_intersection; no_deproject,
+            )])
         end
     end
     return indices
@@ -312,12 +315,15 @@ end
 function inside_indices(
     geometry::GeometryTuple{N},
     position::SVector{N, Float64},
-    intersection=nothing
+    intersection=nothing;
+    no_deproject=false,
 ) where {N}
     indices = Vector{inside_indices_eltype(typeof(geometry))}()
     for (child_index, child) in enumerate(geometry)
         child_intersection = !isnothing(intersection) && intersection[1] == child_index ? intersection[2:end] : nothing
-        append!(indices, [(child_index, new_indices...) for new_indices in inside_indices_for_any_type(child, position, child_intersection)])
+        append!(indices, [(child_index, new_indices...) for new_indices in inside_indices_for_any_type(
+            child, position, child_intersection; no_deproject,
+        )])
     end
     indices
 end
