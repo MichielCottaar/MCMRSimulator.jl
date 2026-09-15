@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pre-filtering support for adaptive readouts using `filter=Subset(...)`.
 - CLI `--filter-inside` option for adaptive simulations.
 - Liminal geometries for statistically modeling packed cell populations without explicitly solving a global packing problem. They can be created in Julia using `LiminalGeometry` and from the CLI using `mcmr geometry create liminal <output_file> --extracellular-fraction <value> --geometry ...`.
+- CATERPillar geometry loading through `read_caterpillar` and `read_geometry`, including conversion of CATERPillar's overlapping sphere output into inner and outer sphere groups for myelinated cells. Magnetic susceptibility of imported myelin is not currently supported.
 
 ### Changed
 - CLI signal output now reports per-spin magnetisation values and includes component SNR information.
