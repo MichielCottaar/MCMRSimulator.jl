@@ -2,7 +2,17 @@ module LiminalGeometries
 
 export LiminalGeometry
 
-"""User-facing collection of cell geometry templates and number fractions."""
+"""
+    LiminalGeometry(geometries; extracellular_fraction)
+
+Create a statistical collection of cell geometry templates. `geometries` should
+be a vector of `(number_fraction, geometry)` tuples. The number fractions give
+the relative abundance of each cell type and are normalized internally;
+`extracellular_fraction` gives the extracellular volume fraction.
+
+See the [Liminal geometry](@ref liminal_geometry) chapter for an overview and
+usage examples.
+"""
 struct LiminalGeometry
     geometries::Vector{Tuple{Float64, Any}}
     extracellular_fraction::Float64
@@ -10,7 +20,7 @@ end
 
 function LiminalGeometry(
     geometries::AbstractVector;
-    extracellular_fraction::Real=0.,
+    extracellular_fraction::Real,
 )
     isempty(geometries) && throw(ArgumentError("at least one cell geometry is required"))
     isfinite(extracellular_fraction) && 0 <= extracellular_fraction <= 1 ||

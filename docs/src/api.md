@@ -42,6 +42,7 @@ LiminalGeometry
 ```@docs
 load_mesh
 read_geometry
+read_caterpillar
 read_geometry_json
 read_swc
 random_positions_radii

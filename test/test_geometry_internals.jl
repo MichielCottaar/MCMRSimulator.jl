@@ -868,13 +868,16 @@ end
             any(index -> index == (1, 1), sample.isinside) == sample.reflection.intersection.inside
             for sample in inner_samples
         )
-        @test_throws ArgumentError mr.LiminalGeometry(geometries=[])
-        @test_throws ArgumentError mr.LiminalGeometry(geometries=[(0., mr.Spheres(radius=1.))])
+        @test_throws UndefKeywordError mr.LiminalGeometry(geometries=[])
+        @test_throws ArgumentError mr.LiminalGeometry(
+            geometries=[], extracellular_fraction=0.,
+        )
+        @test_throws ArgumentError mr.LiminalGeometry(geometries=[(0., mr.Spheres(radius=1.))], extracellular_fraction=0.)
         @test_throws ArgumentError mr.LiminalGeometry(
             geometries=[(1., mr.Spheres(radius=1.))], extracellular_fraction=1.1,
         )
         @test_throws ArgumentError mr.fix(mr.LiminalGeometry(
-            geometries=[(1., repeating_sphere)],
+            geometries=[(1., repeating_sphere)], extracellular_fraction=0.,
         ))
 
         heterogeneous = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(

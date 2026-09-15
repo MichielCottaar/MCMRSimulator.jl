@@ -111,6 +111,28 @@
         end
     end
 
+    @testset "reading CATERPillar geometry files" begin
+        filename = joinpath(@__DIR__, "geometries", "caterpillar.csv")
+        geometries = mr.read_caterpillar(filename)
+        @test length(geometries) == 5
+        @test all(geometry.overlapping.value for geometry in geometries)
+        @test length.(geometries) == [2, 3, 3, 1, 1]
+
+        @test geometries[1].radius.value == [1., 1.]
+        @test geometries[2].radius.value == [0.8, 0.8, 0.7]
+        @test geometries[3].radius.value[1] == 1.
+        @test geometries[3].radius.value[2] == 0.8 + sqrt(eps(Float64))
+        @test geometries[3].radius.value[3] == 0.9
+
+        contents = read(filename, String)
+        @test mr.read_geometry(IOBuffer(contents)) isa Vector{<:mr.Spheres}
+        explicit = mr.read_geometry(IOBuffer(contents); format=:caterpillar)
+        @test length(explicit) == length(geometries)
+        @test_throws ArgumentError mr.read_caterpillar(
+            IOBuffer(replace(contents, "inner_radius outer_radius" => "inner_radius")),
+        )
+    end
+
     @testset "reading connected SWC geometry" begin
         connected = mr.read_swc(joinpath(@__DIR__, "geometries", "cylinder.swc"), R2_inside=0.1)
 

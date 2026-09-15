@@ -79,8 +79,8 @@ import .Geometries:
     Ring, BendyCylinder,
     Triangle, Mesh, nvolumes,
     load_mesh, SWCFile, SWCNode, read_swc, read_swc_raw, fix, fix_susceptibility,
-    random_positions_radii, write_geometry, read_geometry_json, read_geometry, LiminalGeometry
-export Annuli, Cylinders, Walls, Spheres, FiniteCylinders, Mesh, load_mesh, read_swc, read_swc_raw, random_positions_radii, BendyCylinder, write_geometry, read_geometry_json, read_geometry, LiminalGeometry
+    random_positions_radii, write_geometry, read_geometry_json, read_geometry, read_caterpillar, LiminalGeometry
+export Annuli, Cylinders, Walls, Spheres, FiniteCylinders, Mesh, load_mesh, read_swc, read_swc_raw, random_positions_radii, BendyCylinder, write_geometry, read_geometry_json, read_geometry, read_caterpillar, LiminalGeometry
 @compat public ObstructionGroup, IndexedObstruction, Annulus, Cylinder, Wall, Sphere, FiniteCylinder, Ring, Triangle, nvolumes, fix_susceptibility, fix, SWCFile, SWCNode 
 
 import .Geometries: BoundingBox, BoundingBoxNotSupported

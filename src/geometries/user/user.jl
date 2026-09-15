@@ -6,6 +6,7 @@ include("obstructions/obstructions.jl")
 include("split_mesh.jl")
 include("load_mesh.jl")
 include("load_swc.jl")
+include("load_caterpillar.jl")
 include("random_distribution.jl")
 include("json.jl")
 include("liminal_geometry.jl")
@@ -22,6 +23,7 @@ import .Obstructions: ObstructionGroup, IndexedObstruction, nvolumes,
 import .RandomDistribution: random_positions_radii
 import .LoadMesh: load_mesh
 import .LoadSWC: SWCFile, SWCNode, read_swc, read_swc_raw
+import .LoadCaterpillar: read_caterpillar
 import .LoadGeometry: read_geometry
 import .JSON: write_geometry, read_geometry_json
 import .LiminalGeometries: LiminalGeometry

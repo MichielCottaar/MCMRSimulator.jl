@@ -1,4 +1,4 @@
-# Liminal geometry
+# [Liminal geometry](@id liminal_geometry)
 
 Liminal geometry models a population of cells without explicitly constructing a globally packed geometry. It is useful when the MRI signal depends on the morphology and orientation of individual cells, but a physically packed arrangement of all cells would be expensive or impossible to generate.
 

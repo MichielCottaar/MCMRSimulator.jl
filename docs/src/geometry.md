@@ -1,18 +1,58 @@
 # [Obstructions to free diffusion](@id geometry)
-MCMRSimulator.jl comes with a variety of basic components that can be used to represent various components in the tissue microstructure.
+MCMRSimulator.jl provides several geometry representations for restricting diffusion and assigning MRI properties to tissue compartments.
 
+## Geometry representations
 
-| Component:             | infinite walls     | hollow cylinder    | myelinated annuli  | hollow sphere      | mesh               | bendy cylinder     |
-|------------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|
-| Constructor (Julia)         | [`Walls`](@ref)    | [`Cylinders`](@ref) | [`Annuli`](@ref)  | [`Spheres`](@ref)   | [`Mesh`](@ref)     | [`BendyCylinder`](@ref) |
-| Constructor (CLI)         | `mcmr geometry create walls` | `mcmr geometry create cylinders` or `mcmr geometry create-random cylinders` | `mcmr geometry create annuli` or `mcmr geometry create-random annuli` | `mcmr geometry create spheres` or `mcmr geometry create-random spheres` | Generate mesh from tissue samples or generative models (e.g., [palomboGenerativeModelRealistic2019](@cite), [Ginsburger_2019](@cite), [Callaghan_2020](@cite), [villarreal-haroCACTUSComputationalFramework2023](@cite)) | `mcmr geometry create bendy-cylinder` |
-| Hinder diffusion       | ✅ | ✅ |                    | ✅ | ✅ | ✅ |
-| Surface relaxation     | ✅| ✅ |                    | ✅ | ✅ | ✅ |
-| Magnetisation transfer | ✅  | ✅ |                    | ✅ | ✅ | ✅ |
-| Generate off-resonance field    |                    | ✅ | ✅ |                    | ✅     | ✅     |
-| Different relaxation inside    |                    | ✅ | ✅ |  ✅                  | ✅     | ✅     |
-| Intrinsic dimensionality| 1                   | 2 | 2 |  3                  | 3     | 3     |
+| Geometry | Julia constructor | CLI or file source | Intrinsic dimensionality | Typical use |
+|---|---|---|---:|---|
+| Infinite walls | [`Walls`](@ref) | `mcmr geometry create walls` | 1 | Parallel planes |
+| Infinite cylinders | [`Cylinders`](@ref) | `mcmr geometry create cylinders` | 2 | Repeating cylindrical fibres |
+| Cylindrical annuli | [`Annuli`](@ref) | `mcmr geometry create annuli` | 2 | Myelinated cylindrical fibres |
+| Spheres | [`Spheres`](@ref) | `mcmr geometry create spheres` | 3 | Spherical cells or sphere-based morphologies |
+| Connected finite cylinders | `FiniteCylinders` | Usually loaded from SWC | 3 | Connected morphology with spherical nodes and cylindrical links |
+| Meshes | [`Mesh`](@ref) | PLY files or generated externally | 3 | Arbitrary closed surfaces |
+| Bendy cylinders | [`BendyCylinder`](@ref) | `mcmr geometry create bendy-cylinder` | 3 | Curved or varying-radius fibres |
+| Liminal geometry | [`LiminalGeometry`](@ref) | `mcmr geometry create liminal` | 3 | Statistical populations of cells without explicit global packing |
 
+`Cylinders` and `Annuli` are intrinsically two-dimensional geometries. Applying a `rotation` embeds them in three-dimensional space. `FiniteCylinders`, by contrast, are three-dimensional connected structures and should not be confused with infinitely repeating [`Cylinders`](@ref).
+
+## Loading geometry files
+
+[`read_geometry`](@ref) is the general entry point for loading geometry files. When no `format` is supplied, it detects the format from the file contents rather than the filename extension.
+
+| Format | Dedicated reader | Result and notes |
+|---|---|---|
+| JSON | [`read_geometry_json`](@ref) | User-defined obstruction groups |
+| PLY | [`load_mesh`](@ref) | A [`Mesh`](@ref) geometry |
+| SWC | [`read_swc`](@ref) | `FiniteCylinders` by default; use `swc_as_spheres=true` for overlapping [`Spheres`](@ref) |
+| CATERPillar | [`read_caterpillar`](@ref) | Overlapping [`Spheres`](@ref) groups from CATERPillar's whitespace-delimited output |
+| Liminal | [`Liminal geometry`](@ref liminal_geometry) | A [`LiminalGeometry`](@ref) with child geometry files |
+
+For example, the format can normally be inferred automatically:
+
+```julia
+using MCMRSimulator
+
+geometry = read_geometry("geometry_file")
+```
+
+For streams, or when an explicit override is useful, pass `format`:
+
+```julia
+geometry = read_geometry(io; format=:swc, swc_as_spheres=true)
+```
+
+See the linked reader docstrings for the format-specific syntax and options.
+
+### Overlapping spheres
+
+Set `overlapping=true` on [`Spheres`](@ref) when a sequence of overlapping spheres represents one continuous structure. This is the representation used by `read_swc(...; swc_as_spheres=true)` and [`read_caterpillar`](@ref). It differs from a collection of independent, non-overlapping spherical obstructions: overlapping spheres are treated as permeable within their overlapping regions so that the chain does not create artificial barriers between adjacent samples.
+
+### Connected finite cylinders
+
+`FiniteCylinders` represents a connected morphology using spherical endpoints and cylindrical links. [`read_swc`](@ref) constructs these links from the parent IDs in an SWC file. Use this representation when explicit node connectivity is available and cylindrical links are appropriate; use `swc_as_spheres=true` when the sphere samples themselves are the desired morphology representation.
+
+## Generating custom geometries
 The constructors for these components all have a similar interface.
 Some expect certain component-specific keyword arguments (e.g., radius for [`Spheres`](@ref) and [`Cylinders`](@ref), or the keywords regarding the myelin-induced off-resonance field produced by [`Cylinders`](@ref) or [`Annuli`](@ref)).
 MRI relaxation properties within the obstruction and collision parameters (stuck spins, magnetisation transfer rate & permeability) can be set using keyword arguments as described in the [properties section](@ref properties).

@@ -21,7 +21,7 @@ import .User:
     Annulus, Annuli,
     Triangle, Mesh,
     Ring, BendyCylinder,
-    load_mesh, SWCFile, SWCNode, read_swc, read_swc_raw,
+    load_mesh, SWCFile, SWCNode, read_swc, read_swc_raw, read_caterpillar,
     random_positions_radii, nvolumes,
     write_geometry, read_geometry_json, read_geometry
 end

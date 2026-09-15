@@ -1,9 +1,10 @@
-"""Load geometry from JSON, PLY, SWC, or liminal files."""
+"""Load geometry from JSON, PLY, SWC, CATERPillar, or liminal files."""
 module LoadGeometry
 
 import ..JSON: read_geometry_json
 import ..LoadMesh: load_mesh
 import ..LoadSWC: read_swc
+import ..LoadCaterpillar: read_caterpillar, is_caterpillar_header
 import ..LiminalGeometries: LiminalGeometry
 
 function _format(format)
@@ -29,6 +30,7 @@ function _detect_format(io::IO)
         isnothing(firstline) && throw(ArgumentError("Could not detect geometry format from an empty file"))
         first(firstline) in ('{', '[') && return :json
         firstline == "ply" && return :ply
+        is_caterpillar_header(firstline) && return :caterpillar
         lowercase(first(split(firstline))) == "liminal" && return :liminal
         :swc
     finally
@@ -86,16 +88,19 @@ function _read_geometry(io::IO, format; base_dir=pwd(), swc_as_spheres=false, kw
     elseif format == :liminal
         isempty(kwargs) || throw(ArgumentError("Keyword arguments are not supported for liminal geometries"))
         return _read_liminal(io; base_dir, swc_as_spheres)
+    elseif format == :caterpillar
+        return read_caterpillar(io; kwargs...)
     end
-    throw(ArgumentError("Unsupported geometry format '$format'. Expected :json, :ply, :swc, or :liminal."))
+    throw(ArgumentError("Unsupported geometry format '$format'. Expected :json, :ply, :swc, :caterpillar, or :liminal."))
 end
 
 """
     read_geometry(io::IO; format=nothing, kwargs...)
 
 Read geometry from an open stream. If `format` is omitted, the format is
-detected from the first non-empty content line. JSON, PLY, SWC, and liminal
-geometry files are supported. Use `format` to override content detection.
+detected from the first non-empty content line. JSON, PLY, SWC, CATERPillar,
+and liminal geometry files are supported. Use `format` to override content
+detection.
 """
 function read_geometry(io::IO; format=nothing, kwargs...)
     _read_geometry(io, format; kwargs...)
@@ -104,11 +109,11 @@ end
 """
     read_geometry(filename::AbstractString; format=nothing, kwargs...)
 
-Read geometry from a JSON, PLY, SWC, or liminal geometry file. When `format`
-is omitted, the format is detected from the file contents rather than its
-filename extension. Liminal files contain an extracellular volume fraction
-and references to child geometry files; relative child paths are resolved
-relative to the liminal file.
+Read geometry from a JSON, PLY, SWC, CATERPillar, or liminal geometry file.
+When `format` is omitted, the format is detected from the file contents rather
+than its filename extension. Liminal files contain an extracellular volume
+fraction and references to child geometry files; relative child paths are
+resolved relative to the liminal file.
 """
 function read_geometry(filename::AbstractString; format=nothing, kwargs...)
     stripped = strip(filename)
