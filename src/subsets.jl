@@ -48,7 +48,7 @@ $(_arguments)
 """
 get_subset(spins::AbstractVector{<:Spin}, args...; kwargs...) = get_subset(Snapshot(spins), args...; kwargs...).spins
 
-get_subset(snapshot::Snapshot, simulation::Union{Simulation, FixedGeometry}; kwargs...) =
+get_subset(snapshot::Snapshot, simulation::Simulation; kwargs...) =
     get_subset(snapshot, simulation, Subset(; kwargs...))
 
 function get_subset(snapshot::Snapshot, simulation::Simulation, subset::Subset)
@@ -57,9 +57,6 @@ function get_subset(snapshot::Snapshot, simulation::Simulation, subset::Subset)
     end
     _get_subset(snapshot, fix(subset.geometry), subset, true)
 end
-
-get_subset(snapshot::Snapshot, geometry::FixedGeometry, subset::Subset) =
-    _get_subset(snapshot, geometry, subset, false)
 
 function _get_subset(snapshot::Snapshot{N}, geometry::FixedGeometry, subset::Subset, explicit_geometry::Bool) where {N}
     if isnothing(subset.bound) && isnothing(subset.inside)
@@ -78,6 +75,9 @@ function _get_subset(snapshot::Snapshot{N}, geometry::FixedGeometry, subset::Sub
     end
     if !isnothing(subset.inside)
         function _number_isinside(spin::Spin)
+            if !explicit_geometry && !isnothing(spin.isinside)
+                return length(spin.isinside)
+            end
             length(isinside(geometry, spin.position, previous_hit(spin.reflection)))
         end
         if subset.inside isa Bool
