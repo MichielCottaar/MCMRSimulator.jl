@@ -152,24 +152,28 @@ function volume_sampling end
 function projected_surface_area end
 function inverse_mean_free_path end
 
-function _volume_inside_indices(geometry::PhysicalGeometry, position)
+function _volume_inside_indices(geometry::PhysicalGeometry, position; no_deproject=false)
     has_inside(typeof(geometry)) || return Tuple{}[]
     has_single_inside(typeof(geometry)) &&
-        return isinside_single(geometry, position) ? [()] : Tuple{}[]
-    inside_indices(geometry, position)
+        return isinside_single(geometry, position; no_deproject) ? [()] : Tuple{}[]
+    inside_indices(geometry, position; no_deproject)
 end
 
 function volume_sampling(
     geometry::PhysicalGeometry{N},
     bounding_box::InternalBoundingBox{N},
     volume_density::Number,
+    ; no_deproject=false,
 ) where {N}
     volume_density >= 0 || throw(ArgumentError("volume density must be non-negative"))
     lower_bound = InternalBoundingBoxes.lower(bounding_box)
     size = 2 .* InternalBoundingBoxes.half_size(bounding_box)
     nsamples = rand(Poisson(volume_density * prod(size)))
     positions = [SVector{N, Float64}(rand(N) .* size .+ lower_bound) for _ in 1:nsamples]
-    positions, [_volume_inside_indices(geometry, position) for position in positions]
+    positions, [
+        _volume_inside_indices(geometry, position; no_deproject)
+        for position in positions
+    ]
 end
 
 """Whether the geometry is within the single inside."""

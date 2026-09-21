@@ -53,12 +53,25 @@ function volume_sampling(
     fixed_geometry::FixedGeometry,
     bounding_box::InternalBoundingBox{3},
     volume_density::Number,
+    ; no_deproject=false,
 )
-    volume_sampling(fixed_geometry.geometry, bounding_box, volume_density)
+    volume_sampling(
+        fixed_geometry.geometry, bounding_box, volume_density;
+        no_deproject,
+    )
 end
 
-volume_sampling(geometry::FixedGeometry, bounding_box::BoundingBox, volume_density::Number) =
-    volume_sampling(geometry, InternalBoundingBox(bounding_box), volume_density)
+volume_sampling(
+    geometry::FixedGeometry,
+    bounding_box::BoundingBox,
+    volume_density::Number;
+    no_deproject=false,
+) = volume_sampling(
+    geometry,
+    InternalBoundingBox(bounding_box),
+    volume_density;
+    no_deproject,
+)
 
 # A fixed geometry represents one user geometry unless it is a tuple of groups.
 Base.length(geometry::FixedGeometry) =

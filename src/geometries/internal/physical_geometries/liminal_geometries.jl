@@ -501,6 +501,7 @@ function volume_sampling(
     geometry::FixedLiminalGeometry,
     bounding_box::InternalBoundingBox{3},
     volume_density::Number,
+    ; no_deproject=false,
 )
     volume_density >= 0 || throw(ArgumentError("volume density must be non-negative"))
     intracellular_density = volume_density * (1 - geometry.extracellular_fraction)
@@ -510,11 +511,12 @@ function volume_sampling(
     indices = Vector{Vector{inside_indices_eltype(typeof(geometry))}}()
 
     for (cell_index, child) in enumerate(geometry.geometries)
-        child_box = InternalBoundingBox(child)
+        child_box = InternalBoundingBox(child; no_deproject=true)
         child_positions, child_indices = volume_sampling(
             child,
             child_box,
             intracellular_density * geometry.number_fractions[cell_index] * density_scale,
+            ; no_deproject=true,
         )
         for (position, child_index) in zip(child_positions, child_indices)
             isempty(child_index) && continue
@@ -545,13 +547,15 @@ function random_surface_positions(
     positions = SVector{3, Float64}[]
     indices = Tuple[]
     intracellular_scale = (1 - geometry.extracellular_fraction)
+    density_scale = prod(2 .* InternalBoundingBoxes.half_size(bounding_box)) /
+        geometry.weighted_cell_volume
     for (cell_index, child) in enumerate(geometry.geometries)
         child_positions, child_indices = random_surface_positions(
             child,
             density.properties[cell_index],
-            InternalBoundingBox(child; no_deproject, kwargs...),
-            scale_density * intracellular_scale * geometry.number_fractions[cell_index],
-            ; include_gap, no_deproject, kwargs...,
+            InternalBoundingBox(child; no_deproject=true, kwargs...),
+            scale_density * density_scale * intracellular_scale * geometry.number_fractions[cell_index],
+            ; include_gap, no_deproject=true, kwargs...,
         )
         for (position, child_index) in zip(child_positions, child_indices)
             offset = _wrapped_offset(position, bounding_box)

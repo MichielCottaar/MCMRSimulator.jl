@@ -110,6 +110,73 @@
         evolved = mr.evolve(snapshot, simulation, 0.2)
         @test length(evolved.spins) == length(snapshot.spins)
     end
+    @testset "Liminal sampling with rotated cylinders" begin
+        Random.seed!(1234)
+        extracellular_fraction = 0.25
+        geometry = mr.LiminalGeometry(
+            geometries=[(
+                1.,
+                mr.Cylinders(
+                    radius=0.5,
+                    rotation=:x,
+                    surface_density=0.,
+                ),
+            )],
+            extracellular_fraction=extracellular_fraction,
+        )
+        simulation = mr.Simulation([], geometry=geometry)
+        snapshot = mr.Snapshot(20_000, simulation, mr.BoundingBox(2.))
+        inside = count(!isempty, getfield.(snapshot.spins, :isinside))
+        outside = length(snapshot) - inside
+
+        @test inside / length(snapshot) ≈ 1 - extracellular_fraction rtol=0.05
+        @test outside / length(snapshot) ≈ extracellular_fraction rtol=0.05
+    end
+    @testset "Liminal surface sampling with rotated cylinders" begin
+        Random.seed!(1234)
+        nspins = 20_000
+        extracellular_fraction = 0.25
+        radius = 0.5
+        geometry = mr.LiminalGeometry(
+            geometries=[(
+                1.,
+                mr.Cylinders(
+                    radius=radius,
+                    rotation=:x,
+                    surface_density=1.,
+                ),
+            )],
+            extracellular_fraction=extracellular_fraction,
+        )
+        simulation = mr.Simulation([], geometry=geometry, dwell_time=1.)
+        snapshot = mr.Snapshot(nspins, simulation, mr.BoundingBox(2.))
+
+        denominator = 1 + (1 - extracellular_fraction) * 2 / radius
+        expected_free_inside = nspins * (1 - extracellular_fraction) / denominator
+        expected_free_outside = nspins * extracellular_fraction / denominator
+        expected_bound_inside = nspins * (1 - extracellular_fraction) / radius / denominator
+        expected_bound_outside = expected_bound_inside
+
+        free_inside = count(
+            spin -> isnothing(spin.reflection) && !isempty(spin.isinside), snapshot,
+        )
+        free_outside = count(
+            spin -> isnothing(spin.reflection) && isempty(spin.isinside), snapshot,
+        )
+        bound_inside = count(
+            spin -> !isnothing(spin.reflection) && spin.reflection.intersection.inside,
+            snapshot,
+        )
+        bound_outside = count(
+            spin -> !isnothing(spin.reflection) && !spin.reflection.intersection.inside,
+            snapshot,
+        )
+
+        @test free_inside ≈ expected_free_inside rtol=0.1
+        @test free_outside ≈ expected_free_outside rtol=0.1
+        @test bound_inside ≈ expected_bound_inside rtol=0.1
+        @test bound_outside ≈ expected_bound_outside rtol=0.1
+    end
     @testset "Liminal extracellular fraction endpoints" begin
         internal = mr.Geometries.Internal
         child = mr.Spheres(radius=1., permeability=Inf)
