@@ -53,6 +53,23 @@ end
     @test all(spin->norm(spin.position) > 1, outside_particles)
 end
 
+@testset "Use cached inside state for liminal geometry" begin
+    Random.seed!(1234)
+    geometry = mr.LiminalGeometry(
+        geometries=[(1., mr.Spheres(radius=1.))],
+        extracellular_fraction=0.5,
+    )
+    simulation = mr.Simulation([], geometry=geometry)
+    snapshot = mr.Snapshot(100, simulation, 2.)
+    expected_inside = count(!isempty, getfield.(snapshot.spins, :isinside))
+
+    @test expected_inside > 0
+    @test expected_inside < length(snapshot)
+    @test length(mr.get_subset(snapshot, simulation, inside=true)) == expected_inside
+    @test length(mr.get_subset(snapshot, simulation, inside=false)) ==
+        length(snapshot) - expected_inside
+end
+
 @testset "Testing an explicit user geometry" begin
     simulation = mr.Simulation([], geometry=[])
     snapshot = mr.Snapshot([
