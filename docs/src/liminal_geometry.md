@@ -35,8 +35,6 @@ geometry = LiminalGeometry(
     ],
     extracellular_fraction=0.2,
 )
-
-fixed_geometry = fix(geometry)
 ```
 
 The child geometries can be any supported geometry that can be used as a three-dimensional cell template, including morphologies loaded from files:
