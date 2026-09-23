@@ -443,6 +443,46 @@ end
             closed_surface_area,
             zero(SVector{3}),
         )
+
+        triangle_normals = [
+            SA[1., 0., 0.],
+            SA[-cos(π / 3), sin(2π / 3), 0.],
+            SA[-cos(π / 3), -sin(2π / 3), 0.],
+        ]
+        triangle_surface_area = GI.PhysicalGeometries.LiminalGeometries.SphericalSurfaceArea(
+            triangle_normals;
+            degree=32,
+            sample_weight=1.,
+        )
+        for direction in (
+            SA[1., 0., 0.],
+            SA[cos(π / 12), sin(π / 12), 0.],
+            SA[cos(π / 6), sin(π / 6), 0.],
+            SA[-1., 0., 0.],
+            SA[0., 0., 1.],
+            SA[cos(π / 6), 0., sin(π / 6)],
+        )
+            cosines = [normal ⋅ direction for normal in triangle_normals]
+            incoming_weights = max.(0., -cosines)
+            expected_projected_area = sum(abs, cosines) / 2
+            expected_moment = if sum(incoming_weights) == 0
+                0.
+            else
+                sum(
+                    weight * cosine^2
+                    for (weight, cosine) in zip(incoming_weights, cosines)
+                ) / sum(incoming_weights)
+            end
+
+            @test GI.PhysicalGeometries.LiminalGeometries.projected_surface_area(
+                triangle_surface_area,
+                direction,
+            ) ≈ expected_projected_area atol=0.03
+            @test GI.PhysicalGeometries.LiminalGeometries.normal_second_moment(
+                triangle_surface_area,
+                direction,
+            ) ≈ expected_moment atol=0.03
+        end
     end
 
     @testset "Intersection inside requirements" begin
