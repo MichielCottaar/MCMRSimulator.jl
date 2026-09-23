@@ -12,7 +12,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_singl
     volume_sampling, random_surface_positions, bound_intersection_type,
     _merge_types, InternalBoundingBox, estimate_surface, estimate_volume,
     get_intersection_params, to_inside_index, to_property_index,
-    projected_surface_area, inverse_mean_free_path, _geometry_mesh,
+    projected_surface_area, normal_second_moment, inverse_mean_free_path, _geometry_mesh,
     distance_to_surface, size_scale, SurfaceEstimate, is_liminal
 import ..Groups: GeometryTuple
 import ..Groups: inside_indices_for_any_type, _append_type
@@ -22,13 +22,14 @@ import ...InternalBoundingBoxes
 import ....BoundingBoxes: BoundingBoxNotSupported
 import ...Properties: GeometryProperties, GeometryLeafProperties
 
-export FixedLiminalGeometry, OuterSurfaceSampling, SphericalSurfaceArea, sample!
+export FixedLiminalGeometry, OuterSurfaceSampling, SphericalSurfaceArea, normal_second_moment, sample!
 
 const SPHERICAL_SURFACE_AREA_SAMPLE_COUNT = 100_000
 
 struct SphericalSurfaceArea{C}
     degree::Int
     coefficients::Vector{Float64}
+    normal_second_moment_coefficients::Vector{Float64}
     legendre_coefficients::C
 end
 
@@ -55,6 +56,25 @@ function _abs_dot_legendre_coefficients(degree::Int)
     coefficients
 end
 
+function _negative_cubed_dot_legendre_coefficients(degree::Int)
+    polynomials = [Float64[1.]]
+    degree == 0 || push!(polynomials, Float64[0., 1.])
+    for l in 2:degree
+        polynomial = zeros(Float64, l + 1)
+        for power in eachindex(polynomial)
+            power > 1 && (polynomial[power] += (2l - 1) * polynomials[l][power - 1])
+            power <= l - 1 && (polynomial[power] -= (l - 1) * polynomials[l - 1][power])
+            polynomial[power] /= l
+        end
+        push!(polynomials, polynomial)
+    end
+    [
+        2 * (-1)^(l - 1) *
+        sum(coefficient / (power + 3) for (power, coefficient) in enumerate(polynomial))
+        for (l, polynomial) in enumerate(polynomials)
+    ]
+end
+
 function SphericalSurfaceArea(
     normals::AbstractVector{<:SVector{3, <:Real}};
     degree::Integer=8,
@@ -71,7 +91,10 @@ function SphericalSurfaceArea(
         SphericalHarmonics.FullRange,
     )
     coefficients = zeros(Float64, (degree + 1)^2)
+    normal_second_moment_coefficients = zeros(Float64, (degree + 1)^2)
     kernel_coefficients = _abs_dot_legendre_coefficients(degree)
+    normal_second_moment_kernel_coefficients =
+        _negative_cubed_dot_legendre_coefficients(degree)
     for normal in normals
         radius = norm(normal)
         iszero(radius) && throw(ArgumentError("normals must be non-zero"))
@@ -96,13 +119,22 @@ function SphericalSurfaceArea(
         )
         for l in 0:degree
             factor = π * kernel_coefficients[l + 1] * sample_weight
+            normal_second_moment_factor =
+                π * normal_second_moment_kernel_coefficients[l + 1] * sample_weight
             offset = l^2
             for mode in 1:(2l + 1)
                 coefficients[offset + mode] += factor * harmonics[offset + mode]
+                normal_second_moment_coefficients[offset + mode] +=
+                    normal_second_moment_factor * harmonics[offset + mode]
             end
         end
     end
-    SphericalSurfaceArea(degree, coefficients, legendre_coefficients)
+    SphericalSurfaceArea(
+        degree,
+        coefficients,
+        normal_second_moment_coefficients,
+        legendre_coefficients,
+    )
 end
 
 function projected_surface_area(
@@ -137,6 +169,65 @@ function projected_surface_area(
         SphericalHarmonics.RealHarmonics(),
     )
     sum(surface_area.coefficients[index] * harmonics[index] for index in eachindex(harmonics))
+end
+
+"""
+    normal_second_moment(surface_area, direction)
+
+Calculate the flux-weighted second moment of collision-surface normals for a
+travel direction ``direction``. For the unit direction ``u``, this evaluates
+
+```math
+M_2(u) =
+\\frac{\\int \\sigma(n)\\max(0,-n\\cdot u)(n\\cdot u)^2\\,dn}
+     {\\int \\sigma(n)\\max(0,-n\\cdot u)\\,dn}.
+```
+
+The weighting ``max(0, -n dot u)`` selects surface elements encountered by a
+particle travelling in direction ``u``. For the closed outer surfaces used by
+liminal geometries, the denominator is equal to the projected surface area
+represented by `projected_surface_area`.
+
+The direction must be non-zero.
+"""
+function normal_second_moment(
+    surface_area::SphericalSurfaceArea,
+    direction::SVector{3, <:Real},
+)
+    projected_area = projected_surface_area(surface_area, direction)
+    iszero(projected_area) && return NaN
+    radius = norm(direction)
+    iszero(radius) && throw(ArgumentError("direction must be non-zero"))
+    unit_direction = direction / radius
+    θ = acos(unit_direction[3])
+    ϕ = atan(unit_direction[2], unit_direction[1])
+    legendre_polynomials = SphericalHarmonics.allocate_p(Float64, surface_area.degree)
+    SphericalHarmonics.computePlmcostheta!(
+        legendre_polynomials,
+        θ,
+        surface_area.degree,
+        surface_area.legendre_coefficients,
+    )
+    harmonics = SphericalHarmonics.allocate_y(
+        Float64,
+        surface_area.degree,
+        SphericalHarmonics.FullRange,
+    )
+    SphericalHarmonics.computeYlm!(
+        harmonics,
+        legendre_polynomials,
+        θ,
+        ϕ,
+        surface_area.degree,
+        nothing,
+        SphericalHarmonics.FullRange,
+        SphericalHarmonics.RealHarmonics(),
+    )
+    numerator = sum(
+        surface_area.normal_second_moment_coefficients[index] * harmonics[index]
+        for index in eachindex(harmonics)
+    )
+    numerator / projected_area
 end
 
 """Mutable library of sampled outer-surface data for liminal cells.
@@ -320,6 +411,11 @@ function inverse_mean_free_path(
         (geometry.extracellular_fraction * geometry.weighted_cell_volume)
     cell_number_density * projected_surface_area(geometry.spherical_surface_area, direction)
 end
+
+normal_second_moment(
+    geometry::FixedLiminalGeometry,
+    direction::SVector{3, Float64},
+) = normal_second_moment(geometry.spherical_surface_area, direction)
 
 function _is_outer_surface_sample(
     geometry::PhysicalGeometry,

@@ -417,8 +417,30 @@ end
                 direction,
             ) ≈ expected atol=0.01
         end
+        closed_normals = reduce(vcat, [[normal, -normal] for normal in normals])
+        closed_surface_area = GI.PhysicalGeometries.LiminalGeometries.SphericalSurfaceArea(
+            closed_normals;
+            degree=8,
+            sample_weight=sample_weight / 2,
+        )
+        for direction in (SVector(1., 0., 0.), SVector(1., 2., 3.))
+            unit_direction = direction / norm(direction)
+            weights = max.(0., -([normal ⋅ unit_direction for normal in closed_normals]))
+            expected = sum(
+                weight * (normal ⋅ unit_direction)^2
+                for (weight, normal) in zip(weights, closed_normals)
+            ) / (sum(weights))
+            @test GI.PhysicalGeometries.LiminalGeometries.normal_second_moment(
+                closed_surface_area,
+                direction,
+            ) ≈ expected atol=0.01
+        end
         @test_throws ArgumentError GI.PhysicalGeometries.LiminalGeometries.projected_surface_area(
             spherical_area,
+            zero(SVector{3}),
+        )
+        @test_throws ArgumentError GI.PhysicalGeometries.LiminalGeometries.normal_second_moment(
+            closed_surface_area,
             zero(SVector{3}),
         )
     end

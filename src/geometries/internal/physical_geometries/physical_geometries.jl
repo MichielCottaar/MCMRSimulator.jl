@@ -153,6 +153,7 @@ function inside_indices end
 """Sample volume positions together with their cached inside indices."""
 function volume_sampling end
 function projected_surface_area end
+function normal_second_moment end
 function inverse_mean_free_path end
 
 function _volume_inside_indices(geometry::PhysicalGeometry, position; no_deproject=false)
