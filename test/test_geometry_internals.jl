@@ -919,6 +919,24 @@ end
                 tortuosity_strength=strength,
             ))
         end
+        fixed_liminal = mr.fix(mr.LiminalGeometry(
+            geometries=[(1., mr.Spheres(radius=1.))],
+            extracellular_fraction=0.2,
+            tortuosity_strength=0.4,
+        ))
+        direction = SA[1., 2., 3.]
+        expected_tortuosity = 1 - 0.4 *
+            GI.PhysicalGeometries.LiminalGeometries.normal_second_moment(
+                fixed_liminal.geometry,
+                direction,
+            )
+        @test GI.tortuosity(fixed_liminal, GI.IsInside(()), direction) ≈ expected_tortuosity
+        @test GI.tortuosity(fixed_liminal, GI.IsInside((1,)), direction) == 1.
+        @test GI.tortuosity(
+            mr.fix(mr.Spheres(radius=1.)),
+            GI.IsInside(()),
+            direction,
+        ) == 1.
 
         heterogeneous = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(
             [BaseObstructions.Sphere(1.), BaseObstructions.FiniteCylinder(
