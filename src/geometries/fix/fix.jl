@@ -57,13 +57,16 @@ function fix(collection::LiminalGeometry; kwargs...)
         contains_repeat(typeof(geometry.geometry)) &&
             throw(ArgumentError("repeating geometries are not supported in LiminalGeometry"))
     end
+    isfinite(collection.tortuosity_strength) && 0 <= collection.tortuosity_strength <= 1 ||
+        throw(ArgumentError("tortuosity_strength must be between 0 and 1"))
 
     fractions = [fraction for (fraction, _) in collection.geometries]
     fractions ./= sum(fractions)
     physical_geometry = FixedLiminalGeometry(
         [geometry.geometry for geometry in fixed],
         fractions,
-        collection.extracellular_fraction,
+        collection.extracellular_fraction;
+        tortuosity_strength=collection.tortuosity_strength,
     )
     volume = _merge_vector_properties(fixed, :volume)
     surface = _merge_vector_properties(fixed, :surface)

@@ -901,6 +901,24 @@ end
         @test_throws ArgumentError mr.fix(mr.LiminalGeometry(
             geometries=[(1., repeating_sphere)], extracellular_fraction=0.,
         ))
+        default_tortuosity = mr.LiminalGeometry(
+            geometries=[(1., mr.Spheres(radius=1.))],
+            extracellular_fraction=0.2,
+        )
+        @test default_tortuosity.tortuosity_strength == 0.
+        fixed_tortuosity = mr.fix(mr.LiminalGeometry(
+            geometries=[(1., mr.Spheres(radius=1.))],
+            extracellular_fraction=0.2,
+            tortuosity_strength=0.4,
+        ))
+        @test fixed_tortuosity.geometry.tortuosity_strength == 0.4
+        for strength in (-0.1, 1.1, NaN)
+            @test_throws ArgumentError mr.fix(mr.LiminalGeometry(
+                geometries=[(1., mr.Spheres(radius=1.))],
+                extracellular_fraction=0.2,
+                tortuosity_strength=strength,
+            ))
+        end
 
         heterogeneous = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(
             [BaseObstructions.Sphere(1.), BaseObstructions.FiniteCylinder(

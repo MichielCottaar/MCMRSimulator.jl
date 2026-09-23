@@ -264,6 +264,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
     geometries::Vector{P}
     number_fractions::Vector{Float64}
     extracellular_fraction::Float64
+    tortuosity_strength::Float64
     total_surface_area::Float64
     weighted_cell_volume::Float64
     spherical_surface_area::SphericalSurfaceArea
@@ -272,7 +273,8 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
     function FixedLiminalGeometry(
         geometries::AbstractVector{<:PhysicalGeometry{3}},
         number_fractions::AbstractVector{<:Real},
-        extracellular_fraction::Real,
+        extracellular_fraction::Real;
+        tortuosity_strength::Real=0.,
     )
         length(geometries) == length(number_fractions) ||
             throw(ArgumentError("geometries and number_fractions must have the same length"))
@@ -307,6 +309,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
             convert(Vector{child_type}, collect(geometries)),
             fractions,
             Float64(extracellular_fraction),
+            Float64(tortuosity_strength),
             total_surface_area,
             weighted_cell_volume,
             SphericalSurfaceArea(
