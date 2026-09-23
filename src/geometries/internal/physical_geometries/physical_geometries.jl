@@ -43,6 +43,9 @@ Return `nothing` if there is no intersection between `start` and `dest`.
 function find_intersection end
 find_intersection_requires_inside(::Type{<:PhysicalGeometry}) = Val(false)
 
+function is_liminal end
+is_liminal(::Type{<:PhysicalGeometry}) = false
+
 """
     get_child(geometry::PhysicalGeometry, indices) -> (PhysicalGeometry, remaining_indices)
 

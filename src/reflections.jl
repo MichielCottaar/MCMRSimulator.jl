@@ -29,18 +29,18 @@ function Reflection(
     ratio_displaced,
     time_moved,
     distance_moved,
-    permeable=false,
+    permeable=false;
+    ignore_reflection=false,
 )
     updated_collision = permeable ? flip(collision) : collision
-    if permeable
+    if permeable || ignore_reflection
         reflection_direction = direction
-        inside = updated_collision.inside
     else
         reflection_direction =
             -2 * (collision.normal ⋅ direction) * collision.normal /
             norm(collision.normal)^2 + direction
-        inside = updated_collision.inside
     end
+    inside = updated_collision.inside
 
     normalized_direction = reflection_direction / norm(reflection_direction)
     Reflection{typeof(updated_collision)}(

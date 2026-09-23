@@ -122,6 +122,41 @@
             @assert radius <= 1.
         end
     end
+    @testset "Liminal collisions do not reflect extracellular spins" begin
+        liminal = mr.LiminalGeometry(
+            geometries=[(
+                1.,
+                mr.Spheres(radius=1., permeability=0., surface_density=0.),
+        )],
+            extracellular_fraction=0.5,
+        )
+        fixed = mr.fix(liminal)
+        simulation = mr.Simulation([], geometry=liminal, diffusivity=3.)
+        part = mr.SequenceParts.MultSequencePart(
+            1.,
+            mr.SequenceParts.SequencePart[],
+            mr.SequenceParts.InstantSequencePart{SVector{0}}([]),
+        )
+
+        spin = first(filter(
+            spin -> isempty(spin.isinside),
+            mr.spin_sampling(fixed, mr.BoundingBox(4.), 1.),
+        ))
+        spin.position = SA[-2., 0., 0.]
+        mr.Evolve.draw_step!(spin, simulation, part, [3.], SA[2., 0., 0.])
+        @test spin.position ≈ SA[2., 0., 0.]
+        @test isempty(spin.isinside)
+
+        spin = first(filter(
+            spin -> !isempty(spin.isinside),
+            mr.spin_sampling(fixed, mr.BoundingBox(4.), 1.),
+        ))
+        destination = spin.position + SA[10., 0., 0.]
+        mr.Evolve.draw_step!(spin, simulation, part, [3.], destination)
+
+        @test spin.position != destination
+        @test !isempty(spin.isinside)
+    end
     @testset "Cylinder reflections" begin
         @testset "Within cylinder along radial line" begin
             res = correct_collisions(

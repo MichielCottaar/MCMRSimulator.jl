@@ -18,7 +18,7 @@ import ..Relax: relax!
 import ..Properties: GlobalProperties, stick_probability
 import ..Subsets: Subset, get_subset
 import ..Reflections: Reflection, possible_reflection_types, previous_hit, direction
-import ..Geometries.Internal: Intersection, detect_intersection, surface_relaxation, permeability, surface_density, dwell_time, FixedGeometry, to_inside_index
+import ..Geometries.Internal: Intersection, detect_intersection, surface_relaxation, permeability, surface_density, dwell_time, FixedGeometry, to_inside_index, is_liminal
 
 function _update_isinside!(spin::Spin, reflection::Reflection, geometry::FixedGeometry)
     isnothing(spin.isinside) && return
@@ -703,6 +703,8 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
                 break
             end
 
+            ignore_reflection = is_liminal(simulation.geometry) && isempty(spin.isinside)
+
             relaxation = surface_relaxation(simulation.geometry, collision)
             if ~iszero(relaxation)
                 collision_attenuation = exp(-sqrt(timestep) * relaxation)
@@ -717,7 +719,8 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
             reflection = Reflection(collision, new_pos - current_pos, ratio_displaced,
                 isnothing(reflection) ? (1 - fraction_timestep) * use_distance * timestep : reflection.time_moved + (1 - fraction_timestep) * use_distance * timestep,
                 isnothing(reflection) ? norm(new_pos - current_pos) * use_distance : reflection.distance_moved + norm(new_pos - current_pos) * use_distance,
-                passes_through
+                passes_through;
+                ignore_reflection,
             )
             passes_through && _update_isinside!(spin, reflection, simulation.geometry)
             current_pos = spin.position = collision_pos
