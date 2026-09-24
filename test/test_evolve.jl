@@ -332,6 +332,94 @@
         ]
         @test mean_counts ≈ expected rtol=0.2
     end
+    @testset "Liminal compartment density remains stable with tortuosity" begin
+        f_extra = 0.2
+        for child in (
+            mr.Spheres(radius=1., permeability=Inf),
+            mr.Cylinders(radius=1., permeability=Inf),
+        )
+            geometry = mr.LiminalGeometry(
+                geometries=[(1., child)],
+                extracellular_fraction=f_extra,
+                tortuosity_strength=0.5,
+            )
+            simulation = mr.Simulation([], geometry=geometry, diffusivity=0.1, timestep=0.2)
+            Random.seed!(4321)
+            snapshot = mr.Snapshot(1000, simulation)
+
+            tortuous_compartment_counts(snapshot) = begin
+                counts = zeros(Int, 2)
+                for spin in snapshot.spins
+                    isempty(spin.isinside) ?
+                        (counts[1] += 1) : (counts[first(spin.isinside)[1][1] + 1] += 1)
+                end
+                counts
+            end
+
+            compartment_history = Vector{Vector{Int}}()
+            push!(compartment_history, tortuous_compartment_counts(snapshot))
+            for time in 1:6
+                snapshot = mr.evolve(snapshot, simulation, time * 0.2)
+                push!(compartment_history, tortuous_compartment_counts(snapshot))
+            end
+            mean_counts = vec(mean(reduce(hcat, compartment_history), dims=2))
+            expected = [f_extra * length(snapshot), (1 - f_extra) * length(snapshot)]
+            @test mean_counts ≈ expected rtol=0.2
+        end
+    end
+    @testset "Permeable liminal tortuosity reduces mean square displacement" begin
+        nspins = 5000
+        geometry = mr.LiminalGeometry(
+            geometries=[(1., mr.Spheres(radius=1., permeability=1.))],
+            extracellular_fraction=1.,
+            tortuosity_strength=0.5,
+        )
+        tortuous_simulation = mr.Simulation([], geometry=geometry, diffusivity=0.1, timestep=0.2)
+        free_simulation = mr.Simulation([], diffusivity=0.1, timestep=0.2)
+        Random.seed!(4321)
+        initial = mr.Snapshot(nspins, tortuous_simulation, mr.BoundingBox(2.))
+        initial_positions = mr.position.(initial.spins)
+        tortuous = mr.evolve(deepcopy(initial), tortuous_simulation, 1.0)
+        free = mr.evolve(deepcopy(initial), free_simulation, 1.0)
+        tortuous_msd = mean(
+            sum(abs2, position - initial_position)
+            for (position, initial_position) in zip(mr.position.(tortuous.spins), initial_positions)
+        )
+        free_msd = mean(
+            sum(abs2, position - initial_position)
+            for (position, initial_position) in zip(mr.position.(free.spins), initial_positions)
+        )
+        @test tortuous_msd < free_msd
+    end
+    @testset "Impermeable cylindrical tortuosity" begin
+        diffusivity = 0.1
+        duration = 0.2
+        tortuosity_strength = 0.5
+        geometry = mr.LiminalGeometry(
+            geometries=[(1., mr.Cylinders(radius=0.5, permeability=0.))],
+            extracellular_fraction=0.5,
+            tortuosity_strength=tortuosity_strength,
+        )
+        simulation = mr.Simulation([], geometry=geometry, diffusivity=diffusivity, timestep=duration)
+        Random.seed!(4321)
+        initial = mr.Snapshot(20_000, simulation, mr.BoundingBox(2.))
+        initial_positions = mr.position.(initial.spins)
+        evolved = mr.evolve(initial, simulation, duration)
+        msd = [
+            mean(
+                (position[axis] - initial_position[axis])^2
+                for (position, initial_position) in zip(mr.position.(evolved.spins), initial_positions)
+            )
+            for axis in 1:3
+        ]
+        expected = 2 * diffusivity * duration .* [
+            1 - tortuosity_strength / 2,
+            1 - tortuosity_strength / 2,
+            1.,
+        ]
+        @test msd[1:2] ≈ expected[1:2] rtol=0.1
+        @test msd[3] ≈ expected[3] rtol=0.02
+    end
     @testset "Run simulation with multiple sequences at once" begin
         sequences = [
             build_sequence([mr.PulseEvent(flip_angle=0, phase=0.), 2., :readout, 1.]),

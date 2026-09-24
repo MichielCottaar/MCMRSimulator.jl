@@ -685,6 +685,8 @@ function find_intersection(
         inverse_path = inverse_mean_free_path(geometry, direction)
         iszero(inverse_path) && return nothing
         encounter_distance = -log1p(-rand()) / inverse_path
+        encounter_distance *= sqrt(1 - geometry.tortuosity_strength *
+            normal_second_moment(geometry, direction))
         encounter_distance > distance && return nothing
         sampling = geometry.outer_surface_sampling
         lock(sampling.lock)
