@@ -38,6 +38,8 @@ The original simulator was written by Michiel Cottaar.
 
 Other contributors:
 - Zhiyu Zheng
+- Valentine Picht
+- Malte Brammerloh
 ## Movie of spins moving through cylinders
 ```@raw html
 <iframe src="https://ox.cloud.panopto.eu/Panopto/Pages/Embed.aspx?id=b6211751-2743-4bb8-b65a-af5d011a8684&autoplay=true&offerviewer=false&showtitle=false&showbrand=false&captions=false&interactivity=none" style="border: 1px solid #464646;" allowfullscreen allow="autoplay"></iframe>
