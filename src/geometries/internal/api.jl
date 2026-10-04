@@ -1,10 +1,11 @@
 """Public operations supported by the internal geometry engine."""
 
-import StaticArrays: SVector
+import StaticArrays: SVector, SMatrix
+import LinearAlgebra: I, norm, ⋅
 import ..BoundingBoxes: BoundingBox
 import .InternalBoundingBoxes: InternalBoundingBox
 import .InternalBoundingBoxes
-import .PhysicalGeometries: PhysicalGeometry, find_intersection, find_intersection_requires_inside, get_intersection_params, random_surface_positions, volume_sampling, projected_surface_area, normal_second_moment, inverse_mean_free_path, inside_indices, size_scale, geometry_mesh, distance_to_surface, to_property_index, to_inside_index, inside_indices_eltype, bound_intersection_type, contains_repeat, estimate_volume, estimate_surface, is_liminal
+import .PhysicalGeometries: PhysicalGeometry, find_intersection, find_intersection_requires_inside, get_intersection_params, random_surface_positions, volume_sampling, projected_surface_area, normal_second_moment, tortuosity_tensor, inverse_mean_free_path, inside_indices, size_scale, geometry_mesh, distance_to_surface, to_property_index, to_inside_index, inside_indices_eltype, bound_intersection_type, contains_repeat, estimate_volume, estimate_surface, is_liminal
 import .PhysicalGeometries.Groups: GeometryTuple, inside_indices_for_any_type
 import .PhysicalGeometries.Transparents: IgnoreOverlapping
 import .InsideViews: InsideView
@@ -21,7 +22,7 @@ export FixedGeometry, Intersection, flip, IsInside, collision_normal,
     max_surface_relaxation, min_dwell_time,
     bound_intersection_type,
     is_liminal,
-    tortuosity,
+    tortuosity, tortuosity_tensor,
     volume, surface,
     permeability, surface_relaxation, surface_density, dwell_time,
     R1, R2, off_resonance,
@@ -389,10 +390,32 @@ function tortuosity(
     direction::SVector{3, <:Real},
 )
     if is_liminal(geometry) && isempty(inside.inside_of)
-        return 1 - geometry.geometry.tortuosity_strength *
-            normal_second_moment(geometry.geometry, direction)
+        direction_norm = norm(direction)
+        iszero(direction_norm) && throw(ArgumentError("direction must be non-zero"))
+        unit_direction = direction / direction_norm
+        return unit_direction ⋅ (tortuosity_tensor(geometry.geometry) * unit_direction)
     end
     1.
+end
+
+function tortuosity_tensor(
+    geometry::FixedGeometry,
+    inside::IsInside,
+)
+    if is_liminal(geometry) && isempty(inside.inside_of)
+        return tortuosity_tensor(geometry.geometry)
+    end
+    SMatrix{3, 3, Float64, 9}(I)
+end
+
+function tortuosity_transform(
+    geometry::FixedGeometry,
+    inside::IsInside,
+)
+    if is_liminal(geometry) && isempty(inside.inside_of)
+        return geometry.geometry.tortuosity_transform
+    end
+    SMatrix{3, 3, Float64, 9}(I)
 end
 
 """Return the permeability associated with a collision state."""

@@ -154,6 +154,7 @@ function inside_indices end
 function volume_sampling end
 function projected_surface_area end
 function normal_second_moment end
+function tortuosity_tensor end
 function inverse_mean_free_path end
 
 function _volume_inside_indices(geometry::PhysicalGeometry, position; no_deproject=false)

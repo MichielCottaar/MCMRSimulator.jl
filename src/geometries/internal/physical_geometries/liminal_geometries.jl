@@ -1,8 +1,8 @@
 """Physical geometry for a collection of independently placed cell templates."""
 module LiminalGeometries
 
-import StaticArrays: SVector
-import LinearAlgebra: norm, ⋅
+import StaticArrays: SVector, SMatrix
+import LinearAlgebra: norm, ⋅, Symmetric, eigen, Diagonal, I
 import Random: rand, randperm
 import Distributions: Poisson
 import SphericalHarmonics
@@ -12,7 +12,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_singl
     volume_sampling, random_surface_positions, bound_intersection_type,
     _merge_types, InternalBoundingBox, estimate_surface, estimate_volume,
     get_intersection_params, to_inside_index, to_property_index,
-    projected_surface_area, normal_second_moment, inverse_mean_free_path, _geometry_mesh,
+    projected_surface_area, normal_second_moment, tortuosity_tensor, inverse_mean_free_path, _geometry_mesh,
     distance_to_surface, size_scale, SurfaceEstimate, is_liminal
 import ..Groups: GeometryTuple
 import ..Groups: inside_indices_for_any_type, _append_type
@@ -31,6 +31,25 @@ struct SphericalSurfaceArea{C}
     coefficients::Vector{Float64}
     normal_second_moment_coefficients::Vector{Float64}
     legendre_coefficients::C
+end
+
+function _tortuosity_transforms(normals, strength)
+    normal_tensor = zeros(Float64, 3, 3)
+    for normal in normals
+        unit_normal = normal / norm(normal)
+        normal_tensor .+= unit_normal * unit_normal'
+    end
+    normal_tensor ./= length(normals)
+    normal_tensor = SMatrix{3, 3, Float64, 9}(normal_tensor)
+    decomposition = eigen(Symmetric(normal_tensor))
+    factors = 1 .- strength .* decomposition.values
+    transform = SMatrix{3, 3, Float64, 9}(
+        decomposition.vectors * Diagonal(sqrt.(factors)) * decomposition.vectors',
+    )
+    inverse_transform = SMatrix{3, 3, Float64, 9}(
+        decomposition.vectors * Diagonal(map(factor -> iszero(factor) ? 0. : inv(sqrt(factor)), factors)) * decomposition.vectors',
+    )
+    normal_tensor, transform, inverse_transform
 end
 
 function _abs_dot_legendre_coefficients(degree::Int)
@@ -268,6 +287,9 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
     total_surface_area::Float64
     weighted_cell_volume::Float64
     spherical_surface_area::SphericalSurfaceArea
+    normal_second_moment_tensor::SMatrix{3, 3, Float64, 9}
+    tortuosity_transform::SMatrix{3, 3, Float64, 9}
+    inverse_tortuosity_transform::SMatrix{3, 3, Float64, 9}
     outer_surface_sampling::OuterSurfaceSampling{I}
 
     function FixedLiminalGeometry(
@@ -305,6 +327,10 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
             SPHERICAL_SURFACE_AREA_SAMPLE_COUNT,
             surface_index_type,
         )
+        normal_tensor, transform, inverse_transform = _tortuosity_transforms(
+            spherical_sampling.normals,
+            tortuosity_strength,
+        )
         fixed = new{child_type, surface_index_type}(
             convert(Vector{child_type}, collect(geometries)),
             fractions,
@@ -316,6 +342,9 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
                 spherical_sampling.normals;
                 sample_weight=spherical_sampling.weight,
             ),
+            normal_tensor,
+            transform,
+            inverse_transform,
             OuterSurfaceSampling{surface_index_type}(
                 SVector{3, Float64}[],
                 SVector{3, Float64}[],
@@ -419,6 +448,11 @@ normal_second_moment(
     geometry::FixedLiminalGeometry,
     direction::SVector{3, Float64},
 ) = normal_second_moment(geometry.spherical_surface_area, direction)
+
+tortuosity_tensor(
+    geometry::FixedLiminalGeometry,
+) = SMatrix{3, 3, Float64, 9}(I) -
+    geometry.tortuosity_strength * geometry.normal_second_moment_tensor
 
 function _is_outer_surface_sample(
     geometry::PhysicalGeometry,
@@ -685,8 +719,8 @@ function find_intersection(
         inverse_path = inverse_mean_free_path(geometry, direction)
         iszero(inverse_path) && return nothing
         encounter_distance = -log1p(-rand()) / inverse_path
-        encounter_distance *= sqrt(1 - geometry.tortuosity_strength *
-            normal_second_moment(geometry, direction))
+        path_scale = inv(norm(geometry.inverse_tortuosity_transform * direction))
+        encounter_distance *= path_scale
         encounter_distance > distance && return nothing
         sampling = geometry.outer_surface_sampling
         lock(sampling.lock)

@@ -283,7 +283,7 @@
         Random.seed!(5678)
         free_evolved = mr.evolve(all_extracellular_snapshot, free_simulation, 1.0)
         @test all(isempty(spin.isinside) for spin in liminal_evolved.spins)
-        @test mr.position.(liminal_evolved.spins) == mr.position.(free_evolved.spins)
+        @test mr.position.(liminal_evolved.spins) ≈ mr.position.(free_evolved.spins)
     end
     @testset "Fallback bounding box for unsupported geometry" begin
         liminal = mr.fix(mr.LiminalGeometry(

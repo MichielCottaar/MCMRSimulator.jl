@@ -18,7 +18,7 @@ import ..Relax: relax!
 import ..Properties: GlobalProperties, stick_probability
 import ..Subsets: Subset, get_subset
 import ..Reflections: Reflection, possible_reflection_types, previous_hit, direction
-import ..Geometries.Internal: Intersection, detect_intersection, surface_relaxation, permeability, surface_density, dwell_time, FixedGeometry, to_inside_index, is_liminal, tortuosity, IsInside
+import ..Geometries.Internal: Intersection, detect_intersection, surface_relaxation, permeability, surface_density, dwell_time, FixedGeometry, to_inside_index, is_liminal, tortuosity_transform, IsInside
 
 function _update_isinside!(spin::Spin, reflection::Reflection, geometry::FixedGeometry)
     isnothing(spin.isinside) && return
@@ -648,10 +648,9 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
         if !stuck(spin)
             if isnothing(test_new_pos)
                 rand_base_vec = randn(SVector{3, Float64})
-                displacement_direction = rand_base_vec / norm(rand_base_vec)
                 inside = isnothing(spin.isinside) ? IsInside(()) : IsInside(spin.isinside)
-                displacement = rand_base_vec .* sqrt(2 * simulation.diffusivity * timestep) *
-                    sqrt(tortuosity(simulation.geometry, inside, displacement_direction))
+                displacement = tortuosity_transform(simulation.geometry, inside) *
+                    (rand_base_vec .* sqrt(2 * simulation.diffusivity * timestep))
                 new_pos = current_pos + displacement
             else
                 new_pos = SVector{3, Float64}(test_new_pos)
