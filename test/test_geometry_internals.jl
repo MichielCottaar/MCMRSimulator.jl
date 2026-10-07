@@ -964,18 +964,19 @@ end
             extracellular_fraction=0.2,
             tortuosity_strength=0.4,
         ))
-        direction = SA[1., 2., 3.]
-        unit_direction = direction / norm(direction)
-        expected_tortuosity = unit_direction ⋅ ((
-            I - 0.4 * fixed_liminal.geometry.normal_second_moment_tensor
-        ) * unit_direction)
-        @test GI.tortuosity(fixed_liminal, GI.IsInside(()), direction) ≈ expected_tortuosity
-        @test GI.tortuosity(fixed_liminal, GI.IsInside((1,)), direction) == 1.
-        @test GI.tortuosity(
+        expected_tensor = I - 0.4 * fixed_liminal.geometry.normal_second_moment_tensor
+        @test GI.tortuosity_tensor(
+            fixed_liminal,
+            GI.IsInside(()),
+        ) ≈ expected_tensor
+        @test GI.tortuosity_tensor(
+            fixed_liminal,
+            GI.IsInside((1,)),
+        ) == I
+        @test GI.tortuosity_tensor(
             mr.fix(mr.Spheres(radius=1.)),
             GI.IsInside(()),
-            direction,
-        ) == 1.
+        ) == I
 
         heterogeneous = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(
             [BaseObstructions.Sphere(1.), BaseObstructions.FiniteCylinder(

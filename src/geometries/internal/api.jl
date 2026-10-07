@@ -22,7 +22,7 @@ export FixedGeometry, Intersection, flip, IsInside, collision_normal,
     max_surface_relaxation, min_dwell_time,
     bound_intersection_type,
     is_liminal,
-    tortuosity, tortuosity_tensor,
+    tortuosity_tensor,
     volume, surface,
     permeability, surface_relaxation, surface_density, dwell_time,
     R1, R2, off_resonance,
@@ -383,27 +383,13 @@ function min_dwell_time(geometry::FixedGeometry)
     minimum(dwell_times; init=Inf)
 end
 
-"""Return the diffusion reduction factor for a compartment and direction."""
-function tortuosity(
-    geometry::FixedGeometry,
-    inside::IsInside,
-    direction::SVector{3, <:Real},
-)
-    if is_liminal(geometry) && isempty(inside.inside_of)
-        direction_norm = norm(direction)
-        iszero(direction_norm) && throw(ArgumentError("direction must be non-zero"))
-        unit_direction = direction / direction_norm
-        return unit_direction ⋅ (tortuosity_tensor(geometry.geometry) * unit_direction)
-    end
-    1.
-end
-
 function tortuosity_tensor(
     geometry::FixedGeometry,
     inside::IsInside,
 )
     if is_liminal(geometry) && isempty(inside.inside_of)
-        return tortuosity_tensor(geometry.geometry)
+        transform = geometry.geometry.tortuosity_transform
+        return transform * transform
     end
     SMatrix{3, 3, Float64, 9}(I)
 end
