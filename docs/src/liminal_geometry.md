@@ -31,20 +31,19 @@ T = I - s(1 - \alpha)\langle nn^\mathsf{T}\rangle,
 
 where ``s`` is `tortuosity_strength`, ``\alpha`` is `extracellular_fraction`, and the average is over sampled unit outer-surface normals. The default strength is `1.0`. This approximation produces an orientation-dependent tortuosity for aligned, elongated cells and gives free diffusion when the extracellular fraction is one.
 
-For **spheres**, the normal average is ``I/3``, giving
+For **spheres**, the effective diffusivity relative to the free diffusivity ``D_0`` is the same in every direction:
 
 ```math
-T_{\mathrm{sphere}} = \left(1 - \frac{s(1-\alpha)}{3}\right)I.
+\frac{D_{\mathrm{eff}}}{D_0} = 1 - \frac{s(1-\alpha)}{3}.
 ```
 
-At the default ``s=1``, this reduces to ``T_{\mathrm{sphere}} = (2+\alpha)I/3``.
+At the default ``s=1``, this reduces to ``D_{\mathrm{eff}}/D_0 = (2+\alpha)/3``.
 
-For **parallel, infinitely long cylinders** with unit axis vector ``a``, the normal average is ``(I-aa^\mathsf{T})/2``, giving
+For **parallel, infinitely long cylinders**, let ``\theta`` be the angle between the direction of travel and the cylinder axis. The directional effective diffusivity reduction is
 
 ```math
-T_{\mathrm{cylinder}} =
-\left(1 - \frac{s(1-\alpha)}{2}\right)(I-aa^\mathsf{T})
-+ aa^\mathsf{T}.
+\frac{D_{\mathrm{eff}}(\theta)}{D_0} =
+1 - \frac{s(1-\alpha)}{2}\left(1-\cos^2\theta\right).
 ```
 
 Thus the relative diffusivity perpendicular to the cylinders is ``1-s(1-\alpha)/2``, while parallel to the cylinders it remains ``1``. At the default ``s=1``, the perpendicular component is ``(1+\alpha)/2``. These expressions describe the model's ideal surface-normal averages; finite sampling introduces small deviations, and finite cylinder end caps change the normal distribution.
