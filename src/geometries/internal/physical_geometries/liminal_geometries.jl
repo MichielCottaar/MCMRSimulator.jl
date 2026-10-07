@@ -2,7 +2,7 @@
 module LiminalGeometries
 
 import StaticArrays: SVector, SMatrix
-import LinearAlgebra: norm, ⋅, Symmetric, eigen, Diagonal, I
+import LinearAlgebra: norm, ⋅, Symmetric, eigen, Diagonal
 import Random: rand, randperm
 import Distributions: Poisson
 import SphericalHarmonics
@@ -12,7 +12,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_singl
     volume_sampling, random_surface_positions, bound_intersection_type,
     _merge_types, InternalBoundingBox, estimate_surface, estimate_volume,
     get_intersection_params, to_inside_index, to_property_index,
-    projected_surface_area, normal_second_moment, tortuosity_tensor, inverse_mean_free_path, _geometry_mesh,
+    projected_surface_area, normal_second_moment, inverse_mean_free_path, _geometry_mesh,
     distance_to_surface, size_scale, SurfaceEstimate, is_liminal
 import ..Groups: GeometryTuple
 import ..Groups: inside_indices_for_any_type, _append_type
@@ -43,6 +43,10 @@ function _tortuosity_transforms(normals, strength)
     normal_tensor = SMatrix{3, 3, Float64, 9}(normal_tensor)
     decomposition = eigen(Symmetric(normal_tensor))
     factors = 1 .- strength .* decomposition.values
+    # Permit rounding error at the positive-semidefinite boundary.
+    minimum(factors) >= -16eps(Float64) ||
+        throw(ArgumentError("tortuosity_strength produces a tortuosity tensor that is not positive semidefinite"))
+    factors = max.(factors, 0.)
     transform = SMatrix{3, 3, Float64, 9}(
         decomposition.vectors * Diagonal(sqrt.(factors)) * decomposition.vectors',
     )
@@ -296,8 +300,12 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
         geometries::AbstractVector{<:PhysicalGeometry{3}},
         number_fractions::AbstractVector{<:Real},
         extracellular_fraction::Real;
-        tortuosity_strength::Real=0.,
+        tortuosity_strength::Real=1.,
     )
+        isfinite(extracellular_fraction) && 0 <= extracellular_fraction <= 1 ||
+            throw(ArgumentError("extracellular_fraction must be between 0 and 1"))
+        isfinite(tortuosity_strength) && tortuosity_strength >= 0 ||
+            throw(ArgumentError("tortuosity_strength must be finite and nonnegative"))
         length(geometries) == length(number_fractions) ||
             throw(ArgumentError("geometries and number_fractions must have the same length"))
         isempty(geometries) && throw(ArgumentError("at least one liminal geometry is required"))
@@ -329,7 +337,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
         )
         normal_tensor, transform, inverse_transform = _tortuosity_transforms(
             spherical_sampling.normals,
-            tortuosity_strength,
+            tortuosity_strength * (1 - extracellular_fraction),
         )
         fixed = new{child_type, surface_index_type}(
             convert(Vector{child_type}, collect(geometries)),
@@ -448,11 +456,6 @@ normal_second_moment(
     geometry::FixedLiminalGeometry,
     direction::SVector{3, Float64},
 ) = normal_second_moment(geometry.spherical_surface_area, direction)
-
-tortuosity_tensor(
-    geometry::FixedLiminalGeometry,
-) = SMatrix{3, 3, Float64, 9}(I) -
-    geometry.tortuosity_strength * geometry.normal_second_moment_tensor
 
 function _is_outer_surface_sample(
     geometry::PhysicalGeometry,

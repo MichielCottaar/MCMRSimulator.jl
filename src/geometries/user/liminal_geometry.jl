@@ -3,13 +3,18 @@ module LiminalGeometries
 export LiminalGeometry
 
 """
-    LiminalGeometry(geometries; extracellular_fraction, tortuosity_strength=0.)
+    LiminalGeometry(geometries; extracellular_fraction, tortuosity_strength=1.)
 
 Create a statistical collection of cell geometry templates. `geometries` should
 be a vector of `(number_fraction, geometry)` tuples. The number fractions give
 the relative abundance of each cell type and are normalized internally;
 `extracellular_fraction` gives the extracellular volume fraction.
 `tortuosity_strength` controls the diffusion reduction due to liminal geometry.
+The extracellular diffusion tensor relative to free diffusion is
+`I - tortuosity_strength * (1 - extracellular_fraction) * ⟨n * n'⟩`, where
+the average is over unit outer-surface normals. The strength must be finite and
+nonnegative; fixing the geometry also checks that the tensor is positive
+semidefinite. Strengths above 1 are allowed when this condition holds.
 
 See the [Liminal geometry](@ref liminal_geometry) chapter for an overview and
 usage examples.
@@ -23,11 +28,13 @@ end
 function LiminalGeometry(
     geometries::AbstractVector;
     extracellular_fraction::Real,
-    tortuosity_strength::Real=0.,
+    tortuosity_strength::Real=1.,
 )
     isempty(geometries) && throw(ArgumentError("at least one cell geometry is required"))
     isfinite(extracellular_fraction) && 0 <= extracellular_fraction <= 1 ||
         throw(ArgumentError("extracellular_fraction must be between 0 and 1"))
+    isfinite(tortuosity_strength) && tortuosity_strength >= 0 ||
+        throw(ArgumentError("tortuosity_strength must be finite and nonnegative"))
 
     entries = Tuple{Float64, Any}[]
     for entry in geometries

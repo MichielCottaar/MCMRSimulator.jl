@@ -367,7 +367,7 @@
             @test mean_counts ≈ expected rtol=0.2
         end
     end
-    @testset "Permeable liminal tortuosity reduces mean square displacement" begin
+    @testset "Pure extracellular liminal space has free diffusion" begin
         nspins = 5000
         geometry = mr.LiminalGeometry(
             geometries=[(1., mr.Spheres(radius=1., permeability=1.))],
@@ -379,7 +379,9 @@
         Random.seed!(4321)
         initial = mr.Snapshot(nspins, tortuous_simulation, mr.BoundingBox(2.))
         initial_positions = mr.position.(initial.spins)
+        Random.seed!(5678)
         tortuous = mr.evolve(deepcopy(initial), tortuous_simulation, 1.0)
+        Random.seed!(5678)
         free = mr.evolve(deepcopy(initial), free_simulation, 1.0)
         tortuous_msd = mean(
             sum(abs2, position - initial_position)
@@ -389,7 +391,7 @@
             sum(abs2, position - initial_position)
             for (position, initial_position) in zip(mr.position.(free.spins), initial_positions)
         )
-        @test tortuous_msd < free_msd
+        @test tortuous_msd ≈ free_msd
     end
     @testset "Impermeable cylindrical tortuosity" begin
         diffusivity = 0.1
@@ -413,8 +415,8 @@
             for axis in 1:3
         ]
         expected = 2 * diffusivity * duration .* [
-            1 - tortuosity_strength / 2,
-            1 - tortuosity_strength / 2,
+            1 - tortuosity_strength * (1 - 0.5) / 2,
+            1 - tortuosity_strength * (1 - 0.5) / 2,
             1.,
         ]
         @test msd[1:2] ≈ expected[1:2] rtol=0.1

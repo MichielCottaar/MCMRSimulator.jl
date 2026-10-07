@@ -945,26 +945,52 @@ end
             geometries=[(1., mr.Spheres(radius=1.))],
             extracellular_fraction=0.2,
         )
-        @test default_tortuosity.tortuosity_strength == 0.
+        @test default_tortuosity.tortuosity_strength == 1.
         fixed_tortuosity = mr.fix(mr.LiminalGeometry(
             geometries=[(1., mr.Spheres(radius=1.))],
             extracellular_fraction=0.2,
             tortuosity_strength=0.4,
         ))
         @test fixed_tortuosity.geometry.tortuosity_strength == 0.4
-        for strength in (-0.1, 1.1, NaN)
+        for strength in (-0.1, NaN, Inf)
             @test_throws ArgumentError mr.fix(mr.LiminalGeometry(
                 geometries=[(1., mr.Spheres(radius=1.))],
                 extracellular_fraction=0.2,
                 tortuosity_strength=strength,
             ))
         end
+        # Strengths above one are valid if the morphology-dependent tensor is PSD.
+        strong_tortuosity = mr.fix(mr.LiminalGeometry(
+            geometries=[(1., mr.Spheres(radius=1.))],
+            extracellular_fraction=0.2,
+            tortuosity_strength=2.,
+        ))
+        @test strong_tortuosity.geometry.tortuosity_strength == 2.
+        @test_throws ArgumentError mr.fix(mr.LiminalGeometry(
+            geometries=[(1., mr.Spheres(radius=1.))],
+            extracellular_fraction=0.2,
+            tortuosity_strength=4.,
+        ))
+        for alpha in (0., 0.5, 1.)
+            fixed = mr.fix(mr.LiminalGeometry(
+                geometries=[(1., mr.Spheres(radius=1.))],
+                extracellular_fraction=alpha,
+            ))
+            @test GI.tortuosity_tensor(fixed, GI.IsInside(())) ≈
+                ((2 + alpha) / 3) * I atol=0.01
+        end
+        # A singular PSD tensor is supported, but a negative eigenvalue is not.
+        LG = GI.PhysicalGeometries.LiminalGeometries
+        _, transform, inverse_transform = LG._tortuosity_transforms([SA[1., 0., 0.]], 1.)
+        @test transform == Diagonal([0., 1., 1.])
+        @test inverse_transform == Diagonal([0., 1., 1.])
+        @test_throws ArgumentError LG._tortuosity_transforms([SA[1., 0., 0.]], 1.1)
         fixed_liminal = mr.fix(mr.LiminalGeometry(
             geometries=[(1., mr.Spheres(radius=1.))],
             extracellular_fraction=0.2,
             tortuosity_strength=0.4,
         ))
-        expected_tensor = I - 0.4 * fixed_liminal.geometry.normal_second_moment_tensor
+        expected_tensor = I - 0.4 * (1 - 0.2) * fixed_liminal.geometry.normal_second_moment_tensor
         @test GI.tortuosity_tensor(
             fixed_liminal,
             GI.IsInside(()),

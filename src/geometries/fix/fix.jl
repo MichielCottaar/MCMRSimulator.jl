@@ -57,8 +57,8 @@ function fix(collection::LiminalGeometry; kwargs...)
         contains_repeat(typeof(geometry.geometry)) &&
             throw(ArgumentError("repeating geometries are not supported in LiminalGeometry"))
     end
-    isfinite(collection.tortuosity_strength) && 0 <= collection.tortuosity_strength <= 1 ||
-        throw(ArgumentError("tortuosity_strength must be between 0 and 1"))
+    isfinite(collection.tortuosity_strength) && collection.tortuosity_strength >= 0 ||
+        throw(ArgumentError("tortuosity_strength must be finite and nonnegative"))
 
     fractions = [fraction for (fraction, _) in collection.geometries]
     fractions ./= sum(fractions)

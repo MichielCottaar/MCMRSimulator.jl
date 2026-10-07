@@ -21,6 +21,38 @@ The `extracellular_fraction` specifies the volume fraction assigned to the extra
 
 The mean free path is generally direction-dependent. An elongated cell, for example, has a different projected surface area for motion parallel to its axis than for motion perpendicular to it. Consequently, the encounter rate and mean free path can vary with direction. This gives liminal geometry an orientation-dependent effective tortuosity, even though no globally packed arrangement is explicitly stored.
 
+### Extracellular tortuosity
+
+Extracellular displacement steps use the relative diffusion tensor
+
+```math
+T = I - s(1 - \alpha)\langle nn^\mathsf{T}\rangle,
+```
+
+where ``s`` is `tortuosity_strength`, ``\alpha`` is `extracellular_fraction`, and the average is over sampled unit outer-surface normals. The default strength is `1.0`. This approximation produces an orientation-dependent tortuosity for aligned, elongated cells and gives free diffusion when the extracellular fraction is one.
+
+For **spheres**, the normal average is ``I/3``, giving
+
+```math
+T_{\mathrm{sphere}} = \left(1 - \frac{s(1-\alpha)}{3}\right)I.
+```
+
+At the default ``s=1``, this reduces to ``T_{\mathrm{sphere}} = (2+\alpha)I/3``.
+
+For **parallel, infinitely long cylinders** with unit axis vector ``a``, the normal average is ``(I-aa^\mathsf{T})/2``, giving
+
+```math
+T_{\mathrm{cylinder}} =
+\left(1 - \frac{s(1-\alpha)}{2}\right)(I-aa^\mathsf{T})
++ aa^\mathsf{T}.
+```
+
+Thus the relative diffusivity perpendicular to the cylinders is ``1-s(1-\alpha)/2``, while parallel to the cylinders it remains ``1``. At the default ``s=1``, the perpendicular component is ``(1+\alpha)/2``. These expressions describe the model's ideal surface-normal averages; finite sampling introduces small deviations, and finite cylinder end caps change the normal distribution.
+
+The simulator applies the cached symmetric square root of ``T`` to Gaussian displacement vectors. Intracellular displacement steps retain their original diffusivity. Set `tortuosity_strength=0.0` to disable the extracellular displacement reduction.
+
+Strengths must be finite and nonnegative. Values above one are allowed if the resulting tensor is positive semidefinite, which is checked when fixing the geometry. The default strength guarantees positive semidefiniteness for extracellular fractions between zero and one.
+
 ## Julia usage
 
 Create a liminal geometry by supplying a list of `(number_fraction, geometry)` pairs:
