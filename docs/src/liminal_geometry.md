@@ -46,9 +46,9 @@ For **parallel, infinitely long cylinders**, let ``\theta`` be the angle between
 1 - \frac{s(1-\alpha)}{2}\left(1-\cos^2\theta\right).
 ```
 
-Thus the relative diffusivity perpendicular to the cylinders is ``1-s(1-\alpha)/2``, while parallel to the cylinders it remains ``1``. At the default ``s=1``, the perpendicular component is ``(1+\alpha)/2``. These expressions describe the model's ideal surface-normal averages; finite sampling introduces small deviations, and finite cylinder end caps change the normal distribution.
+Thus the relative diffusivity perpendicular to the cylinders is ``1-s(1-\alpha)/2``, while parallel to the cylinders it remains ``1``. At the default ``s=1``, the perpendicular component is ``(1+\alpha)/2``.
 
-The simulator applies the cached symmetric square root of ``T`` to Gaussian displacement vectors. Intracellular displacement steps retain their original diffusivity. Set `tortuosity_strength=0.0` to disable the extracellular displacement reduction.
+The simulator applies the cached symmetric square root of ``T`` to Gaussian displacement vectors. Intracellular displacement steps retain their original diffusivity. Set `tortuosity_strength=0.0` to disable the liminal extracellular displacement reduction.
 
 Strengths must be finite and nonnegative. Values above one are allowed if the resulting tensor is positive semidefinite, which is checked when fixing the geometry. The default strength guarantees positive semidefiniteness for extracellular fractions between zero and one.
 
