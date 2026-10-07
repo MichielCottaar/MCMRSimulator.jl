@@ -1121,6 +1121,37 @@ end
 
     repeated_mesh = Repeat(mesh, [2.0, 2.0, 2.0])
     @test length(GI.geometry_mesh(repeated_mesh)) == 1
+    repeat_distance = 2.0
+    shifted_box_mesh = Mesh(
+        [
+            SVector(0.0, 0.0, 0.0),
+            SVector(repeat_distance, 0.0, 0.0),
+            SVector(0.0, repeat_distance, 0.0),
+            SVector(repeat_distance, repeat_distance, 0.0),
+            SVector(0.0, 0.0, repeat_distance),
+            SVector(repeat_distance, 0.0, repeat_distance),
+            SVector(0.0, repeat_distance, repeat_distance),
+            SVector(repeat_distance, repeat_distance, repeat_distance),
+        ],
+        [
+            SVector(1, 2, 3), SVector(2, 3, 4),
+            SVector(5, 6, 7), SVector(6, 7, 8),
+            SVector(1, 7, 5), SVector(1, 3, 7),
+            SVector(2, 8, 6), SVector(2, 4, 8),
+            SVector(1, 2, 6), SVector(1, 5, 6),
+            SVector(3, 4, 8), SVector(3, 7, 8),
+        ],
+    )
+    repeated_shifted_box = Repeat(
+        shifted_box_mesh,
+        fill(repeat_distance, 3),
+    )
+    @test inside_indices(repeated_shifted_box, SVector(1.5, 1.5, 1.5)) ==
+        [(SVector(0, 0, 0),)]
+    @test inside_indices(repeated_shifted_box, SVector(2.5, 1.5, 1.5)) ==
+        [(SVector(1, 0, 0),)]
+    @test inside_indices(repeated_shifted_box, SVector(-0.5, 1.5, 1.5)) ==
+        [(SVector(-1, 0, 0),)]
     bounded_repeated_mesh = GI.geometry_mesh(
         repeated_mesh,
         PublicBoundingBoxes.BoundingBox([1.0, 0.0, 0.0], [2.0, 1.0, 1.0]),
