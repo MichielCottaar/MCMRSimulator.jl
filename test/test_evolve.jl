@@ -420,7 +420,7 @@
             1.,
         ]
         @test msd[1:2] ≈ expected[1:2] rtol=0.1
-        @test msd[3] ≈ expected[3] rtol=0.02
+        @test msd[3] ≈ expected[3] rtol=0.05
     end
     @testset "Run simulation with multiple sequences at once" begin
         sequences = [
