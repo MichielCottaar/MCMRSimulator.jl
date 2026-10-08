@@ -53,7 +53,7 @@ function get_instants(seq::mb.Sequence)
     for (tstart, block) in mb.iter_blocks(seq)
         for key in keys(block)
             component = block[key]
-            if component isa Tuple{<:Number, <:mb.Components.RFPulseComponent}
+            if component isa Tuple{<:Number, <:Union{mb.Components.RFPulseComponent, mb.InstantGradient}}
                 delay, event = component
                 if event isa mb.InstantGradient
                     push!(instants, (tstart + delay, GradientEvent(event.qvec)))
