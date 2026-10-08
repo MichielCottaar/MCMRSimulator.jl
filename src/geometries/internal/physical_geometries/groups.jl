@@ -6,6 +6,7 @@ import ...InternalBoundingBoxes
 import ..GridDispatch: IntersectionGrid, GridIterator
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, _merge_types, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh
+import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 import ...Properties: all_property_values
 import ...InsideViews: child_view
@@ -13,6 +14,21 @@ import ....BoundingBoxes: BoundingBoxNotSupported
 
 abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
+
+function _inside_sampling_proposals(
+    group::GroupGeometry{N}, density::Real, rng; no_deproject=false,
+) where {N}
+    has_single_inside(typeof(group)) &&
+        return _rejection_inside_sampling(group, density, rng; no_deproject)
+    proposals = SVector{N, Float64}[]
+    for child in group_geometries(group; include_gap=false)
+        has_inside(typeof(child)) || continue
+        append!(proposals, _inside_sampling_proposals(
+            child, density, rng; no_deproject,
+        ))
+    end
+    proposals
+end
 
 get_intersection_params_requires_inside(::Type{<:GeometryVectorLike{N, P}}) where {N, P} =
     get_intersection_params_requires_inside(P)

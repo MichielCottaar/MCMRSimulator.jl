@@ -1,5 +1,6 @@
 import ....Utils: sphere_mesh, volume_conserving_cylinder_radius, volume_conserving_sphere_radius
 import LinearAlgebra: norm
+import Random: randn
 
 struct Round{N} <: BaseObstruction{N}
     radius::Float64
@@ -9,6 +10,19 @@ distance_to_surface(round::Round{N}, position::SVector{N, Float64}) where {N} = 
 
 has_inside(::Type{<:Round}) = true
 has_single_inside(::Type{<:Round}) = true
+
+function _inside_sampling_proposals(
+    round::Round{N}, density::Real, rng; no_deproject=false,
+) where {N}
+    volume = N == 2 ? π * round.radius^2 : 4π * round.radius^3 / 3
+    nsamples = rand(rng, Poisson(density * volume))
+    [
+        let direction = SVector{N, Float64}(randn(rng, N))
+            round.radius * rand(rng)^(1 / N) * direction / norm(direction)
+        end
+        for _ in 1:nsamples
+    ]
+end
 
 function isinside_single(
     round::Round{N},

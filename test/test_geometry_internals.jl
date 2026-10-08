@@ -640,6 +640,107 @@ end
 
     @testset "Monte Carlo geometry measures" begin
         sphere = BaseObstructions.Sphere(1.)
+        @testset "inside_sampling" begin
+            sample_density = 600.
+            approximately_uniform(values) = begin
+                bins = 10
+                all(
+                    abs(count(value -> (bin - 1) / bins <= value < bin / bins, values) /
+                        length(values) - 1 / bins) < 0.025
+                    for bin in 1:bins
+                )
+            end
+
+            Random.seed!(1234)
+            sphere_positions, sphere_indices = GI.inside_sampling(
+                sphere, sample_density;
+                rng=Random.MersenneTwister(1234),
+            )
+            @test length(sphere_positions) / sample_density ≈ 4π / 3 rtol=0.04
+            @test all(index == [()] for index in sphere_indices)
+            @test mean(sum(abs2, position) for position in sphere_positions) ≈ 3 / 5 rtol=0.02
+            @test approximately_uniform([norm(position)^3 for position in sphere_positions])
+            @test approximately_uniform([
+                (position[3] / norm(position) + 1) / 2
+                for position in sphere_positions
+            ])
+            @test approximately_uniform([
+                mod(atan(position[2], position[1]), 2π) / (2π)
+                for position in sphere_positions
+            ])
+
+            circle = BaseObstructions.InfiniteCylinder(1.)
+            circle_positions, circle_indices = GI.PhysicalGeometries.inside_sampling(
+                circle, sample_density; rng=Random.MersenneTwister(1234),
+            )
+            @test length(circle_positions) / sample_density ≈ π rtol=0.04
+            @test all(index == [()] for index in circle_indices)
+            @test approximately_uniform([sum(abs2, position) for position in circle_positions])
+            @test approximately_uniform([
+                mod(atan(position[2], position[1]), 2π) / (2π)
+                for position in circle_positions
+            ])
+
+            tapered_cylinder = BaseObstructions.FiniteCylinder(
+                SVector(0., 0., 0.), SVector(0., 0., 3.), 1., 2.,
+            )
+            cylinder_positions, cylinder_indices = GI.PhysicalGeometries.inside_sampling(
+                tapered_cylinder, sample_density;
+                rng=Random.MersenneTwister(2345),
+            )
+            @test length(cylinder_positions) / sample_density ≈ 7π rtol=0.04
+            @test all(index == [()] for index in cylinder_indices)
+            @test mean(position[3] for position in cylinder_positions) ≈ 3 * 17 / 28 rtol=0.015
+            axial_cdf = [
+                let fraction = position[3] / tapered_cylinder.length
+                    (fraction + fraction^2 + fraction^3 / 3) / (7 / 3)
+                end
+                for position in cylinder_positions
+            ]
+            normalized_radius_squared = [
+                (position[1]^2 + position[2]^2) /
+                    (1 + position[3] / tapered_cylinder.length)^2
+                for position in cylinder_positions
+            ]
+            radial_angles = [
+                mod(atan(-position[1], position[2]), 2π) / (2π)
+                for position in cylinder_positions
+            ]
+            @test approximately_uniform(axial_cdf)
+            @test approximately_uniform(normalized_radius_squared)
+            @test approximately_uniform(radial_angles)
+
+            overlapping_spheres = mr.fix(mr.Spheres(
+                position=[[0., 0., 0.], [1., 0., 0.]],
+                radius=1.,
+                overlapping=true,
+            ))
+            Random.seed!(3456)
+            overlap_positions, overlap_indices = GI.inside_sampling(
+                overlapping_spheres, 1500.,
+            )
+            union_volume = 9π / 4
+            @test length(overlap_positions) / 1500 ≈ union_volume rtol=0.035
+            @test all(!isempty(index) for index in overlap_indices)
+            overlap_fraction = count(index -> length(index) == 2, overlap_indices) /
+                length(overlap_indices)
+            @test overlap_fraction ≈ (5π / 12) / union_volume rtol=0.06
+
+            mesh = Mesh(
+                [SVector(0., 0., 0.), SVector(1., 0., 0.), SVector(0., 1., 0.), SVector(0., 0., 1.)],
+                [SVector(1, 2, 3), SVector(1, 2, 4), SVector(1, 3, 4)],
+            )
+            mesh_fixed = GI.FixedGeometry(
+                mesh,
+                Properties.GeometryLeafProperties(0.),
+                Properties.GeometryLeafProperties(0.),
+                nothing,
+            )
+            Random.seed!(4567)
+            mesh_positions, mesh_indices = GI.inside_sampling(mesh_fixed, 1000.)
+            @test length(mesh_positions) / 1000 ≈ 1 / 6 rtol=0.1
+            @test all(index == [()] for index in mesh_indices)
+        end
         volume = GI.PhysicalGeometries.estimate_volume(
             sphere; nsamples=100_000, rng=Random.MersenneTwister(1234),
         )

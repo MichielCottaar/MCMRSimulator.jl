@@ -8,6 +8,7 @@ import ...InternalBoundingBoxes
 import ....BoundingBoxes: BoundingBoxNotSupported
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result, _translate_native
+import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
 import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
 import ...Properties: GeometryProperties
 
@@ -22,6 +23,25 @@ coordinate system. `from_child_coordinates` maps child coordinates to the
 parent coordinate system.
 """
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
+
+function _inside_sampling_proposals(
+    transformation::Transformation{N, M}, density::Real, rng; no_deproject=false,
+) where {N, M}
+    N == M || return _rejection_inside_sampling(
+        transformation, density, rng; no_deproject,
+    )
+    has_single_inside(typeof(transformation)) || throw(ArgumentError(
+        "inside_sampling is not implemented for $(typeof(transformation))",
+    ))
+    volume_scale = transformation isa Scale ? transformation.scale^N : 1.
+    child_samples = _inside_sampling_proposals(
+        transformation.geometry,
+        density * volume_scale,
+        rng;
+        no_deproject,
+    )
+    [from_child_coordinates(transformation, sample) for sample in child_samples]
+end
 
 get_intersection_params_requires_inside(::Type{<:Transformation{N, M, P}}) where {N, M, P} =
     get_intersection_params_requires_inside(P)

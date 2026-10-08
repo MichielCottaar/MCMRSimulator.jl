@@ -1,4 +1,5 @@
-import LinearAlgebra: cross, norm, ⋅
+import LinearAlgebra: cross, norm, normalize, ⋅
+import Random: randn
 
 struct FiniteCylinder <: BaseObstruction{3}
     first::SVector{3, Float64}
@@ -42,6 +43,36 @@ FiniteCylinder(
 has_inside(::Type{FiniteCylinder}) = true
 has_single_inside(::Type{FiniteCylinder}) = true
 intersection_type(::Type{FiniteCylinder}) = Tuple{Int}
+
+function _inside_sampling_proposals(
+    cylinder::FiniteCylinder,
+    density::Real,
+    rng;
+    no_deproject=false,
+)
+    r₁ = cylinder.radius_first
+    r₂ = cylinder.radius_second
+    volume = π * cylinder.length * (r₁^2 + r₁ * r₂ + r₂^2) / 3
+    nsamples = rand(rng, Poisson(density * volume))
+    radial_axis = abs(cylinder.axis[1]) < 0.9 ?
+        SVector{3, Float64}(1., 0., 0.) : SVector{3, Float64}(0., 1., 0.)
+    basis₁ = normalize(cross(cylinder.axis, radial_axis))
+    basis₂ = cross(cylinder.axis, basis₁)
+    positions = Vector{SVector{3, Float64}}(undef, nsamples)
+    for sample in eachindex(positions)
+        uniform = rand(rng)
+        radius = cbrt((1 - uniform) * r₁^3 + uniform * r₂^3)
+        # Invert C(t) = ∫₀ᵗ r(u)^2 du, the CDF for uniform volume sampling.
+        fraction = uniform * (r₁^2 + r₁ * r₂ + r₂^2) /
+            (radius^2 + radius * r₁ + r₁^2)
+        radius = (1 - fraction) * r₁ + fraction * r₂
+        radial = radius * sqrt(rand(rng))
+        angle = 2π * rand(rng)
+        positions[sample] = cylinder.first + fraction * cylinder.length * cylinder.axis +
+            radial * (cos(angle) * basis₁ + sin(angle) * basis₂)
+    end
+    positions
+end
 
 _finite_cylinder_second(cylinder::FiniteCylinder) =
     cylinder.first + cylinder.length * cylinder.axis
