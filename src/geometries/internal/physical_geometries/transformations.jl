@@ -27,12 +27,21 @@ abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N
 function _inside_sampling_proposals(
     transformation::Transformation{N, M}, density::Real, rng; no_deproject=false,
 ) where {N, M}
-    N == M || return _rejection_inside_sampling(
-        transformation, density, rng; no_deproject,
-    )
-    has_single_inside(typeof(transformation)) || throw(ArgumentError(
-        "inside_sampling is not implemented for $(typeof(transformation))",
-    ))
+    if N != M
+        no_deproject || return _rejection_inside_sampling(
+            transformation, density, rng; no_deproject,
+        )
+        null_basis = nullspace(Matrix(transformation.matrix'))
+        child_samples = _inside_sampling_proposals(
+            transformation.geometry, density, rng; no_deproject,
+        )
+        return [
+            from_child_coordinates(transformation, sample) +
+                null_basis * (rand(rng, N - M) .- 0.5)
+            for sample in child_samples
+        ]
+    end
+    has_inside(typeof(transformation)) || return SVector{N, Float64}[]
     volume_scale = transformation isa Scale ? transformation.scale^N : 1.
     child_samples = _inside_sampling_proposals(
         transformation.geometry,

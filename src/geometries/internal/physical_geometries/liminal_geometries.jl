@@ -3,13 +3,13 @@ module LiminalGeometries
 
 import StaticArrays: SVector, SMatrix
 import LinearAlgebra: norm, ⋅, Symmetric, eigen, Diagonal
-import Random: rand, randperm
+import Random: rand, randperm, default_rng
 import Distributions: Poisson
 import SphericalHarmonics
 import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_single_inside,
     get_intersection_params_requires_inside, inside_indices_eltype, intersection_type,
     inside_indices, find_intersection, find_intersection_requires_inside, get_child,
-    volume_sampling, random_surface_positions, bound_intersection_type,
+    volume_sampling, inside_sampling, random_surface_positions, bound_intersection_type,
     _merge_types, InternalBoundingBox, estimate_surface, estimate_volume,
     get_intersection_params, to_inside_index, to_property_index,
     projected_surface_area, normal_second_moment, inverse_mean_free_path, _geometry_mesh,
@@ -25,6 +25,34 @@ import ...Properties: GeometryProperties, GeometryLeafProperties
 export FixedLiminalGeometry, OuterSurfaceSampling, SphericalSurfaceArea, normal_second_moment, sample!
 
 const SPHERICAL_SURFACE_AREA_SAMPLE_COUNT = 100_000
+const INSIDE_VOLUME_SAMPLE_COUNT = 100_000
+const MINIMUM_INSIDE_VOLUME_SAMPLES = 10_000
+const MAXIMUM_INSIDE_VOLUME_ATTEMPTS = 5
+
+function _estimate_inside_volume(
+    geometry::PhysicalGeometry{3};
+    nsamples=INSIDE_VOLUME_SAMPLE_COUNT,
+    minimum_samples=MINIMUM_INSIDE_VOLUME_SAMPLES,
+    maximum_attempts=MAXIMUM_INSIDE_VOLUME_ATTEMPTS,
+    rng=default_rng(),
+)
+    nsamples > 0 || throw(ArgumentError("nsamples must be positive"))
+    minimum_samples >= 0 || throw(ArgumentError("minimum_samples must be nonnegative"))
+    maximum_attempts > 0 || throw(ArgumentError("maximum_attempts must be positive"))
+    bounding_box = InternalBoundingBox(geometry; no_deproject=true)
+    box_volume = prod(2 .* InternalBoundingBoxes.half_size(bounding_box))
+    density = nsamples / box_volume
+    sampled_volume = 0.
+    for attempt in 1:maximum_attempts
+        positions, _ = inside_sampling(
+            geometry, density; rng, no_deproject=true,
+        )
+        sampled_volume = length(positions) / density
+        length(positions) >= minimum_samples && break
+        attempt == maximum_attempts || (density *= 10)
+    end
+    sampled_volume
+end
 
 struct SphericalSurfaceArea{C}
     degree::Int
@@ -318,7 +346,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
             for (fraction, child) in zip(fractions, geometries)
         )
         weighted_cell_volume = sum(
-            fraction * estimate_volume(child)
+            fraction * _estimate_inside_volume(child)
             for (fraction, child) in zip(fractions, geometries)
         )
         child_types = unique(typeof.(geometries))
@@ -649,18 +677,18 @@ function volume_sampling(
     indices = Vector{Vector{inside_indices_eltype(typeof(geometry))}}()
 
     for (cell_index, child) in enumerate(geometry.geometries)
-        child_box = InternalBoundingBox(child; no_deproject=true)
-        child_positions, child_indices = volume_sampling(
+        child_positions, child_indices = inside_sampling(
             child,
-            child_box,
             intracellular_density * geometry.number_fractions[cell_index] * density_scale,
             ; no_deproject=true,
         )
         for (position, child_index) in zip(child_positions, child_indices)
-            isempty(child_index) && continue
             offset = _wrapped_offset(position, bounding_box)
             push!(positions, position + offset)
-            push!(indices, [tuple((cell_index, offset), index...) for index in child_index])
+            push!(indices, [
+                tuple((cell_index, offset), index...)
+                for index in child_index
+            ])
         end
     end
 

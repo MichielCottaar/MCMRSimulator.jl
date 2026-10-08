@@ -822,6 +822,18 @@ end
         fixed_cells = mr.fix(cells)
         @test fixed_cells isa GI.FixedGeometry
         @test fixed_cells.geometry isa GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry
+        sparse_centers = [[1.5 * index, 0., 0.] for index in -10:10]
+        sparse_cells = mr.fix(mr.Spheres(
+            position=sparse_centers,
+            radius=0.1,
+            overlapping=true,
+        ))
+        sparse_liminal = mr.fix(mr.LiminalGeometry(
+            geometries=[(1., sparse_cells)],
+            extracellular_fraction=0.2,
+        ))
+        @test sparse_liminal.geometry.weighted_cell_volume ≈
+            length(sparse_centers) * 4π * 0.1^3 / 3 rtol=0.04
         geometry_mesh_error = try
             GI.geometry_mesh(fixed_cells.geometry)
             nothing
@@ -975,6 +987,10 @@ end
         sampling_box = mr.BoundingBox(5.)
         volume_positions, volume_indices = GI.volume_sampling(fixed_cells, sampling_box, 0.2)
         @test length(volume_positions) == length(volume_indices)
+        @test count(isempty, volume_indices) ≈
+            0.2 * 0.2 * 10^3 rtol=0.25
+        @test count(!isempty, volume_indices) ≈
+            0.8 * 0.2 * 10^3 rtol=0.25
         @test all(all(position .>= -5) && all(position .<= 5) for position in volume_positions)
         @test all(
             isempty(index) || all(length(cell_index) == 2 for cell_index in index)
