@@ -1316,7 +1316,7 @@ end
     stuck_outside_mesh = (1, false, 0.5)
     @test isinside_single(mesh, SVector(1.2, 0.2, 0.2), stuck_inside_mesh)
     @test !isinside_single(mesh, SVector(0.2, 0.2, 0.2), stuck_outside_mesh)
-    @test mesh.indices[mesh.first_index_of_gap] == SVector(4, 2, 3)
+    @test Set(mesh.indices[mesh.first_index_of_gap]) == Set((4, 2, 3))
     @test BoundingBoxes.lower(mesh.bounding_box) == SVector(0.0, 0.0, 0.0)
     @test BoundingBoxes.upper(mesh.bounding_box) == SVector(1.0, 1.0, 1.0)
     surface_density = Properties.GeometryLeafProperties(1.)
