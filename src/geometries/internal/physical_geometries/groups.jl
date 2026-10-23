@@ -7,6 +7,7 @@ import ..GridDispatch: IntersectionGrid, GridIterator
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, _merge_types, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh
 import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
+import ..PhysicalGeometries: leaf_bounding_boxes
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 import ...Properties: all_property_values
 import ...InsideViews: child_view
@@ -189,6 +190,9 @@ end
 get_intersection_params_requires_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = _requires_inside(P)
 
 group_geometries(group::GeometryTuple; include_gap=true) = group.geometries
+
+leaf_bounding_boxes(group::GeometryVectorLike) = map(leaf_bounding_boxes, group_geometries(group))
+leaf_bounding_boxes(group::GeometryTuple) = map(leaf_bounding_boxes, group_geometries(group))
 
 function get_child(group::GeometryVectorLike, indices::Tuple)
     child_index = indices[1]

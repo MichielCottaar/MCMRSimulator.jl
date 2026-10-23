@@ -14,6 +14,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_singl
     get_intersection_params, to_inside_index, to_property_index,
     projected_surface_area, normal_second_moment, inverse_mean_free_path, _geometry_mesh,
     distance_to_surface, size_scale, SurfaceEstimate, is_liminal
+import ..PhysicalGeometries: leaf_bounding_boxes
 import ..Groups: GeometryTuple
 import ..Groups: inside_indices_for_any_type, _append_type
 import ..Transformations: Shift
@@ -468,6 +469,10 @@ end
 
 InternalBoundingBox(::FixedLiminalGeometry; kwargs...) = throw(BoundingBoxNotSupported(
     "liminal geometries do not have a finite bounding box",
+))
+
+leaf_bounding_boxes(::FixedLiminalGeometry) = throw(BoundingBoxNotSupported(
+    "liminal geometries do not have finite leaf bounding boxes; query their cell geometries instead",
 ))
 
 function inverse_mean_free_path(

@@ -4,6 +4,7 @@ import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox, size_scale, to_inside_index
 import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ..PhysicalGeometries: _inside_sampling_proposals
+import ..PhysicalGeometries: leaf_bounding_boxes
 import ...Properties: GeometryProperties
 import ...InsideViews: has_other
 
@@ -49,6 +50,8 @@ function SizeScaleOverride(geometry::P, size_scale::Real) where {N, P <: Physica
 end
 
 transparent_geometry(wrapper::Transparent) = getfield(wrapper, :geometry)
+
+leaf_bounding_boxes(wrapper::Transparent) = leaf_bounding_boxes(transparent_geometry(wrapper))
 
 has_inside(::Type{<:Transparent{N, P}}) where {N, P} = has_inside(P)
 has_single_inside(::Type{<:Transparent{N, P}}) where {N, P} = has_single_inside(P)

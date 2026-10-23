@@ -276,6 +276,26 @@ function random_surface_positions end
 
 """Return the axis-aligned bounding box containing a physical geometry."""
 function InternalBoundingBox end
+
+"""
+    leaf_bounding_boxes(geometry::PhysicalGeometry)
+
+Return conservative bounding boxes for the leaf surfaces of `geometry`, all in
+the geometry's coordinate frame. The result mirrors the intersection-index
+hierarchy: vector and tuple groups return vectors and tuples of child results,
+while transformations and transparent wrappers preserve their child's structure.
+Empty groups return empty collections.
+
+A base obstruction returns its `InternalBoundingBox` directly. `FiniteCylinder`
+returns a tuple for its side, first cap, and second cap, in surface-index order.
+Meshes return a vector of triangle boxes, including gap-closing triangles.
+
+Periodic geometries and dimension-reducing transformations have no finite leaf
+bounding boxes in their outer frame. Query their finite child geometry instead.
+Likewise, query individual cell geometries for liminal geometry.
+"""
+function leaf_bounding_boxes end
+
 function _geometry_mesh end
 _mesh_result(vertices, triangles) = (vertices=vertices, triangles=triangles)
 _translate_native(value, displacement) = value isa Real ? value + displacement[1] :

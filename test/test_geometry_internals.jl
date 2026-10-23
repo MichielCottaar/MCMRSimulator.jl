@@ -27,6 +27,7 @@ const has_single_inside = GI.PhysicalGeometries.has_single_inside
 const isinside_single = GI.PhysicalGeometries.isinside_single
 const inside_indices = GI.PhysicalGeometries.inside_indices
 const intersection_type = GI.PhysicalGeometries.intersection_type
+const leaf_bounding_boxes = GI.PhysicalGeometries.leaf_bounding_boxes
 const bound_intersection_type = GI.PhysicalGeometries.bound_intersection_type
 const Properties = GI.Properties
 const Plot = mr.Plot
@@ -77,6 +78,82 @@ end
     @test planar_grid.bounding_box == planar_box
     @test all(isfinite, planar_grid.inv_resolution)
     @test BoundingBoxes.upper(planar_grid.grid_bounding_box)[3] > BoundingBoxes.lower(planar_grid.grid_bounding_box)[3]
+end
+
+@testset "leaf bounding boxes" begin
+    sphere = BaseObstructions.Sphere(1.0)
+    cylinder = BaseObstructions.InfiniteCylinder(2.0)
+    wall = BaseObstructions.InfiniteWall()
+    triangle = BaseObstructions.FullTriangle(SVector(0., 0., 0.), SVector(1., 0., 0.), SVector(0., 1., 0.))
+    for primitive in (sphere, cylinder, wall, triangle)
+        @test leaf_bounding_boxes(primitive) == BoundingBoxes.InternalBoundingBox(primitive)
+    end
+
+    # The tuple order matches the side/first-cap/second-cap surface identifiers.
+    finite = BaseObstructions.FiniteCylinder([1., 2., 3.], [1., 2., 7.], 1., 2.)
+    finite_boxes = leaf_bounding_boxes(finite)
+    @test finite_boxes isa Tuple{Vararg{BoundingBoxes.InternalBoundingBox{3}, 3}}
+    @test finite_boxes[1] == BoundingBoxes.InternalBoundingBox(finite)
+    @test BoundingBoxes.lower(finite_boxes[2]) == SVector(0., 1., 3.)
+    @test BoundingBoxes.upper(finite_boxes[2]) == SVector(2., 3., 3.)
+    @test BoundingBoxes.lower(finite_boxes[3]) == SVector(-1., 0., 7.)
+    @test BoundingBoxes.upper(finite_boxes[3]) == SVector(3., 4., 7.)
+    gaps = BaseObstructions.FiniteCylinder([1., 2., 3.], [1., 2., 7.], 1., 2.; caps_are_gaps=true)
+    @test leaf_bounding_boxes(gaps) == finite_boxes
+    tilted = BaseObstructions.FiniteCylinder([0., 0., 0.], [3., 4., 0.], 1., 2.)
+    tilted_boxes = leaf_bounding_boxes(tilted)
+    @test BoundingBoxes.lower(tilted_boxes[2]) ≈ SVector(-0.8, -0.6, -1.)
+    @test BoundingBoxes.upper(tilted_boxes[2]) ≈ SVector(0.8, 0.6, 1.)
+    @test BoundingBoxes.lower(tilted_boxes[3]) ≈ SVector(1.4, 2.8, -2.)
+    @test BoundingBoxes.upper(tilted_boxes[3]) ≈ SVector(4.6, 5.2, 2.)
+
+    nested = GeometryTuple((sphere, GeometryVector([finite])))
+    boxes = leaf_bounding_boxes(nested)
+    @test boxes isa Tuple
+    @test boxes[1] == BoundingBoxes.InternalBoundingBox(sphere)
+    @test boxes[2] isa Vector
+    @test boxes[2] == [finite_boxes]
+    for group in (GeometryVector([sphere]), GeometryVector([sphere]; bounding_box=true), GeometryVector([sphere]; grid=true))
+        @test leaf_bounding_boxes(group) == [BoundingBoxes.InternalBoundingBox(sphere)]
+    end
+    @test leaf_bounding_boxes(GeometryTuple{3}(())) === ()
+    @test isempty(leaf_bounding_boxes(GeometryVector(BaseObstructions.Sphere[])))
+
+    # Transform every box while retaining nested vectors and component tuples.
+    rotation = [0. -1. 0.; 1. 0. 0.; 0. 0. 1.]
+    transformed = Shift(Rotate(Scale(nested, 2.), rotation), [10., 20., 30.])
+    transformed_boxes = leaf_bounding_boxes(transformed)
+    @test transformed_boxes isa Tuple
+    @test transformed_boxes[2] isa Vector
+    @test transformed_boxes[2][1] isa Tuple
+    @test transformed_boxes[1] == BoundingBoxes.InternalBoundingBox{3}(2., [10., 20., 30.])
+    @test BoundingBoxes.lower(transformed_boxes[2][1][2]) == SVector(4., 20., 36.)
+    @test BoundingBoxes.upper(transformed_boxes[2][1][2]) == SVector(8., 24., 36.)
+    @test BoundingBoxes.lower(transformed_boxes[2][1][3]) == SVector(2., 18., 44.)
+    @test BoundingBoxes.upper(transformed_boxes[2][1][3]) == SVector(10., 26., 44.)
+    @test leaf_bounding_boxes(SizeScaleOverride(IgnoreOverlapping(nested), 0.5)) == boxes
+    @test isempty(leaf_bounding_boxes(Shift(GeometryVector(BaseObstructions.Sphere[]), ones(3))))
+
+    # Triangle boxes include the mesh's automatically generated gap closure.
+    mesh = Mesh(
+        [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+        [[1, 2, 3], [1, 2, 4], [1, 3, 4]],
+    )
+    mesh_boxes = leaf_bounding_boxes(mesh)
+    @test mesh_boxes isa Vector{BoundingBoxes.InternalBoundingBox{3}}
+    @test length(mesh_boxes) == length(mesh.indices)
+    @test mesh.first_index_of_gap <= length(mesh_boxes)
+    for (index, vertices) in enumerate(mesh.indices)
+        points = mesh.vertices[vertices]
+        @test BoundingBoxes.lower(mesh_boxes[index]) == reduce((a, b) -> min.(a, b), points)
+        @test BoundingBoxes.upper(mesh_boxes[index]) == reduce((a, b) -> max.(a, b), points)
+    end
+
+    repeat = Repeat(sphere, [4., 4., 4.])
+    @test_throws PublicBoundingBoxes.BoundingBoxNotSupported leaf_bounding_boxes(repeat)
+    @test_throws PublicBoundingBoxes.BoundingBoxNotSupported leaf_bounding_boxes(GeometryTuple((sphere, repeat)))
+    projected = Rotate(cylinder, Matrix{Float64}(I, 3, 2))
+    @test_throws PublicBoundingBoxes.BoundingBoxNotSupported leaf_bounding_boxes(projected)
 end
 
 @testset "intersection types" begin

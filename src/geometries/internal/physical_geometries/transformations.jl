@@ -9,6 +9,7 @@ import ....BoundingBoxes: BoundingBoxNotSupported
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result, _translate_native
 import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
+import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
 import ...Properties: GeometryProperties
 
@@ -23,6 +24,19 @@ coordinate system. `from_child_coordinates` maps child coordinates to the
 parent coordinate system.
 """
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
+
+function leaf_bounding_boxes(transformation::Transformation{N, M}) where {N, M}
+    N == M || throw(BoundingBoxNotSupported(
+        "dimension-reducing transformations do not have finite leaf bounding boxes",
+    ))
+    _transform_leaf_bounding_boxes(transformation, leaf_bounding_boxes(transformation.geometry))
+end
+
+_transform_leaf_bounding_boxes(transformation, box::InternalBoundingBox) =
+    from_child_coordinates(transformation, box)
+
+_transform_leaf_bounding_boxes(transformation, boxes::Union{Tuple, AbstractVector}) =
+    map(box -> _transform_leaf_bounding_boxes(transformation, box), boxes)
 
 function _inside_sampling_proposals(
     transformation::Transformation{N, M}, density::Real, rng; no_deproject=false,

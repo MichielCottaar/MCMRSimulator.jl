@@ -7,6 +7,7 @@ import NearestNeighbors: KDTree, nn
 
 import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, intersection_type, isinside_single, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
+import ..PhysicalGeometries: leaf_bounding_boxes
 import ...Properties: GeometryLeafProperties
 import ..Groups
 import ..GridDispatch: IntersectionGrid, GridIterator
@@ -34,6 +35,8 @@ struct MeshGeometryView
 end
 
 Groups.group_geometries(mesh::Mesh; include_gap=true) = MeshGeometryView(mesh, include_gap)
+
+leaf_bounding_boxes(mesh::Mesh) = [leaf_bounding_boxes(triangle(mesh, index)) for index in eachindex(mesh.indices)]
 
 Base.size(view::MeshGeometryView) = (length(view),)
 Base.axes(view::MeshGeometryView) = (Base.OneTo(length(view)),)
