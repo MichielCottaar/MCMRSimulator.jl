@@ -1844,6 +1844,12 @@ end
     @test BoundingBoxes.upper(rect) == SVector(2.0, 4.0, 6.0)
     @test BoundingBoxes.lower(centered_rect) == SVector(-1.0, -2.0, -3.0)
     @test BoundingBoxes.upper(centered_rect) == SVector(1.0, 2.0, 3.0)
+    box_1d = BoundingBoxes.InternalBoundingBox{1}(1.0)
+    @test BoundingBoxes.could_intersect(box_1d, SVector(-2.0), SVector(2.0))
+    @test !BoundingBoxes.could_intersect(box_1d, SVector(2.0), SVector(3.0))
+    box_2d = BoundingBoxes.InternalBoundingBox{2}(1.0)
+    @test BoundingBoxes.could_intersect(box_2d, SVector(-2.0, 0.0), SVector(2.0, 0.0))
+    @test !BoundingBoxes.could_intersect(box_2d, SVector(2.0, 2.0), SVector(3.0, 3.0))
     @test !BoundingBoxes.could_intersect(centered_cube, SVector(3.0, 3.0, 3.0), SVector(4.0, 4.0, 4.0))
     @test BoundingBoxes.could_intersect(
         centered_cube,

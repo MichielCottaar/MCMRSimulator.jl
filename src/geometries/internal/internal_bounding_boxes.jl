@@ -171,8 +171,29 @@ end
 isinside(box::InternalBoundingBox, position::AbstractVector) =
     all(position .>= box.lower) && all(position .<= box.upper)
 
+@inline function could_intersect(box::InternalBoundingBox{1}, start::AbstractVector, destination::AbstractVector)
+    (start[1] <= box.upper[1] || destination[1] <= box.upper[1]) &&
+        (start[1] >= box.lower[1] || destination[1] >= box.lower[1])
+end
+
+@inline function could_intersect(box::InternalBoundingBox{2}, start::AbstractVector, destination::AbstractVector)
+    (start[1] <= box.upper[1] || destination[1] <= box.upper[1]) &&
+        (start[1] >= box.lower[1] || destination[1] >= box.lower[1]) &&
+    (start[2] <= box.upper[2] || destination[2] <= box.upper[2]) &&
+        (start[2] >= box.lower[2] || destination[2] >= box.lower[2])
+end
+
+@inline function could_intersect(box::InternalBoundingBox{3}, start::AbstractVector, destination::AbstractVector)
+    (start[1] <= box.upper[1] || destination[1] <= box.upper[1]) &&
+        (start[1] >= box.lower[1] || destination[1] >= box.lower[1]) &&
+    (start[2] <= box.upper[2] || destination[2] <= box.upper[2]) &&
+        (start[2] >= box.lower[2] || destination[2] >= box.lower[2]) &&
+    (start[3] <= box.upper[3] || destination[3] <= box.upper[3]) &&
+        (start[3] >= box.lower[3] || destination[3] >= box.lower[3])
+end
+
 function could_intersect(box::InternalBoundingBox{N}, start::AbstractVector, destination::AbstractVector) where {N}
-    return all(
+    all(
         (start[i] <= box.upper[i] || destination[i] <= box.upper[i]) &&
         (start[i] >= box.lower[i] || destination[i] >= box.lower[i])
         for i in 1:N
