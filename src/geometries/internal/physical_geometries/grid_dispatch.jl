@@ -74,11 +74,11 @@ function Base.iterate(iterator::GridIterator, state=nothing)
     end
 end
 
-function _grid_bounding_box(box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N}
+function _grid_bounding_box(box::InternalBoundingBoxes.InternalBoundingBox{N}, minimum_thickness) where {N}
     lower_bound = InternalBoundingBoxes.lower(box)
     upper_bound = InternalBoundingBoxes.upper(box)
     extent = upper_bound - lower_bound
-    grid_extent = max.(extent, eps(Float64))
+    grid_extent = max.(extent, minimum_thickness)
     InternalBoundingBoxes.InternalBoundingBox(
         grid_extent / 2,
         (lower_bound + upper_bound) / 2,
@@ -101,11 +101,15 @@ function IntersectionGrid(
     else
         bounding_box
     end
-    grid_bounding_box = _grid_bounding_box(bounding_box)
-    extent = InternalBoundingBoxes.upper(grid_bounding_box) - InternalBoundingBoxes.lower(grid_bounding_box)
+    extent = InternalBoundingBoxes.upper(bounding_box) - InternalBoundingBoxes.lower(bounding_box)
+    maximum_extent = maximum(extent)
     resolution = isnothing(resolution) ?
-        maximum(extent) / max(ceil(Int, length(bounding_boxes)^(1 / N)), 1) : resolution
+        (iszero(maximum_extent) ? 1.0 : maximum_extent / max(ceil(Int, length(bounding_boxes)^(1 / N)), 1)) : resolution
     isinf(resolution) || resolution > 0 || throw(ArgumentError("grid resolution must be positive"))
+    # Keep single-cell (Inf) grids finite, including fully zero-extent geometry.
+    minimum_thickness = isinf(resolution) ? (iszero(maximum_extent) ? 1.0 : maximum_extent) : resolution
+    grid_bounding_box = _grid_bounding_box(bounding_box, minimum_thickness)
+    extent = InternalBoundingBoxes.upper(grid_bounding_box) - InternalBoundingBoxes.lower(grid_bounding_box)
     dimensions = isinf(resolution) ? SVector{N, Int}(ones(Int, N)) :
         max.(SVector{N, Int}(ceil.(Int, extent ./ resolution)), 1)
     cell_size = extent ./ dimensions

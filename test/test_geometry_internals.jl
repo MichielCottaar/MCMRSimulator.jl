@@ -78,7 +78,50 @@ end
     planar_grid = IntersectionGrid([planar_box]; resolution=1.0)
     @test planar_grid.bounding_box == planar_box
     @test all(isfinite, planar_grid.inv_resolution)
-    @test BoundingBoxes.upper(planar_grid.grid_bounding_box)[3] > BoundingBoxes.lower(planar_grid.grid_bounding_box)[3]
+    @test BoundingBoxes.upper(planar_grid.grid_bounding_box)[3] - BoundingBoxes.lower(planar_grid.grid_bounding_box)[3] == 1.0
+    @test size(planar_grid.indices) == (2, 2, 1)
+
+    # Even positive extents smaller than a cell are expanded symmetrically.
+    thin_box = BoundingBoxes.InternalBoundingBox([0.125, 1.0, 0.0], [1.0, 2.0, 3.0])
+    thin_grid = IntersectionGrid([thin_box]; resolution=1.0)
+    @test thin_grid.bounding_box == thin_box
+    @test BoundingBoxes.lower(thin_grid.grid_bounding_box) == SVector(0.5, 1.0, 2.5)
+    @test BoundingBoxes.upper(thin_grid.grid_bounding_box) == SVector(1.5, 3.0, 3.5)
+    @test size(thin_grid.indices) == (1, 2, 1)
+    @test thin_grid.inv_resolution == SVector(1.0, 1.0, 1.0)
+
+    # Zero-extent geometry uses a 1 um fallback for automatic and Inf resolution.
+    point_box = BoundingBoxes.InternalBoundingBox{3}(0.0, [3.0, 4.0, 5.0])
+    for resolution in (nothing, 0.5, Inf)
+        point_grid = IntersectionGrid([point_box]; resolution)
+        thickness = resolution == 0.5 ? 0.5 : 1.0
+        @test point_grid.bounding_box == point_box
+        @test BoundingBoxes.lower(point_grid.grid_bounding_box) == SVector(3.0, 4.0, 5.0) .- thickness / 2
+        @test BoundingBoxes.upper(point_grid.grid_bounding_box) == SVector(3.0, 4.0, 5.0) .+ thickness / 2
+        @test size(point_grid.indices) == (1, 1, 1)
+        @test all(isfinite, point_grid.inv_resolution)
+        @test point_grid.indices[1, 1, 1] == [1]
+    end
+
+    # Inf still means one cell, with finite bounds based on the original extent.
+    planar_single = IntersectionGrid([planar_box]; resolution=Inf)
+    planar_auto = IntersectionGrid([planar_box])
+    for single in (planar_single, planar_auto)
+        @test single.bounding_box == planar_box
+        @test BoundingBoxes.lower(single.grid_bounding_box) == SVector(-1.0, -1.0, -1.0)
+        @test BoundingBoxes.upper(single.grid_bounding_box) == SVector(1.0, 1.0, 1.0)
+        @test size(single.indices) == (1, 1, 1)
+    end
+
+    # Traversal from outside the geometry stays at a physical, rather than eps, scale.
+    intersect = GI.PhysicalGeometries.find_intersection
+    wall = Shift(BaseObstructions.InfiniteWall(), [3.0])
+    triangle = BaseObstructions.FullTriangle(SVector(0.0, 0.0, 3.0), SVector(1.0, 0.0, 3.0), SVector(0.0, 1.0, 3.0))
+    for resolution in (nothing, 0.5, Inf)
+        @test intersect(Grid(wall; resolution), SVector(2.0), SVector(4.0)) == intersect(wall, SVector(2.0), SVector(4.0))
+        start, destination = SVector(0.1, 0.1, 2.0), SVector(0.1, 0.1, 4.0)
+        @test intersect(Grid(triangle; resolution), start, destination) == intersect(triangle, start, destination)
+    end
 end
 
 @testset "leaf bounding boxes" begin
