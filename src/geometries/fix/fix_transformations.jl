@@ -7,6 +7,7 @@ import ...User.Obstructions: Walls, Cylinders, Spheres, FiniteCylinders, Annuli,
 import ...User.Obstructions: isglobal
 import ...Internal.PhysicalGeometries: PhysicalGeometry
 import ...Internal.PhysicalGeometries.Groups: GeometryVector, GeometryTuple
+import ...Internal.PhysicalGeometries.Grids: Grid
 import ...Internal.PhysicalGeometries.Transformations: Shift, Rotate
 import ...Internal.PhysicalGeometries.Repeats: Repeat
 
@@ -26,7 +27,7 @@ function _vector_geometry(group, geometry::Vector{P}) where {N, P<:PhysicalGeome
     geometry = _shift_obstructions(group, geometry)
     resolution = group.grid_resolution.value
     if !isnothing(resolution)
-        return GeometryVector(geometry; grid=true, grid_resolution=resolution)
+        return Grid(GeometryVector(geometry); resolution)
     elseif group.use_boundingbox.value
         return GeometryVector(geometry; bounding_box=true)
     end
@@ -37,7 +38,7 @@ function _vector_geometry_unshifted(group, geometry::Vector{P}) where {N, P<:Phy
     isempty(geometry) && return GeometryVector(geometry)
     resolution = group.grid_resolution.value
     if !isnothing(resolution)
-        return GeometryVector(geometry; grid=true, grid_resolution=resolution)
+        return Grid(GeometryVector(geometry); resolution)
     elseif group.use_boundingbox.value
         return GeometryVector(geometry; bounding_box=true)
     end
