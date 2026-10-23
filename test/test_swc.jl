@@ -151,6 +151,7 @@
         @test length(mr.read_geometry(IOBuffer(with_parent); format=:caterpillar)) == length(geometries)
         @test_throws ArgumentError mr.read_caterpillar(IOBuffer(replace(with_parent, "-1 0.0" => "nope 0.0")))
         @test_throws ArgumentError mr.read_caterpillar(IOBuffer(replace(with_parent, "-1 0.0 0.0 0.0 1.0 1.0" => "-1 0.0 0.0 0.0 1.0")))
+        @test_throws ArgumentError mr.read_caterpillar(IOBuffer(replace(with_parent, "0.0 0.0 0.0 1.0 1.0" => "bad 0.0 0.0 1.0 1.0")))
 
         separate_cells = """
         cell_type cell_id component component_id X Y Z inner_radius outer_radius
