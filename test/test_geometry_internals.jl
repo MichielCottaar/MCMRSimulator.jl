@@ -16,6 +16,7 @@ const BaseObstructions = GI.PhysicalGeometries.BaseObstructions
 const Meshes = GI.PhysicalGeometries.Meshes
 const Mesh = Meshes.Mesh
 const IntersectionGrid = GI.PhysicalGeometries.GridDispatch.IntersectionGrid
+const Grid = GI.PhysicalGeometries.Grids.Grid
 const Transparents = GI.PhysicalGeometries.Transparents
 const Transparent = GI.PhysicalGeometries.Transparent
 const InsideViews = GI.InsideViews
@@ -269,6 +270,130 @@ end
     @test intersect(repeat, start, destination, nothing, nothing, nothing) == intersect(repeat, start, destination)
     @test_throws ArgumentError intersect(repeat, start, destination, nothing, nothing, ())
     @test_throws ArgumentError intersect(repeat, start, destination, nothing, nothing, (1,))
+end
+
+@testset "transparent intersection grid" begin
+    intersect = GI.PhysicalGeometries.find_intersection
+    sphere = BaseObstructions.Sphere(1.)
+    finite = BaseObstructions.FiniteCylinder([0., 0., -1.], [0., 0., 1.], 0.5)
+    tree = GeometryTuple((GeometryVector([
+        Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.]),
+    ]), finite))
+    grid = Grid(tree; resolution=0.5)
+    @test grid isa Transparent{3}
+    @test grid.geometry === tree
+    @test grid.indices == [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3)]
+    @test eltype(grid.indices) == intersection_type(typeof(tree))
+    @test BoundingBoxes.InternalBoundingBox(grid) == BoundingBoxes.InternalBoundingBox(tree)
+    @test leaf_bounding_boxes(grid) == leaf_bounding_boxes(tree)
+    @test size_scale(grid) == size_scale(tree)
+    @test Grid(sphere).indices == [()]
+
+    rng = Random.MersenneTwister(19)
+    for resolution in (nothing, 0.5, Inf)
+        accelerated = Grid(tree; resolution)
+        for _ in 1:40
+            start = SVector{3, Float64}(10 .* rand(rng, 3) .- 5)
+            destination = SVector{3, Float64}(10 .* rand(rng, 3) .- 5)
+            @test intersect(accelerated, start, destination) == intersect(tree, start, destination)
+            @test inside_indices(accelerated, start) == inside_indices(tree, start)
+        end
+    end
+
+    start, destination = SVector(-5., 0., 0.), SVector(5., 0., 0.)
+    hit = intersect(grid, start, destination)
+    @test hit == intersect(tree, start, destination)
+    @test intersect(grid, start, destination, hit) == intersect(tree, start, destination, hit)
+    @test intersect(grid, start, start) === nothing
+    @test intersect(grid, SVector(-5., 4., 0.), SVector(5., 4., 0.)) === nothing
+    @test GI.PhysicalGeometries.to_property_index(grid, hit[1:(end - 2)]) == (1, 1)
+    @test GI.PhysicalGeometries.to_inside_index(grid, (2, 3)) == (2,)
+    params = GI.PhysicalGeometries.get_intersection_params(grid, start, destination, hit)
+    @test params.normal ≈ SVector(-1., 0., 0.)
+    @test !params.hit_gap
+    for (a, b) in ((SVector(0., 0., -2.), SVector(0., 0., 2.)),
+                   (SVector(-0.75, 0., 0.), SVector(0.75, 0., 0.)))
+        @test intersect(grid, a, b) == intersect(tree, a, b)
+    end
+
+    # Cached inside states must retain other obstructions for overlap handling.
+    overlapping = IgnoreOverlapping(GeometryTuple((
+        sphere, Shift(sphere, [0.5, 0., 0.]),
+    )))
+    overlap_grid = Grid(overlapping; resolution=0.5)
+    a, b = SVector(0.25, 0., 0.), SVector(2., 0., 0.)
+    cached = InsideViews.InsideView([(1,), (2,)])
+    overlap_hit = intersect(overlap_grid, a, b, nothing, cached)
+    @test overlap_hit == intersect(overlapping, a, b, nothing, cached)
+    @test GI.PhysicalGeometries.get_intersection_params(overlap_grid, a, b, overlap_hit, cached).hit_gap
+
+    # A broad box can yield a farther hit than a candidate visited later.
+    broad = Shift(BaseObstructions.Sphere(5.), [0., 4., 0.])
+    near = Shift(BaseObstructions.Sphere(0.25), [-4., 0., 0.])
+    competing = GeometryTuple((broad, near))
+    @test intersect(Grid(competing; resolution=0.5), start, destination) == intersect(competing, start, destination)
+    @test intersect(Grid(competing; resolution=0.5), start, destination)[1] == 2
+    # Equal-distance hits use tree order even if the second box is visited first.
+    tied = GeometryTuple((Shift(sphere, [-2., 0., 0.]), broad))
+    @test intersect(Grid(tied; resolution=0.5), start, destination) == intersect(tied, start, destination)
+
+    mesh = Mesh(
+        [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+        [[1, 2, 3], [1, 2, 4], [1, 3, 4]],
+    )
+    mesh_grid = Grid(mesh; resolution=0.25)
+    @test mesh_grid.indices == [(index,) for index in eachindex(mesh.indices)]
+    a, b = SVector(0.1, 0.1, 0.1), SVector(1., 1., 1.)
+    mesh_hit = intersect(mesh_grid, a, b)
+    @test mesh_hit == intersect(mesh, a, b)
+    @test mesh_hit[1] >= mesh.first_index_of_gap
+    @test GI.PhysicalGeometries.get_intersection_params(mesh_grid, a, b, mesh_hit).hit_gap
+    @test isinside_single(mesh_grid, a) == isinside_single(mesh, a)
+    @test intersect(mesh_grid, a, b, mesh_hit) == intersect(mesh, a, b, mesh_hit)
+
+    rotation = [0. -1. 0.; 1. 0. 0.; 0. 0. 1.]
+    transformed = Shift(Rotate(Scale(tree, 2.), rotation), [1., 2., 3.])
+    @test intersect(Grid(transformed; resolution=1.), SVector(1., -8., 3.), SVector(1., 12., 3.)) ==
+        intersect(transformed, SVector(1., -8., 3.), SVector(1., 12., 3.))
+    cylinder = BaseObstructions.InfiniteCylinder(1.)
+    @test intersect(Grid(cylinder), SVector(-2., 0.), SVector(2., 0.)) == intersect(cylinder, SVector(-2., 0.), SVector(2., 0.))
+    walls = GeometryVector([Shift(BaseObstructions.InfiniteWall(), [-1.]), Shift(BaseObstructions.InfiniteWall(), [1.])])
+    @test intersect(Grid(walls; resolution=0.5), SVector(-2.), SVector(2.)) == intersect(walls, SVector(-2.), SVector(2.))
+
+    periodic = Repeat(tree, [8., 8., 8.])
+    periodic_grid = Repeat(grid, [8., 8., 8.])
+    @test periodic_grid.geometry === grid
+    @test intersect(periodic_grid, start, destination) == intersect(periodic, start, destination)
+    for shift in (SVector(8., 0., 0.), SVector(-8., 8., 0.))
+        a, b = start + shift, destination + shift
+        previous = intersect(periodic, a, b)
+        @test intersect(periodic_grid, a, b) == previous
+        @test intersect(periodic_grid, a, b, previous) == intersect(periodic, a, b, previous)
+        @test inside_indices(periodic_grid, shift) == inside_indices(periodic, shift)
+    end
+    @test_throws ArgumentError intersect(grid, start, destination, nothing, nothing, ())
+    @test_throws ArgumentError Grid(GeometryTuple{3}(()))
+    @test_throws ArgumentError Grid(sphere; resolution=0.)
+    @test_throws PublicBoundingBoxes.BoundingBoxNotSupported Grid(periodic)
+
+    # A leaf spanning several cells is still checked only once by GridIterator.
+    struct GridProbe <: BaseObstructions.BaseObstruction{3}
+        calls::Base.RefValue{Int}
+    end
+    BoundingBoxes.InternalBoundingBox(::GridProbe) = BoundingBoxes.InternalBoundingBox{3}(1.)
+    function GI.PhysicalGeometries.find_intersection(
+        probe::GridProbe, a::SVector{3, Float64}, b::SVector{3, Float64},
+        previous=nothing, inside=nothing, candidate=nothing,
+    )
+        @test candidate == ()
+        probe.calls[] += 1
+        nothing
+    end
+    selected, skipped = GridProbe(Ref(0)), GridProbe(Ref(0))
+    probes = GeometryTuple((selected, Shift(skipped, [0., 4., 0.])))
+    @test intersect(Grid(probes; resolution=0.25), start, destination) === nothing
+    @test selected.calls[] == 1
+    @test skipped.calls[] == 0
 end
 
 @testset "intersection types" begin
