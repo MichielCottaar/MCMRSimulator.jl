@@ -151,6 +151,17 @@
         @test length(mr.read_geometry(IOBuffer(with_parent); format=:caterpillar)) == length(geometries)
         @test_throws ArgumentError mr.read_caterpillar(IOBuffer(replace(with_parent, "-1 0.0" => "nope 0.0")))
         @test_throws ArgumentError mr.read_caterpillar(IOBuffer(replace(with_parent, "-1 0.0 0.0 0.0 1.0 1.0" => "-1 0.0 0.0 0.0 1.0")))
+
+        separate_cells = """
+        cell_type cell_id component component_id X Y Z inner_radius outer_radius
+        axon 3 axon 0 0.0 0.0 0.0 1.0 1.0
+        axon 4 axon 0 5.0 0.0 0.0 2.0 2.0
+        """
+        separate_geometries = mr.read_caterpillar(IOBuffer(separate_cells))
+        @test length(separate_geometries) == 2
+        @test length.(separate_geometries) == [1, 1]
+        @test [only(g.position.value) for g in separate_geometries] == [[0., 0., 0.], [5., 0., 0.]]
+        @test [only(g.radius.value) for g in separate_geometries] == [1., 2.]
     end
 
     @testset "reading connected SWC geometry" begin

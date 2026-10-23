@@ -69,8 +69,9 @@ end
     read_caterpillar(io_or_filename; kwargs...)
 
 Read a whitespace-delimited CATERPillar output file and return overlapping
-[`Spheres`](@ref) groups. `cell_type` values are used only to keep different
-cell types in separate groups and are otherwise not restricted.
+[`Spheres`](@ref) groups. Each `(cell_type, cell_id)` produces its own sphere
+group, or separate inner and outer groups when the cell has a shell. `cell_type`
+values are otherwise not restricted.
 
 CATERPillar represents myelinated axon samples with `inner_radius` and
 `outer_radius`. If any row belonging to a cell has different radii, all rows
@@ -111,9 +112,9 @@ function read_caterpillar(io::IO; kwargs...)
     end
     isempty(cells) && throw(ArgumentError("CATERPillar file contains no data rows"))
 
-    positions = Dict{Tuple{String, Symbol}, Vector{SVector{3, Float64}}}()
-    radii = Dict{Tuple{String, Symbol}, Vector{Float64}}()
-    layer_order = Tuple{String, Symbol}[]
+    positions = Dict{Tuple{String, Int, Symbol}, Vector{SVector{3, Float64}}}()
+    radii = Dict{Tuple{String, Int, Symbol}, Vector{Float64}}()
+    layer_order = Tuple{String, Int, Symbol}[]
     function add_layer!(key, row, radius)
         if !haskey(positions, key)
             positions[key] = SVector{3, Float64}[]
@@ -125,19 +126,19 @@ function read_caterpillar(io::IO; kwargs...)
     end
 
     for cell_key in cell_order
-        cell_type = first(cell_key)
+        cell_type, cell_id = cell_key
         cell_rows = cells[cell_key]
         has_shell = any(row.inner_radius != row.outer_radius for row in cell_rows)
         if has_shell
             for row in cell_rows
-                add_layer!((cell_type, :inner), row, row.inner_radius)
+                add_layer!((cell_type, cell_id, :inner), row, row.inner_radius)
                 outer_radius = row.outer_radius
                 row.inner_radius == row.outer_radius && (outer_radius += sqrt(eps(Float64)))
-                add_layer!((cell_type, :outer), row, outer_radius)
+                add_layer!((cell_type, cell_id, :outer), row, outer_radius)
             end
         else
             for row in cell_rows
-                add_layer!((cell_type, :ordinary), row, row.outer_radius)
+                add_layer!((cell_type, cell_id, :ordinary), row, row.outer_radius)
             end
         end
     end
