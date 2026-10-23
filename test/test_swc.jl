@@ -131,6 +131,26 @@
         @test_throws ArgumentError mr.read_caterpillar(
             IOBuffer(replace(contents, "inner_radius outer_radius" => "inner_radius")),
         )
+
+        with_parent = """
+        cell_type cell_id component component_id parent_component_id X Y Z inner_radius outer_radius
+        axon 0 axon 0 -1 0.0 0.0 0.0 1.0 1.0
+        axon 0 axon 1 0 0.0 0.0 1.5 1.0 1.0
+        axon 1 axon 0 -1 5.0 0.0 0.0 0.8 1.0
+        axon 1 axon 1 0 5.0 0.0 1.5 0.8 0.8
+        axon 1 axon 1 0 5.0 0.0 3.0 0.7 0.9
+        glial_cell 0 soma 0 -1 10.0 0.0 0.0 2.0 2.0
+        unlisted_type 7 branch 3 -1 12.0 0.0 0.0 0.5 0.5
+        """
+        parent_geometries = mr.read_caterpillar(IOBuffer(with_parent))
+        @test length(parent_geometries) == length(geometries)
+        @test all(parent_geometries[i].position.value == geometries[i].position.value for i in eachindex(geometries))
+        @test all(parent_geometries[i].radius.value == geometries[i].radius.value for i in eachindex(geometries))
+        @test all(g.overlapping.value for g in parent_geometries)
+        @test mr.read_geometry(IOBuffer(with_parent)) isa Vector{<:mr.Spheres}
+        @test length(mr.read_geometry(IOBuffer(with_parent); format=:caterpillar)) == length(geometries)
+        @test_throws ArgumentError mr.read_caterpillar(IOBuffer(replace(with_parent, "-1 0.0" => "nope 0.0")))
+        @test_throws ArgumentError mr.read_caterpillar(IOBuffer(replace(with_parent, "-1 0.0 0.0 0.0 1.0 1.0" => "-1 0.0 0.0 0.0 1.0")))
     end
 
     @testset "reading connected SWC geometry" begin

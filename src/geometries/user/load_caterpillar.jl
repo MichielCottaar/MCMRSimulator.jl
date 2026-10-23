@@ -8,6 +8,10 @@ const CATERPILLAR_HEADER = [
     "cell_type", "cell_id", "component", "component_id", "x", "y", "z",
     "inner_radius", "outer_radius",
 ]
+const CATERPILLAR_HEADER_WITH_PARENT = [
+    "cell_type", "cell_id", "component", "component_id", "parent_component_id",
+    "x", "y", "z", "inner_radius", "outer_radius",
+]
 
 struct CaterpillarRow
     cell_type::String
@@ -19,20 +23,32 @@ struct CaterpillarRow
     outer_radius::Float64
 end
 
-is_caterpillar_header(line) = lowercase.(split(strip(line))) == CATERPILLAR_HEADER
+function is_caterpillar_header(line)
+    header = lowercase.(split(strip(line)))
+    header == CATERPILLAR_HEADER || header == CATERPILLAR_HEADER_WITH_PARENT
+end
 
-function _parse_row(line, line_number)
+function _parse_row(line, line_number, has_parent_component)
     fields = split(line)
-    length(fields) == length(CATERPILLAR_HEADER) || throw(ArgumentError(
-        "CATERPillar line $line_number must contain 9 columns, found $(length(fields))",
+    expected_columns = has_parent_component ? length(CATERPILLAR_HEADER_WITH_PARENT) : length(CATERPILLAR_HEADER)
+    length(fields) == expected_columns || throw(ArgumentError(
+        "CATERPillar line $line_number must contain $expected_columns columns, found $(length(fields))",
     ))
     cell_id, component_id = try
         parse(Int, fields[2]), parse(Int, fields[4])
     catch
         throw(ArgumentError("Could not parse CATERPillar IDs on line $line_number"))
     end
+    if has_parent_component
+        try
+            parse(Int, fields[5])
+        catch
+            throw(ArgumentError("Could not parse CATERPillar parent component ID on line $line_number"))
+        end
+    end
+    first_value = has_parent_component ? 6 : 5
     values = try
-        parse.(Float64, fields[5:9])
+        parse.(Float64, fields[first_value:end])
     catch
         throw(ArgumentError("Could not parse CATERPillar coordinates or radii on line $line_number"))
     end
@@ -64,6 +80,9 @@ to the outer radius so the two spheres do not coincide exactly. Magnetic
 susceptibility of the imported myelin is not currently supported; the
 generated sphere groups use the supplied sphere properties only.
 
+MCMRSimulator accepts both the nine-column format and the ten-column format with an integer `parent_component_id` between `component_id` and `X` are supported.
+The parent ID is validated but does not alter the generated sphere geometry.
+
 Additional keyword arguments are passed to every generated [`Spheres`](@ref)
 group. CATERPillar spheres are always loaded with `overlapping=true`.
 """
@@ -74,13 +93,15 @@ function read_caterpillar(io::IO; kwargs...)
         if !isempty(strip(line)) && !startswith(strip(line), "#")
     ]
     isempty(rows) && throw(ArgumentError("CATERPillar file is empty"))
+    header = lowercase.(split(strip(rows[1][2])))
     is_caterpillar_header(rows[1][2]) || throw(ArgumentError(
-        "CATERPillar header must be 'cell_type cell_id component component_id X Y Z inner_radius outer_radius'",
+        "CATERPillar header must contain the standard columns, optionally including parent_component_id",
     ))
+    has_parent_component = header == CATERPILLAR_HEADER_WITH_PARENT
     cells = Dict{Tuple{String, Int}, Vector{CaterpillarRow}}()
     cell_order = Tuple{String, Int}[]
     for (line_number, line) in rows[2:end]
-        row = _parse_row(line, line_number)
+        row = _parse_row(line, line_number, has_parent_component)
         key = (row.cell_type, row.cell_id)
         if !haskey(cells, key)
             cells[key] = CaterpillarRow[]
