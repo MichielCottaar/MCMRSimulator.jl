@@ -182,6 +182,9 @@ end
     @test combined.volume.R1 isa Properties.GeometryTupleProperties
     @test combined.surface.density isa Properties.GeometryTupleProperties
 
+    homogeneous = fix([mr.Walls(position=1.0), mr.Walls(position=2.0)])
+    @test homogeneous.geometry isa mr.Geometries.Internal.PhysicalGeometries.Groups.GeometryVector
+
     @test fix([]).geometry isa mr.Geometries.Internal.PhysicalGeometries.Groups.GeometryTuple
     @test_throws MethodError fix(group; R1=1.0)
     @test_throws MethodError fix(group; R2=1.0)

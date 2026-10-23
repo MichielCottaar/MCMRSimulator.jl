@@ -10,7 +10,7 @@ import ..User.Obstructions: ObstructionGroup, IndexedObstruction, Walls, Cylinde
 import ..Internal.PhysicalGeometries: PhysicalGeometry
 import ..Internal: SizeScaleOverride
 import ..Internal.PhysicalGeometries.Transparents: IgnoreOverlapping
-import ..Internal.PhysicalGeometries.Groups: GeometryTuple
+import ..Internal.PhysicalGeometries.Groups: GeometryTuple, GeometryVector
 import ..Internal.PhysicalGeometries: FixedLiminalGeometry
 import ..Internal.Properties: GeometryTupleProperties
 import ..Internal.Properties: GeometryVectorProperties
@@ -163,7 +163,12 @@ function fix(
         )
         for geometry in geometries
     ]
-    physical_geometry = GeometryTuple(Tuple(geometry.geometry for geometry in fixed))
+    children = [geometry.geometry for geometry in fixed]
+    physical_geometry = if all(geometry -> typeof(geometry) === typeof(first(children)), children)
+        GeometryVector(children)
+    else
+        GeometryTuple(Tuple(children))
+    end
     volume = _merge_properties(fixed, :volume)
     surface = _merge_properties(fixed, :surface)
     susceptibility = fix_susceptibility(geometries)
