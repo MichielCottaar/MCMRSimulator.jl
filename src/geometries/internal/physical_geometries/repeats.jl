@@ -100,7 +100,9 @@ function find_intersection(
     destination::SVector{N, Float64},
     previous_hit=nothing,
     inside=nothing,
+    candidate::Union{Nothing, Tuple}=nothing,
 ) where {N}
+    isnothing(candidate) || throw(ArgumentError("Repeat requires unrestricted candidates; select a candidate inside its finite child"))
     current = nothing
     direction = SVector{N, Bool}(destination .>= start)
     start_repeat = directed_repeat(repeat, start, direction)
@@ -124,6 +126,7 @@ function find_intersection(
                 inside,
                 copy_shift,
             ),
+            nothing,
         )
         isnothing(intersect) && continue
         candidate = (copy_shift, intersect...)

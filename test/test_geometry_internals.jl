@@ -156,6 +156,121 @@ end
     @test_throws PublicBoundingBoxes.BoundingBoxNotSupported leaf_bounding_boxes(projected)
 end
 
+@testset "single intersection candidate" begin
+    intersect = GI.PhysicalGeometries.find_intersection
+    sphere = BaseObstructions.Sphere(1.)
+    start, destination = SVector(-5., 0., 0.), SVector(5., 0., 0.)
+    children = [Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.])]
+    for group in (GeometryVector(children), GeometryVector(children; bounding_box=true),
+                  GeometryVector(children; grid=true, grid_resolution=1.), GeometryTuple(Tuple(children)))
+        @test intersect(group, start, destination, nothing, nothing, nothing) == intersect(group, start, destination)
+        @test intersect(group, start, destination, nothing, nothing, (1,)) == (1, false, 0.2)
+        @test intersect(group, start, destination, nothing, nothing, (2,)) == (2, false, 0.6)
+        @test intersect(group, start, destination, (1, false, 0.2), nothing, (2,)) == (2, false, 0.6)
+        @test intersect(group, start, destination, (2, false, 0.6), nothing, (2,)) === nothing
+        @test intersect(group, start .+ SVector(0., 4., 0.), destination .+ SVector(0., 4., 0.), nothing, nothing, (2,)) === nothing
+        @test_throws ArgumentError intersect(group, start, destination, nothing, nothing, ())
+        @test_throws BoundsError intersect(group, start, destination, nothing, nothing, (3,))
+        @test_throws ArgumentError intersect(group, start, destination, nothing, nothing, (1, 1))
+    end
+
+    nested = GeometryTuple((sphere, GeometryVector(children)))
+    wrapped = SizeScaleOverride(IgnoreOverlapping(nested), 0.25)
+    @test intersect(wrapped, start, destination, nothing, nothing, (2, 2)) == (2, 2, false, 0.6)
+    rotation = [0. -1. 0.; 1. 0. 0.; 0. 0. 1.]
+    transformed = Shift(Rotate(Scale(wrapped, 2.), rotation), [1., 2., 3.])
+    a, b = SVector(1., -8., 3.), SVector(1., 12., 3.)
+    @test intersect(transformed, a, b, nothing, nothing, (2, 2)) == (2, 2, false, 0.6)
+
+    for (primitive, a, b) in (
+        (sphere, start, destination),
+        (BaseObstructions.InfiniteCylinder(1.), SVector(-2., 0.), SVector(2., 0.)),
+        (BaseObstructions.InfiniteWall(), SVector(-1.), SVector(1.)),
+        (BaseObstructions.FullTriangle(SVector(0., 0., 0.), SVector(1., 0., 0.), SVector(0., 1., 0.)),
+         SVector(0.1, 0.1, -1.), SVector(0.1, 0.1, 1.)),
+    )
+        hit = intersect(primitive, a, b)
+        @test hit !== nothing
+        @test intersect(primitive, a, b, nothing, nothing, ()) == hit
+        @test intersect(primitive, a, b, hit, nothing, ()) == intersect(primitive, a, b, hit)
+        @test_throws ArgumentError intersect(primitive, a, b, nothing, nothing, (1,))
+    end
+
+    finite = BaseObstructions.FiniteCylinder([0., 0., -1.], [0., 0., 1.], 1.)
+    a, b = SVector(0., 0., -2.), SVector(0., 0., 2.)
+    @test intersect(finite, a, b) == (2, false, 0.25)
+    @test intersect(finite, a, b, nothing, nothing, (1,)) === nothing
+    @test intersect(finite, a, b, nothing, nothing, (2,)) == (2, false, 0.25)
+    # A selected later cap must not be discarded in favor of the overall nearest hit.
+    @test intersect(finite, a, b, nothing, nothing, (3,)) == (3, false, 0.75)
+    side_a, side_b = SVector(-2., 0., 0.), SVector(2., 0., 0.)
+    @test intersect(finite, side_a, side_b, nothing, nothing, (1,)) == (1, false, 0.25)
+    @test intersect(finite, side_a, side_b, nothing, nothing, (2,)) === nothing
+    @test intersect(finite, side_a, side_b, nothing, nothing, (3,)) === nothing
+    previous = (2, true, 0.25)
+    @test intersect(finite, a, b, previous, nothing, (2,)) === nothing
+    @test intersect(finite, a, b, previous, nothing, (3,)) == (3, true, 0.75)
+    @test intersect(finite, a, b, (2, false, 0.25), nothing, (3,)) === nothing
+    @test intersect(GeometryTuple((sphere, finite)), a, b, nothing, nothing, (2, 3)) == (2, 3, false, 0.75)
+    gaps = BaseObstructions.FiniteCylinder([0., 0., -1.], [0., 0., 1.], 1.; caps_are_gaps=true)
+    cap_hit = intersect(gaps, a, b, nothing, nothing, (3,))
+    @test GI.PhysicalGeometries.get_intersection_params(gaps, a, b, cap_hit).hit_gap
+    for path in ((), (0,), (4,), (1, 2))
+        @test_throws ArgumentError intersect(finite, a, b, nothing, nothing, path)
+    end
+
+    mesh = Mesh(
+        [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+        [[1, 2, 3], [1, 2, 4], [1, 3, 4]],
+    )
+    a, b = SVector(-1., 0.1, 0.1), SVector(2., 0.1, 0.1)
+    for index in eachindex(mesh.indices)
+        triangle_hit = intersect(Meshes.triangle(mesh, index), a, b)
+        expected = isnothing(triangle_hit) ? nothing : (index, triangle_hit...)
+        @test intersect(mesh, a, b, nothing, nothing, (index,)) == expected
+        @test intersect(mesh, a, b, (index, false, 0.), nothing, (index,)) === nothing
+    end
+    gap_index = mesh.first_index_of_gap
+    gap_hit = intersect(mesh, a, b, nothing, nothing, (gap_index,))
+    @test gap_hit !== nothing
+    @test gap_hit[end] > intersect(mesh, a, b)[end]
+    @test GI.PhysicalGeometries.get_intersection_params(mesh, a, b, gap_hit).hit_gap
+    @test intersect(mesh, a, b, (0, false, 0.), nothing, (gap_index,)) == gap_hit
+    @test intersect(GeometryTuple((sphere, mesh)), a, b, nothing, nothing, (2, gap_index)) == (2, gap_hit...)
+    @test_throws ArgumentError intersect(mesh, a, b, nothing, nothing, ())
+    @test_throws ArgumentError intersect(mesh, a, b, nothing, nothing, (1, 1))
+    @test_throws BoundsError intersect(mesh, a, b, nothing, nothing, (length(mesh.indices) + 1,))
+
+    # Instrumented children verify direct dispatch and child-local state routing.
+    struct CandidateProbe <: PhysicalGeometry{3}
+        calls::Vector{Any}
+    end
+    GI.PhysicalGeometries.find_intersection_requires_inside(::Type{CandidateProbe}) = Val(true)
+    function GI.PhysicalGeometries.find_intersection(
+        probe::CandidateProbe, a::SVector{3, Float64}, b::SVector{3, Float64},
+        previous=nothing, inside=nothing, candidate=nothing,
+    )
+        push!(probe.calls, (; previous, inside=isnothing(inside) ? nothing : collect(inside), candidate))
+        (false, 0.75)
+    end
+    skipped, first_probe, selected = CandidateProbe(Any[]), CandidateProbe(Any[]), CandidateProbe(Any[])
+    probes = IgnoreOverlapping(GeometryTuple((skipped, GeometryVector([first_probe, selected]))))
+    cached = InsideViews.InsideView([(1,), (2, 1), (2, 2)])
+    previous = (2, 2, true, 0.25)
+    @test intersect(probes, start, destination, previous, cached, (2, 2)) == (2, 2, false, 0.75)
+    @test isempty(skipped.calls)
+    @test isempty(first_probe.calls)
+    @test only(selected.calls) == (; previous=(true, 0.25), inside=[()], candidate=())
+    empty!(selected.calls)
+    @test intersect(probes, start, destination, (1, false, 0.2), cached, (2, 2)) == (2, 2, false, 0.75)
+    @test only(selected.calls).previous === nothing
+
+    repeat = Repeat(sphere, [4., 4., 4.])
+    @test intersect(repeat, start, destination, nothing, nothing, nothing) == intersect(repeat, start, destination)
+    @test_throws ArgumentError intersect(repeat, start, destination, nothing, nothing, ())
+    @test_throws ArgumentError intersect(repeat, start, destination, nothing, nothing, (1,))
+end
+
 @testset "intersection types" begin
     sphere_type = BaseObstructions.Sphere
 
@@ -899,6 +1014,9 @@ end
         fixed_cells = mr.fix(cells)
         @test fixed_cells isa GI.FixedGeometry
         @test fixed_cells.geometry isa GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry
+        @test_throws ArgumentError GI.PhysicalGeometries.find_intersection(
+            fixed_cells.geometry, SVector(0., 0., 0.), SVector(1., 0., 0.), nothing, nothing, (1,),
+        )
         sparse_centers = [[1.5 * index, 0., 0.] for index in -10:10]
         sparse_cells = mr.fix(mr.Spheres(
             position=sparse_centers,

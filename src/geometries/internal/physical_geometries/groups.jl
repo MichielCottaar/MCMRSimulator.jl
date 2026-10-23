@@ -118,7 +118,16 @@ end
 find_intersection_requires_inside(::Type{<:GroupGeometry{N, P}}) where {N, P} =
     find_intersection_requires_inside(P)
 
-function find_intersection(group::GroupGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, previous_hit=nothing, inside=nothing) where {N}
+function find_intersection(group::GroupGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, previous_hit=nothing, inside=nothing, candidate::Union{Nothing, Tuple}=nothing) where {N}
+    if !isnothing(candidate)
+        isempty(candidate) && throw(ArgumentError("a group candidate must identify a child"))
+        index = first(candidate)
+        child = group_geometries(group)[index]
+        child_previous = isnothing(previous_hit) || previous_hit[1] != index ? nothing : Base.tail(previous_hit)
+        child_inside = child_view(find_intersection_requires_inside(typeof(child)), inside, index)
+        hit = find_intersection(child, start, dest, child_previous, child_inside, Base.tail(candidate))
+        return isnothing(hit) ? nothing : (index, hit...)
+    end
     current = nothing
     for (index, candidate, dist_all_checked) in intersection_candidates(group, start, dest)
         if !isnothing(current) && current[end] < dist_all_checked

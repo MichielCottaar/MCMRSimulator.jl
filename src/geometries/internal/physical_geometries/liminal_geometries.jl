@@ -743,7 +743,9 @@ function find_intersection(
     destination::SVector{3, Float64},
     previous_hit=nothing,
     inside=nothing,
+    candidate::Union{Nothing, Tuple}=nothing,
 )
+    isnothing(candidate) || throw(ArgumentError("FixedLiminalGeometry requires unrestricted candidates; select a candidate inside its cell geometries"))
     displacement = destination - start
     distance = norm(displacement)
     iszero(distance) && return nothing
@@ -813,7 +815,7 @@ function find_intersection(
     end
 
     child = Shift(geometry.geometries[index], offset)
-    intersection = find_intersection(child, start, destination, child_previous, child_inside)
+    intersection = find_intersection(child, start, destination, child_previous, child_inside, nothing)
     isnothing(intersection) ? nothing : ((index, offset), intersection...)
 end
 

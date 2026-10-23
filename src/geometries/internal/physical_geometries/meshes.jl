@@ -309,8 +309,17 @@ function find_intersection(
     destination::SVector{3, Float64},
     previous_hit=nothing,
     inside=nothing,
+    candidate::Union{Nothing, Tuple}=nothing,
 )
     previous_index = isnothing(previous_hit) ? nothing : previous_hit[1]
+    if !isnothing(candidate)
+        length(candidate) == 1 || throw(ArgumentError("a mesh candidate must contain one triangle index"))
+        triangle_index = first(candidate)
+        child = triangle(mesh, triangle_index)
+        triangle_index == previous_index && return nothing
+        hit = find_intersection(child, start, destination, nothing, nothing, ())
+        return isnothing(hit) ? nothing : (triangle_index, hit...)
+    end
     best = nothing
     for (triangle_index, _) in GridIterator(mesh.grid, start, destination)
         triangle_index == previous_index && continue

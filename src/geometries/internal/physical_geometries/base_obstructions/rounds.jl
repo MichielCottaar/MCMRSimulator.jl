@@ -47,7 +47,9 @@ function find_intersection(
     destination::SVector{N, Float64},
     previous_hit=nothing,
     inside=nothing,
+    candidate::Union{Nothing, Tuple}=nothing,
 ) where {N}
+    (isnothing(candidate) || isempty(candidate)) || throw(ArgumentError("a round obstruction candidate must be ()"))
     previous = !isnothing(previous_hit)
     inside = previous ? previous_hit[1] : isinside_single(round, start)
     !inside && previous && return nothing

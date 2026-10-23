@@ -85,8 +85,9 @@ function find_intersection(
     destination::SVector{N, Float64},
     previous_hit=nothing,
     inside=nothing,
+    candidate::Union{Nothing, Tuple}=nothing,
 ) where {N}
-    find_intersection(transparent_geometry(wrapper), start, destination, previous_hit, inside)
+    find_intersection(transparent_geometry(wrapper), start, destination, previous_hit, inside, candidate)
 end
 
 find_intersection_requires_inside(::Type{<:Transparent{N, P}}) where {N, P} =

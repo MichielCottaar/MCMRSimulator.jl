@@ -16,7 +16,9 @@ function find_intersection(
     destination::SVector{1, Float64},
     previous_hit=nothing,
     inside=nothing,
+    candidate::Union{Nothing, Tuple}=nothing,
 )
+    (isnothing(candidate) || isempty(candidate)) || throw(ArgumentError("a wall candidate must be ()"))
     !isnothing(previous_hit) && return nothing
     origin = start[1]
     destination_position = destination[1]

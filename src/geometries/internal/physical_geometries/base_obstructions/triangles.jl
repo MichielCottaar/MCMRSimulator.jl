@@ -87,7 +87,9 @@ function find_intersection(
     destination::SVector{3, Float64},
     previous_hit=nothing,
     inside=nothing,
+    candidate::Union{Nothing, Tuple}=nothing,
 )
+    (isnothing(candidate) || isempty(candidate)) || throw(ArgumentError("a triangle candidate must be ()"))
     !isnothing(previous_hit) && return nothing
     triangle_normal = normal(triangle)
     plane_distance = triangle_normal ⋅ triangle.a

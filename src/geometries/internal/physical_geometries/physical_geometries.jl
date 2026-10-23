@@ -26,7 +26,7 @@ function distance_to_surface end
 
 
 """
-    find_intersection(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, previous_hit=nothing) -> Optional{indices}
+    find_intersection(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, previous_hit=nothing, inside=nothing, candidate=nothing) -> Optional{indices}
 
 Finds the first intersection between `start` and `dest`.
 
@@ -39,6 +39,17 @@ Each layer prepends its identifier information to the front (which can be someth
 The final two elements therefore always have the form `(..., inside, distance)`.
 
 Return `nothing` if there is no intersection between `start` and `dest`.
+
+`candidate` is `nothing` for unrestricted traversal, or a tuple identifying one
+leaf surface in the hierarchy returned by `leaf_bounding_boxes`. Groups dispatch
+directly to the selected child and consume one path component. Transformations
+and transparent wrappers forward the path unchanged. Ordinary base obstructions
+expect `()`, meshes expect `(triangle_index,)`, and finite cylinders expect
+`(surface_index,)` (1: side, 2: first cap, 3: second cap).
+
+Candidate selection preserves the original segment, intersection paths,
+previous-hit handling, and cached `inside` state. Repeating and liminal geometries
+require `candidate === nothing`; selection belongs inside their finite children.
 """
 function find_intersection end
 find_intersection_requires_inside(::Type{<:PhysicalGeometry}) = Val(false)

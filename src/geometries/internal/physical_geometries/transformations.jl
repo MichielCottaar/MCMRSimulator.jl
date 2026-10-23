@@ -332,6 +332,7 @@ function find_intersection(
     destination::SVector{N, Float64},
     previous_hit=nothing,
     inside=nothing,
+    candidate::Union{Nothing, Tuple}=nothing,
 ) where {N, M, P}
     find_intersection(
         transformation.geometry,
@@ -339,6 +340,7 @@ function find_intersection(
         to_child_coordinates(transformation, destination),
         previous_hit,
         inside,
+        candidate,
     )
 end
 

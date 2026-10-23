@@ -151,7 +151,15 @@ function find_intersection(
     destination::SVector{3, Float64},
     previous_intersection=nothing,
     inside=nothing,
+    candidate::Union{Nothing, Tuple}=nothing,
 )
+    surface = if isnothing(candidate)
+        0
+    else
+        length(candidate) == 1 && first(candidate) in (1, 2, 3) ||
+            throw(ArgumentError("a finite-cylinder candidate must be (1,), (2,), or (3,)"))
+        first(candidate)
+    end
     previous = !isnothing(previous_intersection)
     if previous
         previous_index, previous_inside, previous_distance = previous_intersection
@@ -168,39 +176,44 @@ function find_intersection(
     axial_displacement = displacement ⋅ cylinder.axis
     radial_start = relative - axial_start * cylinder.axis
     radial_displacement = displacement - axial_displacement * cylinder.axis
-    radius_start = _finite_cylinder_radius(cylinder, axial_start)
-    radius_slope = (cylinder.radius_second - cylinder.radius_first) / cylinder.length * axial_displacement
-
-    a = radial_displacement ⋅ radial_displacement - radius_slope^2
-    b = 2 * (radial_start ⋅ radial_displacement - radius_start * radius_slope)
-    c = radial_start ⋅ radial_start - radius_start^2
     best = nothing
-    if abs(a) < 1e-12
-        if abs(b) > 1e-12
-            side_distance = -c / b
-            axial = axial_start + side_distance * axial_displacement
-            0 <= axial <= cylinder.length && (best = _finite_cylinder_candidate(best, 1, side_distance))
-        end
-    else
-        determinant = b^2 - 4 * a * c
-        if determinant >= 0
-            root = sqrt(determinant)
-            side_distance = inside ? (-b + root) / (2 * a) : (-b - root) / (2 * a)
-            axial = axial_start + side_distance * axial_displacement
-            0 <= axial <= cylinder.length && (best = _finite_cylinder_candidate(best, 1, side_distance))
+    if surface in (0, 1)
+        radius_start = _finite_cylinder_radius(cylinder, axial_start)
+        radius_slope = (cylinder.radius_second - cylinder.radius_first) / cylinder.length * axial_displacement
+        a = radial_displacement ⋅ radial_displacement - radius_slope^2
+        b = 2 * (radial_start ⋅ radial_displacement - radius_start * radius_slope)
+        c = radial_start ⋅ radial_start - radius_start^2
+        if abs(a) < 1e-12
+            if abs(b) > 1e-12
+                side_distance = -c / b
+                axial = axial_start + side_distance * axial_displacement
+                0 <= axial <= cylinder.length && (best = _finite_cylinder_candidate(best, 1, side_distance))
+            end
+        else
+            determinant = b^2 - 4 * a * c
+            if determinant >= 0
+                root = sqrt(determinant)
+                side_distance = inside ? (-b + root) / (2 * a) : (-b - root) / (2 * a)
+                axial = axial_start + side_distance * axial_displacement
+                0 <= axial <= cylinder.length && (best = _finite_cylinder_candidate(best, 1, side_distance))
+            end
         end
     end
 
     if abs(axial_displacement) > 1e-12
-        first_cap = -axial_start / axial_displacement
-        second_cap = (cylinder.length - axial_start) / axial_displacement
-        radial_first = radial_start + first_cap * radial_displacement
-        radial_second = radial_start + second_cap * radial_displacement
-        if previous_index != 2 && radial_first ⋅ radial_first <= cylinder.radius_first^2
-            best = _finite_cylinder_candidate(best, 2, first_cap)
+        if surface in (0, 2) && previous_index != 2
+            first_cap = -axial_start / axial_displacement
+            radial_first = radial_start + first_cap * radial_displacement
+            if radial_first ⋅ radial_first <= cylinder.radius_first^2
+                best = _finite_cylinder_candidate(best, 2, first_cap)
+            end
         end
-        if previous_index != 3 && radial_second ⋅ radial_second <= cylinder.radius_second^2
-            best = _finite_cylinder_candidate(best, 3, second_cap)
+        if surface in (0, 3) && previous_index != 3
+            second_cap = (cylinder.length - axial_start) / axial_displacement
+            radial_second = radial_start + second_cap * radial_displacement
+            if radial_second ⋅ radial_second <= cylinder.radius_second^2
+                best = _finite_cylinder_candidate(best, 3, second_cap)
+            end
         end
     end
     isnothing(best) ? nothing : (best[1], inside, best[2])
