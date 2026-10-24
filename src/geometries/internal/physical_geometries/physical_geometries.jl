@@ -32,6 +32,32 @@ function has_equivalent_wrapper end
 
 has_equivalent_wrapper(::PhysicalGeometry, ::PhysicalGeometry) = false
 
+"""
+    rewrap(wrapper, geometry::PhysicalGeometry)
+
+Construct the same kind of wrapper around `geometry`, preserving the wrapper's
+parameters. Wrapper types supporting common-wrapper extraction implement this
+alongside `has_equivalent_wrapper` and expose their child as `geometry`.
+"""
+function rewrap end
+
+"""
+    extract_common_wrapper(group)
+
+Lift one equivalent wrapper from every child of a plain `GeometryVector` or
+`GeometryTuple` into a wrapper around the group. Preserve child order and group
+family. Return the original group unchanged if `has_equivalent_wrapper(group)`
+is false. This operation does not recursively simplify descendants or mutate
+the input geometry.
+
+For example, a group of `Repeat` objects with identical repeat distances becomes
+a `Repeat` of the group of their children. Geometric paths change from
+`(child_index, repeat_shift, ...)` to `(repeat_shift, child_index, ...)`, so cached
+inside indices and previous-hit paths must be regenerated. Property paths remain
+unchanged after stripping repeat indices.
+"""
+function extract_common_wrapper end
+
 struct IntersectionParams{N}
     inside::Bool
     normal::SVector{N, Float64}

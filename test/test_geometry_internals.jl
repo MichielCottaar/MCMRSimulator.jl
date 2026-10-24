@@ -30,6 +30,8 @@ const inside_indices = GI.PhysicalGeometries.inside_indices
 const intersection_type = GI.PhysicalGeometries.intersection_type
 const leaf_bounding_boxes = GI.PhysicalGeometries.leaf_bounding_boxes
 const has_equivalent_wrapper = GI.PhysicalGeometries.has_equivalent_wrapper
+const rewrap = GI.PhysicalGeometries.rewrap
+const extract_common_wrapper = GI.PhysicalGeometries.extract_common_wrapper
 const bound_intersection_type = GI.PhysicalGeometries.bound_intersection_type
 const Properties = GI.Properties
 const Plot = mr.Plot
@@ -166,6 +168,120 @@ end
     group = GeometryTuple((repeated, repeated_larger))
     @test !has_equivalent_wrapper(group, group)
     @test !has_equivalent_wrapper(GeometryTuple((group, group)))
+end
+
+@testset "extract common wrapper" begin
+    periods = SVector(6.0, 6.0, 6.0)
+    first_child = Shift(BaseObstructions.Sphere(0.5), [-1.2, 0.0, 0.0])
+    second_child = Shift(BaseObstructions.Sphere(0.6), [1.3, 0.0, 0.0])
+    first_repeat, second_repeat = Repeat(first_child, periods), Repeat(second_child, periods)
+    vector = GeometryVector([first_repeat, second_repeat])
+    tuple_group = GeometryTuple((first_repeat, second_repeat))
+    for group in (vector, tuple_group)
+        extracted = extract_common_wrapper(group)
+        @test extracted isa Repeat{3}
+        @test extracted.repeats == periods
+        @test extracted.geometry isa (group isa GeometryVector ? GeometryVector : GeometryTuple)
+        @test length(extracted.geometry) == 2
+        @test extracted.geometry[1] === first_child
+        @test extracted.geometry[2] === second_child
+        @test group[1] === first_repeat
+        @test group[2] === second_repeat
+        @test extract_common_wrapper(extracted.geometry) === extracted.geometry
+    end
+
+    # Rewrapping uses the new child and rebuilds derived bounds.
+    replacement = BaseObstructions.Sphere(1.0)
+    replaced = rewrap(first_repeat, replacement)
+    @test replaced.geometry === replacement
+    @test replaced.repeats == periods
+    @test replaced.normalized_bounding_box != first_repeat.normalized_bounding_box
+    @test BoundingBoxes.lower(replaced.normalized_bounding_box) == SVector(-1 / 6, -1 / 6, -1 / 6)
+
+    for group in (GeometryVector([first_repeat]), GeometryTuple((first_repeat,)))
+        extracted = extract_common_wrapper(group)
+        @test extracted isa Repeat
+        @test length(extracted.geometry) == 1
+        @test extracted.geometry[1] === first_child
+    end
+
+    different = Repeat(second_child, [6.0, 6.0, 7.0])
+    for unchanged in (
+        GeometryVector([first_repeat, different]),
+        GeometryTuple((first_repeat, second_repeat, different)),
+        GeometryTuple((first_repeat, second_child)),
+        GeometryVector([first_child, second_child]),
+        GeometryVector(typeof(first_repeat)[]),
+        GeometryTuple{3}(()),
+        GeometryTuple((GeometryVector([first_repeat, second_repeat]),)),
+        GeometryTuple((Shift(first_repeat, zeros(3)), Shift(second_repeat, zeros(3)))),
+    )
+        @test extract_common_wrapper(unchanged) === unchanged
+    end
+
+    finite = Shift(BaseObstructions.FiniteCylinder([0., 0., -1.], [0., 0., 1.], 0.4), [1.3, 0., 0.])
+    heterogeneous = GeometryTuple((first_repeat, Repeat(finite, periods)))
+    extracted = extract_common_wrapper(heterogeneous)
+    @test extracted.geometry isa GeometryTuple
+    @test extracted.geometry.geometries === (first_child, finite)
+
+    # Lifting moves the repeat component before the group component in paths.
+    lift_path(path) = (path[2], path[1], path[3:end]...)
+    intersect = GI.PhysicalGeometries.find_intersection
+    property_index = GI.PhysicalGeometries.to_property_index
+    get_params = GI.PhysicalGeometries.get_intersection_params
+    properties = Properties.GeometryVectorProperties([10.0, 20.0])
+    rng = Random.MersenneTwister(72)
+    for original in (vector, tuple_group, heterogeneous)
+        lifted = extract_common_wrapper(original)
+        for shift in (SVector(0., 0., 0.), SVector(6., -6., 0.))
+            start, destination = SVector(-2.5, 0., 0.) + shift, SVector(2.5, 0., 0.) + shift
+            hit = intersect(original, start, destination)
+            lifted_hit = intersect(lifted, start, destination)
+            @test lifted_hit == lift_path(hit)
+            @test property_index(original, hit[1:end-2]) == property_index(lifted, lifted_hit[1:end-2])
+            @test Properties.get_value(properties, property_index(lifted, lifted_hit[1:end-2])) == 10.0
+            @test get_params(original, start, destination, hit).normal ≈ get_params(lifted, start, destination, lifted_hit).normal
+            next_hit = intersect(original, start, destination, hit)
+            @test intersect(lifted, start, destination, lifted_hit) == lift_path(next_hit)
+        end
+        for _ in 1:30
+            start = SVector{3, Float64}(16 .* rand(rng, 3) .- 8)
+            destination = SVector{3, Float64}(16 .* rand(rng, 3) .- 8)
+            hit = intersect(original, start, destination)
+            @test intersect(lifted, start, destination) == (isnothing(hit) ? nothing : lift_path(hit))
+            @test Set(inside_indices(lifted, start)) == Set(lift_path(index) for index in inside_indices(original, start))
+        end
+        # Probe known interior points, including copies outside the central period.
+        for point in (SVector(-1.2, 0., 0.), SVector(1.3, 0., 0.), SVector(7.3, 0., 0.))
+            original_inside = inside_indices(original, point)
+            lifted_inside = inside_indices(lifted, point)
+            @test !isempty(original_inside)
+            @test Set(lifted_inside) == Set(lift_path(index) for index in original_inside)
+            @test Set(property_index(original, index) for index in original_inside) ==
+                Set(property_index(lifted, index) for index in lifted_inside)
+        end
+    end
+
+    # Surface suffixes survive extraction and gap flags are preserved.
+    gaps = Shift(BaseObstructions.FiniteCylinder([0., 0., -1.], [0., 0., 1.], 0.4; caps_are_gaps=true), [1.3, 0., 0.])
+    caps = GeometryTuple((first_repeat, Repeat(gaps, periods)))
+    lifted_caps = extract_common_wrapper(caps)
+    start, destination = SVector(1.3, 0., -2.), SVector(1.3, 0., 2.)
+    cap_hit = intersect(caps, start, destination)
+    lifted_cap_hit = intersect(lifted_caps, start, destination)
+    @test lifted_cap_hit == lift_path(cap_hit)
+    @test cap_hit[3] == 2
+    @test get_params(lifted_caps, start, destination, lifted_cap_hit).hit_gap
+    @test property_index(caps, cap_hit[1:end-2]) == property_index(lifted_caps, lifted_cap_hit[1:end-2])
+
+    walls = GeometryVector([
+        Repeat(Shift(BaseObstructions.InfiniteWall(), [-1.]), [6.]),
+        Repeat(Shift(BaseObstructions.InfiniteWall(), [1.]), [6.]),
+    ])
+    @test extract_common_wrapper(walls) isa Repeat{1}
+    @test intersect(extract_common_wrapper(walls), SVector(-2.), SVector(2.)) ==
+        lift_path(intersect(walls, SVector(-2.), SVector(2.)))
 end
 
 @testset "leaf bounding boxes" begin

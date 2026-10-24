@@ -9,6 +9,7 @@ import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_s
 import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: has_equivalent_wrapper
+import ..PhysicalGeometries: extract_common_wrapper, rewrap
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 import ...Properties: all_property_values
 import ...InsideViews: child_view
@@ -206,6 +207,14 @@ function has_equivalent_wrapper(group::Union{GeometryVectorLike, GeometryTuple})
     isempty(children) && return false
     reference = first(children)
     all(child -> has_equivalent_wrapper(reference, child), children)
+end
+
+function extract_common_wrapper(group::Union{GeometryVector, GeometryTuple})
+    has_equivalent_wrapper(group) || return group
+    reference = first(group.geometries)
+    children = map(child -> child.geometry, group.geometries)
+    inner_group = group isa GeometryVector ? GeometryVector(children) : GeometryTuple(children)
+    rewrap(reference, inner_group)
 end
 
 leaf_bounding_boxes(group::GeometryVectorLike) = map(leaf_bounding_boxes, group_geometries(group))

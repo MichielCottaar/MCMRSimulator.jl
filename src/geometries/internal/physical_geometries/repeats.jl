@@ -9,6 +9,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, fi
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _translate_native, to_property_index
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: has_equivalent_wrapper
+import ..PhysicalGeometries: rewrap
 import ...Properties: GeometryProperties
 import ..Groups
 import ...InsideViews: child_view
@@ -38,6 +39,9 @@ end
 
 has_equivalent_wrapper(first::Repeat{N}, second::Repeat{N}) where {N} =
     first.repeats == second.repeats
+
+rewrap(wrapper::Repeat{N}, geometry::PhysicalGeometry{N}) where {N} =
+    Repeat(geometry, wrapper.repeats)
 
 leaf_bounding_boxes(::Repeat) = throw(BoundingBoxNotSupported(
     "periodic geometries do not have finite leaf bounding boxes; query the repeated child instead",
