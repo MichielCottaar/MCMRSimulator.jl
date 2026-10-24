@@ -8,6 +8,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, fi
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh
 import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
 import ..PhysicalGeometries: leaf_bounding_boxes
+import ..PhysicalGeometries: has_equivalent_wrapper
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 import ...Properties: all_property_values
 import ...InsideViews: child_view
@@ -199,6 +200,13 @@ end
 get_intersection_params_requires_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = _requires_inside(P)
 
 group_geometries(group::GeometryTuple; include_gap=true) = group.geometries
+
+function has_equivalent_wrapper(group::Union{GeometryVectorLike, GeometryTuple})
+    children = group_geometries(group)
+    isempty(children) && return false
+    reference = first(children)
+    all(child -> has_equivalent_wrapper(reference, child), children)
+end
 
 leaf_bounding_boxes(group::GeometryVectorLike) = map(leaf_bounding_boxes, group_geometries(group))
 leaf_bounding_boxes(group::GeometryTuple) = map(leaf_bounding_boxes, group_geometries(group))

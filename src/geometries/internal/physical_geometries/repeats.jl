@@ -8,6 +8,7 @@ import ....BoundingBoxes: BoundingBoxNotSupported
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _translate_native, to_property_index
 import ..PhysicalGeometries: leaf_bounding_boxes
+import ..PhysicalGeometries: has_equivalent_wrapper
 import ...Properties: GeometryProperties
 import ..Groups
 import ...InsideViews: child_view
@@ -34,6 +35,9 @@ struct Repeat{N, P<:PhysicalGeometry{N}} <: Groups.GroupGeometry{N, Shift{N, P}}
         new{N, P}(geometry, repeats, normalized_bounding_box)
     end
 end
+
+has_equivalent_wrapper(first::Repeat{N}, second::Repeat{N}) where {N} =
+    first.repeats == second.repeats
 
 leaf_bounding_boxes(::Repeat) = throw(BoundingBoxNotSupported(
     "periodic geometries do not have finite leaf bounding boxes; query the repeated child instead",

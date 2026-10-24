@@ -29,6 +29,7 @@ const isinside_single = GI.PhysicalGeometries.isinside_single
 const inside_indices = GI.PhysicalGeometries.inside_indices
 const intersection_type = GI.PhysicalGeometries.intersection_type
 const leaf_bounding_boxes = GI.PhysicalGeometries.leaf_bounding_boxes
+const has_equivalent_wrapper = GI.PhysicalGeometries.has_equivalent_wrapper
 const bound_intersection_type = GI.PhysicalGeometries.bound_intersection_type
 const Properties = GI.Properties
 const Plot = mr.Plot
@@ -122,6 +123,49 @@ end
         start, destination = SVector(0.1, 0.1, 2.0), SVector(0.1, 0.1, 4.0)
         @test intersect(Grid(triangle; resolution), start, destination) == intersect(triangle, start, destination)
     end
+end
+
+@testset "equivalent wrappers" begin
+    sphere = BaseObstructions.Sphere(1.0)
+    larger = BaseObstructions.Sphere(2.0)
+    repeated = Repeat(sphere, [4.0, 4.0, 4.0])
+    repeated_larger = Repeat(larger, [4.0, 4.0, 4.0])
+    repeated_shifted = Repeat(Shift(sphere, [0.5, 0.0, 0.0]), [4.0, 4.0, 4.0])
+    different_period = Repeat(sphere, [4.0, 4.0, 5.0])
+    almost_equal_period = Repeat(sphere, [4.0, 4.0, nextfloat(4.0)])
+
+    @test has_equivalent_wrapper(repeated, repeated)
+    for other in (repeated_larger, repeated_shifted)
+        @test has_equivalent_wrapper(repeated, other)
+        @test has_equivalent_wrapper(other, repeated)
+    end
+    @test has_equivalent_wrapper(repeated_larger, repeated_shifted)
+    for other in (different_period, almost_equal_period, sphere,
+                  Repeat(BaseObstructions.InfiniteCylinder(1.0), [4.0, 4.0]))
+        @test !has_equivalent_wrapper(repeated, other)
+        @test !has_equivalent_wrapper(other, repeated)
+    end
+    # Identical unsupported types still use the conservative fallback.
+    for unsupported in (sphere, Shift(sphere, ones(3)), Scale(sphere, 2.0),
+                        Rotate(sphere, Matrix{Float64}(I, 3, 3)), IgnoreOverlapping(sphere), Grid(sphere))
+        @test !has_equivalent_wrapper(unsupported, unsupported)
+    end
+
+    @test has_equivalent_wrapper(GeometryVector([repeated, repeated_larger]))
+    @test has_equivalent_wrapper(GeometryTuple((repeated, repeated_larger, repeated_shifted)))
+    @test !has_equivalent_wrapper(GeometryVector([repeated, different_period]))
+    @test !has_equivalent_wrapper(GeometryTuple((repeated, repeated_shifted, different_period)))
+    @test !has_equivalent_wrapper(GeometryTuple((repeated, sphere)))
+    @test !has_equivalent_wrapper(GeometryVector([sphere, larger]))
+    @test !has_equivalent_wrapper(GeometryVector(BaseObstructions.Sphere[]))
+    @test !has_equivalent_wrapper(GeometryTuple{3}(()))
+    @test has_equivalent_wrapper(GeometryVector([repeated]))
+    @test has_equivalent_wrapper(GeometryTuple((repeated,)))
+    @test !has_equivalent_wrapper(GeometryVector([sphere]))
+    @test !has_equivalent_wrapper(GeometryTuple((sphere,)))
+    group = GeometryTuple((repeated, repeated_larger))
+    @test !has_equivalent_wrapper(group, group)
+    @test !has_equivalent_wrapper(GeometryTuple((group, group)))
 end
 
 @testset "leaf bounding boxes" begin

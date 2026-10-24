@@ -14,6 +14,24 @@ Represents a physical geometry in N-dimensional space. This is an abstract type 
 """
 abstract type PhysicalGeometry{N} end
 
+"""
+    has_equivalent_wrapper(geometry1::PhysicalGeometry, geometry2::PhysicalGeometry)
+    has_equivalent_wrapper(group)
+
+Return whether two geometries have equivalent top-level wrappers, independently
+of their wrapped geometries. The default is `false`, including for identical
+objects whose wrapper type has no specialized comparison. Supported wrapper
+comparisons should be symmetric and transitive.
+`Repeat` wrappers are equivalent when their repeat-distance vectors match
+exactly; their children may differ in type and content.
+
+For a vector-like or tuple group, compare every child with the first child.
+Empty groups return `false`; a singleton group compares its child with itself.
+"""
+function has_equivalent_wrapper end
+
+has_equivalent_wrapper(::PhysicalGeometry, ::PhysicalGeometry) = false
+
 struct IntersectionParams{N}
     inside::Bool
     normal::SVector{N, Float64}
