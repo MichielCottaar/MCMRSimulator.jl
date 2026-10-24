@@ -44,11 +44,15 @@ function rewrap end
 """
     extract_common_wrapper(group)
 
-Lift one equivalent wrapper from every child of a plain `GeometryVector` or
-`GeometryTuple` into a wrapper around the group. Preserve child order and group
-family. Return the original group unchanged if `has_equivalent_wrapper(group)`
-is false. This operation does not recursively simplify descendants or mutate
-the input geometry.
+Lift consecutive equivalent wrapper layers from every child of a plain
+`GeometryVector` or `GeometryTuple` into wrappers around the group. After removing
+each common layer, recursively extract wrappers from the resulting inner group
+before reapplying the outer wrapper. Stop when `has_equivalent_wrapper` is false.
+Preserve child order, group family, and wrapper order without mutating the input.
+
+Return the original group unchanged if its children have no equivalent wrapper.
+Recursion only follows inner groups created by removing common wrappers; it does
+not otherwise simplify descendants.
 
 For example, a group of `Repeat` objects with identical repeat distances becomes
 a `Repeat` of the group of their children. Geometric paths change from

@@ -190,6 +190,29 @@ end
         @test extract_common_wrapper(extracted.geometry) === extracted.geometry
     end
 
+    # A test-only wrapper lets us exercise consecutive layers without nesting repeats.
+    struct ExtractionWrapper{N, P<:PhysicalGeometry{N}} <: Transparent{N, P}
+        geometry::P
+    end
+    GI.PhysicalGeometries.has_equivalent_wrapper(::ExtractionWrapper{N}, ::ExtractionWrapper{N}) where {N} = true
+    GI.PhysicalGeometries.rewrap(::ExtractionWrapper{N}, geometry::PhysicalGeometry{N}) where {N} =
+        ExtractionWrapper{N, typeof(geometry)}(geometry)
+    wrapped_first = ExtractionWrapper{3, typeof(first_repeat)}(first_repeat)
+    wrapped_second = ExtractionWrapper{3, typeof(second_repeat)}(second_repeat)
+    for group in (GeometryVector([wrapped_first, wrapped_second]), GeometryTuple((wrapped_first, wrapped_second)))
+        extracted = extract_common_wrapper(group)
+        @test extracted isa ExtractionWrapper
+        @test extracted.geometry isa Repeat
+        @test extracted.geometry.repeats == periods
+        inner_group = extracted.geometry.geometry
+        @test inner_group isa (group isa GeometryVector ? GeometryVector : GeometryTuple)
+        @test inner_group[1] === first_child
+        @test inner_group[2] === second_child
+        @test extract_common_wrapper(inner_group) === inner_group
+        @test group[1] === wrapped_first
+        @test group[2] === wrapped_second
+    end
+
     # Rewrapping uses the new child and rebuilds derived bounds.
     replacement = BaseObstructions.Sphere(1.0)
     replaced = rewrap(first_repeat, replacement)

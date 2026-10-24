@@ -214,7 +214,7 @@ function extract_common_wrapper(group::Union{GeometryVector, GeometryTuple})
     reference = first(group.geometries)
     children = map(child -> child.geometry, group.geometries)
     inner_group = group isa GeometryVector ? GeometryVector(children) : GeometryTuple(children)
-    rewrap(reference, inner_group)
+    rewrap(reference, extract_common_wrapper(inner_group))
 end
 
 leaf_bounding_boxes(group::GeometryVectorLike) = map(leaf_bounding_boxes, group_geometries(group))
