@@ -4,6 +4,7 @@ import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single
 import ..PhysicalGeometries: to_property_index
 import ..PhysicalGeometries: leaf_bounding_boxes
+import ..PhysicalGeometries: simplify
 import ...InternalBoundingBoxes: InternalBoundingBox
 import ...InternalBoundingBoxes
 import ...Properties: GeometryLeafProperties
@@ -14,6 +15,8 @@ import Distributions: Poisson
 import Random: rand
 
 abstract type BaseObstruction{N} <: PhysicalGeometry{N} end
+
+simplify(geometry::BaseObstruction) = geometry
 
 leaf_bounding_boxes(geometry::BaseObstruction) = InternalBoundingBox(geometry)
 

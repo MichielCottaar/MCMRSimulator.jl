@@ -62,6 +62,27 @@ unchanged after stripping repeat indices.
 """
 function extract_common_wrapper end
 
+"""
+    simplify(geometry::PhysicalGeometry)
+
+Return an equivalent internal geometry representation with common wrappers
+extracted. Simplify the children of supported groups and wrappers first, then
+apply `extract_common_wrapper` to plain `GeometryVector` and `GeometryTuple`
+groups. Base obstructions are returned unchanged. Every other geometry type must
+provide simplification support; missing implementations raise `MethodError`.
+The input is never mutated, and unchanged subtrees may be returned by identity.
+
+A vector group accepts simplified children only if all have the same fully
+concrete type. Otherwise, discard all proposed child changes and return the
+original vector group; never convert it to a tuple group. Tuple groups retain
+their tuple representation and may accept heterogeneous child changes.
+
+Wrapper extraction can reorder geometric paths. Generate cached inside states
+and previous-hit paths for the returned geometry rather than reusing those from
+the original representation. Property paths retain their original ordering.
+"""
+function simplify end
+
 struct IntersectionParams{N}
     inside::Bool
     normal::SVector{N, Float64}

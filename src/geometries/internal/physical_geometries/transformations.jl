@@ -10,6 +10,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, fi
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result, _translate_native
 import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
 import ..PhysicalGeometries: leaf_bounding_boxes
+import ..PhysicalGeometries: simplify, rewrap
 import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
 import ...Properties: GeometryProperties
 
@@ -24,6 +25,11 @@ coordinate system. `from_child_coordinates` maps child coordinates to the
 parent coordinate system.
 """
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
+
+function simplify(wrapper::Transformation)
+    geometry = simplify(wrapper.geometry)
+    geometry === wrapper.geometry ? wrapper : rewrap(wrapper, geometry)
+end
 
 function leaf_bounding_boxes(transformation::Transformation{N, M}) where {N, M}
     N == M || throw(BoundingBoxNotSupported(
@@ -140,6 +146,8 @@ end
 Shift(geometry::P, shift::AbstractVector{<:Real}) where {N, P<:PhysicalGeometry{N}} =
     Shift{N, P}(geometry, SVector{N, Float64}(shift))
 
+rewrap(wrapper::Shift{N}, geometry::PhysicalGeometry{N}) where {N} = Shift(geometry, wrapper.shift)
+
 """
     Scale{N}(scale)
 
@@ -157,6 +165,8 @@ struct Scale{N, P<:PhysicalGeometry{N}} <: Transformation{N, N, P}
 end
 
 Scale(geometry::P, scale::Real) where {N, P<:PhysicalGeometry{N}} = Scale{N, P}(geometry, scale)
+
+rewrap(wrapper::Scale{N}, geometry::PhysicalGeometry{N}) where {N} = Scale(geometry, wrapper.scale)
 
 """
     Rotate(geometry, matrix)
@@ -195,6 +205,8 @@ function Rotate(geometry::P, matrix::AbstractMatrix{<:Real}) where {M, P<:Physic
     matrix = SMatrix{N, M, Float64}(matrix)
     Rotate{N, M, P}(geometry, matrix)
 end
+
+rewrap(wrapper::Rotate{N, M}, geometry::PhysicalGeometry{M}) where {N, M} = Rotate(geometry, wrapper.matrix)
 
 function InternalBoundingBox(
     transformation::Rotate{N, M}; no_deproject=false, kwargs...

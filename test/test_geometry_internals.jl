@@ -32,6 +32,7 @@ const leaf_bounding_boxes = GI.PhysicalGeometries.leaf_bounding_boxes
 const has_equivalent_wrapper = GI.PhysicalGeometries.has_equivalent_wrapper
 const rewrap = GI.PhysicalGeometries.rewrap
 const extract_common_wrapper = GI.PhysicalGeometries.extract_common_wrapper
+const simplify = GI.PhysicalGeometries.simplify
 const bound_intersection_type = GI.PhysicalGeometries.bound_intersection_type
 const Properties = GI.Properties
 const Plot = mr.Plot
@@ -305,6 +306,143 @@ end
     @test extract_common_wrapper(walls) isa Repeat{1}
     @test intersect(extract_common_wrapper(walls), SVector(-2.), SVector(2.)) ==
         lift_path(intersect(walls, SVector(-2.), SVector(2.)))
+end
+
+@testset "simplify geometry" begin
+    periods = SVector(6., 6., 6.)
+    a = Shift(BaseObstructions.Sphere(0.3), [-1., 0., 0.])
+    b = Shift(BaseObstructions.Sphere(0.4), [1., 0., 0.])
+    c = Shift(BaseObstructions.Sphere(0.3), [0., 1., 0.])
+    d = Shift(BaseObstructions.Sphere(0.4), [0., -1., 0.])
+    first = GeometryVector([Repeat(a, periods), Repeat(b, periods)])
+    second = GeometryVector([Repeat(c, periods), Repeat(d, periods)])
+    mixed = GeometryVector([Repeat(a, periods), Repeat(b, [8., 8., 8.])])
+
+    # Children simplify to different types: reject every proposed vector change.
+    inconsistent = GeometryVector([first, mixed])
+    @test simplify(first) isa Repeat
+    @test simplify(mixed) === mixed
+    @test simplify(inconsistent) === inconsistent
+    @test inconsistent[1] === first
+    @test inconsistent[2] === mixed
+    @test first[1].geometry === a
+
+    # A uniform element-type change is accepted without converting to a tuple.
+    other_periods = GeometryVector([Repeat(c, [8., 8., 8.]), Repeat(d, [8., 8., 8.])])
+    uniform = GeometryVector([first, other_periods])
+    uniform_result = simplify(uniform)
+    @test uniform_result isa GeometryVector
+    @test uniform_result !== uniform
+    @test eltype(uniform_result) !== eltype(uniform)
+    @test isconcretetype(eltype(uniform_result))
+    @test all(child -> child isa Repeat, uniform_result)
+    @test uniform_result[1].geometry.geometries == [a, b]
+    @test uniform_result[2].geometry.geometries == [c, d]
+    @test simplify(uniform_result) === uniform_result
+
+    # Tuple groups accept heterogeneous child changes while preserving their family.
+    tuple_input = GeometryTuple((first, mixed))
+    tuple_result = simplify(tuple_input)
+    @test tuple_result isa GeometryTuple
+    @test tuple_result[1] isa Repeat
+    @test tuple_result[2] === mixed
+    @test tuple_input[1] === first
+    @test simplify(tuple_result) === tuple_result
+
+    # Child extraction exposes equivalent repeats for the parent to extract.
+    for original in (GeometryVector([first, second]), GeometryTuple((first, second)))
+        result = simplify(original)
+        @test result isa Repeat
+        @test result.repeats == periods
+        @test result.geometry isa (original isa GeometryVector ? GeometryVector : GeometryTuple)
+        @test result.geometry[1].geometries == [a, b]
+        @test result.geometry[2].geometries == [c, d]
+        @test original[1] === first
+        @test original[2] === second
+        @test simplify(result) === result
+
+        # The repeat index moves ahead of both original group indices.
+        move_repeat(path) = (path[3], path[1], path[2], path[4:end]...)
+        intersect = GI.PhysicalGeometries.find_intersection
+        property_index = GI.PhysicalGeometries.to_property_index
+        for shift in (SVector(0., 0., 0.), SVector(6., -6., 0.))
+            start, destination = SVector(-2., 0., 0.) + shift, SVector(2., 0., 0.) + shift
+            hit = intersect(original, start, destination)
+            new_hit = intersect(result, start, destination)
+            @test new_hit == move_repeat(hit)
+            @test intersect(result, start, destination, new_hit) ==
+                move_repeat(intersect(original, start, destination, hit))
+            @test property_index(original, hit[1:end-2]) == property_index(result, new_hit[1:end-2])
+            @test GI.PhysicalGeometries.get_intersection_params(original, start, destination, hit).normal ≈
+                GI.PhysicalGeometries.get_intersection_params(result, start, destination, new_hit).normal
+            for point in (a.shift + shift, b.shift + shift, c.shift + shift, d.shift + shift)
+                before = inside_indices(original, point)
+                after = inside_indices(result, point)
+                @test !isempty(before)
+                @test Set(after) == Set(move_repeat(index) for index in before)
+                @test Set(property_index(original, index) for index in before) ==
+                    Set(property_index(result, index) for index in after)
+            end
+        end
+    end
+
+    rotation = [0. -1. 0.; 1. 0. 0.; 0. 0. 1.]
+    wrapped = Shift(Scale(Rotate(IgnoreOverlapping(SizeScaleOverride(first, 0.1)), rotation), 2.), [1., 2., 3.])
+    wrapped_result = simplify(wrapped)
+    @test wrapped_result isa Shift
+    @test wrapped_result.shift == wrapped.shift
+    @test wrapped_result.geometry isa Scale
+    @test wrapped_result.geometry.scale == 2.
+    @test wrapped_result.geometry.geometry isa Rotate
+    @test wrapped_result.geometry.geometry.matrix == rotation
+    @test wrapped_result.geometry.geometry.geometry isa IgnoreOverlapping
+    override = wrapped_result.geometry.geometry.geometry.geometry
+    @test override isa SizeScaleOverride
+    @test override.size_scale == 0.1
+    @test override.geometry isa Repeat
+    @test wrapped.geometry.geometry.geometry.geometry.geometry === first
+    @test simplify(wrapped_result) === wrapped_result
+
+    cylinders = GeometryVector([
+        Repeat(Shift(BaseObstructions.InfiniteCylinder(0.3), [-1., 0.]), [6., 6.]),
+        Repeat(Shift(BaseObstructions.InfiniteCylinder(0.3), [1., 0.]), [6., 6.]),
+    ])
+    projected = Rotate(cylinders, Matrix{Float64}(I, 3, 2))
+    projected_result = simplify(projected)
+    @test projected_result isa Rotate{3, 2}
+    @test projected_result.geometry isa Repeat{2}
+    @test projected_result.matrix == projected.matrix
+
+    # Repeat also simplifies its child, rebuilding derived state when it changes.
+    struct SimplifiableSphere <: PhysicalGeometry{3}
+        radius::Float64
+    end
+    BoundingBoxes.InternalBoundingBox(geometry::SimplifiableSphere) = BoundingBoxes.InternalBoundingBox{3}(geometry.radius)
+    GI.PhysicalGeometries.simplify(geometry::SimplifiableSphere) = BaseObstructions.Sphere(geometry.radius)
+    repeated = Repeat(SimplifiableSphere(0.5), periods)
+    repeated_result = simplify(repeated)
+    @test repeated_result isa Repeat{3, BaseObstructions.Sphere}
+    @test repeated_result.repeats == repeated.repeats
+    @test repeated_result.normalized_bounding_box == repeated.normalized_bounding_box
+    @test repeated.geometry isa SimplifiableSphere
+
+    sphere = BaseObstructions.Sphere(0.5)
+    for unchanged in (sphere, first[1], GeometryVector([a, b]), GeometryTuple((a, b)),
+                      GeometryVector(typeof(a)[]), GeometryTuple{3}(()), Shift(sphere, ones(3)),
+                      Grid(GeometryVector([a, b]); resolution=0.5))
+        @test simplify(unchanged) === unchanged
+    end
+
+    struct UnsupportedSimplification <: PhysicalGeometry{3} end
+    unsupported = UnsupportedSimplification()
+    @test_throws MethodError simplify(unsupported)
+    @test_throws MethodError simplify(GeometryVector([unsupported]))
+    @test_throws MethodError simplify(GeometryTuple((sphere, unsupported)))
+    @test_throws MethodError simplify(Shift(unsupported, zeros(3)))
+    for primitive in (BaseObstructions.InfiniteWall(), BaseObstructions.InfiniteCylinder(1.),
+                      BaseObstructions.FiniteCylinder([0., 0., 0.], [0., 0., 1.], 0.5))
+        @test simplify(primitive) === primitive
+    end
 end
 
 @testset "leaf bounding boxes" begin

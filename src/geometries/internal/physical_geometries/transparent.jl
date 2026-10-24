@@ -5,6 +5,7 @@ import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, f
 import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ..PhysicalGeometries: _inside_sampling_proposals
 import ..PhysicalGeometries: leaf_bounding_boxes
+import ..PhysicalGeometries: simplify, rewrap
 import ...Properties: GeometryProperties
 import ...InsideViews: has_other
 
@@ -50,6 +51,15 @@ function SizeScaleOverride(geometry::P, size_scale::Real) where {N, P <: Physica
 end
 
 transparent_geometry(wrapper::Transparent) = getfield(wrapper, :geometry)
+
+function simplify(wrapper::Transparent)
+    geometry = simplify(transparent_geometry(wrapper))
+    geometry === transparent_geometry(wrapper) ? wrapper : rewrap(wrapper, geometry)
+end
+
+rewrap(wrapper::IgnoreOverlapping{N}, geometry::PhysicalGeometry{N}) where {N} = IgnoreOverlapping(geometry)
+rewrap(wrapper::SizeScaleOverride{N}, geometry::PhysicalGeometry{N}) where {N} =
+    SizeScaleOverride(geometry, wrapper.size_scale)
 
 leaf_bounding_boxes(wrapper::Transparent) = leaf_bounding_boxes(transparent_geometry(wrapper))
 
