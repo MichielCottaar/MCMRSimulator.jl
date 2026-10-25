@@ -42,6 +42,10 @@ function Base.show(io::IO, ::Type{T}) where {T <: Transparent}
     print(io, nameof(T))
     T isa UnionAll && return
     print(io, "{")
+    for index in T.parameters[3:end]
+        show(io, index)
+        print(io, ", ")
+    end
     show(io, T.parameters[2])
     print(io, "}")
 end
