@@ -296,6 +296,47 @@ end
 
 inside_candidates(group::GeometryTuple, position) = enumerate(group_geometries(group))
 
+function isinside_single(
+    group::GroupGeometry{N},
+    position::SVector{N, Float64},
+    previous_intersection=nothing;
+    candidate=nothing,
+    no_deproject=false,
+    kwargs...,
+) where {N}
+    isnothing(candidate) && throw(ArgumentError(
+        "isinside_single for a geometry group requires a candidate index",
+    ))
+    candidate isa Tuple && !isempty(candidate) || throw(ArgumentError(
+        "a geometry-group candidate must be a non-empty index tuple",
+    ))
+
+    child_index = candidate[1]
+    child = nothing
+    for (index, candidate_child) in inside_candidates(group, position)
+        if index == child_index
+            child = candidate_child
+            break
+        end
+    end
+    isnothing(child) && return false
+    has_inside(typeof(child)) || throw(ArgumentError(
+        "candidate index selects a geometry without an inside region",
+    ))
+
+    child_candidate = candidate[2:end]
+    if has_single_inside(typeof(child))
+        isempty(child_candidate) || throw(ArgumentError(
+            "candidate index contains extra indices for a single-inside geometry",
+        ))
+        return isinside_single(child, position, previous_intersection; no_deproject, kwargs...)
+    end
+    isinside_single(
+        child, position, previous_intersection;
+        candidate=child_candidate, no_deproject, kwargs...,
+    )
+end
+
 intersection_candidates(group::Union{GeometryVector, GeometryTuple}, start, destination) =
     ((index, child, 0.0) for (index, child) in enumerate(group_geometries(group)))
 

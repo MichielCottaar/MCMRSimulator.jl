@@ -1169,6 +1169,25 @@ end
     @test skipped.calls[] == 0
 end
 
+@testset "candidate-based group isinside_single" begin
+    sphere = BaseObstructions.Sphere(1.)
+    group = GeometryTuple((
+        Shift(sphere, [-3., 0., 0.]),
+        GeometryVector([Shift(sphere, [3., 0., 0.])]),
+    ))
+
+    @test isinside_single(group, SVector(-3., 0., 0.); candidate=(1,))
+    @test isinside_single(group, SVector(3., 0., 0.); candidate=(2, 1))
+    @test !isinside_single(group, SVector(0., 0., 0.); candidate=(1,))
+    @test !isinside_single(group, SVector(-3., 0., 0.); candidate=(2, 1))
+    @test_throws ArgumentError isinside_single(group, SVector(0., 0., 0.))
+    @test_throws ArgumentError isinside_single(group, SVector(0., 0., 0.); candidate=())
+    @test_throws ArgumentError isinside_single(group, SVector(0., 0., 0.); candidate=(1, 1))
+
+    wrapped_group = Shift(group, [1., 2., 0.])
+    @test isinside_single(wrapped_group, SVector(-2., 2., 0.); candidate=(1,))
+end
+
 @testset "intersection types" begin
     sphere_type = BaseObstructions.Sphere
 
