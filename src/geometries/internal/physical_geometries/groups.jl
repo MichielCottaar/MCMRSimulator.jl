@@ -325,14 +325,16 @@ function isinside_single(
     ))
 
     child_candidate = candidate[2:end]
+    child_intersection = !isnothing(previous_intersection) &&
+        previous_intersection[1] == child_index ? previous_intersection[2:end] : nothing
     if has_single_inside(typeof(child))
         isempty(child_candidate) || throw(ArgumentError(
             "candidate index contains extra indices for a single-inside geometry",
         ))
-        return isinside_single(child, position, previous_intersection; no_deproject, kwargs...)
+        return isinside_single(child, position, child_intersection; no_deproject, kwargs...)
     end
     isinside_single(
-        child, position, previous_intersection;
+        child, position, child_intersection;
         candidate=child_candidate, no_deproject, kwargs...,
     )
 end

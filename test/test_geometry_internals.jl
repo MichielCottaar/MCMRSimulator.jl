@@ -1072,6 +1072,8 @@ end
             @test inside_indices(accelerated, start) == inside_indices(tree, start)
         end
     end
+    @test isempty(inside_indices(grid, SVector(100., 100., 100.)))
+    @test isempty(inside_indices(grid, BoundingBoxes.upper(grid.grid.grid_bounding_box)))
 
     start, destination = SVector(-5., 0., 0.), SVector(5., 0., 0.)
     hit = intersect(grid, start, destination)
@@ -1142,6 +1144,11 @@ end
     fully_inside_voxel = findfirst(!isempty, sphere_mesh_grid.fully_inside_indices)
     @test !isnothing(fully_inside_voxel)
     @test only(sphere_mesh_grid.fully_inside_indices[fully_inside_voxel]) == ()
+    for _ in 1:40
+        position = SVector{3, Float64}(2 .* rand(rng, 3) .- 1)
+        @test inside_indices(sphere_mesh_grid, position) ==
+            GI.PhysicalGeometries._volume_inside_indices(sphere_mesh, position)
+    end
 
     rotation = [0. -1. 0.; 1. 0. 0.; 0. 0. 1.]
     transformed = Shift(Rotate(Scale(tree, 2.), rotation), [1., 2., 3.])
@@ -1187,6 +1194,28 @@ end
     @test intersect(Grid(probes; resolution=0.25), start, destination) === nothing
     @test selected.calls[] == 1
     @test skipped.calls[] == 0
+
+    struct GridInsideProbe <: BaseObstructions.BaseObstruction{3}
+        calls::Base.RefValue{Int}
+    end
+    GI.PhysicalGeometries.has_inside(::Type{GridInsideProbe}) = true
+    GI.PhysicalGeometries.has_single_inside(::Type{GridInsideProbe}) = true
+    GI.PhysicalGeometries.intersection_type(::Type{GridInsideProbe}) = Tuple{Int}
+    GI.PhysicalGeometries.leaf_bounding_boxes(::GridInsideProbe) = (
+        BoundingBoxes.InternalBoundingBox{3}(1.),
+        BoundingBoxes.InternalBoundingBox{3}(1.),
+    )
+    function GI.PhysicalGeometries.isinside_single(
+        probe::GridInsideProbe, position::SVector{3, Float64}, previous=nothing; kwargs...,
+    )
+        probe.calls[] += 1
+        true
+    end
+    inside_probe = GridInsideProbe(Ref(0))
+    inside_probe_grid = Grid(inside_probe; resolution=0.5)
+    inside_probe.calls[] = 0
+    @test inside_indices(inside_probe_grid, SVector(0., 0., 0.)) == [()]
+    @test inside_probe.calls[] == 1
 end
 
 @testset "candidate-based group isinside_single" begin

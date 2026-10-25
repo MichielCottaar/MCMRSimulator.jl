@@ -4,7 +4,7 @@ module Grids
 import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, InternalBoundingBox, leaf_bounding_boxes
 import ..PhysicalGeometries: intersection_type, inside_indices_eltype, find_intersection
-import ..PhysicalGeometries: rewrap, has_equivalent_wrapper
+import ..PhysicalGeometries: inside_indices, isinside_single, rewrap, has_equivalent_wrapper
 import ..PhysicalGeometries: _volume_inside_indices, to_inside_index
 import ..Transparents: Transparent
 import ..GridDispatch: IntersectionGrid, GridIterator
@@ -83,6 +83,42 @@ function _flatten_leaf_bounding_boxes!(boxes, indices, children::Union{Tuple, Ab
 end
 
 InternalBoundingBox(geometry::Grid; kwargs...) = geometry.grid.bounding_box
+
+function _grid_coordinate(grid::IntersectionGrid{N}, position::SVector{N, Float64}) where {N}
+    lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)
+    upper_bound = InternalBoundingBoxes.upper(grid.grid_bounding_box)
+    (any(position .< lower_bound) || any(position .> upper_bound)) && return nothing
+    coordinate = Int.(floor.((position - lower_bound) .* grid.inv_resolution)) .+ 1
+    coordinate = clamp.(coordinate, 1, SVector{N, Int}(size(grid.indices)))
+    SVector{N, Int}(coordinate)
+end
+
+function inside_indices(
+    wrapper::Grid{N},
+    position::SVector{N, Float64},
+    intersection=nothing;
+    no_deproject=false,
+    kwargs...,
+) where {N}
+    inside_type = inside_indices_eltype(typeof(wrapper.geometry))
+    indices = Vector{inside_type}()
+    coordinate = _grid_coordinate(wrapper.grid, position)
+    isnothing(coordinate) && return indices
+
+    append!(indices, wrapper.fully_inside_indices[coordinate...])
+    checked = Set{inside_type}()
+    for collision_index in wrapper.grid.indices[coordinate...]
+        inside_index = to_inside_index(wrapper.geometry, wrapper.indices[collision_index])
+        isnothing(inside_index) && continue
+        inside_index in checked && continue
+        push!(checked, inside_index)
+        isinside_single(
+            wrapper.geometry, position, intersection;
+            candidate=inside_index, no_deproject, kwargs...,
+        ) && push!(indices, inside_index)
+    end
+    sort!(indices; lt=isless)
+end
 
 function _earlier_hit(hit, best)
     isnothing(best) && return true
