@@ -39,8 +39,8 @@ has_equivalent_wrapper(::PhysicalGeometry, ::PhysicalGeometry) = false
 Construct the same kind of wrapper around `geometry`, preserving the wrapper's
 parameters. Wrapper types supporting common-wrapper extraction implement this
 alongside `has_equivalent_wrapper` and expose their child as `geometry`.
-For plain vector and tuple groups, reconstruct the same group family from the
-supplied child collection.
+For vector and tuple groups, reconstruct the same group family from the supplied
+child collection, rebuilding acceleration data where applicable.
 """
 function rewrap end
 
@@ -61,6 +61,8 @@ concrete type. Otherwise, discard all proposed child changes and use the origina
 vector group for any local rewrite; never convert it to a tuple group. Rejecting
 child changes does not skip the local rewrite. Tuple groups retain their tuple
 representation and may accept heterogeneous child changes.
+Bounding-box vector groups follow the same child-type policy, rebuilding their
+boxes when children change.
 
 `Val(:extract_common_wrapper)` performs one bottom-up pass, extracting at most one
 common wrapper layer from each visited plain vector or tuple group. For example,

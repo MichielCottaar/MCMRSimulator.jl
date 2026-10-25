@@ -3,7 +3,7 @@ module Grids
 
 import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, InternalBoundingBox, leaf_bounding_boxes
-import ..PhysicalGeometries: intersection_type, find_intersection
+import ..PhysicalGeometries: intersection_type, find_intersection, rewrap
 import ..Transparents: Transparent
 import ..GridDispatch: IntersectionGrid, GridIterator
 
@@ -12,8 +12,10 @@ import ..GridDispatch: IntersectionGrid, GridIterator
 
 Wrap a finite geometry in an intersection grid over its leaf bounding boxes.
 `resolution` specifies the cell size; `nothing` uses the `IntersectionGrid`
-estimate. Leaf indices follow the hierarchy returned by `leaf_bounding_boxes`,
-so intersection paths and properties retain their original geometry indices.
+estimate. The requested value is stored in `user_resolution` and reused when
+rewrapping a simplified child. Leaf indices follow the hierarchy returned by
+`leaf_bounding_boxes`, so intersection paths and properties retain their original
+geometry indices.
 
 The wrapper expects an unrestricted incoming candidate and supplies individual
 candidate paths to its child during grid traversal. For periodic geometries,
@@ -23,6 +25,7 @@ struct Grid{N, P<:PhysicalGeometry{N}, I} <: Transparent{N, P}
     geometry::P
     grid::IntersectionGrid{N}
     indices::Vector{I}
+    user_resolution::Union{Nothing, Float64}
 end
 
 function Grid(geometry::P; resolution=nothing) where {N, P<:PhysicalGeometry{N}}
@@ -30,8 +33,11 @@ function Grid(geometry::P; resolution=nothing) where {N, P<:PhysicalGeometry{N}}
     indices = Vector{intersection_type(P)}()
     _flatten_leaf_bounding_boxes!(boxes, indices, leaf_bounding_boxes(geometry), ())
     grid = IntersectionGrid(boxes; resolution)
-    Grid{N, P, eltype(indices)}(geometry, grid, indices)
+    Grid{N, P, eltype(indices)}(geometry, grid, indices, resolution)
 end
+
+rewrap(wrapper::Grid{N}, geometry::PhysicalGeometry{N}) where {N} =
+    Grid(geometry; resolution=wrapper.user_resolution)
 
 function _flatten_leaf_bounding_boxes!(boxes, indices, box::InternalBoundingBox, path)
     push!(boxes, box)

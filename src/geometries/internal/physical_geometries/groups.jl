@@ -211,10 +211,11 @@ function has_equivalent_wrapper(group::Union{GeometryVectorLike, GeometryTuple})
 end
 
 rewrap(::GeometryVector, children::AbstractVector{<:PhysicalGeometry}) = GeometryVector(children)
+rewrap(::GeometryVectorBoundingBox, children::AbstractVector{<:PhysicalGeometry}) = GeometryVectorBoundingBox(children)
 rewrap(::GeometryTuple, children::Tuple) = GeometryTuple(children)
 
 # Return the rebuilt node, or the original node when child changes are rejected.
-function _simplify_children(group::GeometryVector, pass::Val)
+function _simplify_children(group::Union{GeometryVector, GeometryVectorBoundingBox}, pass::Val)
     isempty(group) && return group
     children = map(child -> simplify(child, pass), group.geometries)
     child_type = typeof(first(children))
@@ -229,7 +230,7 @@ function _simplify_children(group::GeometryTuple, pass::Val)
     unchanged ? group : rewrap(group, children)
 end
 
-simplify(group::Union{GeometryVector, GeometryTuple}, pass::Val) = _simplify_children(group, pass)
+simplify(group::Union{GeometryVector, GeometryVectorBoundingBox, GeometryTuple}, pass::Val) = _simplify_children(group, pass)
 
 function simplify(group::Union{GeometryVector, GeometryTuple}, pass::Val{:extract_common_wrapper})
     rebuilt = _simplify_children(group, pass)

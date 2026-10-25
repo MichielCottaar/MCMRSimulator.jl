@@ -639,6 +639,78 @@ end
     @test rebuilt.outer_surface_sampling.index_to_sample == 1
 end
 
+@testset "simplify accelerated geometry" begin
+    pass = Val(:extract_common_wrapper)
+    children = [SimplifiableSphere(0.5), SimplifiableSphere(0.75)]
+    bounded = GeometryVectorBoundingBox(children)
+    original_boxes = copy(bounded.bounding_boxes)
+    @test simplify(bounded, Val(:traverse_only)) === bounded
+    rebuilt = simplify(bounded, pass)
+    @test rebuilt isa GeometryVectorBoundingBox{3, BaseObstructions.Sphere}
+    @test rebuilt.geometries == [BaseObstructions.Sphere(0.5), BaseObstructions.Sphere(0.75)]
+    @test rebuilt.bounding_boxes == BoundingBoxes.InternalBoundingBox.(rebuilt.geometries)
+    @test rebuilt.bounding_boxes !== bounded.bounding_boxes
+    @test bounded.bounding_boxes == original_boxes
+    @test bounded.geometries === children
+    @test simplify(rebuilt, pass) === rebuilt
+    @test simplify(rebuilt) === rebuilt
+    @test simplify(bounded).geometries == rebuilt.geometries
+
+    inconsistent = GeometryVectorBoundingBox([SimplifiableSphere(0.1), SimplifiableSphere(0.5)])
+    @test simplify(inconsistent, pass) === inconsistent
+    @test all(child -> child isa SimplifiableSphere, inconsistent.geometries)
+    empty_group = GeometryVectorBoundingBox(BaseObstructions.Sphere[])
+    @test simplify(empty_group, pass) === empty_group
+    @test simplify(empty_group) === empty_group
+
+    # Bounding-box groups preserve acceleration rather than extracting wrappers.
+    sphere = BaseObstructions.Sphere(1.)
+    smaller = BaseObstructions.Sphere(0.5)
+    wrapped = GeometryVectorBoundingBox([
+        ExtractionWrapper{3, typeof(sphere)}(sphere),
+        ExtractionWrapper{3, typeof(smaller)}(smaller),
+    ])
+    @test has_equivalent_wrapper(wrapped)
+    @test simplify(wrapped, pass) === wrapped
+
+    intersect = GI.PhysicalGeometries.find_intersection
+    start, destination = SVector(-2., 0., 0.), SVector(5., 0., 0.)
+    @test intersect(rebuilt, start, destination) == intersect(GeometryVector(rebuilt.geometries), start, destination)
+
+    # This pass changes finite-tree paths, forcing Grid to rebuild its candidates.
+    GI.PhysicalGeometries.simplify(group::GeometryTuple{3, Tuple{BaseObstructions.Sphere}}, ::Val{:unwrap_acceleration_test}) = group[1]
+    shifted = Shift(smaller, [3., 0., 0.])
+    tree = GeometryTuple((GeometryTuple((sphere,)), shifted))
+    for resolution in (nothing, 0.5, Inf)
+        grid = Grid(tree; resolution)
+        @test grid.user_resolution === resolution
+        @test grid.indices == [(1, 1), (2,)]
+        @test simplify(grid, Val(:traverse_only)) === grid
+        @test simplify(grid) === grid
+        result = simplify(grid, Val(:unwrap_acceleration_test))
+        @test result isa Grid
+        @test result !== grid
+        @test result.user_resolution === resolution
+        @test result.geometry.geometries === (sphere, shifted)
+        @test result.indices == [(1,), (2,)]
+        @test eltype(result.indices) == intersection_type(typeof(result.geometry))
+        @test grid.geometry === tree
+        @test grid.indices == [(1, 1), (2,)]
+        expected = IntersectionGrid([
+            BoundingBoxes.InternalBoundingBox(sphere), BoundingBoxes.InternalBoundingBox(shifted),
+        ]; resolution)
+        @test result.grid.indices == expected.indices
+        @test result.grid.grid_bounding_box == expected.grid_bounding_box
+        @test result.grid.inv_resolution == expected.inv_resolution
+        hit = intersect(result, start, destination)
+        @test hit == intersect(result.geometry, start, destination)
+        @test intersect(result, start, destination, hit) == intersect(result.geometry, start, destination, hit)
+        @test inside_indices(result, SVector(3., 0., 0.)) == [(2,)]
+        @test simplify(result, Val(:unwrap_acceleration_test)) === result
+        @test simplify(result) === result
+    end
+end
+
 @testset "leaf bounding boxes" begin
     sphere = BaseObstructions.Sphere(1.0)
     cylinder = BaseObstructions.InfiniteCylinder(2.0)
