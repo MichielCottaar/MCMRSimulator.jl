@@ -2,7 +2,6 @@ const GI = mr.Geometries.Internal
 const PhysicalGeometry = GI.PhysicalGeometries.PhysicalGeometry
 const GeometryVector = GI.PhysicalGeometries.Groups.GeometryVector
 const GeometryVectorBoundingBox = GI.PhysicalGeometries.Groups.GeometryVectorBoundingBox
-const GeometryVectorGrid = GI.PhysicalGeometries.Groups.GeometryVectorGrid
 const GeometryTuple = GI.PhysicalGeometries.Groups.GeometryTuple
 const Transformations = GI.PhysicalGeometries.Transformations
 const Shift = Transformations.Shift
@@ -887,7 +886,7 @@ end
     @test boxes[1] == BoundingBoxes.InternalBoundingBox(sphere)
     @test boxes[2] isa Vector
     @test boxes[2] == [finite_boxes]
-    for group in (GeometryVector([sphere]), GeometryVector([sphere]; bounding_box=true), GeometryVector([sphere]; grid=true))
+    for group in (GeometryVector([sphere]), GeometryVector([sphere]; bounding_box=true))
         @test leaf_bounding_boxes(group) == [BoundingBoxes.InternalBoundingBox(sphere)]
     end
     @test leaf_bounding_boxes(GeometryTuple{3}(())) === ()
@@ -935,8 +934,7 @@ end
     sphere = BaseObstructions.Sphere(1.)
     start, destination = SVector(-5., 0., 0.), SVector(5., 0., 0.)
     children = [Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.])]
-    for group in (GeometryVector(children), GeometryVector(children; bounding_box=true),
-                  GeometryVector(children; grid=true, grid_resolution=1.), GeometryTuple(Tuple(children)))
+    for group in (GeometryVector(children), GeometryVector(children; bounding_box=true), GeometryTuple(Tuple(children)))
         @test intersect(group, start, destination, nothing, nothing, nothing) == intersect(group, start, destination)
         @test intersect(group, start, destination, nothing, nothing, (1,)) == (1, false, 0.2)
         @test intersect(group, start, destination, nothing, nothing, (2,)) == (2, false, 0.6)
@@ -1484,8 +1482,7 @@ end
     vector = GeometryVector{3}(geometries)
     @test GeometryVector(geometries) isa GeometryVector{3, TestGeometry{3}}
     @test GeometryVector([BaseObstructions.Sphere(1.0)]; bounding_box=true) isa GeometryVectorBoundingBox{3, BaseObstructions.Sphere}
-    @test GeometryVector([BaseObstructions.Sphere(1.0)]; grid=true) isa GeometryVectorGrid{3, BaseObstructions.Sphere}
-    @test_throws ArgumentError GeometryVector([BaseObstructions.Sphere(1.0)]; bounding_box=true, grid=true)
+    @test_throws MethodError GeometryVector([BaseObstructions.Sphere(1.0)]; grid=true)
     @test vector isa GI.PhysicalGeometries.Groups.GroupGeometry{3}
     @test size(vector) == (2,)
     @test axes(vector) == (Base.OneTo(2),)
@@ -2846,11 +2843,11 @@ end
     @test inside_indices(filtered_spheres, SVector(0.0, 0.0, 0.0)) == [
         (1,),
     ]
-    grid_spheres = GeometryVector([
+    grid_spheres = Grid(GeometryVector([
         Shift(sphere, [-3.0, 0.0, 0.0]),
         Shift(sphere, [3.0, 0.0, 0.0]),
-    ]; grid=true, grid_resolution=2.0)
-    @test grid_spheres isa GeometryVectorGrid{3, Shift{3, BaseObstructions.Sphere}}
+    ]); resolution=2.0)
+    @test grid_spheres isa Grid{3}
     @test inside_indices(grid_spheres, SVector(3.0, 0.0, 0.0)) == [(2,)]
     regular_grid_hit = GI.PhysicalGeometries.find_intersection(
         GeometryVector([

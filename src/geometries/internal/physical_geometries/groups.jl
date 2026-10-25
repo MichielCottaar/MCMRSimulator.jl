@@ -3,7 +3,6 @@ module Groups
 
 import StaticArrays: SVector
 import ...InternalBoundingBoxes
-import ..GridDispatch: IntersectionGrid, GridIterator
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, _merge_types, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh
 import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
@@ -182,19 +181,6 @@ struct GeometryVectorBoundingBox{N, P<:PhysicalGeometry{N}} <: GeometryVectorLik
     end
 end
 
-struct GeometryVectorGrid{N, P<:PhysicalGeometry{N}} <: GeometryVectorLike{N, P}
-    geometries::Vector{P}
-    grid::IntersectionGrid{N}
-
-    function GeometryVectorGrid{N, P}(
-        geometries::Vector{P},
-        grid::IntersectionGrid{N},
-    ) where {N, P<:PhysicalGeometry{N}}
-        _is_fully_concrete(P) || throw(ArgumentError("GeometryVector element types must be fully concrete"))
-        new{N, P}(geometries, grid)
-    end
-end
-
 struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} <: GroupGeometry{N, P}
     geometries::P
 end
@@ -288,12 +274,6 @@ inside_candidates(group::GeometryVectorBoundingBox, position) =
         if InternalBoundingBoxes.isinside(group.bounding_boxes[index], position)
     )
 
-function inside_candidates(group::GeometryVectorGrid{N}, position::SVector{N, Float64}) where {N}
-    coordinate = _grid_coordinate(group, position)
-    isnothing(coordinate) && return ()
-    ((index, group_geometries(group)[index]) for index in group.grid.indices[coordinate...])
-end
-
 inside_candidates(group::GeometryTuple, position) = enumerate(group_geometries(group))
 
 function isinside_single(
@@ -349,21 +329,6 @@ intersection_candidates(group::GeometryVectorBoundingBox, start, destination) =
         if InternalBoundingBoxes.does_intersect(group.bounding_boxes[index], start, destination)
     )
 
-function intersection_candidates(group::GeometryVectorGrid, start, destination)
-    start_coordinate = _grid_coordinate(group, start)
-    destination_coordinate = _grid_coordinate(group, destination)
-    if !isnothing(start_coordinate) && start_coordinate == destination_coordinate
-        return (
-            (index, group_geometries(group)[index], 0.0)
-            for index in group.grid.indices[start_coordinate...]
-        )
-    end
-    (
-        (child_index, group_geometries(group)[child_index], dist_all_checked)
-        for (child_index, dist_all_checked) in GridIterator(group.grid, start, destination)
-    )
-end
-
 has_inside(::Type{<:GeometryVectorLike{N, P}}) where {N, P} = has_inside(P)
 has_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = any(has_inside, P.parameters)
 has_single_inside(::Type{<:GroupGeometry}) = false
@@ -380,8 +345,6 @@ function InternalBoundingBox(geometry::GroupGeometry{N, P}; kwargs...) where {N,
         (upper_bound + lower_bound) / 2,
     )
 end
-
-InternalBoundingBox(geometry::GeometryVectorGrid; kwargs...) = geometry.grid.bounding_box
 
 function inside_indices_for_any_type(geometry, position, intersection; no_deproject=false)
     geometry_type = typeof(geometry)
@@ -419,14 +382,6 @@ function inside_indices(
     return indices
 end
 
-function _grid_coordinate(
-    geometry::GeometryVectorGrid{N},
-    position::SVector{N, Float64},
-) where {N}
-    coordinate = Int.(floor.((position - InternalBoundingBoxes.lower(geometry.grid.grid_bounding_box)) .* geometry.grid.inv_resolution)) .+ 1
-    any(coordinate .< 1) || any(coordinate .> size(geometry.grid.indices)) ? nothing : SVector{N, Int}(coordinate)
-end
-
 function inside_indices(
     geometry::GeometryTuple{N},
     position::SVector{N, Float64},
@@ -449,22 +404,8 @@ GeometryVector{N}(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}} =
 function GeometryVector(
     geometries::Vector{P};
     bounding_box::Bool=false,
-    grid::Bool=false,
-    grid_resolution=nothing,
 ) where {N, P<:PhysicalGeometry{N}}
-    bounding_box && grid && throw(ArgumentError("bounding_box and grid cannot both be enabled"))
-    grid && return GeometryVectorGrid(geometries; grid_resolution)
     bounding_box ? GeometryVectorBoundingBox(geometries) : GeometryVector{N, P}(geometries)
-end
-
-function GeometryVectorGrid(
-    geometries::Vector{P};
-    grid_resolution=nothing,
-) where {N, P<:PhysicalGeometry{N}}
-    isempty(geometries) && throw(ArgumentError("cannot construct a grid for an empty geometry vector"))
-    boxes = InternalBoundingBox.(geometries)
-    grid = IntersectionGrid(boxes; resolution=grid_resolution)
-    GeometryVectorGrid{N, P}(geometries, grid)
 end
 
 GeometryVectorBoundingBox(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}} =
