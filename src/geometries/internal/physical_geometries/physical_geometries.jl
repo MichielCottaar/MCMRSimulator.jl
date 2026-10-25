@@ -43,6 +43,9 @@ For vector and tuple groups, reconstruct the same group family from the supplied
 child collection, rebuilding acceleration data where applicable.
 """
 function rewrap end
+rewrap(wrapper, geometry::PhysicalGeometry, ::Val) = rewrap(wrapper, geometry)
+rewrap_extracted_wrapper(wrapper, references, geometry::PhysicalGeometry) =
+    rewrap(wrapper, geometry)
 
 """
     simplify(geometry::PhysicalGeometry)

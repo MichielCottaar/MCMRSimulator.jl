@@ -9,7 +9,7 @@ import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_s
 import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: has_equivalent_wrapper
-import ..PhysicalGeometries: rewrap
+import ..PhysicalGeometries: rewrap, rewrap_extracted_wrapper
 import ..PhysicalGeometries: simplify
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 import ...Properties: all_property_values
@@ -235,9 +235,8 @@ simplify(group::Union{GeometryVector, GeometryVectorBoundingBox, GeometryTuple},
 function simplify(group::Union{GeometryVector, GeometryTuple}, pass::Val{:extract_common_wrapper})
     rebuilt = _simplify_children(group, pass)
     has_equivalent_wrapper(rebuilt) || return rebuilt
-    reference = first(rebuilt.geometries)
     children = map(child -> child.geometry, rebuilt.geometries)
-    rewrap(reference, rewrap(rebuilt, children))
+    rewrap_extracted_wrapper(first(rebuilt.geometries), rebuilt.geometries, rewrap(rebuilt, children))
 end
 
 leaf_bounding_boxes(group::GeometryVectorLike) = map(leaf_bounding_boxes, group_geometries(group))

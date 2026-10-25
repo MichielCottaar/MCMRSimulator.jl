@@ -1,11 +1,12 @@
 module Transparents
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox, size_scale, to_inside_index
+import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox, size_scale, to_inside_index, to_property_index
 import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ..PhysicalGeometries: _inside_sampling_proposals
 import ..PhysicalGeometries: leaf_bounding_boxes
-import ..PhysicalGeometries: simplify, rewrap, has_equivalent_wrapper
+import ..PhysicalGeometries: distance_to_surface
+import ..PhysicalGeometries: simplify, rewrap, rewrap_extracted_wrapper, has_equivalent_wrapper
 import ...Properties: GeometryProperties
 import ...InsideViews: has_other
 
@@ -19,10 +20,21 @@ _inside_sampling_proposals(wrapper::Transparent, density::Real, rng; kwargs...) 
 get_intersection_params_requires_inside(::Type{<:Transparent{N, P}}) where {N, P} =
     get_intersection_params_requires_inside(P)
 
-"""Treat intersections inside another obstruction as gaps."""
-struct IgnoreOverlapping{N, P <: PhysicalGeometry{N}} <: Transparent{N, P}
+"""Treat intersections inside another obstruction as gaps.
+
+`K` is the number of vector/tuple group levels this wrapper has been extracted
+through. For `K > 0`, gap detection only considers other inside regions sharing
+the same first `K` non-repeat indices, preserving the scope of the original
+wrapper placement.
+"""
+struct IgnoreOverlapping{N, P <: PhysicalGeometry{N}, K} <: Transparent{N, P}
     geometry::P
 end
+
+IgnoreOverlapping(geometry::P) where {N, P<:PhysicalGeometry{N}} =
+    IgnoreOverlapping{N, P, 0}(geometry)
+
+has_equivalent_wrapper(::IgnoreOverlapping{N, P, K}, ::IgnoreOverlapping{N, Q, K}) where {N, P, Q, K} = true
 
 get_intersection_params_requires_inside(::Type{<:IgnoreOverlapping}) = Val(true)
 
@@ -30,7 +42,7 @@ function Base.show(io::IO, ::Type{T}) where {T <: Transparent}
     print(io, nameof(T))
     T isa UnionAll && return
     print(io, "{")
-    show(io, T.parameters[end])
+    show(io, T.parameters[2])
     print(io, "}")
 end
 
@@ -57,13 +69,26 @@ function simplify(wrapper::Transparent, pass::Val)
     geometry === transparent_geometry(wrapper) ? wrapper : rewrap(wrapper, geometry)
 end
 
-rewrap(wrapper::IgnoreOverlapping{N}, geometry::PhysicalGeometry{N}) where {N} = IgnoreOverlapping(geometry)
+rewrap(wrapper::IgnoreOverlapping{N, P, K}, geometry::PhysicalGeometry{N}) where {N, P, K} =
+    IgnoreOverlapping{N, typeof(geometry), K}(geometry)
+
+function rewrap_extracted_wrapper(
+    reference::IgnoreOverlapping{N, P, K},
+    references::Union{AbstractVector, Tuple},
+    geometry::PhysicalGeometry{N},
+) where {N, P, K}
+    all(wrapper -> has_equivalent_wrapper(reference, wrapper), references) ||
+        throw(ArgumentError("cannot extract IgnoreOverlapping wrappers with different scopes"))
+    IgnoreOverlapping{N, typeof(geometry), K + 1}(geometry)
+end
 rewrap(wrapper::SizeScaleOverride{N}, geometry::PhysicalGeometry{N}) where {N} =
     SizeScaleOverride(geometry, wrapper.size_scale)
 has_equivalent_wrapper(first::SizeScaleOverride{N}, second::SizeScaleOverride{N}) where {N} =
     first.size_scale == second.size_scale
 
 leaf_bounding_boxes(wrapper::Transparent) = leaf_bounding_boxes(transparent_geometry(wrapper))
+distance_to_surface(wrapper::Transparent, position) =
+    distance_to_surface(transparent_geometry(wrapper), position)
 
 has_inside(::Type{<:Transparent{N, P}}) where {N, P} = has_inside(P)
 has_single_inside(::Type{<:Transparent{N, P}}) where {N, P} = has_single_inside(P)
@@ -108,12 +133,12 @@ find_intersection_requires_inside(::Type{<:Transparent{N, P}}) where {N, P} =
 get_child(wrapper::Transparent, indices) = (transparent_geometry(wrapper), indices)
 
 function get_intersection_params(
-    wrapper::IgnoreOverlapping{N},
+    wrapper::IgnoreOverlapping{N, P, K},
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
     indices::Tuple,
     isinside=nothing,
-) where {N}
+) where {N, P, K}
     result = get_intersection_params(
         transparent_geometry(wrapper),
         start,
@@ -123,7 +148,9 @@ function get_intersection_params(
     )
     collision_indices = indices[1:(end - 2)]
     obstruction_indices = to_inside_index(transparent_geometry(wrapper), collision_indices)
-    overlapping = !isnothing(obstruction_indices) && has_other(isinside, obstruction_indices)
+    overlapping = !isnothing(obstruction_indices) && _has_scoped_other(
+        Val(K), transparent_geometry(wrapper), isinside, obstruction_indices,
+    )
     IntersectionParams{N}(result.inside, result.normal, result.hit_gap || overlapping)
 end
 
@@ -145,13 +172,13 @@ function random_surface_positions(
 end
 
 function random_surface_positions(
-    wrapper::IgnoreOverlapping{N},
+    wrapper::IgnoreOverlapping{N, P, K},
     density::GeometryProperties,
     bounding_box::InternalBoundingBox{N},
     scale_density;
     include_gap=false,
     kwargs...,
-) where {N}
+) where {N, P, K}
     geometry = transparent_geometry(wrapper)
     positions, indices = random_surface_positions(
         geometry, density, bounding_box, scale_density; include_gap, kwargs...,
@@ -159,10 +186,37 @@ function random_surface_positions(
     inside_indices_at(position) = has_single_inside(typeof(geometry)) ?
         (isinside_single(geometry, position) ? [()] : Tuple{}[]) :
         inside_indices(geometry, position)
-    keep = [all(inside_index == index[1:(end - 1)] for inside_index in inside_indices_at(position))
-        for (position, index) in zip(positions, indices)]
+    keep = [if K == 0
+        # Retain the legacy surface-path comparison when no group was lifted.
+        all(inside_index == index[1:(end - 1)] for inside_index in inside_indices_at(position))
+    else
+        obstruction_indices = to_inside_index(geometry, index[1:(end - 1)])
+        isnothing(obstruction_indices) || !_has_scoped_other(
+            Val(K), geometry, inside_indices_at(position), obstruction_indices,
+        )
+    end for (position, index) in zip(positions, indices)]
     positions[keep], indices[keep]
 end
+
+# Preserve the original, allocation-free comparison when no group wrapper has
+# been extracted. Lifted wrappers compare prefixes after removing repeat indices.
+_has_scoped_other(::Val{0}, geometry, inside, obstruction_indices) =
+    has_other(inside, obstruction_indices)
+
+function _has_scoped_other(::Val{K}, geometry, inside, obstruction_indices) where {K}
+    obstruction_property_index = to_property_index(geometry, obstruction_indices)
+    (isnothing(obstruction_property_index) || length(obstruction_property_index) < K) && return false
+    obstruction_prefix = _index_prefix(obstruction_property_index, K)
+    for inside_index in inside
+        property_index = to_property_index(geometry, inside_index)
+        (isnothing(property_index) || length(property_index) < K) && continue
+        property_index == obstruction_property_index && continue
+        _index_prefix(property_index, K) == obstruction_prefix && return true
+    end
+    false
+end
+
+_index_prefix(index::Tuple, count::Int) = index[1:min(count, length(index))]
 
 _geometry_mesh(wrapper::Transparent; kwargs...) = _geometry_mesh(transparent_geometry(wrapper); kwargs...)
 

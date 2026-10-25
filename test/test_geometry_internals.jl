@@ -148,7 +148,7 @@ end
         @test !has_equivalent_wrapper(other, repeated)
     end
     # Primitives and wrappers without an equivalence implementation use the fallback.
-    for unsupported in (sphere, IgnoreOverlapping(sphere))
+    for unsupported in (sphere,)
         @test !has_equivalent_wrapper(unsupported, unsupported)
     end
 
@@ -181,6 +181,11 @@ end
     @test has_equivalent_wrapper(rotate_b, rotate_a)
     @test !has_equivalent_wrapper(rotate_a, Rotate(sphere, Matrix{Float64}(I, 3, 3)))
     @test !has_equivalent_wrapper(rotate_a, Rotate(BaseObstructions.InfiniteCylinder(1.), rotation[:, 1:2]))
+
+    ignored_a, ignored_b = IgnoreOverlapping(sphere), IgnoreOverlapping(larger)
+    @test has_equivalent_wrapper(ignored_a, ignored_b)
+    @test has_equivalent_wrapper(ignored_b, ignored_a)
+    @test !has_equivalent_wrapper(ignored_a, IgnoreOverlapping{3, typeof(larger), 1}(larger))
 
     override_a = SizeScaleOverride(sphere, 0.25)
     override_b = SizeScaleOverride(larger, 0.25)
@@ -223,6 +228,13 @@ end
     @test extracted_grid.geometry isa GeometryTuple
     @test extracted_grid.geometry[1].geometries == [sphere]
     @test extracted_grid.geometry[2].geometries == [larger]
+
+    extracted_ignore = simplify(GeometryTuple((ignored_a, ignored_b)), Val(:extract_common_wrapper))
+    @test extracted_ignore isa IgnoreOverlapping
+    @test typeof(extracted_ignore).parameters[3] == 1
+    @test extracted_ignore.geometry.geometries == (sphere, larger)
+    preserved_scope = rewrap(extracted_ignore, extracted_ignore.geometry)
+    @test typeof(preserved_scope).parameters[3] == 1
 
     group = GeometryTuple((repeated, repeated_larger))
     @test !has_equivalent_wrapper(group, group)
@@ -400,6 +412,62 @@ end
     @test simplify(walls, pass) isa Repeat{1}
     @test intersect(simplify(walls, pass), SVector(-2.), SVector(2.)) ==
         lift_path(intersect(walls, SVector(-2.), SVector(2.)))
+end
+
+@testset "scoped IgnoreOverlapping wrappers" begin
+    periods = [6., 6., 6.]
+    sphere = BaseObstructions.Sphere(1.)
+    first_leaf = Shift(sphere, [0., 0., 0.])
+    overlapping_leaf = Shift(sphere, [0.5, 0., 0.])
+    grid_a = Grid(GeometryVector([first_leaf, overlapping_leaf]); resolution=0.5)
+    grid_b = Grid(GeometryVector([first_leaf, overlapping_leaf]); resolution=0.5)
+    original = GeometryVector([
+        IgnoreOverlapping(Repeat(grid_a, periods)),
+        IgnoreOverlapping(Repeat(grid_b, periods)),
+    ])
+    extracted = simplify(original)
+    @test extracted isa IgnoreOverlapping
+    @test typeof(extracted).parameters[3] == 1
+    @test extracted.geometry isa Repeat
+    @test extracted.geometry.geometry isa Grid
+    @test extracted.geometry.geometry.geometry isa GeometryVector
+    @test all(child -> child isa GeometryVector, extracted.geometry.geometry.geometry)
+
+    # Property paths strip the repeat displacement, so K=1 scopes comparisons
+    # to the original outer vector child and ignores a colliding sibling.
+    params = GI.PhysicalGeometries.get_intersection_params
+    repeated_geometry = extracted.geometry
+    origin = SVector(0, 0, 0)
+    start, destination = SVector(-2., 0., 0.), SVector(2., 0., 0.)
+    inside_within_child = InsideViews.InsideView([
+        (origin, 1, 1),
+        (origin, 1, 2),
+    ])
+    collision_in_first_leaf = (origin, 1, 1, false, 0.5)
+    @test params(extracted, start, destination, collision_in_first_leaf, inside_within_child).hit_gap
+
+    inside_other_sibling = InsideViews.InsideView([(origin, 2, 1)])
+    @test !params(extracted, start, destination, collision_in_first_leaf, inside_other_sibling).hit_gap
+    collision_in_second_child = (origin, 2, 1, false, 0.5)
+    inside_first_sibling = InsideViews.InsideView([(origin, 1, 1)])
+    @test !params(extracted, start, destination, collision_in_second_child, inside_first_sibling).hit_gap
+
+    # K=0 preserves the former full-path comparison, including repeat indices.
+    unlifted = IgnoreOverlapping(repeated_geometry)
+    inside_repeated_geometry = InsideViews.InsideView([(origin, 1, 1), (origin, 1, 2)])
+    unlifted_collision = (origin, 1, 1, false, 0.5)
+    @test params(unlifted, start, destination, unlifted_collision, inside_repeated_geometry).hit_gap
+    @test rewrap(unlifted, repeated_geometry).geometry === repeated_geometry
+    @test typeof(rewrap(unlifted, repeated_geometry)).parameters[3] == 0
+
+    # Each extracted vector/tuple level increments the scope exactly once.
+    nested = GeometryVector([
+        GeometryTuple((IgnoreOverlapping(Repeat(grid_a, periods)), IgnoreOverlapping(Repeat(grid_b, periods)))),
+        GeometryTuple((IgnoreOverlapping(Repeat(grid_a, periods)), IgnoreOverlapping(Repeat(grid_b, periods)))),
+    ])
+    nested_result = simplify(nested)
+    @test nested_result isa IgnoreOverlapping
+    @test typeof(nested_result).parameters[3] == 2
 end
 
 @testset "simplify geometry" begin
