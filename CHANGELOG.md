@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CATERPillar geometry loading through `read_caterpillar` and `read_geometry`, including conversion of CATERPillar's overlapping sphere output into inner and outer sphere groups for myelinated cells. Magnetic susceptibility of imported myelin is not currently supported.
 
 ### Changed
+- Grids are now used to partition the geometry by default. This limits the number of obstructions a spin needs to check during each step to just those that are actually close by (i.e., within the same grid element). Disable this gridding by setting `geometry.grid_resolution=inf`.
 - CLI signal output now reports per-spin magnetisation values and includes component SNR information.
 - Fixed-spin and adaptive total-signal readouts now expose SNR information through `SpinOrientationSum.snr`.
 - `--target-snr` and `--Nspins` are mutually exclusive; `--max-spins` is the adaptive upper-bound option.
