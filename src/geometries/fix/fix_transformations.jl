@@ -25,28 +25,19 @@ end
 
 function _vector_geometry(group, geometry::Vector{P}) where {N, P<:PhysicalGeometry{N}}
     geometry = _shift_obstructions(group, geometry)
-    resolution = group.grid_resolution.value
-    if resolution != Inf
-        return Grid(GeometryVector(geometry); resolution)
-    elseif group.use_boundingbox.value
-        return GeometryVector(geometry; bounding_box=true)
-    end
-    GeometryVector(geometry)
+    GeometryVector(geometry; bounding_box=group.use_boundingbox.value)
 end
 
 function _vector_geometry_unshifted(group, geometry::Vector{P}) where {N, P<:PhysicalGeometry{N}}
     isempty(geometry) && return GeometryVector(geometry)
-    resolution = group.grid_resolution.value
-    if resolution != Inf
-        return Grid(GeometryVector(geometry); resolution)
-    elseif group.use_boundingbox.value
-        return GeometryVector(geometry; bounding_box=true)
-    end
-    GeometryVector(geometry)
+    GeometryVector(geometry; bounding_box=group.use_boundingbox.value)
 end
 
 function _apply_local_transformations(group, geometry::Vector)
     geometry = _vector_geometry(group, geometry)
+    if group.grid_resolution.value != Inf
+        geometry = Grid(geometry; resolution=group.grid_resolution.value)
+    end
     if !isnothing(group.repeats.value)
         geometry = Repeat(geometry, group.repeats.value)
     end
@@ -90,6 +81,9 @@ function fix_transformations(group::FiniteCylinders, geometries::Tuple)
         GeometryTuple((endpoint_geometries, cylinder_geometries))
     else
         cylinder_geometries
+    end
+    if group.grid_resolution.value != Inf
+        geometry = Grid(geometry; resolution=group.grid_resolution.value)
     end
     if !isnothing(group.repeats.value)
         geometry = Repeat(geometry, group.repeats.value)

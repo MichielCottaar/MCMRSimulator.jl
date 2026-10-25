@@ -98,6 +98,7 @@ const fix = mr.Geometries.Fix.fix
         FixBaseGeometry.fix_base_geometry(grid_group),
     )
     @test gridded isa mr.Geometries.Internal.PhysicalGeometries.Grids.Grid
+    @test gridded.geometry isa Groups.GeometryVectorBoundingBox
 
     ungridded_group = mr.Spheres(radius=1.0, grid_resolution=Inf)
     ungridded = FixTransformations.fix_transformations(
