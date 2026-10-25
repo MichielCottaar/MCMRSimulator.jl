@@ -30,6 +30,7 @@ const inside_indices = GI.PhysicalGeometries.inside_indices
 const intersection_type = GI.PhysicalGeometries.intersection_type
 const leaf_bounding_boxes = GI.PhysicalGeometries.leaf_bounding_boxes
 const has_equivalent_wrapper = GI.PhysicalGeometries.has_equivalent_wrapper
+const child_geometry = GI.PhysicalGeometries.child_geometry
 const rewrap = GI.PhysicalGeometries.rewrap
 const simplify = GI.PhysicalGeometries.simplify
 const bound_intersection_type = GI.PhysicalGeometries.bound_intersection_type
@@ -135,6 +136,21 @@ end
     repeated_shifted = Repeat(Shift(sphere, [0.5, 0.0, 0.0]), [4.0, 4.0, 4.0])
     different_period = Repeat(sphere, [4.0, 4.0, 5.0])
     almost_equal_period = Repeat(sphere, [4.0, 4.0, nextfloat(4.0)])
+
+    for wrapper in (
+        Shift(sphere, ones(3)),
+        Scale(sphere, 2.0),
+        Rotate(sphere, Matrix{Float64}(I, 3, 3)),
+        IgnoreOverlapping(sphere),
+        SizeScaleOverride(sphere, 0.5),
+        Grid(GeometryVector([sphere]); resolution=0.5),
+    )
+        @test child_geometry(wrapper) === wrapper.geometry
+    end
+    @test_throws ArgumentError child_geometry(sphere)
+    @test_throws ArgumentError child_geometry(GeometryVector([sphere]))
+    @test_throws ArgumentError child_geometry(GeometryTuple((sphere,)))
+    @test child_geometry(repeated) === repeated.geometry
 
     @test has_equivalent_wrapper(repeated, repeated)
     for other in (repeated_larger, repeated_shifted)

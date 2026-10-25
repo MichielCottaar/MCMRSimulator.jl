@@ -14,6 +14,13 @@ Represents a physical geometry in N-dimensional space. This is an abstract type 
 """
 abstract type PhysicalGeometry{N} end
 
+"""Return the single wrapped child geometry, or throw if the geometry has no single child."""
+function child_geometry end
+
+function child_geometry(geometry::PhysicalGeometry)
+    throw(ArgumentError("$(typeof(geometry)) does not have a single child geometry"))
+end
+
 """
     has_equivalent_wrapper(geometry1::PhysicalGeometry, geometry2::PhysicalGeometry)
     has_equivalent_wrapper(group)
@@ -412,7 +419,7 @@ include("grids.jl")
 include("monte_carlo_measures.jl")
 import .MonteCarloMeasures: SurfaceEstimate, contains_repeat, estimate_volume, estimate_surface
 include("liminal_geometries.jl")
-import .Transparents: Transparent, IgnoreOverlapping, transparent_geometry
+import .Transparents: Transparent, IgnoreOverlapping
 import .LiminalGeometries: FixedLiminalGeometry
 
 end

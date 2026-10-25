@@ -5,6 +5,7 @@ import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, f
 import ..PhysicalGeometries: to_property_index
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: simplify
+import ..PhysicalGeometries: child_geometry
 import ...InternalBoundingBoxes: InternalBoundingBox
 import ...InternalBoundingBoxes
 import ...Properties: GeometryLeafProperties
@@ -15,6 +16,10 @@ import Distributions: Poisson
 import Random: rand
 
 abstract type BaseObstruction{N} <: PhysicalGeometry{N} end
+
+child_geometry(geometry::BaseObstruction) = throw(ArgumentError(
+    "base obstruction $(typeof(geometry)) does not have a child geometry",
+))
 
 simplify(geometry::BaseObstruction, ::Val) = geometry
 

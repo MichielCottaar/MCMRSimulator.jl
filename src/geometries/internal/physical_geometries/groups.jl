@@ -9,7 +9,7 @@ import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_s
 import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: has_equivalent_wrapper
-import ..PhysicalGeometries: rewrap, rewrap_extracted_wrapper
+import ..PhysicalGeometries: rewrap, rewrap_extracted_wrapper, child_geometry
 import ..PhysicalGeometries: simplify
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 import ...Properties: all_property_values
@@ -18,6 +18,10 @@ import ....BoundingBoxes: BoundingBoxNotSupported
 
 abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
+
+child_geometry(group::GroupGeometry) = throw(ArgumentError(
+    "geometry group $(typeof(group)) has multiple children; use group_geometries instead",
+))
 
 function _inside_sampling_proposals(
     group::GroupGeometry{N}, density::Real, rng; no_deproject=false,
@@ -235,7 +239,7 @@ simplify(group::Union{GeometryVector, GeometryVectorBoundingBox, GeometryTuple},
 function simplify(group::Union{GeometryVector, GeometryTuple}, pass::Val{:extract_common_wrapper})
     rebuilt = _simplify_children(group, pass)
     has_equivalent_wrapper(rebuilt) || return rebuilt
-    children = map(child -> child.geometry, rebuilt.geometries)
+    children = map(child_geometry, rebuilt.geometries)
     rewrap_extracted_wrapper(first(rebuilt.geometries), rebuilt.geometries, rewrap(rebuilt, children))
 end
 

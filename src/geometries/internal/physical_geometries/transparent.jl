@@ -7,6 +7,7 @@ import ..PhysicalGeometries: _inside_sampling_proposals
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: distance_to_surface
 import ..PhysicalGeometries: simplify, rewrap, rewrap_extracted_wrapper, has_equivalent_wrapper
+import ..PhysicalGeometries: child_geometry
 import ...Properties: GeometryProperties
 import ...InsideViews: has_other
 
@@ -14,7 +15,7 @@ abstract type Transparent{N, P <: PhysicalGeometry{N}} <: PhysicalGeometry{N} en
 
 _inside_sampling_proposals(wrapper::Transparent, density::Real, rng; kwargs...) =
     _inside_sampling_proposals(
-        transparent_geometry(wrapper), density, rng; kwargs...,
+        child_geometry(wrapper), density, rng; kwargs...,
     )
 
 get_intersection_params_requires_inside(::Type{<:Transparent{N, P}}) where {N, P} =
@@ -54,7 +55,7 @@ child_type(::Type{<:Transparent{N, P}}) where {N, P} = P
 inside_indices_eltype(::Type{<:Transparent{N, P}}) where {N, P} = inside_indices_eltype(P)
 intersection_type(::Type{<:Transparent{N, P}}) where {N, P} = intersection_type(P)
 bound_intersection_type(wrapper::Transparent, density) =
-    bound_intersection_type(transparent_geometry(wrapper), density)
+    bound_intersection_type(child_geometry(wrapper), density)
 
 struct SizeScaleOverride{N, P <: PhysicalGeometry{N}} <: Transparent{N, P}
     geometry::P
@@ -66,11 +67,11 @@ function SizeScaleOverride(geometry::P, size_scale::Real) where {N, P <: Physica
     SizeScaleOverride{N, P}(geometry, Float64(size_scale))
 end
 
-transparent_geometry(wrapper::Transparent) = getfield(wrapper, :geometry)
+child_geometry(wrapper::Transparent) = wrapper.geometry
 
 function simplify(wrapper::Transparent, pass::Val)
-    geometry = simplify(transparent_geometry(wrapper), pass)
-    geometry === transparent_geometry(wrapper) ? wrapper : rewrap(wrapper, geometry)
+    geometry = simplify(child_geometry(wrapper), pass)
+    geometry === child_geometry(wrapper) ? wrapper : rewrap(wrapper, geometry)
 end
 
 rewrap(wrapper::IgnoreOverlapping{N, P, K}, geometry::PhysicalGeometry{N}) where {N, P, K} =
@@ -90,14 +91,14 @@ rewrap(wrapper::SizeScaleOverride{N}, geometry::PhysicalGeometry{N}) where {N} =
 has_equivalent_wrapper(first::SizeScaleOverride{N}, second::SizeScaleOverride{N}) where {N} =
     first.size_scale == second.size_scale
 
-leaf_bounding_boxes(wrapper::Transparent) = leaf_bounding_boxes(transparent_geometry(wrapper))
+leaf_bounding_boxes(wrapper::Transparent) = leaf_bounding_boxes(child_geometry(wrapper))
 distance_to_surface(wrapper::Transparent, position) =
-    distance_to_surface(transparent_geometry(wrapper), position)
+    distance_to_surface(child_geometry(wrapper), position)
 
 has_inside(::Type{<:Transparent{N, P}}) where {N, P} = has_inside(P)
 has_single_inside(::Type{<:Transparent{N, P}}) where {N, P} = has_single_inside(P)
 InternalBoundingBox(wrapper::Transparent; kwargs...) =
-    InternalBoundingBox(transparent_geometry(wrapper); kwargs...)
+    InternalBoundingBox(child_geometry(wrapper); kwargs...)
 
 inside_indices(
     wrapper::Transparent{N},
@@ -106,7 +107,7 @@ inside_indices(
     ; no_deproject=false,
     kwargs...,
 ) where {N} = inside_indices(
-    transparent_geometry(wrapper), position, intersection; no_deproject, kwargs...
+    child_geometry(wrapper), position, intersection; no_deproject, kwargs...
 )
 
 isinside_single(
@@ -116,7 +117,7 @@ isinside_single(
     ; no_deproject=false,
     kwargs...,
 ) where {N} = isinside_single(
-    transparent_geometry(wrapper), position, previous_intersection;
+    child_geometry(wrapper), position, previous_intersection;
     no_deproject, kwargs...
 )
 
@@ -128,13 +129,13 @@ function find_intersection(
     inside=nothing,
     candidate::Union{Nothing, Tuple}=nothing,
 ) where {N}
-    find_intersection(transparent_geometry(wrapper), start, destination, previous_hit, inside, candidate)
+    find_intersection(child_geometry(wrapper), start, destination, previous_hit, inside, candidate)
 end
 
 find_intersection_requires_inside(::Type{<:Transparent{N, P}}) where {N, P} =
     find_intersection_requires_inside(P)
 
-get_child(wrapper::Transparent, indices) = (transparent_geometry(wrapper), indices)
+get_child(wrapper::Transparent, indices) = (child_geometry(wrapper), indices)
 
 function get_intersection_params(
     wrapper::IgnoreOverlapping{N, P, K},
@@ -144,22 +145,22 @@ function get_intersection_params(
     isinside=nothing,
 ) where {N, P, K}
     result = get_intersection_params(
-        transparent_geometry(wrapper),
+        child_geometry(wrapper),
         start,
         destination,
         indices,
         isinside,
     )
     collision_indices = indices[1:(end - 2)]
-    obstruction_indices = to_inside_index(transparent_geometry(wrapper), collision_indices)
+    obstruction_indices = to_inside_index(child_geometry(wrapper), collision_indices)
     overlapping = !isnothing(obstruction_indices) && _has_scoped_other(
-        Val(K), transparent_geometry(wrapper), isinside, obstruction_indices,
+        Val(K), child_geometry(wrapper), isinside, obstruction_indices,
     )
     IntersectionParams{N}(result.inside, result.normal, result.hit_gap || overlapping)
 end
 
 size_scale(wrapper::SizeScaleOverride) = wrapper.size_scale
-size_scale(wrapper::Transparent) = size_scale(transparent_geometry(wrapper))
+size_scale(wrapper::Transparent) = size_scale(child_geometry(wrapper))
 
 function random_surface_positions(
     wrapper::Transparent{N},
@@ -170,7 +171,7 @@ function random_surface_positions(
     kwargs...,
 ) where {N}
     random_surface_positions(
-        transparent_geometry(wrapper), density, bounding_box, scale_density;
+        child_geometry(wrapper), density, bounding_box, scale_density;
         include_gap, kwargs...,
     )
 end
@@ -183,7 +184,7 @@ function random_surface_positions(
     include_gap=false,
     kwargs...,
 ) where {N, P, K}
-    geometry = transparent_geometry(wrapper)
+    geometry = child_geometry(wrapper)
     positions, indices = random_surface_positions(
         geometry, density, bounding_box, scale_density; include_gap, kwargs...,
     )
@@ -222,6 +223,6 @@ end
 
 _index_prefix(index::Tuple, count::Int) = index[1:min(count, length(index))]
 
-_geometry_mesh(wrapper::Transparent; kwargs...) = _geometry_mesh(transparent_geometry(wrapper); kwargs...)
+_geometry_mesh(wrapper::Transparent; kwargs...) = _geometry_mesh(child_geometry(wrapper); kwargs...)
 
 end
