@@ -42,7 +42,8 @@ const fix = mr.Geometries.Fix.fix
 
     fixed_finite_cylinders = fix(finite_cylinders)
     @test fixed_finite_cylinders.geometry isa Transparent
-    @test fixed_finite_cylinders.geometry.geometry isa Groups.GeometryTuple
+    @test fixed_finite_cylinders.geometry.geometry isa mr.Geometries.Internal.PhysicalGeometries.Grids.Grid
+    @test fixed_finite_cylinders.geometry.geometry.geometry isa Groups.GeometryTuple
 
     cylinder_only = mr.FiniteCylinders(
         position=[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
@@ -51,7 +52,8 @@ const fix = mr.Geometries.Fix.fix
         use_spherical_endpoint=[false, false],
     )
     fixed_cylinder_only = fix(cylinder_only)
-    @test fixed_cylinder_only.geometry.geometry isa Groups.GeometryVectorLike
+    @test fixed_cylinder_only.geometry.geometry isa mr.Geometries.Internal.PhysicalGeometries.Grids.Grid
+    @test fixed_cylinder_only.geometry.geometry.geometry isa Groups.GeometryVectorLike
 
     mesh = mr.Mesh(
         vertices=[
@@ -79,8 +81,8 @@ const fix = mr.Geometries.Fix.fix
         FixBaseGeometry.fix_base_geometry(mr.Cylinders(radius=[1.0, 1.0], position=[[0.0, 0.0], [2.0, 0.0]])),
     )
     @test positioned isa Transformations.Rotate{3, 2}
-    @test positioned.geometry isa Groups.GeometryVectorBoundingBox
-    @test positioned.geometry.geometries[2].shift == SVector(2.0, 0.0)
+    @test positioned.geometry isa mr.Geometries.Internal.PhysicalGeometries.Grids.Grid
+    @test positioned.geometry.geometry.geometries[2].shift == SVector(2.0, 0.0)
 
     global_position_group = mr.Spheres(radius=1.0, position=[1.0, 2.0, 3.0])
     globally_positioned = FixTransformations.fix_transformations(
@@ -95,7 +97,14 @@ const fix = mr.Geometries.Fix.fix
         grid_group,
         FixBaseGeometry.fix_base_geometry(grid_group),
     )
-    @test gridded isa Groups.GeometryVectorGrid
+    @test gridded isa mr.Geometries.Internal.PhysicalGeometries.Grids.Grid
+
+    ungridded_group = mr.Spheres(radius=1.0, grid_resolution=Inf)
+    ungridded = FixTransformations.fix_transformations(
+        ungridded_group,
+        FixBaseGeometry.fix_base_geometry(ungridded_group),
+    )
+    @test ungridded isa Groups.GeometryVectorBoundingBox
 
     repeated_group = mr.Spheres(radius=1.0, repeats=[4.0, 4.0, 4.0])
     repeated = FixTransformations.fix_transformations(
@@ -183,7 +192,7 @@ end
     @test combined.surface.density isa Properties.GeometryTupleProperties
 
     homogeneous = fix([mr.Walls(position=1.0), mr.Walls(position=2.0)])
-    @test homogeneous.geometry isa mr.Geometries.Internal.PhysicalGeometries.Groups.GeometryVector
+    @test homogeneous.geometry isa Transformations.Rotate
 
     @test fix([]).geometry isa mr.Geometries.Internal.PhysicalGeometries.Groups.GeometryTuple
     @test_throws MethodError fix(group; R1=1.0)
@@ -203,8 +212,8 @@ end
         permeability_surface=3.0,
     )
     fixed_mesh = fix(mesh; dwell_time=4.0, surface_relaxation=5.0, density=6.0)
-    @test fixed_mesh.geometry isa Groups.GeometryVectorBoundingBox
-    @test first(fixed_mesh.geometry.geometries) isa Meshes.Mesh
+    @test fixed_mesh.geometry isa mr.Geometries.Internal.PhysicalGeometries.Grids.Grid
+    @test first(fixed_mesh.geometry.geometry.geometries) isa Meshes.Mesh
     @test fixed_mesh.volume.R1.value == 2.0
     @test fixed_mesh.surface.permeability.value == 3.0
     @test fixed_mesh.surface.dwell_time.value == 4.0

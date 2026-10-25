@@ -26,7 +26,7 @@ end
 function _vector_geometry(group, geometry::Vector{P}) where {N, P<:PhysicalGeometry{N}}
     geometry = _shift_obstructions(group, geometry)
     resolution = group.grid_resolution.value
-    if !isnothing(resolution)
+    if resolution != Inf
         return Grid(GeometryVector(geometry); resolution)
     elseif group.use_boundingbox.value
         return GeometryVector(geometry; bounding_box=true)
@@ -37,7 +37,7 @@ end
 function _vector_geometry_unshifted(group, geometry::Vector{P}) where {N, P<:PhysicalGeometry{N}}
     isempty(geometry) && return GeometryVector(geometry)
     resolution = group.grid_resolution.value
-    if !isnothing(resolution)
+    if resolution != Inf
         return Grid(GeometryVector(geometry); resolution)
     elseif group.use_boundingbox.value
         return GeometryVector(geometry; bounding_box=true)
