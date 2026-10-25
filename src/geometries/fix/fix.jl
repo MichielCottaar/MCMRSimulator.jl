@@ -7,7 +7,7 @@ include("fix_susceptibility.jl")
 
 import ..User: LiminalGeometry
 import ..User.Obstructions: ObstructionGroup, IndexedObstruction, Walls, Cylinders, Spheres, FiniteCylinders, Annuli, BendyCylinder, Mesh
-import ..Internal.PhysicalGeometries: PhysicalGeometry
+import ..Internal.PhysicalGeometries: PhysicalGeometry, simplify
 import ..Internal: SizeScaleOverride
 import ..Internal.PhysicalGeometries.Transparents: IgnoreOverlapping
 import ..Internal.PhysicalGeometries.Groups: GeometryTuple, GeometryVector
@@ -68,6 +68,7 @@ function fix(collection::LiminalGeometry; kwargs...)
         collection.extracellular_fraction;
         tortuosity_strength=collection.tortuosity_strength,
     )
+    physical_geometry = simplify(physical_geometry)
     volume = _merge_vector_properties(fixed, :volume)
     surface = _merge_vector_properties(fixed, :surface)
     susceptibility = LiminalSusceptibility(Tuple(geometry.susceptibility for geometry in fixed))
@@ -108,6 +109,7 @@ function fix(
     if !isnothing(size_scale)
         physical_geometry = SizeScaleOverride(physical_geometry, size_scale)
     end
+    physical_geometry = simplify(physical_geometry)
     properties = fix_properties(
         group;
         permeability,
@@ -169,6 +171,7 @@ function fix(
     else
         GeometryTuple(Tuple(children))
     end
+    physical_geometry = simplify(physical_geometry)
     volume = _merge_properties(fixed, :volume)
     surface = _merge_properties(fixed, :surface)
     susceptibility = fix_susceptibility(geometries)
