@@ -9,7 +9,7 @@ import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_s
 import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: has_equivalent_wrapper
-import ..PhysicalGeometries: extract_common_wrapper, rewrap
+import ..PhysicalGeometries: rewrap
 import ..PhysicalGeometries: simplify
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 import ...Properties: all_property_values
@@ -210,29 +210,33 @@ function has_equivalent_wrapper(group::Union{GeometryVectorLike, GeometryTuple})
     all(child -> has_equivalent_wrapper(reference, child), children)
 end
 
-function extract_common_wrapper(group::Union{GeometryVector, GeometryTuple})
-    has_equivalent_wrapper(group) || return group
-    reference = first(group.geometries)
-    children = map(child -> child.geometry, group.geometries)
-    inner_group = group isa GeometryVector ? GeometryVector(children) : GeometryTuple(children)
-    rewrap(reference, extract_common_wrapper(inner_group))
-end
+rewrap(::GeometryVector, children::AbstractVector{<:PhysicalGeometry}) = GeometryVector(children)
+rewrap(::GeometryTuple, children::Tuple) = GeometryTuple(children)
 
-function simplify(group::GeometryVector)
+# Return the rebuilt node, or the original node when child changes are rejected.
+function _simplify_children(group::GeometryVector, pass::Val)
     isempty(group) && return group
-    children = map(simplify, group.geometries)
+    children = map(child -> simplify(child, pass), group.geometries)
     child_type = typeof(first(children))
     _is_fully_concrete(child_type) && all(child -> typeof(child) === child_type, children) || return group
     unchanged = all(index -> children[index] === group.geometries[index], eachindex(children))
-    rebuilt = unchanged ? group : GeometryVector(child_type[children...])
-    extract_common_wrapper(rebuilt)
+    unchanged ? group : rewrap(group, child_type[children...])
 end
 
-function simplify(group::GeometryTuple)
-    children = map(simplify, group.geometries)
+function _simplify_children(group::GeometryTuple, pass::Val)
+    children = map(child -> simplify(child, pass), group.geometries)
     unchanged = all(index -> children[index] === group.geometries[index], eachindex(children))
-    rebuilt = unchanged ? group : GeometryTuple(children)
-    extract_common_wrapper(rebuilt)
+    unchanged ? group : rewrap(group, children)
+end
+
+simplify(group::Union{GeometryVector, GeometryTuple}, pass::Val) = _simplify_children(group, pass)
+
+function simplify(group::Union{GeometryVector, GeometryTuple}, pass::Val{:extract_common_wrapper})
+    rebuilt = _simplify_children(group, pass)
+    has_equivalent_wrapper(rebuilt) || return rebuilt
+    reference = first(rebuilt.geometries)
+    children = map(child -> child.geometry, rebuilt.geometries)
+    rewrap(reference, rewrap(rebuilt, children))
 end
 
 leaf_bounding_boxes(group::GeometryVectorLike) = map(leaf_bounding_boxes, group_geometries(group))

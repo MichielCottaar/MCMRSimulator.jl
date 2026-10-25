@@ -52,8 +52,8 @@ end
 
 transparent_geometry(wrapper::Transparent) = getfield(wrapper, :geometry)
 
-function simplify(wrapper::Transparent)
-    geometry = simplify(transparent_geometry(wrapper))
+function simplify(wrapper::Transparent, pass::Val)
+    geometry = simplify(transparent_geometry(wrapper), pass)
     geometry === transparent_geometry(wrapper) ? wrapper : rewrap(wrapper, geometry)
 end
 

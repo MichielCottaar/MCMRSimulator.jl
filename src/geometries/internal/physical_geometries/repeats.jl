@@ -44,8 +44,8 @@ has_equivalent_wrapper(first::Repeat{N}, second::Repeat{N}) where {N} =
 rewrap(wrapper::Repeat{N}, geometry::PhysicalGeometry{N}) where {N} =
     Repeat(geometry, wrapper.repeats)
 
-function simplify(wrapper::Repeat)
-    geometry = simplify(wrapper.geometry)
+function simplify(wrapper::Repeat, pass::Val)
+    geometry = simplify(wrapper.geometry, pass)
     geometry === wrapper.geometry ? wrapper : rewrap(wrapper, geometry)
 end
 

@@ -16,7 +16,7 @@ import Random: rand
 
 abstract type BaseObstruction{N} <: PhysicalGeometry{N} end
 
-simplify(geometry::BaseObstruction) = geometry
+simplify(geometry::BaseObstruction, ::Val) = geometry
 
 leaf_bounding_boxes(geometry::BaseObstruction) = InternalBoundingBox(geometry)
 

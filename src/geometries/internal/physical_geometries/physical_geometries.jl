@@ -34,54 +34,57 @@ has_equivalent_wrapper(::PhysicalGeometry, ::PhysicalGeometry) = false
 
 """
     rewrap(wrapper, geometry::PhysicalGeometry)
+    rewrap(group, children)
 
 Construct the same kind of wrapper around `geometry`, preserving the wrapper's
 parameters. Wrapper types supporting common-wrapper extraction implement this
 alongside `has_equivalent_wrapper` and expose their child as `geometry`.
+For plain vector and tuple groups, reconstruct the same group family from the
+supplied child collection.
 """
 function rewrap end
 
 """
-    extract_common_wrapper(group)
-
-Lift consecutive equivalent wrapper layers from every child of a plain
-`GeometryVector` or `GeometryTuple` into wrappers around the group. After removing
-each common layer, recursively extract wrappers from the resulting inner group
-before reapplying the outer wrapper. Stop when `has_equivalent_wrapper` is false.
-Preserve child order, group family, and wrapper order without mutating the input.
-
-Return the original group unchanged if its children have no equivalent wrapper.
-Recursion only follows inner groups created by removing common wrappers; it does
-not otherwise simplify descendants.
-
-For example, a group of `Repeat` objects with identical repeat distances becomes
-a `Repeat` of the group of their children. Geometric paths change from
-`(child_index, repeat_shift, ...)` to `(repeat_shift, child_index, ...)`, so cached
-inside indices and previous-hit paths must be regenerated. Property paths remain
-unchanged after stripping repeat indices.
-"""
-function extract_common_wrapper end
-
-"""
     simplify(geometry::PhysicalGeometry)
+    simplify(geometry::PhysicalGeometry, pass::Val)
 
-Return an equivalent internal geometry representation with common wrappers
-extracted. Simplify the children of supported groups and wrappers first, then
-apply `extract_common_wrapper` to plain `GeometryVector` and `GeometryTuple`
-groups. Base obstructions are returned unchanged. Every other geometry type must
-provide simplification support; missing implementations raise `MethodError`.
-The input is never mutated, and unchanged subtrees may be returned by identity.
+Return an equivalent internal geometry representation after applying the
+simplification pass identified by `Val(:symbol)`. Default implementations forward
+the same pass to their children and reconstruct through `rewrap` when needed.
+Base obstructions are returned unchanged. Pass-specific methods can add local
+rewrites; an otherwise unrecognized pass just traverses supported nodes.
+Geometry types without traversal support raise `MethodError`. The input is never
+mutated, and unchanged subtrees may be returned by identity.
 
 A vector group accepts simplified children only if all have the same fully
-concrete type. Otherwise, discard all proposed child changes and return the
-original vector group; never convert it to a tuple group. Tuple groups retain
-their tuple representation and may accept heterogeneous child changes.
+concrete type. Otherwise, discard all proposed child changes and use the original
+vector group for any local rewrite; never convert it to a tuple group. Rejecting
+child changes does not skip the local rewrite. Tuple groups retain their tuple
+representation and may accept heterogeneous child changes.
+
+`Val(:extract_common_wrapper)` performs one bottom-up pass, extracting at most one
+common wrapper layer from each visited plain vector or tuple group. For example,
+a group of `Repeat` objects with identical periods becomes a `Repeat` of the group
+of their children. The newly constructed inner group is left for a subsequent
+pass. Child and wrapper order are preserved.
+
+Without a pass argument, repeatedly apply `Val(:extract_common_wrapper)` until
+the returned representation is unchanged according to `===`. Supported passes
+must preserve the identity of unchanged subtrees so convergence can be detected.
 
 Wrapper extraction can reorder geometric paths. Generate cached inside states
 and previous-hit paths for the returned geometry rather than reusing those from
 the original representation. Property paths retain their original ordering.
 """
 function simplify end
+
+function simplify(geometry::PhysicalGeometry)
+    while true
+        simplified = simplify(geometry, Val(:extract_common_wrapper))
+        simplified === geometry && return geometry
+        geometry = simplified
+    end
+end
 
 struct IntersectionParams{N}
     inside::Bool

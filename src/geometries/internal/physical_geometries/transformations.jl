@@ -26,8 +26,8 @@ parent coordinate system.
 """
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
 
-function simplify(wrapper::Transformation)
-    geometry = simplify(wrapper.geometry)
+function simplify(wrapper::Transformation, pass::Val)
+    geometry = simplify(wrapper.geometry, pass)
     geometry === wrapper.geometry ? wrapper : rewrap(wrapper, geometry)
 end
 
