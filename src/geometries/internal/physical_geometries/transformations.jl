@@ -10,7 +10,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, fi
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result, _translate_native
 import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
 import ..PhysicalGeometries: leaf_bounding_boxes
-import ..PhysicalGeometries: simplify, rewrap
+import ..PhysicalGeometries: simplify, rewrap, has_equivalent_wrapper
 import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
 import ...Properties: GeometryProperties
 
@@ -147,6 +147,7 @@ Shift(geometry::P, shift::AbstractVector{<:Real}) where {N, P<:PhysicalGeometry{
     Shift{N, P}(geometry, SVector{N, Float64}(shift))
 
 rewrap(wrapper::Shift{N}, geometry::PhysicalGeometry{N}) where {N} = Shift(geometry, wrapper.shift)
+has_equivalent_wrapper(first::Shift{N}, second::Shift{N}) where {N} = first.shift == second.shift
 
 """
     Scale{N}(scale)
@@ -167,6 +168,7 @@ end
 Scale(geometry::P, scale::Real) where {N, P<:PhysicalGeometry{N}} = Scale{N, P}(geometry, scale)
 
 rewrap(wrapper::Scale{N}, geometry::PhysicalGeometry{N}) where {N} = Scale(geometry, wrapper.scale)
+has_equivalent_wrapper(first::Scale{N}, second::Scale{N}) where {N} = first.scale == second.scale
 
 """
     Rotate(geometry, matrix)
@@ -207,6 +209,8 @@ function Rotate(geometry::P, matrix::AbstractMatrix{<:Real}) where {M, P<:Physic
 end
 
 rewrap(wrapper::Rotate{N, M}, geometry::PhysicalGeometry{M}) where {N, M} = Rotate(geometry, wrapper.matrix)
+has_equivalent_wrapper(first::Rotate{N, M}, second::Rotate{N, M}) where {N, M} =
+    first.matrix == second.matrix
 
 function InternalBoundingBox(
     transformation::Rotate{N, M}; no_deproject=false, kwargs...

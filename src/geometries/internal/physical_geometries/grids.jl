@@ -3,7 +3,7 @@ module Grids
 
 import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, InternalBoundingBox, leaf_bounding_boxes
-import ..PhysicalGeometries: intersection_type, find_intersection, rewrap
+import ..PhysicalGeometries: intersection_type, find_intersection, rewrap, has_equivalent_wrapper
 import ..Transparents: Transparent
 import ..GridDispatch: IntersectionGrid, GridIterator
 
@@ -38,6 +38,8 @@ end
 
 rewrap(wrapper::Grid{N}, geometry::PhysicalGeometry{N}) where {N} =
     Grid(geometry; resolution=wrapper.user_resolution)
+has_equivalent_wrapper(first::Grid{N}, second::Grid{N}) where {N} =
+    first.user_resolution == second.user_resolution
 
 function _flatten_leaf_bounding_boxes!(boxes, indices, box::InternalBoundingBox, path)
     push!(boxes, box)

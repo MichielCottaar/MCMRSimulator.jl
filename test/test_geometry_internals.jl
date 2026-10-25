@@ -147,9 +147,8 @@ end
         @test !has_equivalent_wrapper(repeated, other)
         @test !has_equivalent_wrapper(other, repeated)
     end
-    # Identical unsupported types still use the conservative fallback.
-    for unsupported in (sphere, Shift(sphere, ones(3)), Scale(sphere, 2.0),
-                        Rotate(sphere, Matrix{Float64}(I, 3, 3)), IgnoreOverlapping(sphere), Grid(sphere))
+    # Primitives and wrappers without an equivalence implementation use the fallback.
+    for unsupported in (sphere, IgnoreOverlapping(sphere))
         @test !has_equivalent_wrapper(unsupported, unsupported)
     end
 
@@ -165,6 +164,66 @@ end
     @test has_equivalent_wrapper(GeometryTuple((repeated,)))
     @test !has_equivalent_wrapper(GeometryVector([sphere]))
     @test !has_equivalent_wrapper(GeometryTuple((sphere,)))
+    shift_a, shift_b = Shift(sphere, [1., 0., 0.]), Shift(larger, [1., 0., 0.])
+    shift_c = Shift(sphere, [1., 0., 1.])
+    @test has_equivalent_wrapper(shift_a, shift_b)
+    @test has_equivalent_wrapper(shift_b, shift_a)
+    @test !has_equivalent_wrapper(shift_a, shift_c)
+
+    scale_a, scale_b = Scale(sphere, 2.), Scale(larger, 2.)
+    @test has_equivalent_wrapper(scale_a, scale_b)
+    @test !has_equivalent_wrapper(scale_a, Scale(sphere, nextfloat(2.)))
+
+    rotation = [0. -1. 0.; 1. 0. 0.; 0. 0. 1.]
+    rotate_a = Rotate(sphere, rotation)
+    rotate_b = Rotate(larger, rotation)
+    @test has_equivalent_wrapper(rotate_a, rotate_b)
+    @test has_equivalent_wrapper(rotate_b, rotate_a)
+    @test !has_equivalent_wrapper(rotate_a, Rotate(sphere, Matrix{Float64}(I, 3, 3)))
+    @test !has_equivalent_wrapper(rotate_a, Rotate(BaseObstructions.InfiniteCylinder(1.), rotation[:, 1:2]))
+
+    override_a = SizeScaleOverride(sphere, 0.25)
+    override_b = SizeScaleOverride(larger, 0.25)
+    @test has_equivalent_wrapper(override_a, override_b)
+    @test !has_equivalent_wrapper(override_a, SizeScaleOverride(sphere, 0.5))
+
+    grid_a = Grid(GeometryVector([sphere]); resolution=0.5)
+    grid_b = Grid(GeometryVector([larger]); resolution=0.5)
+    grid_auto = Grid(GeometryVector([sphere]))
+    grid_single = Grid(GeometryVector([sphere]); resolution=Inf)
+    @test has_equivalent_wrapper(grid_a, grid_b)
+    @test has_equivalent_wrapper(grid_b, grid_a)
+    @test has_equivalent_wrapper(grid_auto, Grid(GeometryVector([larger])))
+    @test has_equivalent_wrapper(grid_single, Grid(GeometryVector([larger]); resolution=Inf))
+    @test !has_equivalent_wrapper(grid_a, grid_auto)
+    @test !has_equivalent_wrapper(grid_auto, grid_single)
+
+    # Matching wrappers can be extracted while preserving their parameters.
+    shift_group = GeometryTuple((shift_a, shift_b))
+    extracted_shift = simplify(shift_group, Val(:extract_common_wrapper))
+    @test extracted_shift isa Shift
+    @test extracted_shift.shift == shift_a.shift
+    @test extracted_shift.geometry.geometries == (sphere, larger)
+    scale_group = GeometryTuple((scale_a, scale_b))
+    extracted_scale = simplify(scale_group, Val(:extract_common_wrapper))
+    @test extracted_scale isa Scale
+    @test extracted_scale.scale == 2.
+    rotate_group = GeometryTuple((rotate_a, rotate_b))
+    extracted_rotate = simplify(rotate_group, Val(:extract_common_wrapper))
+    @test extracted_rotate isa Rotate
+    @test extracted_rotate.matrix == rotation
+    override_group = GeometryTuple((override_a, override_b))
+    extracted_override = simplify(override_group, Val(:extract_common_wrapper))
+    @test extracted_override isa SizeScaleOverride
+    @test extracted_override.size_scale == 0.25
+    grid_group = GeometryTuple((grid_a, grid_b))
+    extracted_grid = simplify(grid_group, Val(:extract_common_wrapper))
+    @test extracted_grid isa Grid
+    @test extracted_grid.user_resolution == 0.5
+    @test extracted_grid.geometry isa GeometryTuple
+    @test extracted_grid.geometry[1].geometries == [sphere]
+    @test extracted_grid.geometry[2].geometries == [larger]
+
     group = GeometryTuple((repeated, repeated_larger))
     @test !has_equivalent_wrapper(group, group)
     @test !has_equivalent_wrapper(GeometryTuple((group, group)))
@@ -273,7 +332,7 @@ end
         GeometryVector([first_child, second_child]),
         GeometryVector(typeof(first_repeat)[]),
         GeometryTuple{3}(()),
-        GeometryTuple((Shift(first_repeat, zeros(3)), Shift(second_repeat, zeros(3)))),
+        GeometryTuple((Shift(first_repeat, zeros(3)), Shift(second_repeat, ones(3)))),
     )
         @test simplify(unchanged, pass) === unchanged
     end

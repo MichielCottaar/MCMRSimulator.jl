@@ -5,7 +5,7 @@ import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, f
 import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ..PhysicalGeometries: _inside_sampling_proposals
 import ..PhysicalGeometries: leaf_bounding_boxes
-import ..PhysicalGeometries: simplify, rewrap
+import ..PhysicalGeometries: simplify, rewrap, has_equivalent_wrapper
 import ...Properties: GeometryProperties
 import ...InsideViews: has_other
 
@@ -60,6 +60,8 @@ end
 rewrap(wrapper::IgnoreOverlapping{N}, geometry::PhysicalGeometry{N}) where {N} = IgnoreOverlapping(geometry)
 rewrap(wrapper::SizeScaleOverride{N}, geometry::PhysicalGeometry{N}) where {N} =
     SizeScaleOverride(geometry, wrapper.size_scale)
+has_equivalent_wrapper(first::SizeScaleOverride{N}, second::SizeScaleOverride{N}) where {N} =
+    first.size_scale == second.size_scale
 
 leaf_bounding_boxes(wrapper::Transparent) = leaf_bounding_boxes(transparent_geometry(wrapper))
 
