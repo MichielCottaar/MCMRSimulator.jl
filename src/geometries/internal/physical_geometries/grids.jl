@@ -3,9 +3,12 @@ module Grids
 
 import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, InternalBoundingBox, leaf_bounding_boxes
-import ..PhysicalGeometries: intersection_type, find_intersection, rewrap, has_equivalent_wrapper
+import ..PhysicalGeometries: intersection_type, inside_indices_eltype, find_intersection
+import ..PhysicalGeometries: rewrap, has_equivalent_wrapper
+import ..PhysicalGeometries: _volume_inside_indices, to_inside_index
 import ..Transparents: Transparent
 import ..GridDispatch: IntersectionGrid, GridIterator
+import ...InternalBoundingBoxes
 
 """
     Grid(geometry::PhysicalGeometry; resolution=nothing)
@@ -21,10 +24,11 @@ The wrapper expects an unrestricted incoming candidate and supplies individual
 candidate paths to its child during grid traversal. For periodic geometries,
 place the grid inside `Repeat`.
 """
-struct Grid{N, P<:PhysicalGeometry{N}, I} <: Transparent{N, P}
+struct Grid{N, P<:PhysicalGeometry{N}, I, V} <: Transparent{N, P}
     geometry::P
     grid::IntersectionGrid{N}
     indices::Vector{I}
+    fully_inside_indices::Array{Vector{V}, N}
     user_resolution::Union{Nothing, Float64}
 end
 
@@ -33,7 +37,31 @@ function Grid(geometry::P; resolution=nothing) where {N, P<:PhysicalGeometry{N}}
     indices = Vector{intersection_type(P)}()
     _flatten_leaf_bounding_boxes!(boxes, indices, leaf_bounding_boxes(geometry), ())
     grid = IntersectionGrid(boxes; resolution)
-    Grid{N, P, eltype(indices)}(geometry, grid, indices, resolution)
+    inside_indices_by_voxel = _fully_inside_indices(geometry, grid, indices)
+    Grid{N, P, eltype(indices), inside_indices_eltype(P)}(
+        geometry, grid, indices, inside_indices_by_voxel, resolution,
+    )
+end
+
+function _fully_inside_indices(geometry, grid::IntersectionGrid{N}, collision_indices) where {N}
+    inside_type = inside_indices_eltype(typeof(geometry))
+    result = Array{Vector{inside_type}, N}(undef, size(grid.indices))
+    lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)
+    cell_size = 1 ./ grid.inv_resolution
+    for voxel in CartesianIndices(result)
+        centre = lower_bound .+ (SVector{N, Float64}(Tuple(voxel)) .- 0.5) .* cell_size
+        inside_at_centre = _volume_inside_indices(geometry, centre)
+        collision_inside = Set{inside_type}()
+        for collision_index in grid.indices[voxel]
+            inside_index = to_inside_index(geometry, collision_indices[collision_index])
+            isnothing(inside_index) || push!(collision_inside, inside_index)
+        end
+        result[voxel] = inside_type[
+            inside_index for inside_index in inside_at_centre
+            if !(inside_index in collision_inside)
+        ]
+    end
+    result
 end
 
 rewrap(wrapper::Grid{N}, geometry::PhysicalGeometry{N}) where {N} =

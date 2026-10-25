@@ -1124,6 +1124,25 @@ end
     @test isinside_single(mesh_grid, a) == isinside_single(mesh, a)
     @test intersect(mesh_grid, a, b, mesh_hit) == intersect(mesh, a, b, mesh_hit)
 
+    sphere_vertices, sphere_triangles = mr.Geometries.Utils.sphere_mesh(32)
+    sphere_mesh = Mesh(sphere_vertices, sphere_triangles)
+    sphere_mesh_grid = Grid(sphere_mesh; resolution=0.25)
+
+    # Surface candidates are mapped to inside paths before excluding cells that
+    # may intersect a surface. Several triangle candidates can map to the same
+    # mesh inside region.
+    surface_voxel = CartesianIndex(4, 3, 1)
+    surface_inside = [
+        GI.PhysicalGeometries.to_inside_index(sphere_mesh, sphere_mesh_grid.indices[index])
+        for index in sphere_mesh_grid.grid.indices[surface_voxel]
+    ]
+    @test () in surface_inside
+    @test isempty(sphere_mesh_grid.fully_inside_indices[surface_voxel])
+
+    fully_inside_voxel = findfirst(!isempty, sphere_mesh_grid.fully_inside_indices)
+    @test !isnothing(fully_inside_voxel)
+    @test only(sphere_mesh_grid.fully_inside_indices[fully_inside_voxel]) == ()
+
     rotation = [0. -1. 0.; 1. 0. 0.; 0. 0. 1.]
     transformed = Shift(Rotate(Scale(tree, 2.), rotation), [1., 2., 3.])
     @test intersect(Grid(transformed; resolution=1.), SVector(1., -8., 3.), SVector(1., 12., 3.)) ==
@@ -1153,6 +1172,7 @@ end
     struct GridProbe <: BaseObstructions.BaseObstruction{3}
         calls::Base.RefValue{Int}
     end
+    GI.PhysicalGeometries.has_inside(::Type{GridProbe}) = false
     BoundingBoxes.InternalBoundingBox(::GridProbe) = BoundingBoxes.InternalBoundingBox{3}(1.)
     function GI.PhysicalGeometries.find_intersection(
         probe::GridProbe, a::SVector{3, Float64}, b::SVector{3, Float64},
