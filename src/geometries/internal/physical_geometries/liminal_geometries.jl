@@ -15,6 +15,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_singl
     projected_surface_area, normal_second_moment, inverse_mean_free_path, _geometry_mesh,
     distance_to_surface, size_scale, SurfaceEstimate, is_liminal
 import ..PhysicalGeometries: leaf_bounding_boxes
+import ..PhysicalGeometries: simplify, rewrap
 import ..Groups: GeometryTuple
 import ..Groups: inside_indices_for_any_type, _append_type
 import ..Transformations: Shift
@@ -312,6 +313,21 @@ function projected_surface_area(
     sampling.weight * projected_sum
 end
 
+"""
+    FixedLiminalGeometry(geometries, number_fractions, extracellular_fraction;
+        tortuosity_strength=1., precomputed=(;))
+
+Construct independently placed cell geometries and their derived statistics.
+The internal `precomputed` named tuple can supply `total_surface_area`,
+`weighted_cell_volume`, `spherical_surface_area`, and `tortuosity` (the tuple of
+normal second-moment tensor, tortuosity transform, and inverse transform).
+Missing statistics are estimated as usual. Precomputed statistics must describe
+the supplied cells, fractions, and tortuosity parameters.
+
+Outer-surface samples are always generated afresh, using the current geometry's
+intersection paths. Equivalent representations can therefore reuse physical
+statistics without retaining stale surface indices.
+"""
 struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
     geometries::Vector{P}
     number_fractions::Vector{Float64}
@@ -330,6 +346,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
         number_fractions::AbstractVector{<:Real},
         extracellular_fraction::Real;
         tortuosity_strength::Real=1.,
+        precomputed::NamedTuple=(;),
     )
         isfinite(extracellular_fraction) && 0 <= extracellular_fraction <= 1 ||
             throw(ArgumentError("extracellular_fraction must be between 0 and 1"))
@@ -342,14 +359,18 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
         all(isfinite, fractions) && all(>(0), fractions) ||
             throw(ArgumentError("cell number fractions must be finite and positive"))
         fractions ./= sum(fractions)
-        total_surface_area = sum(
-            fraction * estimate_surface(child; outer=true, include_gap=true).area
-            for (fraction, child) in zip(fractions, geometries)
-        )
-        weighted_cell_volume = sum(
-            fraction * _estimate_inside_volume(child)
-            for (fraction, child) in zip(fractions, geometries)
-        )
+        total_surface_area = Float64(get(precomputed, :total_surface_area) do
+            sum(
+                fraction * estimate_surface(child; outer=true, include_gap=true).area
+                for (fraction, child) in zip(fractions, geometries)
+            )
+        end)
+        weighted_cell_volume = Float64(get(precomputed, :weighted_cell_volume) do
+            sum(
+                fraction * _estimate_inside_volume(child)
+                for (fraction, child) in zip(fractions, geometries)
+            )
+        end)
         child_types = unique(typeof.(geometries))
         child_type = length(child_types) == 1 ?
             only(child_types) : Core.apply_type(Union, child_types...)
@@ -357,17 +378,24 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
             _merge_types(intersection_type(child) for child in _child_types(child_type)),
             Bool,
         )
-        spherical_sampling = _sample_outer_surface(
-            geometries,
-            fractions,
-            total_surface_area,
-            SPHERICAL_SURFACE_AREA_SAMPLE_COUNT,
-            surface_index_type,
-        )
-        normal_tensor, transform, inverse_transform = _tortuosity_transforms(
-            spherical_sampling.normals,
-            tortuosity_strength * (1 - extracellular_fraction),
-        )
+        if !haskey(precomputed, :spherical_surface_area) || !haskey(precomputed, :tortuosity)
+            spherical_sampling = _sample_outer_surface(
+                geometries,
+                fractions,
+                total_surface_area,
+                SPHERICAL_SURFACE_AREA_SAMPLE_COUNT,
+                surface_index_type,
+            )
+        end
+        spherical_surface_area = get(precomputed, :spherical_surface_area) do
+            SphericalSurfaceArea(spherical_sampling.normals; sample_weight=spherical_sampling.weight)
+        end
+        normal_tensor, transform, inverse_transform = get(precomputed, :tortuosity) do
+            _tortuosity_transforms(
+                spherical_sampling.normals,
+                tortuosity_strength * (1 - extracellular_fraction),
+            )
+        end
         fixed = new{child_type, surface_index_type}(
             convert(Vector{child_type}, collect(geometries)),
             fractions,
@@ -375,10 +403,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
             Float64(tortuosity_strength),
             total_surface_area,
             weighted_cell_volume,
-            SphericalSurfaceArea(
-                spherical_sampling.normals;
-                sample_weight=spherical_sampling.weight,
-            ),
+            spherical_surface_area,
             normal_tensor,
             transform,
             inverse_transform,
@@ -395,6 +420,25 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
         sample!(fixed.outer_surface_sampling, fixed)
         fixed
     end
+end
+
+function simplify(geometry::FixedLiminalGeometry, pass::Val)
+    children = map(child -> simplify(child, pass), geometry.geometries)
+    all(index -> children[index] === geometry.geometries[index], eachindex(children)) && return geometry
+    rewrap(geometry, children)
+end
+
+function rewrap(geometry::FixedLiminalGeometry, children::AbstractVector{<:PhysicalGeometry{3}})
+    FixedLiminalGeometry(
+        children, geometry.number_fractions, geometry.extracellular_fraction;
+        tortuosity_strength=geometry.tortuosity_strength,
+        precomputed=(
+            total_surface_area=geometry.total_surface_area,
+            weighted_cell_volume=geometry.weighted_cell_volume,
+            spherical_surface_area=geometry.spherical_surface_area,
+            tortuosity=(geometry.normal_second_moment_tensor, geometry.tortuosity_transform, geometry.inverse_tortuosity_transform),
+        ),
+    )
 end
 
 is_liminal(::Type{<:FixedLiminalGeometry}) = true

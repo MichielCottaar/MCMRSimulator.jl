@@ -536,6 +536,109 @@ end
     end
 end
 
+@testset "simplify liminal geometry" begin
+    Liminal = GI.PhysicalGeometries.LiminalGeometries
+    sphere = BaseObstructions.Sphere(1.)
+    smaller = BaseObstructions.Sphere(0.75)
+    singleton = GeometryTuple((sphere,))
+    geometry = Liminal.FixedLiminalGeometry(
+        PhysicalGeometry{3}[singleton, smaller], [1., 3.], 0.2;
+        tortuosity_strength=0.7,
+    )
+    @test simplify(geometry, Val(:traverse_only)) === geometry
+    @test simplify(geometry) === geometry
+
+    # Remove a group layer so the old cached surface paths are no longer valid.
+    GI.PhysicalGeometries.simplify(group::GeometryTuple{3, Tuple{BaseObstructions.Sphere}}, ::Val{:unwrap_liminal_test}) =
+        group[1].radius >= 1. ? group[1] : group
+    sampling = geometry.outer_surface_sampling
+    @test length(sampling.positions) > 1
+    sampling.index_to_sample = 2
+    original_positions = copy(sampling.positions)
+    original_indices = copy(sampling.surface_indices)
+    result = simplify(geometry, Val(:unwrap_liminal_test))
+    @test result isa Liminal.FixedLiminalGeometry
+    @test result !== geometry
+    @test result.geometries == [sphere, smaller]
+    @test geometry.geometries[1] === singleton
+    @test result.number_fractions == geometry.number_fractions
+    @test result.extracellular_fraction == geometry.extracellular_fraction
+    @test result.tortuosity_strength == geometry.tortuosity_strength
+    @test result.total_surface_area == geometry.total_surface_area
+    @test result.weighted_cell_volume == geometry.weighted_cell_volume
+    @test result.spherical_surface_area === geometry.spherical_surface_area
+    @test result.normal_second_moment_tensor == geometry.normal_second_moment_tensor
+    @test result.tortuosity_transform == geometry.tortuosity_transform
+    @test result.inverse_tortuosity_transform == geometry.inverse_tortuosity_transform
+    fresh = result.outer_surface_sampling
+    @test fresh !== sampling
+    @test fresh.lock !== sampling.lock
+    @test fresh.index_to_sample == 1
+    @test !isempty(fresh.positions)
+    @test eltype(fresh.surface_indices) == Tuple{Bool}
+    @test all(length(index) == 1 for index in fresh.surface_indices)
+    @test all(zip(fresh.positions, fresh.surface_indices, fresh.cell_indices)) do (position, index, cell)
+        params = GI.PhysicalGeometries.get_intersection_params(
+            result.geometries[cell], position, position, (index..., 0.),
+        )
+        norm(params.normal) ≈ 1.
+    end
+    @test sampling.positions == original_positions
+    @test sampling.surface_indices == original_indices
+    @test sampling.index_to_sample == 2
+    @test simplify(result, Val(:unwrap_liminal_test)) === result
+    @test simplify(result) === result
+
+    # Liminal collections can accept heterogeneous child types after rewriting.
+    homogeneous = rewrap(geometry, [singleton, GeometryTuple((smaller,))])
+    heterogeneous = simplify(homogeneous, Val(:unwrap_liminal_test))
+    @test heterogeneous.geometries[1] === sphere
+    @test heterogeneous.geometries[2] === homogeneous.geometries[2]
+    @test length(Base.uniontypes(eltype(heterogeneous.geometries))) == 2
+    @test heterogeneous.weighted_cell_volume == geometry.weighted_cell_volume
+    @test heterogeneous.spherical_surface_area === geometry.spherical_surface_area
+
+    # Partial precomputation skips volume estimation; complete precomputation
+    # also skips area and large spherical-statistics sampling during rewrap.
+    struct LiminalEstimationProbe <: Transparent{3, BaseObstructions.Sphere}
+        geometry::BaseObstructions.Sphere
+        volume_calls::Base.RefValue{Int}
+        surface_calls::Base.RefValue{Int}
+        sampling_calls::Base.RefValue{Int}
+    end
+    function GI.PhysicalGeometries.LiminalGeometries._estimate_inside_volume(probe::LiminalEstimationProbe; kwargs...)
+        probe.volume_calls[] += 1
+        4π / 3 * probe.geometry.radius^3
+    end
+    function GI.PhysicalGeometries.estimate_surface(probe::LiminalEstimationProbe; kwargs...)
+        probe.surface_calls[] += 1
+        GI.PhysicalGeometries.estimate_surface(probe.geometry; kwargs...)
+    end
+    function GI.PhysicalGeometries.random_surface_positions(
+        probe::LiminalEstimationProbe, density::Properties.GeometryProperties,
+        box::BoundingBoxes.InternalBoundingBox{3}, scale_density; kwargs...,
+    )
+        probe.sampling_calls[] += 1
+        GI.PhysicalGeometries.random_surface_positions(probe.geometry, density, box, scale_density; kwargs...)
+    end
+    probe = LiminalEstimationProbe(sphere, Ref(0), Ref(0), Ref(0))
+    volume = 4π / 3
+    precomputed_volume = Liminal.FixedLiminalGeometry(
+        [probe], [1.], 0.2; precomputed=(weighted_cell_volume=volume,),
+    )
+    @test precomputed_volume.weighted_cell_volume == volume
+    @test probe.volume_calls[] == 0
+    @test probe.surface_calls[] == 1
+    @test probe.sampling_calls[] == 2
+    rebuilt = rewrap(precomputed_volume, [probe])
+    @test probe.volume_calls[] == 0
+    @test probe.surface_calls[] == 1
+    @test probe.sampling_calls[] == 3
+    @test rebuilt.spherical_surface_area === precomputed_volume.spherical_surface_area
+    @test rebuilt.outer_surface_sampling !== precomputed_volume.outer_surface_sampling
+    @test rebuilt.outer_surface_sampling.index_to_sample == 1
+end
+
 @testset "leaf bounding boxes" begin
     sphere = BaseObstructions.Sphere(1.0)
     cylinder = BaseObstructions.InfiniteCylinder(2.0)
