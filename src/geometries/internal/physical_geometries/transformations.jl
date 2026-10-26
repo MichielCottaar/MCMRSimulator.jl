@@ -35,11 +35,14 @@ function simplify(wrapper::Transformation, pass::Val)
     geometry === child_geometry(wrapper) ? wrapper : rewrap(wrapper, geometry)
 end
 
-function leaf_bounding_boxes(transformation::Transformation{N, M}) where {N, M}
+function leaf_bounding_boxes(transformation::Transformation{N, M}; inside=false) where {N, M}
     N == M || throw(BoundingBoxNotSupported(
         "dimension-reducing transformations do not have finite leaf bounding boxes",
     ))
-    _transform_leaf_bounding_boxes(transformation, leaf_bounding_boxes(transformation.geometry))
+    _transform_leaf_bounding_boxes(
+        transformation,
+        leaf_bounding_boxes(transformation.geometry; inside),
+    )
 end
 
 _transform_leaf_bounding_boxes(transformation, box::InternalBoundingBox) =

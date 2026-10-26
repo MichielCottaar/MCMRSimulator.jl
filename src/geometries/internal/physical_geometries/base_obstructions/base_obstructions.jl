@@ -23,7 +23,10 @@ child_geometry(geometry::BaseObstruction) = throw(ArgumentError(
 
 simplify(geometry::BaseObstruction, ::Val) = geometry
 
-leaf_bounding_boxes(geometry::BaseObstruction) = InternalBoundingBox(geometry)
+function leaf_bounding_boxes(geometry::BaseObstruction{N}; inside=false) where {N}
+    inside && !has_inside(typeof(geometry)) && return InternalBoundingBox{N}[]
+    InternalBoundingBox(geometry)
+end
 
 function Base.show(io::IO, ::Type{T}) where {T <: BaseObstruction}
     print(io, nameof(T))

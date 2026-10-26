@@ -54,7 +54,7 @@ function simplify(wrapper::Repeat, pass::Val)
     geometry === wrapper.geometry ? wrapper : rewrap(wrapper, geometry)
 end
 
-leaf_bounding_boxes(::Repeat) = throw(BoundingBoxNotSupported(
+leaf_bounding_boxes(::Repeat; inside=false) = throw(BoundingBoxNotSupported(
     "periodic geometries do not have finite leaf bounding boxes; query the repeated child instead",
 ))
 

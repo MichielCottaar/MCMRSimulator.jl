@@ -39,7 +39,9 @@ end
 
 Groups.group_geometries(mesh::Mesh; include_gap=true) = MeshGeometryView(mesh, include_gap)
 
-leaf_bounding_boxes(mesh::Mesh) = [leaf_bounding_boxes(triangle(mesh, index)) for index in eachindex(mesh.indices)]
+leaf_bounding_boxes(mesh::Mesh; inside=false) = inside ?
+    InternalBoundingBox(mesh) :
+    [leaf_bounding_boxes(triangle(mesh, index)) for index in eachindex(mesh.indices)]
 
 Base.size(view::MeshGeometryView) = (length(view),)
 Base.axes(view::MeshGeometryView) = (Base.OneTo(length(view)),)

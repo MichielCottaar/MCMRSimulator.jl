@@ -520,7 +520,7 @@ InternalBoundingBox(::FixedLiminalGeometry; kwargs...) = throw(BoundingBoxNotSup
     "liminal geometries do not have a finite bounding box",
 ))
 
-leaf_bounding_boxes(::FixedLiminalGeometry) = throw(BoundingBoxNotSupported(
+leaf_bounding_boxes(::FixedLiminalGeometry; inside=false) = throw(BoundingBoxNotSupported(
     "liminal geometries do not have finite leaf bounding boxes; query their cell geometries instead",
 ))
 

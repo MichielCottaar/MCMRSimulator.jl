@@ -106,7 +106,8 @@ function InternalBoundingBox(cylinder::FiniteCylinder; kwargs...)
     InternalBoundingBox(half_size, center)
 end
 
-function leaf_bounding_boxes(cylinder::FiniteCylinder)
+function leaf_bounding_boxes(cylinder::FiniteCylinder; inside=false)
+    inside && return InternalBoundingBox(cylinder)
     radial_extent = sqrt.(max.(0.0, 1 .- cylinder.axis.^2))
     (
         InternalBoundingBox(cylinder),

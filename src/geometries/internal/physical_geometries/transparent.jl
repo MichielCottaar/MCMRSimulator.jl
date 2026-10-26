@@ -93,7 +93,8 @@ rewrap(wrapper::SizeScaleOverride{N}, geometry::PhysicalGeometry{N}) where {N} =
 has_equivalent_wrapper(first::SizeScaleOverride{N}, second::SizeScaleOverride{N}) where {N} =
     first.size_scale == second.size_scale
 
-leaf_bounding_boxes(wrapper::Transparent) = leaf_bounding_boxes(child_geometry(wrapper))
+leaf_bounding_boxes(wrapper::Transparent; inside=false) =
+    leaf_bounding_boxes(child_geometry(wrapper); inside)
 distance_to_surface(wrapper::Transparent, position) =
     distance_to_surface(child_geometry(wrapper), position)
 

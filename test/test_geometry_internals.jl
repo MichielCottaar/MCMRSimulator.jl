@@ -906,6 +906,12 @@ end
     for primitive in (sphere, cylinder, wall, triangle)
         @test leaf_bounding_boxes(primitive) == BoundingBoxes.InternalBoundingBox(primitive)
     end
+    @test leaf_bounding_boxes(sphere; inside=true) == BoundingBoxes.InternalBoundingBox(sphere)
+    @test leaf_bounding_boxes(cylinder; inside=true) == BoundingBoxes.InternalBoundingBox(cylinder)
+    @test leaf_bounding_boxes(wall; inside=true) isa Vector{BoundingBoxes.InternalBoundingBox{1}}
+    @test isempty(leaf_bounding_boxes(wall; inside=true))
+    @test leaf_bounding_boxes(triangle; inside=true) isa Vector{BoundingBoxes.InternalBoundingBox{3}}
+    @test isempty(leaf_bounding_boxes(triangle; inside=true))
 
     # The tuple order matches the side/first-cap/second-cap surface identifiers.
     finite = BaseObstructions.FiniteCylinder([1., 2., 3.], [1., 2., 7.], 1., 2.)
@@ -918,6 +924,7 @@ end
     @test BoundingBoxes.upper(finite_boxes[3]) == SVector(3., 4., 7.)
     gaps = BaseObstructions.FiniteCylinder([1., 2., 3.], [1., 2., 7.], 1., 2.; caps_are_gaps=true)
     @test leaf_bounding_boxes(gaps) == finite_boxes
+    @test leaf_bounding_boxes(finite; inside=true) == BoundingBoxes.InternalBoundingBox(finite)
     tilted = BaseObstructions.FiniteCylinder([0., 0., 0.], [3., 4., 0.], 1., 2.)
     tilted_boxes = leaf_bounding_boxes(tilted)
     @test BoundingBoxes.lower(tilted_boxes[2]) ≈ SVector(-0.8, -0.6, -1.)
@@ -931,6 +938,12 @@ end
     @test boxes[1] == BoundingBoxes.InternalBoundingBox(sphere)
     @test boxes[2] isa Vector
     @test boxes[2] == [finite_boxes]
+    inside_boxes = leaf_bounding_boxes(GeometryTuple((sphere, triangle, finite)); inside=true)
+    @test inside_boxes == (
+        BoundingBoxes.InternalBoundingBox(sphere),
+        BoundingBoxes.InternalBoundingBox{3}[],
+        BoundingBoxes.InternalBoundingBox(finite),
+    )
     for group in (GeometryVector([sphere]), GeometryVector([sphere]; bounding_box=true))
         @test leaf_bounding_boxes(group) == [BoundingBoxes.InternalBoundingBox(sphere)]
     end
@@ -950,6 +963,23 @@ end
     @test BoundingBoxes.lower(transformed_boxes[2][1][3]) == SVector(2., 18., 44.)
     @test BoundingBoxes.upper(transformed_boxes[2][1][3]) == SVector(10., 26., 44.)
     @test leaf_bounding_boxes(SizeScaleOverride(IgnoreOverlapping(nested), 0.5)) == boxes
+    inside_transformed = Shift(Meshes.Mesh(
+        [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+        [[1, 2, 3], [1, 2, 4], [1, 3, 4]],
+    ), [10., 20., 30.])
+    @test leaf_bounding_boxes(inside_transformed; inside=true) ==
+        BoundingBoxes.InternalBoundingBox(inside_transformed)
+    mixed_inside_groups = GeometryTuple((
+        GeometryVector([Shift(inside_transformed.geometry, zeros(3)), Shift(inside_transformed.geometry, [5., 0., 0.])]),
+        triangle,
+    ))
+    inside_group_boxes = leaf_bounding_boxes(mixed_inside_groups; inside=true)
+    @test inside_group_boxes[1] == [
+        BoundingBoxes.InternalBoundingBox(mixed_inside_groups[1][1]),
+        BoundingBoxes.InternalBoundingBox(mixed_inside_groups[1][2]),
+    ]
+    @test inside_group_boxes[2] isa Vector{BoundingBoxes.InternalBoundingBox{3}}
+    @test isempty(inside_group_boxes[2])
     @test isempty(leaf_bounding_boxes(Shift(GeometryVector(BaseObstructions.Sphere[]), ones(3))))
 
     # Triangle boxes include the mesh's automatically generated gap closure.

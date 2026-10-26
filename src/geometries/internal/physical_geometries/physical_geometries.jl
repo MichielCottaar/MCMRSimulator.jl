@@ -379,17 +379,21 @@ function random_surface_positions end
 function InternalBoundingBox end
 
 """
-    leaf_bounding_boxes(geometry::PhysicalGeometry)
+    leaf_bounding_boxes(geometry::PhysicalGeometry; inside=false)
 
 Return conservative bounding boxes for the leaf surfaces of `geometry`, all in
 the geometry's coordinate frame. The result mirrors the intersection-index
 hierarchy: vector and tuple groups return vectors and tuples of child results,
 while transformations and transparent wrappers preserve their child's structure.
-Empty groups return empty collections.
+Empty groups return empty collections. With `inside=true`, return bounds for
+inside regions instead of collision leaves; geometries without an inside return
+an empty bounding-box vector while retaining their position in the hierarchy.
 
 A base obstruction returns its `InternalBoundingBox` directly. `FiniteCylinder`
-returns a tuple for its side, first cap, and second cap, in surface-index order.
-Meshes return a vector of triangle boxes, including gap-closing triangles.
+returns a tuple for its side, first cap, and second cap, in surface-index order;
+for inside bounds it returns its single full-geometry bounding box. Meshes return
+a vector of triangle boxes, including gap-closing triangles, or their full bounding
+box for inside queries.
 
 Periodic geometries and dimension-reducing transformations have no finite leaf
 bounding boxes in their outer frame. Query their finite child geometry instead.

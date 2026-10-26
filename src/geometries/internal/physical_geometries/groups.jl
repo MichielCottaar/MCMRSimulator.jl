@@ -234,8 +234,12 @@ function simplify(group::Union{GeometryVector, GeometryTuple}, pass::Val{:extrac
     rewrap_extracted_wrapper(first(rebuilt.geometries), rebuilt.geometries, rewrap(rebuilt, children))
 end
 
-leaf_bounding_boxes(group::GeometryVectorLike) = map(leaf_bounding_boxes, group_geometries(group))
-leaf_bounding_boxes(group::GeometryTuple) = map(leaf_bounding_boxes, group_geometries(group))
+leaf_bounding_boxes(group::GeometryVectorLike; inside=false) = map(
+    child -> leaf_bounding_boxes(child; inside), group_geometries(group),
+)
+leaf_bounding_boxes(group::GeometryTuple; inside=false) = map(
+    child -> leaf_bounding_boxes(child; inside), group_geometries(group),
+)
 
 function get_child(group::GeometryVectorLike, indices::Tuple)
     child_index = indices[1]
