@@ -16,6 +16,11 @@ const Meshes = GI.PhysicalGeometries.Meshes
 const Mesh = Meshes.Mesh
 const IntersectionGrid = GI.PhysicalGeometries.GridDispatch.IntersectionGrid
 const Grid = GI.PhysicalGeometries.Grids.Grid
+finalised_grid(geometry; kwargs...) = begin
+    grid = Grid(geometry; kwargs...)
+    GI.PhysicalGeometries.finalise!(grid)
+    grid
+end
 const Transparents = GI.PhysicalGeometries.Transparents
 const Transparent = GI.PhysicalGeometries.Transparent
 const InsideViews = GI.InsideViews
@@ -140,9 +145,9 @@ end
     wall = Shift(BaseObstructions.InfiniteWall(), [3.0])
     triangle = BaseObstructions.FullTriangle(SVector(0.0, 0.0, 3.0), SVector(1.0, 0.0, 3.0), SVector(0.0, 1.0, 3.0))
     for resolution in (nothing, 0.5, Inf)
-        @test intersect(Grid(wall; resolution), SVector(2.0), SVector(4.0)) == intersect(wall, SVector(2.0), SVector(4.0))
+        @test intersect(finalised_grid(wall; resolution), SVector(2.0), SVector(4.0)) == intersect(wall, SVector(2.0), SVector(4.0))
         start, destination = SVector(0.1, 0.1, 2.0), SVector(0.1, 0.1, 4.0)
-        @test intersect(Grid(triangle; resolution), start, destination) == intersect(triangle, start, destination)
+        @test intersect(finalised_grid(triangle; resolution), start, destination) == intersect(triangle, start, destination)
     end
 end
 
@@ -871,6 +876,7 @@ end
         result = simplify(grid, Val(:unwrap_acceleration_test))
         @test result isa Grid
         @test result !== grid
+        GI.PhysicalGeometries.finalise!(result)
         @test result.user_resolution === resolution
         @test result.geometry.geometries === (sphere, shifted)
         @test result.indices == [(1,), (2,)]
@@ -1090,6 +1096,11 @@ end
         Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.]),
     ]), finite))
     grid = Grid(tree; resolution=0.5)
+    @test !isassigned(grid.grid.indices, lastindex(grid.grid.indices))
+    @test all(isempty, grid.fully_inside_indices)
+    @test_throws ArgumentError inside_indices(grid, SVector(0., 0., 0.))
+    @test_throws ArgumentError intersect(grid, SVector(-5., 0., 0.), SVector(5., 0., 0.))
+    GI.PhysicalGeometries.finalise!(grid)
     @test grid isa Transparent{3}
     @test grid.geometry === tree
     @test grid.indices == [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3)]
@@ -1101,7 +1112,7 @@ end
 
     rng = Random.MersenneTwister(19)
     for resolution in (nothing, 0.5, Inf)
-        accelerated = Grid(tree; resolution)
+        accelerated = finalised_grid(tree; resolution)
         for _ in 1:40
             start = SVector{3, Float64}(10 .* rand(rng, 3) .- 5)
             destination = SVector{3, Float64}(10 .* rand(rng, 3) .- 5)
@@ -1132,7 +1143,7 @@ end
     overlapping = IgnoreOverlapping(GeometryTuple((
         sphere, Shift(sphere, [0.5, 0., 0.]),
     )))
-    overlap_grid = Grid(overlapping; resolution=0.5)
+    overlap_grid = finalised_grid(overlapping; resolution=0.5)
     a, b = SVector(0.25, 0., 0.), SVector(2., 0., 0.)
     cached = InsideViews.InsideView([(1,), (2,)])
     overlap_hit = intersect(overlap_grid, a, b, nothing, cached)
@@ -1143,17 +1154,17 @@ end
     broad = Shift(BaseObstructions.Sphere(5.), [0., 4., 0.])
     near = Shift(BaseObstructions.Sphere(0.25), [-4., 0., 0.])
     competing = GeometryTuple((broad, near))
-    @test intersect(Grid(competing; resolution=0.5), start, destination) == intersect(competing, start, destination)
-    @test intersect(Grid(competing; resolution=0.5), start, destination)[1] == 2
+    @test intersect(finalised_grid(competing; resolution=0.5), start, destination) == intersect(competing, start, destination)
+    @test intersect(finalised_grid(competing; resolution=0.5), start, destination)[1] == 2
     # Equal-distance hits use tree order even if the second box is visited first.
     tied = GeometryTuple((Shift(sphere, [-2., 0., 0.]), broad))
-    @test intersect(Grid(tied; resolution=0.5), start, destination) == intersect(tied, start, destination)
+    @test intersect(finalised_grid(tied; resolution=0.5), start, destination) == intersect(tied, start, destination)
 
     mesh = Mesh(
         [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
         [[1, 2, 3], [1, 2, 4], [1, 3, 4]],
     )
-    mesh_grid = Grid(mesh; resolution=0.25)
+    mesh_grid = finalised_grid(mesh; resolution=0.25)
     @test mesh_grid.indices == [(index,) for index in eachindex(mesh.indices)]
     a, b = SVector(0.1, 0.1, 0.1), SVector(1., 1., 1.)
     mesh_hit = intersect(mesh_grid, a, b)
@@ -1165,7 +1176,7 @@ end
 
     sphere_vertices, sphere_triangles = mr.Geometries.Utils.sphere_mesh(32)
     sphere_mesh = Mesh(sphere_vertices, sphere_triangles)
-    sphere_mesh_grid = Grid(sphere_mesh; resolution=0.25)
+    sphere_mesh_grid = finalised_grid(sphere_mesh; resolution=0.25)
 
     # Surface candidates are mapped to inside paths before excluding cells that
     # may intersect a surface. Several triangle candidates can map to the same
@@ -1189,12 +1200,12 @@ end
 
     rotation = [0. -1. 0.; 1. 0. 0.; 0. 0. 1.]
     transformed = Shift(Rotate(Scale(tree, 2.), rotation), [1., 2., 3.])
-    @test intersect(Grid(transformed; resolution=1.), SVector(1., -8., 3.), SVector(1., 12., 3.)) ==
+    @test intersect(finalised_grid(transformed; resolution=1.), SVector(1., -8., 3.), SVector(1., 12., 3.)) ==
         intersect(transformed, SVector(1., -8., 3.), SVector(1., 12., 3.))
     cylinder = BaseObstructions.InfiniteCylinder(1.)
-    @test intersect(Grid(cylinder), SVector(-2., 0.), SVector(2., 0.)) == intersect(cylinder, SVector(-2., 0.), SVector(2., 0.))
+    @test intersect(finalised_grid(cylinder), SVector(-2., 0.), SVector(2., 0.)) == intersect(cylinder, SVector(-2., 0.), SVector(2., 0.))
     walls = GeometryVector([Shift(BaseObstructions.InfiniteWall(), [-1.]), Shift(BaseObstructions.InfiniteWall(), [1.])])
-    @test intersect(Grid(walls; resolution=0.5), SVector(-2.), SVector(2.)) == intersect(walls, SVector(-2.), SVector(2.))
+    @test intersect(finalised_grid(walls; resolution=0.5), SVector(-2.), SVector(2.)) == intersect(walls, SVector(-2.), SVector(2.))
 
     periodic = Repeat(tree, [8., 8., 8.])
     periodic_grid = Repeat(grid, [8., 8., 8.])
@@ -1228,7 +1239,7 @@ end
     end
     selected, skipped = GridProbe(Ref(0)), GridProbe(Ref(0))
     probes = GeometryTuple((selected, Shift(skipped, [0., 4., 0.])))
-    @test intersect(Grid(probes; resolution=0.25), start, destination) === nothing
+    @test intersect(finalised_grid(probes; resolution=0.25), start, destination) === nothing
     @test selected.calls[] == 1
     @test skipped.calls[] == 0
 
@@ -1249,7 +1260,7 @@ end
         true
     end
     inside_probe = GridInsideProbe(Ref(0))
-    inside_probe_grid = Grid(inside_probe; resolution=0.5)
+    inside_probe_grid = finalised_grid(inside_probe; resolution=0.5)
     inside_probe.calls[] = 0
     @test inside_indices(inside_probe_grid, SVector(0., 0., 0.)) == [()]
     @test inside_probe.calls[] == 1
@@ -2882,7 +2893,7 @@ end
     @test inside_indices(filtered_spheres, SVector(0.0, 0.0, 0.0)) == [
         (1,),
     ]
-    grid_spheres = Grid(GeometryVector([
+    grid_spheres = finalised_grid(GeometryVector([
         Shift(sphere, [-3.0, 0.0, 0.0]),
         Shift(sphere, [3.0, 0.0, 0.0]),
     ]); resolution=2.0)

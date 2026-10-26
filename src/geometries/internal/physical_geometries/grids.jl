@@ -5,7 +5,7 @@ import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, InternalBoundingBox, leaf_bounding_boxes
 import ..PhysicalGeometries: intersection_type, inside_indices_eltype, find_intersection
 import ..PhysicalGeometries: inside_indices, isinside_single, rewrap, has_equivalent_wrapper
-import ..PhysicalGeometries: _volume_inside_indices, to_inside_index
+import ..PhysicalGeometries: _volume_inside_indices, to_inside_index, finalise!
 import ..Transparents: Transparent
 import ..GridDispatch: IntersectionGrid, GridIterator
 import ...InternalBoundingBoxes
@@ -36,11 +36,27 @@ function Grid(geometry::P; resolution=nothing) where {N, P<:PhysicalGeometry{N}}
     boxes = InternalBoundingBox{N}[]
     indices = Vector{intersection_type(P)}()
     _flatten_leaf_bounding_boxes!(boxes, indices, leaf_bounding_boxes(geometry), ())
-    grid = IntersectionGrid(boxes; resolution)
-    inside_indices_by_voxel = _fully_inside_indices(geometry, grid, indices)
+    grid = IntersectionGrid(boxes; resolution, delayed=true)
+    inside_type = inside_indices_eltype(P)
+    fully_inside_indices = Array{Vector{inside_type}, N}(undef, Tuple(grid.dimensions))
+    for voxel in CartesianIndices(fully_inside_indices)
+        fully_inside_indices[voxel] = Vector{inside_type}()
+    end
     Grid{N, P, eltype(indices), inside_indices_eltype(P)}(
-        geometry, grid, indices, inside_indices_by_voxel, resolution,
+        geometry, grid, indices, fully_inside_indices, resolution,
     )
+end
+
+function finalise!(wrapper::Grid{N}) where {N}
+    finalise!(wrapper.geometry)
+    boxes = InternalBoundingBox{N}[]
+    _flatten_leaf_bounding_boxes!(boxes, leaf_bounding_boxes(wrapper.geometry))
+    finalise!(wrapper.grid, boxes)
+    copyto!(
+        wrapper.fully_inside_indices,
+        _fully_inside_indices(wrapper.geometry, wrapper.grid, wrapper.indices),
+    )
+    nothing
 end
 
 function _fully_inside_indices(geometry, grid::IntersectionGrid{N}, collision_indices) where {N}
@@ -82,6 +98,18 @@ function _flatten_leaf_bounding_boxes!(boxes, indices, children::Union{Tuple, Ab
     nothing
 end
 
+function _flatten_leaf_bounding_boxes!(boxes, box::InternalBoundingBox)
+    push!(boxes, box)
+    nothing
+end
+
+function _flatten_leaf_bounding_boxes!(boxes, children::Union{Tuple, AbstractVector})
+    for child in children
+        _flatten_leaf_bounding_boxes!(boxes, child)
+    end
+    nothing
+end
+
 InternalBoundingBox(geometry::Grid; kwargs...) = geometry.grid.bounding_box
 
 function _grid_coordinate(grid::IntersectionGrid{N}, position::SVector{N, Float64}) where {N}
@@ -102,6 +130,7 @@ function inside_indices(
 ) where {N}
     inside_type = inside_indices_eltype(typeof(wrapper.geometry))
     indices = Vector{inside_type}()
+    _require_finalised(wrapper.grid)
     coordinate = _grid_coordinate(wrapper.grid, position)
     isnothing(coordinate) && return indices
 
@@ -118,6 +147,13 @@ function inside_indices(
         ) && push!(indices, inside_index)
     end
     sort!(indices; lt=isless)
+end
+
+function _require_finalised(grid::IntersectionGrid)
+    isassigned(grid.indices, lastindex(grid.indices)) || throw(ArgumentError(
+        "Grid is not finalised; call finalise!(grid) before querying it",
+    ))
+    nothing
 end
 
 function _earlier_hit(hit, best)
