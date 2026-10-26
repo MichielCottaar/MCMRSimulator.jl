@@ -178,6 +178,7 @@ function _constrain_snapshot(snapshot::Snapshot{N}, simulation::Simulation) wher
             deepcopy(spin.reflection),
             spin.rng,
             inside,
+            spin.status,
         )
     end
     Snapshot(spins, snapshot.time)

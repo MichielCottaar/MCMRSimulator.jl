@@ -2,6 +2,53 @@
 @testset "test_various.jl" begin
 @test length(detect_ambiguities(mr)) == 0
 
+@testset "Invalid spin accumulation" begin
+    spins = [mr.Spin(longitudinal=1.), mr.Spin(longitudinal=3.),
+             mr.Spin(longitudinal=100., status=:stuck),
+             mr.Spin(longitudinal=200., status=:other)]
+    snapshot = mr.Snapshot(spins)
+    result = mr.SpinOrientationSum(snapshot)
+    @test length(result) == 2
+    @test mr.orientation(snapshot) == SA[0., 0., 4.]
+    @test mr.orientation(snapshot; mean=true) == SA[0., 0., 2.]
+    @test mr.longitudinal(snapshot; mean=true) == 2.
+    @test result.invalid_spins == Dict(:stuck => 1, :other => 1)
+    combined = result + result
+    @test combined.nspins == 4
+    @test mr.longitudinal(combined) == 8.
+    @test combined.invalid_spins == Dict(:stuck => 2, :other => 2)
+    @test result.invalid_spins[:stuck] == 1
+
+    acc = mr.Evolve.TotalSignalAccumulator(0.)
+    mr.Evolve.readout!(acc, spins)
+    first_result = mr.Evolve.fix_accumulator(acc)
+    @test first_result.nspins == 2
+    @test first_result.invalid_spins == result.invalid_spins
+    @test mr.Evolve.standard_error(acc)[3] ≈ 2.
+    mr.Evolve.readout!(acc, spins)
+    @test mr.Evolve.fix_accumulator(acc).invalid_spins == combined.invalid_spins
+    @test first_result.invalid_spins == result.invalid_spins
+
+    invalid = mr.Snapshot(spins[3:4])
+    @test mr.SpinOrientationSum(invalid).nspins == 0
+    @test mr.orientation(invalid; mean=true) == zeros(3)
+
+    sequence = build_sequence(1.)
+    simulation = mr.Simulation(sequence; geometry=mr.Spheres(radius=1.), diffusivity=0.)
+    subset_spins = [mr.Spin(position=[0., 0., 0.]),
+                    mr.Spin(position=[0., 0., 0.], status=:stuck),
+                    mr.Spin(position=[2., 0., 0.], status=:other)]
+    results = mr.readout(subset_spins, simulation, [0., 1.];
+        subset=[mr.Subset(), mr.Subset(inside=true), mr.Subset(inside=false)])
+    for time in 1:2
+        @test results[time, 1].nspins == 1
+        @test results[time, 1].invalid_spins == Dict(:stuck => 1, :other => 1)
+        @test results[time, 2].invalid_spins == Dict(:stuck => 1)
+        @test results[time, 3].nspins == 0
+        @test results[time, 3].invalid_spins == Dict(:other => 1)
+    end
+end
+
 @testset "Adaptive readout" begin
     Random.seed!(1234)
     sequence = build_sequence([0., :readout])

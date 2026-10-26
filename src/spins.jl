@@ -447,8 +447,10 @@ end
 get_time(s :: Snapshot) = s.time
 
 function orientation(s :: Snapshot; mean=false)
-    result = sum(orientation, s.spins, init=zero(SVector{3, Float64}))
-    return mean && !isempty(s) ? result ./ length(s) : result
+    valid_spins = Iterators.filter(spin -> spin.status == :valid, s.spins)
+    result = sum(orientation, valid_spins, init=zero(SVector{3, Float64}))
+    nvalid = count(spin -> spin.status == :valid, s.spins)
+    return mean && !iszero(nvalid) ? result ./ nvalid : result
 end
 
 for symbol in (:R1, :R2)
@@ -522,8 +524,10 @@ off_resonance(positions::AbstractVector{<:AbstractVector{<:Number}}, geometry, g
 """
     SpinOrientationSum(snapshot)
 
-Computes the total signal and the number of spins in a [`Snapshot`](@ref).
+Computes the total signal and the number of valid spins in a [`Snapshot`](@ref).
 The number of spins can be found by running `length(spin_orientation_sum)`.
+Only spins with status `:valid` contribute to the signal and spin count.
+The `invalid_spins` dictionary records the number of invalid spins by status.
 The optional `snr` field contains the component SNR when the result was produced by a signal readout with uncertainty tracking.
 The spin orientation information can be found in the same way as for [`SpinOrientation`](@ref),
 namely by calling [`transverse`](@ref), [`longitudinal`](@ref), or [`phase`](@ref).
@@ -532,13 +536,27 @@ struct SpinOrientationSum
     orient :: SpinOrientation
     nspins :: Int
     snr :: Union{Nothing, SVector{3, Float64}}
+    invalid_spins :: Dict{Symbol, Int}
 end
+SpinOrientationSum(orient::SpinOrientation, nspins::Int, snr) = SpinOrientationSum(orient, nspins, snr, Dict{Symbol, Int}())
 SpinOrientationSum(orient::SpinOrientation, nspins::Int) = SpinOrientationSum(orient, nspins, nothing)
-SpinOrientationSum(s :: Snapshot) = SpinOrientationSum(SpinOrientation(orientation(s)), length(s))
+function SpinOrientationSum(s::Snapshot)
+    invalid_spins = Dict{Symbol, Int}()
+    nvalid = 0
+    for spin in s
+        if spin.status == :valid
+            nvalid += 1
+        else
+            invalid_spins[spin.status] = get(invalid_spins, spin.status, 0) + 1
+        end
+    end
+    return SpinOrientationSum(SpinOrientation(orientation(s)), nvalid, nothing, invalid_spins)
+end
 
 Base.length(s::SpinOrientationSum) = s.nspins
 function Base.show(io::IO, orient::SpinOrientationSum)
     text = "SpinOrientationSum(longitudinal=$(longitudinal(orient)), transverse=$(transverse(orient)), phase=$(phase(orient))°, nspins=$(length(orient))"
+    isempty(orient.invalid_spins) || (text *= ", invalid_spins=$(orient.invalid_spins)")
     isnothing(orient.snr) ? print(io, text * ")") : print(io, text * ", snr=$(orient.snr))")
 end
 
@@ -561,7 +579,9 @@ snr(s :: SpinOrientationSum) = s.snr
 function Base.:+(sp1::SpinOrientationSum, sp2::SpinOrientationSum)
     return SpinOrientationSum(
         SpinOrientation(orientation(sp1) .+ orientation(sp2)),
-        sp1.nspins + sp2.nspins
+        sp1.nspins + sp2.nspins,
+        nothing,
+        mergewith(+, sp1.invalid_spins, sp2.invalid_spins),
     )
 end
 

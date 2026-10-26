@@ -51,12 +51,14 @@ After the simulation a [`SpinOrientationSum`](@ref) will be returned.
 """
 struct TotalSignalAccumulator <: SingleAccumulator
     nspins :: Ref{Int}
+    invalid_spins :: Dict{Symbol, Int}
     as_vector :: MVector{3, Float64}
     means :: MVector{3, Float64}
     m2 :: MVector{3, Float64}
     nwrite :: Ref{Int}
     TotalSignalAccumulator(time::Number) = new(
         Ref(0),
+        Dict{Symbol, Int}(),
         zero(MVector{3, Float64}),
         zero(MVector{3, Float64}),
         zero(MVector{3, Float64}),
@@ -251,6 +253,10 @@ Adds the `spins` to the readout of `single_accumulator`
 """
 function readout!(acc::TotalSignalAccumulator, spins::Vector{<:Spin{1}})
     for spin in spins
+        if spin.status != :valid
+            acc.invalid_spins[spin.status] = get(acc.invalid_spins, spin.status, 0) + 1
+            continue
+        end
         value = orientation(spin)
         n = acc.nspins[] + 1
         delta = value .- acc.means
@@ -314,6 +320,7 @@ function fix_accumulator(acc::TotalSignalAccumulator; min_spins=0)
         SpinOrientation(acc.as_vector),
         acc.nspins[],
         inv.(inverse_snr(acc, Int(min_spins))),
+        copy(acc.invalid_spins),
     )
 end
 
@@ -369,6 +376,7 @@ function fix_statistics(acc::GridAccumulator, target_snr::Float64, min_spins::In
                 standard_error=standard_error(cell),
                 snr=inv.(inverse_snr(cell, min_spins)),
                 nspins=cell.nspins[],
+                invalid_spins=copy(cell.invalid_spins),
             )
         else
             nothing
