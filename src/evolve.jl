@@ -743,6 +743,7 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
         end
     end
     if !found_solution
+        @show spin
         error("Bounced single particle for 1000000 times in single step; terminating! This likely reflects that two obstructions in the geometry overlap perfectly, which is not robustly supported at present.")
     end
     if ~isnothing(test_new_pos)
