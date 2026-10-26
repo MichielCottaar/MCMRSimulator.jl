@@ -630,6 +630,7 @@ end
 
 
 function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequencePart{N}, B0s::AbstractVector{Float64}, test_new_pos=nothing) where {N}
+    spin.status == :valid || return
     if ~isnothing(test_new_pos)
         all_positions = [spin.position]
     end
@@ -745,8 +746,8 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
         end
     end
     if !found_solution
-        @show spin
-        error("Bounced single particle for 1000000 times in single step; terminating! This likely reflects that two obstructions in the geometry overlap perfectly, which is not robustly supported at present.")
+        spin.status = :stuck
+        @warn "Spin bounced 1000000 times in a single step and will not be updated further. This likely reflects that two obstructions in the geometry overlap perfectly, which is not robustly supported at present." spin=spin position=spin.position
     end
     if ~isnothing(test_new_pos)
         push!(all_positions, spin.position)

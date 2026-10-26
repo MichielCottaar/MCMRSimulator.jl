@@ -1,4 +1,19 @@
 @testset "test_collisions.jl" begin
+    @testset "Non-valid spins are not evolved" begin
+        part = mr.SequenceParts.MultSequencePart(
+            1.,
+            mr.SequenceParts.SequencePart[],
+            mr.SequenceParts.InstantSequencePart{SVector{0}}([]),
+        )
+        simulation = mr.Simulation([], diffusivity=1.)
+        spin = mr.Spin(nsequences=0, position=[1., 2., 3.], status=:stuck)
+        original_position = spin.position
+
+        @test isnothing(mr.Evolve.draw_step!(spin, simulation, part, Float64[]))
+        @test spin.position == original_position
+        @test spin.status == :stuck
+    end
+
 
     function compare(ms1 :: AbstractVector, ms2 :: AbstractVector)
         @test length(ms1) == length(ms2)
