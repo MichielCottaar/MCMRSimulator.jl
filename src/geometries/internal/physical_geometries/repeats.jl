@@ -11,6 +11,7 @@ import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: has_equivalent_wrapper
 import ..PhysicalGeometries: rewrap
 import ..PhysicalGeometries: simplify
+import ..PhysicalGeometries: finalise!
 import ...Properties: GeometryProperties
 import ..Groups
 import ...InsideViews: child_view
@@ -39,6 +40,8 @@ struct Repeat{N, P<:PhysicalGeometry{N}} <: Groups.GroupGeometry{N, Shift{N, P}}
 end
 
 child_geometry(repeat::Repeat) = repeat.geometry
+
+finalise!(repeat::Repeat) = finalise!(child_geometry(repeat))
 
 has_equivalent_wrapper(first::Repeat{N}, second::Repeat{N}) where {N} =
     first.repeats == second.repeats

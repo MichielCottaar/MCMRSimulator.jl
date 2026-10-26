@@ -11,7 +11,7 @@ import ...InternalBoundingBoxes
 import ...Properties: GeometryLeafProperties
 import ...Properties: all_property_values
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result
-import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
+import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling, finalise!
 import Distributions: Poisson
 import Random: rand
 
@@ -37,6 +37,7 @@ child_type(::Type{<:BaseObstruction}) =
 
 inside_indices_eltype(::Type{<:BaseObstruction}) = Tuple{}
 intersection_type(::Type{<:BaseObstruction}) = Tuple{}
+finalise!(::BaseObstruction) = nothing
 
 function bound_intersection_type(::BaseObstruction, density)
     any(!iszero, all_property_values(density)) ? Union{Tuple{}} : Union{}

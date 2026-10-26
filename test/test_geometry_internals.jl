@@ -487,6 +487,26 @@ end
 
 @testset "simplify geometry" begin
     pass = Val(:extract_common_wrapper)
+
+    struct FinaliseProbe <: BaseObstructions.BaseObstruction{3}
+        order::Vector{Symbol}
+        label::Symbol
+    end
+    GI.PhysicalGeometries.finalise!(probe::FinaliseProbe) = push!(probe.order, probe.label)
+
+    finalise_order = Symbol[]
+    finalise_tree = Shift(IgnoreOverlapping(GeometryTuple((
+        FinaliseProbe(finalise_order, :first),
+        GeometryVector([
+            FinaliseProbe(finalise_order, :second),
+            FinaliseProbe(finalise_order, :third),
+        ]),
+    ))), zeros(3))
+    @test simplify(finalise_tree, pass) === finalise_tree
+    @test isempty(finalise_order)
+    @test simplify(finalise_tree) === finalise_tree
+    @test finalise_order == [:first, :second, :third]
+
     periods = SVector(6., 6., 6.)
     a = Shift(BaseObstructions.Sphere(0.3), [-1., 0., 0.])
     b = Shift(BaseObstructions.Sphere(0.4), [1., 0., 0.])

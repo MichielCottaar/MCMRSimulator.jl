@@ -15,7 +15,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_singl
     projected_surface_area, normal_second_moment, inverse_mean_free_path, _geometry_mesh,
     distance_to_surface, size_scale, SurfaceEstimate, is_liminal
 import ..PhysicalGeometries: leaf_bounding_boxes
-import ..PhysicalGeometries: simplify, rewrap
+import ..PhysicalGeometries: simplify, rewrap, finalise!
 import ..Groups: GeometryTuple
 import ..Groups: inside_indices_for_any_type, _append_type
 import ..Transformations: Shift
@@ -426,6 +426,11 @@ function simplify(geometry::FixedLiminalGeometry, pass::Val)
     children = map(child -> simplify(child, pass), geometry.geometries)
     all(index -> children[index] === geometry.geometries[index], eachindex(children)) && return geometry
     rewrap(geometry, children)
+end
+
+function finalise!(geometry::FixedLiminalGeometry)
+    foreach(finalise!, geometry.geometries)
+    nothing
 end
 
 function rewrap(geometry::FixedLiminalGeometry, children::AbstractVector{<:PhysicalGeometry{3}})

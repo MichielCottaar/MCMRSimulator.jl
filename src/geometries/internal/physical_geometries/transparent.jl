@@ -7,7 +7,7 @@ import ..PhysicalGeometries: _inside_sampling_proposals
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: distance_to_surface
 import ..PhysicalGeometries: simplify, rewrap, rewrap_extracted_wrapper, has_equivalent_wrapper
-import ..PhysicalGeometries: child_geometry
+import ..PhysicalGeometries: child_geometry, finalise!
 import ...Properties: GeometryProperties
 import ...InsideViews: has_other
 
@@ -68,6 +68,8 @@ function SizeScaleOverride(geometry::P, size_scale::Real) where {N, P <: Physica
 end
 
 child_geometry(wrapper::Transparent) = wrapper.geometry
+
+finalise!(wrapper::Transparent) = finalise!(child_geometry(wrapper))
 
 function simplify(wrapper::Transparent, pass::Val)
     geometry = simplify(child_geometry(wrapper), pass)

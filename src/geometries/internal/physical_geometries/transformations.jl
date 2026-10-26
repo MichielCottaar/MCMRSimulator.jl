@@ -10,7 +10,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, fi
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result, _translate_native
 import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
 import ..PhysicalGeometries: leaf_bounding_boxes
-import ..PhysicalGeometries: simplify, rewrap, has_equivalent_wrapper, child_geometry
+import ..PhysicalGeometries: simplify, rewrap, has_equivalent_wrapper, child_geometry, finalise!
 import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
 import ...Properties: GeometryProperties
 
@@ -27,6 +27,8 @@ parent coordinate system.
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
 
 child_geometry(transformation::Transformation) = transformation.geometry
+
+finalise!(transformation::Transformation) = finalise!(child_geometry(transformation))
 
 function simplify(wrapper::Transformation, pass::Val)
     geometry = simplify(child_geometry(wrapper), pass)

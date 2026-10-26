@@ -8,7 +8,7 @@ import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_s
 import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: has_equivalent_wrapper
-import ..PhysicalGeometries: rewrap, rewrap_extracted_wrapper, child_geometry
+import ..PhysicalGeometries: rewrap, rewrap_extracted_wrapper, child_geometry, finalise!
 import ..PhysicalGeometries: simplify
 import ...Properties: GeometryProperties, GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 import ...Properties: all_property_values
@@ -203,6 +203,11 @@ end
 rewrap(::GeometryVector, children::AbstractVector{<:PhysicalGeometry}) = GeometryVector(children)
 rewrap(::GeometryVectorBoundingBox, children::AbstractVector{<:PhysicalGeometry}) = GeometryVectorBoundingBox(children)
 rewrap(::GeometryTuple, children::Tuple) = GeometryTuple(children)
+
+function finalise!(group::Union{GeometryVector, GeometryVectorBoundingBox, GeometryTuple})
+    foreach(finalise!, group_geometries(group))
+    nothing
+end
 
 # Return the rebuilt node, or the original node when child changes are rejected.
 function _simplify_children(group::Union{GeometryVector, GeometryVectorBoundingBox}, pass::Val)

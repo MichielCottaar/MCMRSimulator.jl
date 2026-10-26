@@ -90,10 +90,16 @@ the original representation. Property paths retain their original ordering.
 """
 function simplify end
 
+"""Finalise a geometry after simplification."""
+function finalise! end
+
 function simplify(geometry::PhysicalGeometry)
     while true
         simplified = simplify(geometry, Val(:extract_common_wrapper))
-        simplified === geometry && return geometry
+        if simplified === geometry
+            finalise!(geometry)
+            return geometry
+        end
         geometry = simplified
     end
 end
