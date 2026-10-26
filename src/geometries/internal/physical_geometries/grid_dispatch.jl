@@ -3,17 +3,20 @@ module GridDispatch
 import StaticArrays: SVector
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
+import ..PhysicalGeometries: finalise!
 
 struct IntersectionGrid{N}
     bounding_box::InternalBoundingBoxes.InternalBoundingBox{N}
     grid_bounding_box::InternalBoundingBoxes.InternalBoundingBox{N}
     inv_resolution::SVector{N, Float64}
+    dimensions::SVector{N, Int}
+    number_of_children::Int
     indices::Array{Vector{Int}, N}
 end
 
 """Iterate over grid child indices in ray order."""
-struct GridIterator{N, G, R}
-    grid::G
+struct GridIterator{N, I, R}
+    indices::I
     ray::R
     grid_size::SVector{N, Int}
 end
@@ -23,16 +26,17 @@ function GridIterator(
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
 ) where {N}
-    grid_size = SVector{N, Int}(size(grid.indices))
-    iszero(destination - start) && return GridIterator{N, typeof(grid), Nothing}(grid, nothing, grid_size)
+    indices = _require_grid_indices(grid)
+    grid_size = grid.dimensions
+    iszero(destination - start) && return GridIterator{N, typeof(indices), Nothing}(indices, nothing, grid_size)
     InternalBoundingBoxes.does_intersect(grid.grid_bounding_box, start, destination) ||
-        return GridIterator{N, typeof(grid), Nothing}(grid, nothing, grid_size)
+        return GridIterator{N, typeof(indices), Nothing}(indices, nothing, grid_size)
 
     lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)
     scaled_start = (start - lower_bound) .* grid.inv_resolution
     scaled_destination = (destination - lower_bound) .* grid.inv_resolution
-    GridIterator{N, typeof(grid), typeof(ray_grid_intersections(scaled_start, scaled_destination))}(
-        grid,
+    GridIterator{N, typeof(indices), typeof(ray_grid_intersections(scaled_start, scaled_destination))}(
+        indices,
         ray_grid_intersections(scaled_start, scaled_destination),
         grid_size,
     )
@@ -69,9 +73,16 @@ function Base.iterate(iterator::GridIterator, state=nothing)
         end
 
         entered_grid = true
-        children = iterator.grid.indices[voxel .+ 1...]
+        children = iterator.indices[voxel .+ 1...]
         child_position = 1
     end
+end
+
+function _require_grid_indices(grid::IntersectionGrid)
+    isassigned(grid.indices, lastindex(grid.indices)) || throw(ArgumentError(
+        "IntersectionGrid indices are delayed; call finalise!(grid, bounding_boxes) before traversal",
+    ))
+    grid.indices
 end
 
 function _grid_bounding_box(box::InternalBoundingBoxes.InternalBoundingBox{N}, minimum_thickness) where {N}
@@ -85,10 +96,12 @@ function _grid_bounding_box(box::InternalBoundingBoxes.InternalBoundingBox{N}, m
     )
 end
 
+"""Build an intersection grid; `delayed=true` defers its per-cell indices."""
 function IntersectionGrid(
     bounding_boxes::AbstractVector{<:InternalBoundingBoxes.InternalBoundingBox{N}};
     resolution=nothing,
     bounding_box=nothing,
+    delayed::Bool=false,
 ) where {N}
     isempty(bounding_boxes) && throw(ArgumentError("cannot construct a grid for an empty bounding-box vector"))
     bounding_box = if isnothing(bounding_box)
@@ -113,12 +126,34 @@ function IntersectionGrid(
     dimensions = isinf(resolution) ? SVector{N, Int}(ones(Int, N)) :
         max.(SVector{N, Int}(ceil.(Int, extent ./ resolution)), 1)
     cell_size = extent ./ dimensions
+    indices = delayed ? Array{Vector{Int}, N}(undef, Tuple(dimensions)) :
+        InternalBoundingBoxes.grid_indices(grid_bounding_box, dimensions, bounding_boxes)
     IntersectionGrid{N}(
         bounding_box,
         grid_bounding_box,
         SVector{N, Float64}(1 ./ cell_size),
-        InternalBoundingBoxes.grid_indices(grid_bounding_box, dimensions, bounding_boxes),
+        dimensions,
+        length(bounding_boxes),
+        indices,
     )
+end
+
+"""Populate the per-cell candidate indices of a delayed intersection grid."""
+function finalise!(
+    grid::IntersectionGrid{N},
+    bounding_boxes::AbstractVector{<:InternalBoundingBoxes.InternalBoundingBox{N}},
+) where {N}
+    length(bounding_boxes) == grid.number_of_children || throw(ArgumentError(
+        "cannot finalise IntersectionGrid with a different number of bounding boxes",
+    ))
+    isassigned(grid.indices, lastindex(grid.indices)) && return grid
+    indices = InternalBoundingBoxes.grid_indices(
+        grid.grid_bounding_box, grid.dimensions, bounding_boxes,
+    )
+    for index in eachindex(indices)
+        grid.indices[index] = indices[index]
+    end
+    grid
 end
 
 end

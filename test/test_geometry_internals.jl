@@ -77,6 +77,25 @@ end
     @test grid.indices[1, 1, 1] == [1]
     @test grid.indices[2, 1, 1] == [2]
 
+    delayed_grid = IntersectionGrid(
+        child_boxes; resolution=2.0, bounding_box=grid_box, delayed=true,
+    )
+    @test !isassigned(delayed_grid.indices, firstindex(delayed_grid.indices))
+    @test delayed_grid.dimensions == SVector(2, 1, 1)
+    start, destination = SVector(-2., 0., 0.), SVector(2., 0., 0.)
+    @test_throws ArgumentError GI.PhysicalGeometries.GridDispatch.GridIterator(
+        delayed_grid, start, destination,
+    )
+    @test GI.PhysicalGeometries.finalise!(delayed_grid, child_boxes) === delayed_grid
+    @test delayed_grid.indices == grid.indices
+    @test collect(GI.PhysicalGeometries.GridDispatch.GridIterator(
+        delayed_grid, start, destination,
+    )) == collect(GI.PhysicalGeometries.GridDispatch.GridIterator(
+        grid, start, destination,
+    ))
+    @test GI.PhysicalGeometries.finalise!(delayed_grid, child_boxes) === delayed_grid
+    @test_throws ArgumentError GI.PhysicalGeometries.finalise!(delayed_grid, child_boxes[1:1])
+
     planar_box = BoundingBoxes.InternalBoundingBox([1.0, 1.0, 0.0])
     planar_grid = IntersectionGrid([planar_box]; resolution=1.0)
     @test planar_grid.bounding_box == planar_box
