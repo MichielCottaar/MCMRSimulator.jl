@@ -45,11 +45,31 @@ end
 Base.IteratorSize(::Type{<:GridIterator}) = Base.SizeUnknown()
 Base.eltype(::Type{<:GridIterator}) = Tuple{Int, Float64}
 
-function Base.iterate(iterator::GridIterator, state=nothing)
-    isnothing(iterator.ray) && return nothing
+Base.iterate(iterator::GridIterator{N, I, Nothing}) where {N, I} = nothing
 
-    ray_state, children, child_position, entered_grid, checked, entry_time = isnothing(state) ?
-        (nothing, Int[], 1, false, Set{Int}(), 0.0) : state
+function Base.iterate(iterator::GridIterator)
+    state = _first_grid_state(iterator)
+    isnothing(state) && return nothing
+    _iterate_grid_candidates(iterator, state)
+end
+
+Base.iterate(iterator::GridIterator, state) = _iterate_grid_candidates(iterator, state)
+
+function _first_grid_state(iterator::GridIterator)
+    next_voxel = iterate(iterator.ray)
+    while !isnothing(next_voxel)
+        ((voxel, entry_time, _, _, _), ray_state) = next_voxel
+        if !any(voxel .< 0) && !any(voxel .>= iterator.grid_size)
+            children = iterator.indices[voxel .+ 1...]
+            return (ray_state, children, 1, true, Set{Int}(), entry_time)
+        end
+        next_voxel = iterate(iterator.ray, ray_state)
+    end
+    nothing
+end
+
+function _iterate_grid_candidates(iterator::GridIterator, state)
+    ray_state, children, child_position, entered_grid, checked, entry_time = state
 
     while true
         while child_position <= length(children)
