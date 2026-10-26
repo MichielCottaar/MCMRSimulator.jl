@@ -38,7 +38,7 @@
     subset_spins = [mr.Spin(position=[0., 0., 0.]),
                     mr.Spin(position=[0., 0., 0.], status=:stuck),
                     mr.Spin(position=[2., 0., 0.], status=:other)]
-    results = mr.readout(subset_spins, simulation, [0., 1.];
+    results = @test_logs (:warn, r"(?s)There were 2 invalid spins.*1 spins with status :other:.*position=.*1 spins with status :stuck:.*position=") mr.readout(subset_spins, simulation, [0., 1.];
         subset=[mr.Subset(), mr.Subset(inside=true), mr.Subset(inside=false)])
     for time in 1:2
         @test results[time, 1].nspins == 1
@@ -47,6 +47,23 @@
         @test results[time, 3].nspins == 0
         @test results[time, 3].invalid_spins == Dict(:other => 1)
     end
+    @test_logs mr.readout(subset_spins[1:1], simulation, 0.)
+
+    grid = mr.Evolve.GridAccumulator(simulation, 0.; readouts=0.)
+    for _ in 1:2
+        batch = mr.Simulations._to_snapshot(subset_spins, simulation, nothing)
+        @test_logs mr.Evolve.run_readout!(batch, simulation, grid; readouts=0.)
+    end
+    @test_logs (:warn, r"(?s)There were 4 invalid spins.*2 spins with status :other:.*2 spins with status :stuck:") mr.Evolve.fix_accumulator(grid)
+
+    many_spins = [mr.Spin(status=:stuck) for _ in 1:100]
+    expected = "There were 100 invalid spins.\n- 100 spins with status :stuck: " *
+        repr(mr.Spin[many_spins...]; context=:limit => true) *
+        "\nSpins with status :stuck bounced 1000000 times in a single step. This is likely caused by overlapping geometries at the positions where the spins got stuck, which is not robustly supported at present."
+    @test_logs (:warn, expected) mr.Evolve.warn_invalid_spins(many_spins)
+    other_spins = mr.Spin[mr.Spin(status=:other)]
+    @test_logs (:warn, "There were 1 invalid spins.\n- 1 spins with status :other: " *
+        repr(other_spins; context=:limit => true)) mr.Evolve.warn_invalid_spins(other_spins)
 end
 
 @testset "Adaptive readout" begin

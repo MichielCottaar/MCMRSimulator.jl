@@ -122,6 +122,7 @@ struct GridAccumulator{T<:SingleAccumulator, S<:Simulation}
     flatten :: SVector{4, Bool}
     last_readout :: Tuple{Int, Int, Int}
     first_TR :: Int
+    invalid_spins :: Vector{Spin}
 end
 
 function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatten=false, subset=Subset(), return_snapshot=false, readouts=nothing, nTR=nothing, kwargs...) where {N}
@@ -163,7 +164,8 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
             simulation,
             to_flatten,
             (1, argmax(use_readouts), 1),
-            0
+            0,
+            Spin[],
         )
     end
 
@@ -243,6 +245,7 @@ function GridAccumulator(simulation::Simulation{N}, start_time::Number; noflatte
         to_flatten,
         last_readout,
         first_TR,
+        Spin[],
     )
 end
 
@@ -356,6 +359,7 @@ fix_accumulator(::FillerAccumulator) = nothing
 Return the accumulated readout results as an array.
 """
 function fix_accumulator(acc::GridAccumulator; min_spins=0)
+    warn_invalid_spins(acc.invalid_spins)
     full_grid = map(acc.grid) do cell
         if cell isa TotalSignalAccumulator
             fix_accumulator(cell; min_spins=min_spins)
@@ -367,6 +371,23 @@ function fix_accumulator(acc::GridAccumulator; min_spins=0)
         flatten ? 1 : (:)
     end
     return full_grid[indices...]
+end
+
+function warn_invalid_spins(spins::AbstractVector{<:Spin})
+    isempty(spins) && return
+    groups = Dict{Symbol, Vector{Spin}}()
+    for spin in spins
+        push!(get!(() -> Spin[], groups, spin.status), spin)
+    end
+    lines = ["There were $(length(spins)) invalid spins."]
+    for status in sort!(collect(keys(groups)))
+        group = groups[status]
+        push!(lines, "- $(length(group)) spins with status $(repr(status)): $(repr(group; context=:limit => true))")
+    end
+    if haskey(groups, :stuck)
+        push!(lines, "Spins with status :stuck bounced 1000000 times in a single step. This is likely caused by overlapping geometries at the positions where the spins got stuck, which is not robustly supported at present.")
+    end
+    @warn join(lines, "\n")
 end
 
 function fix_statistics(acc::GridAccumulator, target_snr::Float64, min_spins::Int)
@@ -554,6 +575,7 @@ function run_readout!(snapshot::Snapshot{N}, simulation::Simulation{N}, accumula
     B0s = map(B0, simulation.sequences)
     for part in parts(simulation.sequences, snapshot.time, simulation.timestep; kwargs...)
         if process_sequence_step!(snapshot.spins, simulation, part, B0s, accumulator)
+            append!(accumulator.invalid_spins, filter(spin -> spin.status != :valid, snapshot.spins))
             return
         end
     end
@@ -755,7 +777,6 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
     end
     if !found_solution
         spin.status = :stuck
-        @warn "Spin bounced 1000000 times in a single step and will not be updated further. This likely reflects that two obstructions in the geometry overlap perfectly, which is not robustly supported at present." spin=spin position=spin.position
     end
     if ~isnothing(test_new_pos)
         push!(all_positions, spin.position)
