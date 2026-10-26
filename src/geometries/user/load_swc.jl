@@ -107,7 +107,7 @@ end
 
 
 """
-    read_swc(swc_file; swc_as_spheres=false, grid_resolution=Inf, kwargs...)
+    read_swc(swc_file; swc_as_spheres=false, kwargs...)
 
 Read an SWC file and return a `FiniteCylinders` object with the node positions,
 radii, and parent connections. Set `swc_as_spheres=true` to load overlapping
@@ -117,13 +117,8 @@ See [`Spheres`](@ref) for the available keyword arguments.
 
 By default, each node is connected to its parent. Set `swc_as_spheres=true` to
 disable those connections and load only spherical endpoints.
-
-By default geometries generated from SWC files do not rely on a grid to select collision candidates.
-For very large SWC files or geometries containing many SWC cells in a non-liminal geometry, 
-it might be computationally more efficient to include a grid.
-Enable the grid by setting `grid_resolution=nothing`.
 """
-function read_swc(swc_file::SWCFile; swc_as_spheres=false, grid_resolution=Inf, kwargs...)
+function read_swc(swc_file::SWCFile; swc_as_spheres=false, kwargs...)
     radii = [node.radius for node in swc_file.nodes]
     positions = [node.position for node in swc_file.nodes]
     if swc_as_spheres
@@ -140,7 +135,6 @@ function read_swc(swc_file::SWCFile; swc_as_spheres=false, grid_resolution=Inf, 
             radius=radii,
             connected_to=connected_to,
             use_spherical_endpoint=true,
-            grid_resolution=grid_resolution,
         ),
         kwargs,
     )
