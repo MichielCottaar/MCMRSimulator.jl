@@ -1,4 +1,13 @@
 @testset "test_evolve.jl" begin
+    @testset "Spin status is retained when copied" begin
+        spin = mr.Spin(status=:stuck)
+        @test mr.Spin().status == :valid
+        @test deepcopy(spin).status == :stuck
+        @test mr.Spin(spin, 2).status == :stuck
+        @test mr.get_sequence(mr.Spin(spin, 2), 1).status == :stuck
+        @test deepcopy(mr.Snapshot([spin])).spins[1].status == :stuck
+    end
+
     @testset "Empty environment and sequence" begin
         empty_sequence = build_sequence(2.8)
         simulation = mr.Simulation(empty_sequence)

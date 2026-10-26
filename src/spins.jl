@@ -123,21 +123,25 @@ mutable struct Spin{N, ST<:AbstractVector{SpinOrientation}, R<:Union{Nothing, Re
     reflection :: R
     rng :: FixedXoshiro
     isinside :: I
+    status :: Symbol
 end
+
+Spin{N, ST, R, I}(position, orientations, reflection, rng, isinside) where {N, ST, R, I} =
+    Spin{N, ST, R, I}(position, orientations, reflection, rng, isinside, :valid)
 
 static_vector_type(N) = N < 50 ? SVector{N} : Vector
 
-function Spin(position::AbstractArray{<:Real}, orientations::AbstractVector{SpinOrientation}, reflection=nothing, rng::FixedXoshiro=FixedXoshiro(), isinside=nothing)
+function Spin(position::AbstractArray{<:Real}, orientations::AbstractVector{SpinOrientation}, reflection=nothing, rng::FixedXoshiro=FixedXoshiro(), isinside=nothing, status::Symbol=:valid)
     st = static_vector_type(length(orientations)){SpinOrientation}
-    Spin{length(orientations), st, Union{Nothing, Reflection}, typeof(isinside)}(SVector{3, Float64}(position), st(SpinOrientation.(orientations)), reflection, rng, isinside)
+    Spin{length(orientations), st, Union{Nothing, Reflection}, typeof(isinside)}(SVector{3, Float64}(position), st(SpinOrientation.(orientations)), reflection, rng, isinside, status)
 end
 
-function Spin(;nsequences=1, position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., reflection=nothing, rng=FixedXoshiro(), isinside=nothing)
-    base = Spin(SVector{3, Float64}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), reflection, rng, isinside)
+function Spin(;nsequences=1, position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., reflection=nothing, rng=FixedXoshiro(), isinside=nothing, status=:valid)
+    base = Spin(SVector{3, Float64}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), reflection, rng, isinside, status)
     return nsequences == 1 ? base : Spin(base, nsequences)
 end
-Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.reflection, reference_spin.rng, deepcopy(reference_spin.isinside))
-Spin(reference_spin::Spin{0}, nsequences::Int) = Spin(reference_spin.position, repeat([SpinOrientation()], nsequences), reference_spin.reflection, reference_spin.rng, deepcopy(reference_spin.isinside))
+Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.reflection, reference_spin.rng, deepcopy(reference_spin.isinside), reference_spin.status)
+Spin(reference_spin::Spin{0}, nsequences::Int) = Spin(reference_spin.position, repeat([SpinOrientation()], nsequences), reference_spin.reflection, reference_spin.rng, deepcopy(reference_spin.isinside), reference_spin.status)
 
 show_helper(io::IO, spin::Spin{0}) = print(io, "with no magnetisation information)")
 show_helper(io::IO, spin::Spin{1}) = print(io, "with $(repr(spin.orientations[1], context=io)))")
@@ -146,7 +150,7 @@ function Base.show(io::IO, spin::Spin)
     if stuck(spin)
         print(io, "stuck ")
     end
-    print(io, "Spin(position=$(spin.position) ")
+    print(io, "Spin(status=$(spin.status), position=$(spin.position) ")
     show_helper(io, spin)
 end
 
@@ -154,7 +158,7 @@ Base.deepcopy_internal(spin::Spin{N, ST, R, I}, stackdict::IdDict) where {N, ST,
     spin.position, map(spin.orientations) do orient 
         Base.deepcopy_internal(orient, stackdict)
     end, Base.deepcopy_internal(spin.reflection, stackdict), spin.rng,
-    Base.deepcopy_internal(spin.isinside, stackdict)
+    Base.deepcopy_internal(spin.isinside, stackdict), spin.status
 )
 
 function Base.deepcopy_internal(spins::Vector{<:Spin}, stackdict::IdDict)
@@ -284,6 +288,7 @@ function get_sequence(spin::Spin{N, ST, R, I}, index) where {N, ST, R, I}
         spin.reflection,
         spin.rng,
         deepcopy(spin.isinside),
+        spin.status,
     )
 end
 
@@ -396,6 +401,7 @@ function _expand_sample(sample::Spin{0}, geometry::FixedGeometry, nsequences::In
         sample.reflection,
         sample.rng,
         sample.isinside,
+        sample.status,
     )
 end
 

@@ -598,6 +598,8 @@ function evolve(spins, simulation::Simulation{N}, new_time; TR=nothing, bounding
             ]),
             res[1].spins[index].reflection,
             res[1].spins[index].rng,
+            deepcopy(res[1].spins[index].isinside),
+            res[1].spins[index].status,
         )
         for index in 1:length(snapshot.spins)
     ]
