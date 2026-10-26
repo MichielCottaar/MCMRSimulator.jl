@@ -5,7 +5,7 @@ import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, InternalBoundingBox, leaf_bounding_boxes
 import ..PhysicalGeometries: intersection_type, inside_indices_eltype, find_intersection
 import ..PhysicalGeometries: inside_indices, isinside_single, rewrap, has_equivalent_wrapper
-import ..PhysicalGeometries: _volume_inside_indices, to_inside_index, finalise!
+import ..PhysicalGeometries: to_inside_index, finalise!
 import ..Transparents: Transparent
 import ..GridDispatch: IntersectionGrid, GridIterator
 import ...InternalBoundingBoxes
@@ -61,23 +61,53 @@ end
 
 function _fully_inside_indices(geometry, grid::IntersectionGrid{N}, collision_indices) where {N}
     inside_type = inside_indices_eltype(typeof(geometry))
-    result = Array{Vector{inside_type}, N}(undef, size(grid.indices))
+    result = Array{Vector{inside_type}, N}(undef, Tuple(grid.dimensions))
+    for voxel in CartesianIndices(result)
+        result[voxel] = inside_type[]
+    end
+
+    inside_boxes = InternalBoundingBox{N}[]
+    inside_leaf_indices = Vector{inside_type}()
+    _flatten_inside_bounding_boxes!(
+        inside_boxes, inside_leaf_indices, leaf_bounding_boxes(geometry; inside=true), (),
+    )
+    isempty(inside_boxes) && return result
+
+    inside_grid_indices = InternalBoundingBoxes.grid_indices(
+        grid.grid_bounding_box, grid.dimensions, inside_boxes,
+    )
+    collision_inside_indices = [
+        to_inside_index(geometry, collision_index) for collision_index in collision_indices
+    ]
     lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)
     cell_size = 1 ./ grid.inv_resolution
     for voxel in CartesianIndices(result)
+        isempty(inside_grid_indices[voxel]) && continue
         centre = lower_bound .+ (SVector{N, Float64}(Tuple(voxel)) .- 0.5) .* cell_size
-        inside_at_centre = _volume_inside_indices(geometry, centre)
-        collision_inside = Set{inside_type}()
-        for collision_index in grid.indices[voxel]
-            inside_index = to_inside_index(geometry, collision_indices[collision_index])
-            isnothing(inside_index) || push!(collision_inside, inside_index)
+        for inside_leaf_index in inside_grid_indices[voxel]
+            inside_index = inside_leaf_indices[inside_leaf_index]
+            any(
+                collision_index -> collision_inside_indices[collision_index] == inside_index,
+                grid.indices[voxel],
+            ) && continue
+            isinside_single(geometry, centre; candidate=inside_index) &&
+                push!(result[voxel], inside_index)
         end
-        result[voxel] = inside_type[
-            inside_index for inside_index in inside_at_centre
-            if !(inside_index in collision_inside)
-        ]
     end
     result
+end
+
+function _flatten_inside_bounding_boxes!(boxes, indices, box::InternalBoundingBox, path)
+    push!(boxes, box)
+    push!(indices, path)
+    nothing
+end
+
+function _flatten_inside_bounding_boxes!(boxes, indices, children::Union{Tuple, AbstractVector}, path)
+    for (index, child) in enumerate(children)
+        _flatten_inside_bounding_boxes!(boxes, indices, child, (path..., index))
+    end
+    nothing
 end
 
 rewrap(wrapper::Grid{N}, geometry::PhysicalGeometry{N}) where {N} =

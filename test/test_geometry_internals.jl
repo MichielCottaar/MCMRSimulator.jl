@@ -1279,10 +1279,11 @@ end
     GI.PhysicalGeometries.has_inside(::Type{GridInsideProbe}) = true
     GI.PhysicalGeometries.has_single_inside(::Type{GridInsideProbe}) = true
     GI.PhysicalGeometries.intersection_type(::Type{GridInsideProbe}) = Tuple{Int}
-    GI.PhysicalGeometries.leaf_bounding_boxes(::GridInsideProbe) = (
-        BoundingBoxes.InternalBoundingBox{3}(1.),
-        BoundingBoxes.InternalBoundingBox{3}(1.),
-    )
+    BoundingBoxes.InternalBoundingBox(::GridInsideProbe) = BoundingBoxes.InternalBoundingBox{3}(1.)
+    function GI.PhysicalGeometries.leaf_bounding_boxes(::GridInsideProbe; inside=false)
+        box = BoundingBoxes.InternalBoundingBox{3}(1.)
+        inside ? box : (box, box)
+    end
     function GI.PhysicalGeometries.isinside_single(
         probe::GridInsideProbe, position::SVector{3, Float64}, previous=nothing; kwargs...,
     )
@@ -1291,6 +1292,7 @@ end
     end
     inside_probe = GridInsideProbe(Ref(0))
     inside_probe_grid = finalised_grid(inside_probe; resolution=0.5)
+    @test inside_probe.calls[] == 0
     inside_probe.calls[] = 0
     @test inside_indices(inside_probe_grid, SVector(0., 0., 0.)) == [()]
     @test inside_probe.calls[] == 1
