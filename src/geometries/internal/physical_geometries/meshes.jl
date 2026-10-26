@@ -29,6 +29,7 @@ struct Mesh <: Groups.GeometryVectorLike{3, FullTriangle}
     inside_mask::BitArray{3}
 end
 
+# Mesh triangles are exposed through a generated view, not stored child geometries.
 finalise!(::Mesh) = nothing
 
 struct MeshGeometryView
