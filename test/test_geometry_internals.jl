@@ -2950,6 +2950,17 @@ end
         SVector(5.0, 0.0, 0.0),
     )
     @test grid_hit == regular_grid_hit
+    same_voxel_start, same_voxel_destination = SVector(2.1, 0.0, 0.0), SVector(2.9, 0.0, 0.0)
+    @test GI.PhysicalGeometries.Grids._grid_coordinate(
+        grid_spheres.grid, same_voxel_start,
+    ) == GI.PhysicalGeometries.Grids._grid_coordinate(
+        grid_spheres.grid, same_voxel_destination,
+    )
+    @test GI.PhysicalGeometries.find_intersection(
+        grid_spheres, same_voxel_start, same_voxel_destination,
+    ) == GI.PhysicalGeometries.find_intersection(
+        grid_spheres.geometry, same_voxel_start, same_voxel_destination,
+    )
     @test_throws ArgumentError GeometryVectorBoundingBox(
         [sphere],
         BoundingBoxes.InternalBoundingBox{3}[],

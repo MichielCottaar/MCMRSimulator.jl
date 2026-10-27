@@ -198,8 +198,24 @@ function find_intersection(
     candidate::Union{Nothing, Tuple}=nothing,
 ) where {N}
     isnothing(candidate) || throw(ArgumentError("Grid requires an unrestricted incoming candidate"))
+    _require_finalised(geometry.grid)
+    start_coordinate = _grid_coordinate(geometry.grid, start)
+    destination_coordinate = _grid_coordinate(geometry.grid, destination)
+    if !isnothing(start_coordinate) && start_coordinate == destination_coordinate
+        return _find_intersection_candidates(
+            geometry, start, destination, previous_hit, inside,
+            ((index, 0.0) for index in geometry.grid.indices[start_coordinate...]),
+        )
+    end
+    _find_intersection_candidates(
+        geometry, start, destination, previous_hit, inside,
+        GridIterator(geometry.grid, start, destination),
+    )
+end
+
+function _find_intersection_candidates(geometry, start, destination, previous_hit, inside, candidates)
     best = nothing
-    for (index, entry_time) in GridIterator(geometry.grid, start, destination)
+    for (index, entry_time) in candidates
         !isnothing(best) && best[end] < entry_time && break
         hit = find_intersection(
             geometry.geometry, start, destination, previous_hit, inside, geometry.indices[index],
