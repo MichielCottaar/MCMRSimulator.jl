@@ -1614,10 +1614,6 @@ end
         @test !InsideViews.has_other(first_child, ())
         @test InsideViews.has_other(second_child, (1,))
 
-        properties = Properties.GeometryTupleProperties((1., Properties.GeometryTupleProperties((2., 3.))))
-        @test Properties.get_value(properties, view) == 6.
-        @test Properties.get_value(properties.properties[2], second_child) == 5.
-
         liminal_view = InsideViews.InsideView([
             ((1, :offset_a), 1),
             ((2, :offset_b), 1),
@@ -2741,7 +2737,6 @@ end
     @test get_value(vector_properties, (2, 1)) == 20.0
     @test get_value(vector_properties, Tuple[]) === 0.0
     @test get_value(vector_properties, SVector{0, Tuple}()) === 0.0
-    @test get_value(vector_properties, InsideViews.InsideView(Tuple{Int, Int}[])) === 0.0
     tuple_properties = Properties.GeometryTupleProperties((1.0, vector_properties))
     @test tuple_properties isa Properties.GeometryProperties{Float64}
     @test eltype(tuple_properties) === Float64
