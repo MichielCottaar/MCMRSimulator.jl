@@ -2756,14 +2756,14 @@ end
     ]) == 13.0
     @test Properties.sum_values(aggregation_properties, Tuple[]) === 0.0
     @test Properties.sum_values(aggregation_properties, [
-        (2, 1),
         (1, 1),
-        (2, 2),
         (1, 1),
         (1, 2),
+        (2, 1),
+        (2, 2),
     ]) == 13.0
     equal_properties = Properties.GeometryVectorProperties([10.0, 10.0])
-    @test Properties.sum_values(equal_properties, (index for index in [(2,), (1,), (2,)])) == 20.0
+    @test Properties.sum_values(equal_properties, (index for index in [(1,), (2,), (2,)])) == 20.0
     @test Properties.sum_values(leaf_properties, [(2,), (1,)]) == 3.0
     @test_throws ArgumentError get_value(vector_properties, ())
     @test_throws BoundsError get_value(vector_properties, (3,))

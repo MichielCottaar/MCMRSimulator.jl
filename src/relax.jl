@@ -35,7 +35,7 @@ function relax!(spin::Spin{N}, new_pos::NewPosType, simulation::Simulation{N}, p
     previous = previous_hit(spin.reflection)
     inside = isnothing(spin.isinside) ?
         Internal.isinside(simulation.geometry, mean_pos, previous) :
-        Internal.IsInside(spin.isinside)
+        Internal.IsInside(spin.isinside, spin.property_indices)
     props = (
         R1 = simulation.properties.R1 + Internal.R1(simulation.geometry, inside, previous),
         R2 = simulation.properties.R2 + Internal.R2(simulation.geometry, inside, previous),

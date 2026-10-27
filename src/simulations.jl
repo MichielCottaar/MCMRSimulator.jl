@@ -5,7 +5,7 @@ module Simulations
 import StaticArrays: SVector, SizedVector
 import ..Geometries: ObstructionGroup, fix
 import ..Geometries: BoundingBox, BoundingBoxNotSupported
-import ..Geometries.Internal: FixedGeometry, susceptibility_off_resonance, isinside, inside_cache_type
+import ..Geometries.Internal: FixedGeometry, susceptibility_off_resonance, isinside, inside_cache_type, sorted_property_indices
 import ..Reflections: previous_hit
 import ..Spins: Spin, Snapshot, SpinOrientation, static_vector_type, stuck, spin_type
 import ..Methods: get_time
@@ -179,6 +179,7 @@ function _constrain_snapshot(snapshot::Snapshot{N}, simulation::Simulation) wher
             spin.rng,
             inside,
             spin.status,
+            sorted_property_indices(simulation.geometry, inside),
         )
     end
     Snapshot(spins, snapshot.time)
@@ -228,7 +229,7 @@ susceptibility_off_resonance(simulation::Simulation, spin::Spin) =
         simulation,
         spin.position,
         stuck(spin) ? previous_hit(spin.reflection) : nothing,
-        isnothing(spin.isinside) ? nothing : Internal.IsInside(spin.isinside),
+        isnothing(spin.isinside) ? nothing : Internal.IsInside(spin.isinside, spin.property_indices),
     )
 susceptibility_off_resonance(
     simulation::Simulation,

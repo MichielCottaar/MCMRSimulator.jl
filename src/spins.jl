@@ -27,7 +27,8 @@ import ..Reflections: Reflection, has_intersection, has_hit, previous_hit, possi
 import ..Geometries.Internal:
     random_surface_positions, volume_sampling,
     FixedGeometry,
-    isinside, IsInside, inside_cache_type, R1, R2, off_resonance, susceptibility_off_resonance
+    isinside, IsInside, inside_cache_type, property_cache_type, sorted_property_indices,
+    R1, R2, off_resonance, susceptibility_off_resonance
 import ..Methods: get_time, norm_angle
 import ..Properties: GlobalProperties
 import ..Geometries: fix, fix_susceptibility
@@ -117,31 +118,32 @@ Create a new spin with the same position as `reference_spin` with the orientatio
 - [`orientation`](@ref) to get a (`nsequences`x3) matrix with the spin orientations in 3D space
 - [`position`](@ref) to get a length-3 vector with spin location
 """
-mutable struct Spin{N, ST<:AbstractVector{SpinOrientation}, R<:Union{Nothing, Reflection}, I<:Union{Nothing, AbstractVector}}
+mutable struct Spin{N, ST<:AbstractVector{SpinOrientation}, R<:Union{Nothing, Reflection}, I<:Union{Nothing, AbstractVector}, P<:Union{Nothing, AbstractVector}}
     position :: SVector{3, Float64}
     orientations :: ST
     reflection :: R
     rng :: FixedXoshiro
     isinside :: I
     status :: Symbol
+    property_indices :: P
 end
 
-Spin{N, ST, R, I}(position, orientations, reflection, rng, isinside) where {N, ST, R, I} =
-    Spin{N, ST, R, I}(position, orientations, reflection, rng, isinside, :valid)
+Spin{N, ST, R, I}(position, orientations, reflection, rng, isinside, status=:valid) where {N, ST, R, I} =
+    Spin{N, ST, R, I, Nothing}(position, orientations, reflection, rng, isinside, status, nothing)
 
 static_vector_type(N) = N < 50 ? SVector{N} : Vector
 
-function Spin(position::AbstractArray{<:Real}, orientations::AbstractVector{SpinOrientation}, reflection=nothing, rng::FixedXoshiro=FixedXoshiro(), isinside=nothing, status::Symbol=:valid)
+function Spin(position::AbstractArray{<:Real}, orientations::AbstractVector{SpinOrientation}, reflection=nothing, rng::FixedXoshiro=FixedXoshiro(), isinside=nothing, status::Symbol=:valid, property_indices=nothing)
     st = static_vector_type(length(orientations)){SpinOrientation}
-    Spin{length(orientations), st, Union{Nothing, Reflection}, typeof(isinside)}(SVector{3, Float64}(position), st(SpinOrientation.(orientations)), reflection, rng, isinside, status)
+    Spin{length(orientations), st, Union{Nothing, Reflection}, typeof(isinside), typeof(property_indices)}(SVector{3, Float64}(position), st(SpinOrientation.(orientations)), reflection, rng, isinside, status, property_indices)
 end
 
 function Spin(;nsequences=1, position=zero(SVector{3,Float64}), longitudinal=1., transverse=0., phase=0., reflection=nothing, rng=FixedXoshiro(), isinside=nothing, status=:valid)
     base = Spin(SVector{3, Float64}(position), SVector{1}(SpinOrientation(longitudinal, transverse, phase)), reflection, rng, isinside, status)
     return nsequences == 1 ? base : Spin(base, nsequences)
 end
-Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.reflection, reference_spin.rng, deepcopy(reference_spin.isinside), reference_spin.status)
-Spin(reference_spin::Spin{0}, nsequences::Int) = Spin(reference_spin.position, repeat([SpinOrientation()], nsequences), reference_spin.reflection, reference_spin.rng, deepcopy(reference_spin.isinside), reference_spin.status)
+Spin(reference_spin::Spin{1}, nsequences::Int) = Spin(reference_spin.position, repeat(reference_spin.orientations, nsequences), reference_spin.reflection, reference_spin.rng, deepcopy(reference_spin.isinside), reference_spin.status, deepcopy(reference_spin.property_indices))
+Spin(reference_spin::Spin{0}, nsequences::Int) = Spin(reference_spin.position, repeat([SpinOrientation()], nsequences), reference_spin.reflection, reference_spin.rng, deepcopy(reference_spin.isinside), reference_spin.status, deepcopy(reference_spin.property_indices))
 
 show_helper(io::IO, spin::Spin{0}) = print(io, "with no magnetisation information)")
 show_helper(io::IO, spin::Spin{1}) = print(io, "with $(repr(spin.orientations[1], context=io)))")
@@ -154,11 +156,12 @@ function Base.show(io::IO, spin::Spin)
     show_helper(io, spin)
 end
 
-Base.deepcopy_internal(spin::Spin{N, ST, R, I}, stackdict::IdDict) where {N, ST, R, I} = Spin{N, ST, R, I}(
+Base.deepcopy_internal(spin::Spin{N, ST, R, I, P}, stackdict::IdDict) where {N, ST, R, I, P} = Spin{N, ST, R, I, P}(
     spin.position, map(spin.orientations) do orient 
         Base.deepcopy_internal(orient, stackdict)
     end, Base.deepcopy_internal(spin.reflection, stackdict), spin.rng,
-    Base.deepcopy_internal(spin.isinside, stackdict), spin.status
+    Base.deepcopy_internal(spin.isinside, stackdict), spin.status,
+    Base.deepcopy_internal(spin.property_indices, stackdict)
 )
 
 function Base.deepcopy_internal(spins::Vector{<:Spin}, stackdict::IdDict)
@@ -281,14 +284,15 @@ end
 
 Extracts the spin orientation corresponding to a specific sequence, where the sequence index uses the order in which the sequences where provided in the `Simulation`.
 """
-function get_sequence(spin::Spin{N, ST, R, I}, index) where {N, ST, R, I}
-    Spin{1, SVector{1, SpinOrientation}, R, I}(
+function get_sequence(spin::Spin{N, ST, R, I, P}, index) where {N, ST, R, I, P}
+    Spin{1, SVector{1, SpinOrientation}, R, I, P}(
         spin.position,
         SVector{1}([spin.orientations[index]]),
         spin.reflection,
         spin.rng,
         deepcopy(spin.isinside),
         spin.status,
+        deepcopy(spin.property_indices),
     )
 end
 
@@ -364,6 +368,7 @@ function spin_type(geometry::FixedGeometry, nsequences::Integer=1)
         static_vector_type(nsequences){SpinOrientation},
         possible_reflection_types(geometry),
         inside_cache_type(geometry),
+        property_cache_type(geometry),
     }
 end
 
@@ -373,7 +378,8 @@ function spin_sampling(geometry::FixedGeometry, bounding_box::BoundingBox, volum
     cache_type = inside_cache_type(geometry)
     orientations = static_vector_type(0){SpinOrientation}()
     spins = S[
-        S(position, orientations, nothing, FixedXoshiro(), cache_type(indices))
+        S(position, orientations, nothing, FixedXoshiro(), cache_type(indices), :valid,
+          sorted_property_indices(geometry, indices))
         for (position, indices) in zip(volume_positions, volume_indices)
     ]
 
@@ -383,7 +389,8 @@ function spin_sampling(geometry::FixedGeometry, bounding_box::BoundingBox, volum
         direction ⋅ intersection.normal < 0 && (direction = -direction)
         reflection = Reflection(intersection, -direction, norm(direction), 0., 0.)
         indices = cache_type(isinside(geometry, position, intersection).inside_of)
-        push!(spins, S(position, orientations, reflection, FixedXoshiro(), indices))
+        push!(spins, S(position, orientations, reflection, FixedXoshiro(), indices, :valid,
+                       sorted_property_indices(geometry, indices)))
     end
     spins
 end
@@ -400,15 +407,16 @@ function _expand_sample(sample::Spin{0}, geometry::FixedGeometry, nsequences::In
         static_vector_type(nsequences)(fill(orientation, nsequences)),
         sample.reflection,
         sample.rng,
-        sample.isinside,
+        deepcopy(sample.isinside),
         sample.status,
+        deepcopy(sample.property_indices),
     )
 end
 
 function Snapshot(nspins::Integer, bounding_box=500, geometry=(); time::Real=0., kwargs...)
     if iszero(nspins)
         nseq = get(kwargs, :nsequences, 1)
-        return Snapshot(Spin{nseq, static_vector_type(nseq){SpinOrientation}, Union{Nothing, Reflection}, Nothing}[], time)
+        return Snapshot(Spin{nseq, static_vector_type(nseq){SpinOrientation}, Union{Nothing, Reflection}, Nothing, Nothing}[], time)
     end
     geometry = geometry isa FixedGeometry ? geometry : fix(geometry)
     bounding_box = BoundingBox(bounding_box)
@@ -429,7 +437,7 @@ Base.show(io::IO, snap::Snapshot{N}) where {N} = print(io, "Snapshot($(length(sn
 
 
 function random_surface_spins(geometry::FixedGeometry, bounding_box::BoundingBox, volume_density::Number; nsequences=1, kwargs...)
-    spins = Spin{nsequences, static_vector_type(nsequences){SpinOrientation}, Union{Nothing, Reflection}, Nothing}[]
+    spins = Spin{nsequences, static_vector_type(nsequences){SpinOrientation}, Union{Nothing, Reflection}, Nothing, Nothing}[]
     positions, intersections = random_surface_positions(geometry, bounding_box, volume_density)
     for (position, intersection) in zip(positions, intersections)
         use_normal = intersection.normal
@@ -506,7 +514,7 @@ function off_resonance(spins::AbstractVector{<:Spin}, geometry, global_propertie
         previous = previous_hit(spin.reflection)
         inside_state = isnothing(spin.isinside) ?
             isinside(fg, spin.position, previous) :
-            IsInside(spin.isinside)
+            IsInside(spin.isinside, spin.property_indices)
         susc = susceptibility_off_resonance(
             fg, spin.position, previous, inside_state,
         )

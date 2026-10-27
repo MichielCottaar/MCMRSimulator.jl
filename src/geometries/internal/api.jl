@@ -202,8 +202,29 @@ end
 Identifies which obstructions this position/spin is inside of.
 Use `Base.length` to get the number of obstructions.
 """
-struct IsInside{T}
+struct IsInside{T, P}
     inside_of::T
+    property_indices::P
+end
+
+IsInside(indices) = IsInside(indices, nothing)
+
+function property_cache_type(geometry::FixedGeometry)
+    index_type = inside_indices_eltype(typeof(geometry.geometry))
+    index_type === Union{} && return Vector{Tuple{}}
+    Vector{Core.Compiler.return_type(to_property_index, Tuple{typeof(geometry.geometry), index_type})}
+end
+
+function update_property_indices!(properties, geometry::FixedGeometry, indices)
+    empty!(properties)
+    for index in indices
+        push!(properties, to_property_index(geometry.geometry, index))
+    end
+    sort!(properties)
+end
+
+function sorted_property_indices(geometry::FixedGeometry, indices)
+    update_property_indices!(property_cache_type(geometry)(), geometry, indices)
 end
 
 Base.length(inside::IsInside) = length(inside.inside_of)
@@ -228,9 +249,9 @@ function isinside(
     position::SVector{3, Float64},
     intersection=nothing,
 )
-    length(geometry) == 0 && return IsInside(SVector{0, Union{}}())
+    length(geometry) == 0 && return IsInside(SVector{0, Union{}}(), Tuple{}[])
     as_vec = inside_indices_for_any_type(geometry.geometry, position, intersection)
-    IsInside(as_vec)
+    IsInside(as_vec, sorted_property_indices(geometry, as_vec))
 end
 
 isinside(geometry::FixedGeometry, position::SVector{3, Float64}, intersection::Intersection) =
@@ -439,10 +460,8 @@ for symbol in (:R1, :R2, :off_resonance)
             inside::IsInside,
             intersection=nothing,
         )
-            property_indices = (
-                to_property_index(geometry.geometry, index)
-                for index in inside.inside_of
-            )
+            property_indices = isnothing(inside.property_indices) ?
+                sorted_property_indices(geometry, inside.inside_of) : inside.property_indices
             volume = sum_values(geometry.volume.$symbol, property_indices)
             surface = isnothing(intersection) ?
                 0.0 :

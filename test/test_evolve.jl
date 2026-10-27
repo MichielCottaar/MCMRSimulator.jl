@@ -8,6 +8,56 @@
         @test deepcopy(mr.Snapshot([spin])).spins[1].status == :stuck
     end
 
+    @testset "Sorted property-index cache" begin
+        internal = mr.Geometries.Internal
+        geometry = mr.Spheres(
+            radius=[1.2, 1.2], position=[[0., 0., 0.], [0., 0., 0.]],
+            repeats=[2., 4., 4.], overlapping=true,
+            R1_inside=[0.1, 0.2], R2_inside=0.4, off_resonance_inside=[0.5, 0.6],
+        )
+        simulation = mr.Simulation(build_sequence(1.0); geometry, diffusivity=0.)
+        initial = mr.Spin(position=[1., 0., 0.], longitudinal=0., transverse=1.)
+        spin = only(mr.Simulations._constrain_snapshot(mr.Snapshot([initial]), simulation))
+        fixed = simulation.geometry
+        mapped = [internal.to_property_index(fixed.geometry, index) for index in spin.isinside]
+        @test !issorted(mapped)
+        @test spin.property_indices == sort(mapped)
+        @test length(spin.property_indices) == 4
+        @test isconcretetype(eltype(spin.property_indices))
+        inside = internal.IsInside(spin.isinside, spin.property_indices)
+        @test internal.R1(fixed, inside) ≈ 0.3
+        @test internal.R2(fixed, inside) ≈ 0.4
+        @test internal.off_resonance(fixed, inside) ≈ 1.1
+        @test internal.isinside(fixed, spin.position).property_indices == spin.property_indices
+
+        for copied in (deepcopy(spin), mr.Spin(spin, 2), mr.get_sequence(spin, 1))
+            @test copied.property_indices == spin.property_indices
+            @test copied.property_indices !== spin.property_indices
+            @test copied.isinside !== spin.isinside
+        end
+        evolved = only(mr.evolve(initial, simulation, 1.0))
+        @test mr.longitudinal(evolved) ≈ 1 - exp(-0.3)
+        @test mr.transverse(evolved) ≈ exp(-0.4)
+
+        cache = spin.property_indices
+        index = first(spin.isinside)
+        collision = internal.Intersection(
+            0., index, internal.to_property_index(fixed.geometry, index),
+            SVector(1., 0., 0.), false, false,
+        )
+        for hit in (collision, internal.flip(collision))
+            reflection = mr.Reflections.Reflection(hit, SVector(1., 0., 0.), 1., 0., 0.)
+            mr.Evolve._update_isinside!(spin, reflection, fixed)
+            @test spin.property_indices === cache
+            @test (index in spin.isinside) == hit.inside
+            @test spin.property_indices == sort([
+                internal.to_property_index(fixed.geometry, path) for path in spin.isinside
+            ])
+            @test internal.R1(fixed, internal.IsInside(spin.isinside, cache)) ≈ 0.3
+        end
+        @test length(spin.property_indices) == 4
+    end
+
     @testset "Empty environment and sequence" begin
         empty_sequence = build_sequence(2.8)
         simulation = mr.Simulation(empty_sequence)
