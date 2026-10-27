@@ -1,8 +1,6 @@
 """MRI-property storage and lookup for physical geometries."""
 module Properties
 
-import StaticArrays: SVector
-
 """
 MRI properties assigned to obstructions or groups of obstructions of type `S`.
 """
@@ -51,75 +49,33 @@ function GeometryTupleProperties(properties::Tuple)
     GeometryTupleProperties{S, typeof(properties)}(properties)
 end
 
+"""Return the property value and the path consumed before reaching its scalar leaf."""
 function get_value(property, ::Tuple)
-    property
+    property, ()
 end
+
+get_value(properties::GeometryLeafProperties, ::Tuple) = (properties.value, ())
 
 function get_value(properties::GeometryProperties, index::Tuple)
-    properties isa GeometryLeafProperties && return properties.value
     isempty(index) && throw(ArgumentError("property index is empty for a nested property"))
     child_index = index[1]
-    1 <= child_index <= length(properties.properties) ||
-        throw(BoundsError(properties.properties, child_index))
-    get_value(properties.properties[child_index], index[2:end])
+    value, consumed = get_value(properties.properties[child_index], Base.tail(index))
+    value, (child_index, consumed...)
 end
 
-function _get_value_many(properties::GeometryProperties, indices::Tuple)
-    isempty(indices) && return zero(eltype(properties))
-    properties isa GeometryLeafProperties && return properties.value
-
-    grouped_indices = Dict{Int, Vector{Tuple}}()
-    for index in indices
-        isempty(index) && throw(ArgumentError("property indices must not be empty"))
-        child_index = index[1]
-        child_index isa Int || throw(ArgumentError("property child indices must be integers"))
-        push!(get!(grouped_indices, child_index, Tuple[]), index[2:end])
-    end
-
-    sum(_get_value_many(
-        properties.properties[child_index],
-        Tuple(child_indices),
-    ) for (child_index, child_indices) in grouped_indices)
-end
-
-function get_value(properties::GeometryProperties, indices::SVector)
-    _get_value_many(properties, Tuple(indices))
-end
-
-
-function get_value(property, indices::AbstractVector{<:Tuple})
-    isempty(indices) && return zero(property)
-    property
-end
-
-function get_value(properties::GeometryProperties, indices::AbstractVector{<:Tuple})
-    isempty(indices) && return zero(eltype(properties))
-    properties isa GeometryLeafProperties && return properties.value
-
+"""Sum each distinct property-tree leaf once, assuming that the `indices` are ordered."""
+function sum_values(properties::GeometryProperties, indices)
     total = zero(eltype(properties))
-    child_index = nothing
-    child_indices = Base.tuple_type_tail(eltype(indices))[]
+    previous = nothing
     for index in indices
-        isempty(index) && throw(ArgumentError("inside indices must not be empty"))
-        next_child_index, remaining = index[1], index[2:end]
-        if child_index !== nothing && next_child_index < child_index
-            throw(ArgumentError("inside indices must be sorted"))
+        value, consumed = get_value(properties, index)
+        if consumed == previous
+            continue
         end
-        if child_index !== nothing && next_child_index != child_index
-            1 <= child_index <= length(properties.properties) ||
-                throw(BoundsError(properties.properties, child_index))
-            value = get_value(properties.properties[child_index], child_indices)
-            total += value
-            empty!(child_indices)
-        end
-        child_index = next_child_index
-        push!(child_indices, remaining)
+        previous = consumed
+        total += value
     end
-
-    1 <= child_index <= length(properties.properties) ||
-        throw(BoundsError(properties.properties, child_index))
-    value = get_value(properties.properties[child_index], child_indices)
-    total + value
+    total
 end
 
 function _all_property_values(properties::Tuple)

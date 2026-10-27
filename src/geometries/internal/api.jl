@@ -11,7 +11,7 @@ import .PhysicalGeometries.Transparents: IgnoreOverlapping
 import .InsideViews: InsideView
 import .PhysicalGeometries: get_intersection_params_requires_inside
 import .PhysicalGeometries.Transparents: SizeScaleOverride
-import .Properties: all_property_values, get_value
+import .Properties: all_property_values, get_value, sum_values
 import .Susceptibility: susceptibility_off_resonance, off_resonance_gradient
 import .RayGridIntersection: ray_grid_intersections
 
@@ -410,25 +410,25 @@ end
 """Return the permeability associated with a collision state."""
 function permeability(geometry::FixedGeometry, intersection::Intersection)
     intersection.hit_gap && return Inf
-    get_value(geometry.surface.permeability, intersection.property_indices)
+    first(get_value(geometry.surface.permeability, intersection.property_indices))
 end
 
 """Return the surface-relaxation value associated with a collision state."""
 function surface_relaxation(geometry::FixedGeometry, intersection::Intersection)
     intersection.hit_gap && return 0.
-    get_value(geometry.surface.surface_relaxation, intersection.property_indices)
+    first(get_value(geometry.surface.surface_relaxation, intersection.property_indices))
 end
 
 """Return the surface-density value associated with a collision state."""
 function surface_density(geometry::FixedGeometry, intersection::Intersection)
     intersection.hit_gap && return 0.
-    get_value(geometry.surface.density, intersection.property_indices)
+    first(get_value(geometry.surface.density, intersection.property_indices))
 end
 
 """Return the dwell-time value associated with a collision state."""
 function dwell_time(geometry::FixedGeometry, intersection::Intersection)
     intersection.hit_gap && return 0.
-    get_value(geometry.surface.dwell_time, intersection.property_indices)
+    first(get_value(geometry.surface.dwell_time, intersection.property_indices))
 end
 
 # Generate the shared volume-plus-surface lookup for MRI properties.
@@ -439,14 +439,14 @@ for symbol in (:R1, :R2, :off_resonance)
             inside::IsInside,
             intersection=nothing,
         )
-            property_indices = [
+            property_indices = (
                 to_property_index(geometry.geometry, index)
                 for index in inside.inside_of
-            ]
-            volume = get_value(geometry.volume.$symbol, property_indices)
+            )
+            volume = sum_values(geometry.volume.$symbol, property_indices)
             surface = isnothing(intersection) ?
                 0.0 :
-                get_value(geometry.surface.$symbol, intersection.property_indices)
+                first(get_value(geometry.surface.$symbol, intersection.property_indices))
             volume + surface
         end
 

@@ -409,7 +409,7 @@ end
             lifted_hit = intersect(lifted, start, destination)
             @test lifted_hit == lift_path(hit)
             @test property_index(original, hit[1:end-2]) == property_index(lifted, lifted_hit[1:end-2])
-            @test Properties.get_value(properties, property_index(lifted, lifted_hit[1:end-2])) == 10.0
+            @test first(Properties.get_value(properties, property_index(lifted, lifted_hit[1:end-2]))) == 10.0
             @test get_params(original, start, destination, hit).normal ≈ get_params(lifted, start, destination, lifted_hit).normal
             next_hit = intersect(original, start, destination, hit)
             @test intersect(lifted, start, destination, lifted_hit) == lift_path(next_hit)
@@ -2725,23 +2725,22 @@ end
         for index in sampled_indices
     )
 
-    @test get_value(3.0, (1, 2)) == 3.0
-    @test get_value(3.0, Tuple[]) === 0.0
-    @test get_value(3, Tuple[]) === 0
+    @test get_value(3.0, (1, 2)) == (3.0, ())
     leaf_properties = Properties.GeometryLeafProperties(3.0)
     @test leaf_properties isa Properties.GeometryProperties{Float64}
     @test eltype(leaf_properties) === Float64
     vector_properties = Properties.GeometryVectorProperties([10.0, 20.0])
     @test vector_properties isa Properties.GeometryProperties{Float64}
     @test eltype(vector_properties) === Float64
-    @test get_value(vector_properties, (2, 1)) == 20.0
-    @test get_value(vector_properties, Tuple[]) === 0.0
-    @test get_value(vector_properties, SVector{0, Tuple}()) === 0.0
+    @test get_value(vector_properties, (2, 1)) == (20.0, (2,))
+    @test get_value(leaf_properties, ()) == (3.0, ())
+    @test Properties.sum_values(vector_properties, Tuple[]) === 0.0
+    @test Properties.sum_values(vector_properties, SVector{0, Tuple}()) === 0.0
     tuple_properties = Properties.GeometryTupleProperties((1.0, vector_properties))
     @test tuple_properties isa Properties.GeometryProperties{Float64}
     @test eltype(tuple_properties) === Float64
-    @test get_value(tuple_properties, (2, 2)) == 20.0
-    @test get_value(tuple_properties, [
+    @test get_value(tuple_properties, (2, 2)) == (20.0, (2, 2))
+    @test Properties.sum_values(tuple_properties, [
         (1, 4),
         (2, 2),
     ]) == 21.0
@@ -2749,17 +2748,24 @@ end
         Properties.GeometryVectorProperties([1.0, 2.0]),
         10.0,
     ))
-    @test get_value(aggregation_properties, [
+    @test Properties.sum_values(aggregation_properties, [
         (1, 1),
         (1, 2),
         (2, 1),
         (2, 2),
     ]) == 13.0
-    @test get_value(aggregation_properties, Tuple[]) == 0
-    @test_throws ArgumentError get_value(aggregation_properties, [
+    @test Properties.sum_values(aggregation_properties, Tuple[]) === 0.0
+    @test Properties.sum_values(aggregation_properties, [
         (2, 1),
         (1, 1),
-    ])
+        (2, 2),
+        (1, 1),
+        (1, 2),
+    ]) == 13.0
+    equal_properties = Properties.GeometryVectorProperties([10.0, 10.0])
+    @test Properties.sum_values(equal_properties, (index for index in [(2,), (1,), (2,)])) == 20.0
+    @test Properties.sum_values(leaf_properties, [(2,), (1,)]) == 3.0
+    @test_throws ArgumentError get_value(vector_properties, ())
     @test_throws BoundsError get_value(vector_properties, (3,))
     @test_throws ArgumentError Properties.GeometryVectorProperties([
         Properties.GeometryLeafProperties(1.0),

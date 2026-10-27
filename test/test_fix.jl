@@ -146,16 +146,16 @@ const fix = mr.Geometries.Fix.fix
         density=10.0,
     )
     @test cylinder_properties.volume.R1 isa Properties.GeometryVectorProperties
-    @test get_value(cylinder_properties.volume.R1, (2,)) == 2.0
-    @test get_value(cylinder_properties.volume.R2, (1,)) == 3.0
-    @test get_value(cylinder_properties.surface.permeability, (2,)) == 7.0
-    @test get_value(cylinder_properties.surface.dwell_time, (1,)) == 8.0
-    @test get_value(cylinder_properties.surface.surface_relaxation, (1,)) == 9.0
-    @test get_value(cylinder_properties.surface.density, (1,)) == 10.0
+    @test get_value(cylinder_properties.volume.R1, (2,)) == (2.0, (2,))
+    @test get_value(cylinder_properties.volume.R2, (1,)) == (3.0, ())
+    @test get_value(cylinder_properties.surface.permeability, (2,)) == (7.0, (2,))
+    @test get_value(cylinder_properties.surface.dwell_time, (1,)) == (8.0, ())
+    @test get_value(cylinder_properties.surface.surface_relaxation, (1,)) == (9.0, ())
+    @test get_value(cylinder_properties.surface.density, (1,)) == (10.0, ())
 
     wall_properties = FixProperties.fix_properties(mr.Walls(position=0.0, R1_surface=2.0))
-    @test get_value(wall_properties.volume.R1, (1,)) == 0.0
-    @test get_value(wall_properties.surface.R1, (1,)) == 2.0
+    @test get_value(wall_properties.volume.R1, (1,)) == (0.0, ())
+    @test get_value(wall_properties.surface.R1, (1,)) == (2.0, ())
 
     annulus_properties = FixProperties.fix_properties(mr.Annuli(
         inner=1.0,
@@ -166,10 +166,10 @@ const fix = mr.Geometries.Fix.fix
         permeability_outer_surface=4.0,
     ))
     @test annulus_properties.volume.R1 isa Properties.GeometryTupleProperties
-    @test get_value(annulus_properties.volume.R1, (1, 1)) == -1.0
-    @test get_value(annulus_properties.volume.R1, (2, 1)) == 2.0
-    @test get_value(annulus_properties.surface.permeability, (1, 1)) == 3.0
-    @test get_value(annulus_properties.surface.permeability, (2, 1)) == 4.0
+    @test get_value(annulus_properties.volume.R1, (1, 1)) == (-1.0, (1,))
+    @test get_value(annulus_properties.volume.R1, (2, 1)) == (2.0, (2,))
+    @test get_value(annulus_properties.surface.permeability, (1, 1)) == (3.0, (1,))
+    @test get_value(annulus_properties.surface.permeability, (2, 1)) == (4.0, (2,))
 end
 
 @testset "Fix dispatcher" begin
