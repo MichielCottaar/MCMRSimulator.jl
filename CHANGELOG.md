@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adaptive readout emits a warning when a finite `max_spins` limit is reached before the target SNR.
 - The default spin-sampling bounding box now uses the bounds of finite, non-repeating geometries. Empty, repeating, and unbounded geometries continue to use the default 1 mm^3 box.
 - Adaptive `max_spins` now counts accepted spins after pre-filtering.
+- Stuck spins no longer cause an error to be raised. Instead, the number of stuck spins is reported in a warning and the remaining spins are still used to compute the signal. If the number of stuck spins is large, the resulting signal may be unreliable.
 
 ### Optimisation
 - Collision detection algorithm has been sped up, especially for small geometries
