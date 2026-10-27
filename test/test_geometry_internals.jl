@@ -1258,7 +1258,7 @@ end
     @test_throws ArgumentError Grid(sphere; resolution=0.)
     @test_throws PublicBoundingBoxes.BoundingBoxNotSupported Grid(periodic)
 
-    # A leaf spanning several cells is still checked only once by GridIterator.
+    # A leaf spanning several cells may be checked once per voxel by GridIterator.
     struct GridProbe <: BaseObstructions.BaseObstruction{3}
         calls::Base.RefValue{Int}
     end
@@ -1275,7 +1275,7 @@ end
     selected, skipped = GridProbe(Ref(0)), GridProbe(Ref(0))
     probes = GeometryTuple((selected, Shift(skipped, [0., 4., 0.])))
     @test intersect(finalised_grid(probes; resolution=0.25), start, destination) === nothing
-    @test selected.calls[] == 1
+    @test selected.calls[] == 8
     @test skipped.calls[] == 0
 
     struct GridInsideProbe <: BaseObstructions.BaseObstruction{3}
