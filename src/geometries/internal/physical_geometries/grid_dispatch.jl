@@ -58,10 +58,10 @@ Base.iterate(iterator::GridIterator, state) = _iterate_grid_candidates(iterator,
 function _first_grid_state(iterator::GridIterator)
     next_voxel = iterate(iterator.ray)
     while !isnothing(next_voxel)
-        ((voxel, entry_time, _, _, _), ray_state) = next_voxel
+        ((voxel, entry_time, _, _), ray_state) = next_voxel
         if !any(voxel .< 0) && !any(voxel .>= iterator.grid_size)
             children = iterator.indices[voxel .+ 1...]
-            return (ray_state, children, 1, true, Set{Int}(), entry_time)
+            return (ray_state, children, 1, true, entry_time)
         end
         next_voxel = iterate(iterator.ray, ray_state)
     end
@@ -69,23 +69,21 @@ function _first_grid_state(iterator::GridIterator)
 end
 
 function _iterate_grid_candidates(iterator::GridIterator, state)
-    ray_state, children, child_position, entered_grid, checked, entry_time = state
+    ray_state, children, child_position, entered_grid, entry_time = state
 
     while true
         while child_position <= length(children)
             child_index = children[child_position]
             child_position += 1
-            child_index in checked && continue
-            push!(checked, child_index)
             return (
                 (child_index, entry_time),
-                (ray_state, children, child_position, entered_grid, checked, entry_time),
+                (ray_state, children, child_position, entered_grid, entry_time),
             )
         end
 
         next_voxel = isnothing(ray_state) ? iterate(iterator.ray) : iterate(iterator.ray, ray_state)
         isnothing(next_voxel) && return nothing
-        ((voxel, entry_time, _, _, _), ray_state) = next_voxel
+        ((voxel, entry_time, _, _), ray_state) = next_voxel
 
         if any(voxel .< 0) || any(voxel .>= iterator.grid_size)
             entered_grid && return nothing
