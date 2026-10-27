@@ -7,7 +7,7 @@ import NearestNeighbors: KDTree, nn
 
 import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, intersection_type, isinside_single, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
-import ..PhysicalGeometries: leaf_bounding_boxes, finalise!
+import ..PhysicalGeometries: leaf_bounding_boxes, finalise!, simplify
 import ...Properties: GeometryLeafProperties
 import ..Groups
 import ..GridDispatch: IntersectionGrid, GridIterator
@@ -29,8 +29,12 @@ struct Mesh <: Groups.GeometryVectorLike{3, FullTriangle}
     inside_mask::BitArray{3}
 end
 
+Base.show(io::IO, ::Type{Mesh}) = print(io, "Mesh")
+Base.show(io::IO, ::Mesh) = print(io, "Mesh(...)")
+
 # Mesh triangles are exposed through a generated view, not stored child geometries.
 finalise!(::Mesh) = nothing
+simplify(mesh::Mesh, ::Val) = mesh
 
 struct MeshGeometryView
     mesh::Mesh

@@ -991,6 +991,10 @@ end
     @test mesh_boxes isa Vector{BoundingBoxes.InternalBoundingBox{3}}
     @test length(mesh_boxes) == length(mesh.indices)
     @test mesh.first_index_of_gap <= length(mesh_boxes)
+    @test sprint(show, Mesh) == "Mesh"
+    @test sprint(show, mesh) == "Mesh(...)"
+    @test simplify(mesh, Val(:extract_common_wrapper)) === mesh
+    @test simplify(mesh) === mesh
     for (index, vertices) in enumerate(mesh.indices)
         points = mesh.vertices[vertices]
         @test BoundingBoxes.lower(mesh_boxes[index]) == reduce((a, b) -> min.(a, b), points)
