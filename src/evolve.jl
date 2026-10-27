@@ -693,7 +693,9 @@ function draw_step!(spin::Spin{N}, simulation::Simulation{N}, parts::MultSequenc
             else
                 new_pos = SVector{3, Float64}(test_new_pos)
             end
-            ratio_displaced = norm(new_pos - current_pos) / sqrt(2 * simulation.diffusivity * timestep)
+            distance = norm(new_pos - current_pos)
+            ratio_displaced = iszero(distance) ?
+                0.0 : distance / sqrt(2 * simulation.diffusivity * timestep)
             reflection = nothing
             phit = nothing
         end
