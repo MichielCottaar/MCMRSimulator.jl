@@ -1221,11 +1221,12 @@ end
         for index in sphere_mesh_grid.grid.indices[surface_voxel]
     ]
     @test () in surface_inside
-    @test isempty(sphere_mesh_grid.fully_inside_indices[surface_voxel])
+    surface_coordinate = SVector{3, Int}(Tuple(surface_voxel))
+    @test isempty(get(sphere_mesh_grid.fully_inside_indices, surface_coordinate, ()))
 
-    fully_inside_voxel = findfirst(!isempty, sphere_mesh_grid.fully_inside_indices)
-    @test !isnothing(fully_inside_voxel)
-    @test only(sphere_mesh_grid.fully_inside_indices[fully_inside_voxel]) == ()
+    fully_inside_voxel, fully_inside_indices = first(sphere_mesh_grid.fully_inside_indices)
+    @test !isempty(fully_inside_indices)
+    @test only(fully_inside_indices) == ()
     for _ in 1:40
         position = SVector{3, Float64}(2 .* rand(rng, 3) .- 1)
         @test inside_indices(sphere_mesh_grid, position) ==
