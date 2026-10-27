@@ -99,7 +99,7 @@ function get_value(properties::GeometryProperties, indices::AbstractVector{<:Tup
 
     total = nothing
     child_index = nothing
-    child_indices = Tuple[]
+    child_indices = Base.tuple_type_tail(eltype(indices))[]
     for index in indices
         isempty(index) && throw(ArgumentError("inside indices must not be empty"))
         next_child_index, remaining = index[1], index[2:end]
