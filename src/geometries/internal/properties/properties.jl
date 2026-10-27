@@ -66,7 +66,7 @@ function get_value(properties::GeometryProperties, index::Tuple)
 end
 
 function _get_value_many(properties::GeometryProperties, indices::Tuple)
-    isempty(indices) && return 0
+    isempty(indices) && return zero(eltype(properties))
     properties isa GeometryLeafProperties && return properties.value
 
     grouped_indices = Dict{Int, Vector{Tuple}}()
@@ -89,15 +89,15 @@ end
 
 
 function get_value(property, indices::AbstractVector{<:Tuple})
-    isempty(indices) && return 0
+    isempty(indices) && return zero(property)
     property
 end
 
 function get_value(properties::GeometryProperties, indices::AbstractVector{<:Tuple})
-    isempty(indices) && return 0
+    isempty(indices) && return zero(eltype(properties))
     properties isa GeometryLeafProperties && return properties.value
 
-    total = nothing
+    total = zero(eltype(properties))
     child_index = nothing
     child_indices = Base.tuple_type_tail(eltype(indices))[]
     for index in indices
@@ -110,7 +110,7 @@ function get_value(properties::GeometryProperties, indices::AbstractVector{<:Tup
             1 <= child_index <= length(properties.properties) ||
                 throw(BoundsError(properties.properties, child_index))
             value = get_value(properties.properties[child_index], child_indices)
-            total = total === nothing ? value : total + value
+            total += value
             empty!(child_indices)
         end
         child_index = next_child_index
@@ -120,19 +120,19 @@ function get_value(properties::GeometryProperties, indices::AbstractVector{<:Tup
     1 <= child_index <= length(properties.properties) ||
         throw(BoundsError(properties.properties, child_index))
     value = get_value(properties.properties[child_index], child_indices)
-    total === nothing ? value : total + value
+    total + value
 end
 
 function get_value(property, view::InsideView)
-    isempty(view) && return 0
+    isempty(view) && return zero(property)
     property
 end
 
 function get_value(properties::GeometryProperties, view::InsideView)
-    isempty(view) && return 0
+    isempty(view) && return zero(eltype(properties))
     properties isa GeometryLeafProperties && return properties.value
 
-    total = nothing
+    total = zero(eltype(properties))
     child_index = nothing
     group_first = view.first
     for index_index in view.first:view.last
@@ -148,7 +148,7 @@ function get_value(properties::GeometryProperties, view::InsideView)
                 properties.properties[child_index],
                 child_view(Val(true), view, group_first, index_index - 1, view.depth + 1),
             )
-            total = total === nothing ? value : total + value
+            total += value
             group_first = index_index
         end
         child_index = next_child_index
@@ -158,7 +158,7 @@ function get_value(properties::GeometryProperties, view::InsideView)
         properties.properties[child_index],
         child_view(Val(true), view, group_first, view.last, view.depth + 1),
     )
-    total === nothing ? value : total + value
+    total + value
 end
 
 function _all_property_values(properties::Tuple)

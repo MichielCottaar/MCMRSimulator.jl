@@ -2730,6 +2730,8 @@ end
     )
 
     @test get_value(3.0, (1, 2)) == 3.0
+    @test get_value(3.0, Tuple[]) === 0.0
+    @test get_value(3, Tuple[]) === 0
     leaf_properties = Properties.GeometryLeafProperties(3.0)
     @test leaf_properties isa Properties.GeometryProperties{Float64}
     @test eltype(leaf_properties) === Float64
@@ -2737,6 +2739,9 @@ end
     @test vector_properties isa Properties.GeometryProperties{Float64}
     @test eltype(vector_properties) === Float64
     @test get_value(vector_properties, (2, 1)) == 20.0
+    @test get_value(vector_properties, Tuple[]) === 0.0
+    @test get_value(vector_properties, SVector{0, Tuple}()) === 0.0
+    @test get_value(vector_properties, InsideViews.InsideView(Tuple{Int, Int}[])) === 0.0
     tuple_properties = Properties.GeometryTupleProperties((1.0, vector_properties))
     @test tuple_properties isa Properties.GeometryProperties{Float64}
     @test eltype(tuple_properties) === Float64
