@@ -55,6 +55,7 @@ function find_intersection(
     !inside && previous && return nothing
     difference = destination - start
     a = sum(difference .* difference)
+    iszero(a) && return nothing
     b = sum(2 .* start .* difference)
     c = sum(start .* start)
     determinant = b * b - 4 * a * (c - round.radius^2)

@@ -1122,6 +1122,22 @@ end
     @test_throws ArgumentError intersect(repeat, start, destination, nothing, nothing, (1,))
 end
 
+@testset "stationary round intersections" begin
+    intersect = GI.PhysicalGeometries.find_intersection
+    for obstruction in (BaseObstructions.Sphere(1.), BaseObstructions.InfiniteCylinder(1.))
+        N = obstruction isa BaseObstructions.Sphere ? 3 : 2
+        for resolution in (0.25, Inf)
+            accelerated = finalised_grid(obstruction; resolution)
+            for radius in (0., 0.9, 1., 2.)
+                position = SVector{N, Float64}(ntuple(i -> i == 1 ? radius : 0., N))
+                @test intersect(obstruction, position, position) === nothing
+                @test intersect(obstruction, position, position, nothing, nothing, ()) === nothing
+                @test intersect(accelerated, position, position) === nothing
+            end
+        end
+    end
+end
+
 @testset "transparent intersection grid" begin
     intersect = GI.PhysicalGeometries.find_intersection
     sphere = BaseObstructions.Sphere(1.)
@@ -1134,6 +1150,7 @@ end
     @test all(isempty, grid.fully_inside_indices)
     @test_throws ArgumentError inside_indices(grid, SVector(0., 0., 0.))
     @test_throws ArgumentError intersect(grid, SVector(-5., 0., 0.), SVector(5., 0., 0.))
+    @test_throws ArgumentError intersect(grid, SVector(0., 0., 0.), SVector(0., 0., 0.))
     GI.PhysicalGeometries.finalise!(grid)
     @test grid isa Transparent{3}
     @test grid.geometry === tree

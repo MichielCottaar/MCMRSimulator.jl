@@ -199,6 +199,7 @@ function find_intersection(
 ) where {N}
     isnothing(candidate) || throw(ArgumentError("Grid requires an unrestricted incoming candidate"))
     _require_finalised(geometry.grid)
+    iszero(destination - start) && return nothing
     start_coordinate = _grid_coordinate(geometry.grid, start)
     destination_coordinate = _grid_coordinate(geometry.grid, destination)
     if !isnothing(start_coordinate) && start_coordinate == destination_coordinate
