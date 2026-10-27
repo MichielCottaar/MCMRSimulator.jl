@@ -236,5 +236,5 @@ end
     )
     fixed_bendy_cylinder = fix(bendy_cylinder)
     @test fixed_bendy_cylinder.geometry isa Repeats.Repeat
-    @test first(fixed_bendy_cylinder.geometry.geometry.geometries) isa Meshes.Mesh
+    @test first(fixed_bendy_cylinder.geometry.geometry.geometry.geometries) isa Meshes.Mesh
 end
