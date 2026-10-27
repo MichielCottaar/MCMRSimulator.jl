@@ -329,13 +329,13 @@ end
         mr.read_pulseq(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2.seq")),
     ]
     sim = mr.Simulation(sequences, geometry=mr.Spheres(radius=[1, 2.], repeats=[5, 5, 5]), R1=0.1, surface_relaxation=0.3)
-    @test repr(sim, context=:compact => true) == "Simulation(2 sequences, fixed(Repeat{GeometryVector{Round{3}}}), D=3.0um^2/ms, GlobalProperties(R1=0.1kHz, ))"
+    @test repr(sim, context=:compact => true) == "Simulation(2 sequences, fixed(Repeat{Grid{Tuple{Int64}, Tuple{Int64}, GeometryVector{Round{3}}}}), D=3.0um^2/ms, GlobalProperties(R1=0.1kHz, ))"
 end
 
 @testset "Base.show for simulations with geometry" begin
     sim = mr.Simulation([], geometry=mr.Spheres(radius=[1., 2.]))
     @test sprint(show, sim) isa String
-    @test contains(sprint(show, sim), "fixed(GeometryVector{Round{3}})")
+    @test contains(sprint(show, sim), "fixed(Grid{Tuple{Int64}, Tuple{Int64}, GeometryVector{Round{3}}})")
 end
 
 @testset "Physical geometry type display" begin
@@ -360,16 +360,16 @@ end
 
     show_type(geometry) = sprint(show, typeof(mr.fix(geometry).geometry))
 
-    @test show_type(mr.Spheres(radius=[1., 2.])) == "GeometryVector{Round{3}}"
+    @test show_type(mr.Spheres(radius=[1., 2.])) == "Grid{Tuple{Int64}, Tuple{Int64}, GeometryVector{Round{3}}}"
     @test show_type(mr.Spheres(
         radius=[1., 2.],
         position=[[0, 0, 0], [1, 1, 1]],
         repeats=[5, 5, 5],
-    )) == "Repeat{GeometryVector{Shift{Round{3}}}}"
+    )) == "Repeat{Grid{Tuple{Int64}, Tuple{Int64}, GeometryVector{Shift{Round{3}}}}}"
     @test show_type(mr.Spheres(radius=1., size_scale=2.)) ==
-        "SizeScaleOverride{GeometryVector{Round{3}}}"
+        "SizeScaleOverride{Grid{Tuple{Int64}, Tuple{Int64}, GeometryVector{Round{3}}}}"
     @test show_type([mr.Spheres(radius=1.), mr.Cylinders(radius=0.5)]) ==
-        "GeometryTuple{GeometryVector{Round{3}}, Rotate{GeometryVector{Round{2}}}}"
+        "GeometryTuple{Grid{Tuple{Int64}, Tuple{Int64}, GeometryVector{Round{3}}}, Rotate{Grid{Tuple{Int64}, Tuple{Int64}, GeometryVector{Round{2}}}}}"
 end
 
 @testset "Test size scale calculations" begin
