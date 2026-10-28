@@ -166,6 +166,9 @@ end
     traversed_cells = mr.DebugCounters.snapshot(grid)[:ncells]
     @test traversed_cells isa mr.DebugCounters.FrequencyCounter{Int}
     @test traversed_cells.counts == Dict(0 => 1, 1 => 1, 4 => 1)
+    candidate_counts = mr.DebugCounters.snapshot(grid)[:ncandidates]
+    @test candidate_counts isa mr.DebugCounters.FrequencyCounter{Int}
+    @test candidate_counts.counts == Dict(0 => 1, 1 => 1, 4 => 1)
 
     normal_grid = finalised_grid(geometry; resolution=0.5)
     @test !debug_mode(normal_grid)
