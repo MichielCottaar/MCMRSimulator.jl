@@ -28,7 +28,12 @@ function fix(
     dwell_time=0.,
     surface_relaxation=0.,
     density=0.,
+    debug=false,
 )
+    debug isa Bool || throw(ArgumentError("debug must be a Bool"))
+    debug && throw(ArgumentError(
+        "cannot enable debug for an already fixed geometry; pass the original geometry to fix instead",
+    ))
     (permeability == 0. && dwell_time == 0. && surface_relaxation == 0. && density == 0.) ||
         throw(ArgumentError("cannot apply fix keywords to an already fixed geometry"))
     geometry
@@ -48,9 +53,14 @@ function _merge_vector_properties(fixed, field_name::Symbol)
     )
 end
 
-function fix(collection::LiminalGeometry; kwargs...)
+function fix(collection::LiminalGeometry; debug=false, kwargs...)
+    debug isa Bool || throw(ArgumentError("debug must be a Bool"))
+    debug && any(geometry isa FixedGeometry for (_, geometry) in collection.geometries) &&
+        throw(ArgumentError(
+            "cannot enable debug for an already fixed geometry in LiminalGeometry; pass the original geometry to fix instead",
+        ))
     fixed = [
-        geometry isa FixedGeometry ? geometry : fix(geometry; kwargs...)
+        geometry isa FixedGeometry ? geometry : fix(geometry; debug, kwargs...)
         for (_, geometry) in collection.geometries
     ]
     for geometry in fixed
@@ -96,9 +106,11 @@ function fix(
     dwell_time=0.,
     surface_relaxation=0.,
     density=0.,
+    debug=false,
 )
+    debug isa Bool || throw(ArgumentError("debug must be a Bool"))
     base_geometry = fix_base_geometry(group)
-    physical_geometry = fix_transformations(group, base_geometry)
+    physical_geometry = fix_transformations(group, base_geometry; debug)
     if group isa FiniteCylinders || (group isa Spheres && group.overlapping.value)
         physical_geometry = IgnoreOverlapping(physical_geometry)
     end
@@ -143,7 +155,9 @@ function fix(
     dwell_time=0.,
     surface_relaxation=0.,
     density=0.,
+    debug=false,
 )
+    debug isa Bool || throw(ArgumentError("debug must be a Bool"))
     if isempty(geometries)
         volume = _zero_volume()
         surface = _zero_surface(; permeability, dwell_time, surface_relaxation, density)
@@ -162,6 +176,7 @@ function fix(
             dwell_time,
             surface_relaxation,
             density,
+            debug,
         )
         for geometry in geometries
     ]

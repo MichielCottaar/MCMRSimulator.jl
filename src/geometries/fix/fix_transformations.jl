@@ -33,10 +33,10 @@ function _vector_geometry_unshifted(group, geometry::Vector{P}) where {N, P<:Phy
     GeometryVector(geometry; bounding_box=group.use_boundingbox.value)
 end
 
-function _apply_local_transformations(group, geometry::Vector)
+function _apply_local_transformations(group, geometry::Vector; debug=false)
     geometry = _vector_geometry(group, geometry)
     if group.grid_resolution.value != Inf
-        geometry = Grid(geometry; resolution=group.grid_resolution.value)
+        geometry = Grid(geometry; resolution=group.grid_resolution.value, debug)
     end
     if !isnothing(group.repeats.value)
         geometry = Repeat(geometry, group.repeats.value)
@@ -66,13 +66,15 @@ function _apply_global_shift(group, geometry)
     Shift(geometry, position)
 end
 
-function fix_transformations(group::Union{Walls, Cylinders, Spheres, Mesh}, geometry::Vector)
-    geometry = _apply_local_transformations(group, geometry)
+function fix_transformations(group::Union{Walls, Cylinders, Spheres, Mesh}, geometry::Vector; debug=false)
+    debug isa Bool || throw(ArgumentError("debug must be a Bool"))
+    geometry = _apply_local_transformations(group, geometry; debug)
     geometry = _apply_global_shift(group, geometry)
     _apply_rotation(group, geometry)
 end
 
-function fix_transformations(group::FiniteCylinders, geometries::Tuple)
+function fix_transformations(group::FiniteCylinders, geometries::Tuple; debug=false)
+    debug isa Bool || throw(ArgumentError("debug must be a Bool"))
     endpoint_geometries, cylinder_geometries = geometries
     endpoint_geometries = _vector_geometry_unshifted(group, endpoint_geometries)
     cylinder_geometries = _vector_geometry_unshifted(group, cylinder_geometries)
@@ -83,7 +85,7 @@ function fix_transformations(group::FiniteCylinders, geometries::Tuple)
         cylinder_geometries
     end
     if group.grid_resolution.value != Inf
-        geometry = Grid(geometry; resolution=group.grid_resolution.value)
+        geometry = Grid(geometry; resolution=group.grid_resolution.value, debug)
     end
     if !isnothing(group.repeats.value)
         geometry = Repeat(geometry, group.repeats.value)
@@ -91,8 +93,9 @@ function fix_transformations(group::FiniteCylinders, geometries::Tuple)
     _apply_rotation(group, geometry)
 end
 
-function fix_transformations(group::Annuli, geometries::Tuple)
-    transformed = map(geometry -> _apply_local_transformations(group, geometry), geometries)
+function fix_transformations(group::Annuli, geometries::Tuple; debug=false)
+    debug isa Bool || throw(ArgumentError("debug must be a Bool"))
+    transformed = map(geometry -> _apply_local_transformations(group, geometry; debug), geometries)
     geometry = GeometryTuple(transformed)
     geometry = _apply_global_shift(group, geometry)
     _apply_rotation(group, geometry)

@@ -99,6 +99,13 @@ const fix = mr.Geometries.Fix.fix
     )
     @test gridded isa mr.Geometries.Internal.PhysicalGeometries.Grids.Grid
     @test gridded.geometry isa Groups.GeometryVectorBoundingBox
+    debug_gridded = FixTransformations.fix_transformations(
+        grid_group,
+        FixBaseGeometry.fix_base_geometry(grid_group);
+        debug=true,
+    )
+    @test mr.DebugCounters.debug_mode(debug_gridded)
+    @test !mr.DebugCounters.debug_mode(gridded)
 
     ungridded_group = mr.Spheres(radius=1.0, grid_resolution=Inf)
     ungridded = FixTransformations.fix_transformations(
@@ -186,6 +193,25 @@ end
     @test fixed.surface.surface_relaxation.value == 5.0
     @test fixed.surface.density.value == 6.0
     @test fix(fixed) === fixed
+
+    grid_group = mr.Spheres(radius=1.0, grid_resolution=0.5)
+    fixed_grid = fix(grid_group; debug=true)
+    @test fixed_grid.geometry isa mr.Geometries.Internal.PhysicalGeometries.Grids.Grid
+    @test mr.DebugCounters.debug_mode(fixed_grid.geometry)
+    @test !mr.DebugCounters.debug_mode(fix(grid_group).geometry)
+    simulation = mr.Simulation([], geometry=grid_group, debug=true)
+    @test mr.DebugCounters.debug_mode(simulation.geometry.geometry)
+    default_simulation = mr.Simulation([], geometry=grid_group)
+    @test !mr.DebugCounters.debug_mode(default_simulation.geometry.geometry)
+
+    @test_throws ArgumentError fix(fixed_grid; debug=true)
+    @test_throws ArgumentError mr.Simulation([], geometry=fixed_grid, debug=true)
+    @test_throws ArgumentError fix([fixed_grid]; debug=true)
+    fixed_liminal = mr.LiminalGeometry(
+        geometries=[(1.0, fixed_grid)],
+        extracellular_fraction=0.2,
+    )
+    @test_throws ArgumentError fix(fixed_liminal; debug=true)
 
     combined = fix([mr.Walls(position=0.0), group])
     @test combined.geometry isa mr.Geometries.Internal.PhysicalGeometries.Groups.GeometryTuple

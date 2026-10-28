@@ -29,6 +29,7 @@ Defines the setup of the simulation and stores the output of the run.
 - `geometry`: Set of obstructions, which can be used to restrict the diffusion, produce off-resonance fields, alter the local T1/T2 relaxation, and as sources of magnetisation transfer.
 - `diffusivity`: Rate of the random motion of the spins in um^2/ms (default: 3).
 - `verbose`: set to false to silence descriptions of the simulation parameters (default: true).
+- `debug`: set to true to collect diagnostics from debug-enabled intersection grids (default: false).
 
 ## MRI properties
 These parameters determine the evolution and relaxation of the spin magnetisation.
@@ -105,13 +106,21 @@ function Simulation(
     R2=0.,
     off_resonance=0.,
     verbose=true,
+    debug=false,
     timestep=(),
 )
     flatten = !isa(sequences, AbstractVector)
     if flatten
         sequences = [sequences]
     end
-    geometry = fix(geometry; permeability=permeability, density=surface_density, dwell_time=dwell_time, surface_relaxation=surface_relaxation)
+    geometry = fix(
+        geometry;
+        permeability,
+        density=surface_density,
+        dwell_time,
+        surface_relaxation,
+        debug,
+    )
 
     default_properties = GlobalProperties(; R1=R1, R2=R2, off_resonance=off_resonance)
     if iszero(diffusivity) && length(geometry) > 0

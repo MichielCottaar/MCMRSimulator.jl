@@ -46,6 +46,12 @@ struct Grid{N, P<:PhysicalGeometry{N}, I, V, D} <: Transparent{N, P}
     user_resolution::Union{Nothing, Float64}
 end
 
+function Base.show(io::IO, ::Type{Grid{N, P, I, V, D}}) where {N, P, I, V, D}
+    print(io, "Grid{")
+    show(io, P)
+    print(io, "}")
+end
+
 function Grid(geometry::P; resolution=nothing, debug=false) where {N, P<:PhysicalGeometry{N}}
     debug isa Bool || throw(ArgumentError("debug must be a Bool"))
     boxes = InternalBoundingBox{N}[]
