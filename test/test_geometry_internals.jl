@@ -151,6 +151,31 @@ end
     end
 end
 
+@testset "Grid traversed-cell diagnostic" begin
+    sphere = BaseObstructions.Sphere(1.0)
+    geometry = GeometryVector([sphere])
+    grid = finalised_grid(geometry; resolution=0.5, debug=true)
+    debug_mode = GI.PhysicalGeometries.Grids.debug_mode
+    @test debug_mode(grid)
+
+    intersect = GI.PhysicalGeometries.find_intersection
+    intersect(grid, SVector(-0.9, 0.0, 0.0), SVector(-0.7, 0.0, 0.0)) # one cell
+    intersect(grid, SVector(-0.9, 0.0, 0.0), SVector(0.9, 0.0, 0.0)) # four cells
+    intersect(grid, SVector(-0.5, 0.0, 0.0), SVector(-0.5, 0.0, 0.0)) # zero-length path
+
+    traversed_cells = mr.DebugCounters.snapshot(grid)[:ncells]
+    @test traversed_cells isa mr.DebugCounters.FrequencyCounter{Int}
+    @test traversed_cells.counts == Dict(0 => 1, 1 => 1, 4 => 1)
+
+    normal_grid = finalised_grid(geometry; resolution=0.5)
+    @test !debug_mode(normal_grid)
+    @test intersect(grid, SVector(-0.9, 0.0, 0.0), SVector(0.9, 0.0, 0.0)) ==
+        intersect(normal_grid, SVector(-0.9, 0.0, 0.0), SVector(0.9, 0.0, 0.0))
+
+    rebuilt = rewrap(grid, geometry)
+    @test debug_mode(rebuilt)
+end
+
 @testset "equivalent wrappers" begin
     sphere = BaseObstructions.Sphere(1.0)
     larger = BaseObstructions.Sphere(2.0)
@@ -235,10 +260,12 @@ end
     grid_b = Grid(GeometryVector([larger]); resolution=0.5)
     grid_auto = Grid(GeometryVector([sphere]))
     grid_single = Grid(GeometryVector([sphere]); resolution=Inf)
+    grid_debug = Grid(GeometryVector([sphere]); resolution=0.5, debug=true)
     @test has_equivalent_wrapper(grid_a, grid_b)
     @test has_equivalent_wrapper(grid_b, grid_a)
     @test has_equivalent_wrapper(grid_auto, Grid(GeometryVector([larger])))
     @test has_equivalent_wrapper(grid_single, Grid(GeometryVector([larger]); resolution=Inf))
+    @test has_equivalent_wrapper(grid_a, grid_debug)
     @test !has_equivalent_wrapper(grid_a, grid_auto)
     @test !has_equivalent_wrapper(grid_auto, grid_single)
 

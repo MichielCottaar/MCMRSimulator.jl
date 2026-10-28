@@ -9,9 +9,16 @@ import ..PhysicalGeometries: to_inside_index, finalise!
 import ..Transparents: Transparent
 import ..GridDispatch: IntersectionGrid, GridIterator
 import ...InternalBoundingBoxes
+import .....DebugCounters
+
+function __init__()
+    DebugCounters.register!(Grid, [
+        (:ncells, "Number of grid cells between start and end of trajectory in single steps", DebugCounters.FrequencyCounter(Int)),
+    ])
+end
 
 """
-    Grid(geometry::PhysicalGeometry; resolution=nothing)
+    Grid(geometry::PhysicalGeometry; resolution=nothing, debug=false)
 
 Wrap a finite geometry in an intersection grid over its leaf bounding boxes.
 `resolution` specifies the cell size; `nothing` uses the `IntersectionGrid`
@@ -22,9 +29,10 @@ geometry indices.
 
 The wrapper expects an unrestricted incoming candidate and supplies individual
 candidate paths to its child during grid traversal. For periodic geometries,
-place the grid inside `Repeat`.
+place the grid inside `Repeat`. Set `debug=true` to collect per-instance debug
+metrics.
 """
-struct Grid{N, P<:PhysicalGeometry{N}, I, V} <: Transparent{N, P}
+struct Grid{N, P<:PhysicalGeometry{N}, I, V, D} <: Transparent{N, P}
     geometry::P
     grid::IntersectionGrid{N}
     indices::Vector{I}
@@ -32,15 +40,16 @@ struct Grid{N, P<:PhysicalGeometry{N}, I, V} <: Transparent{N, P}
     user_resolution::Union{Nothing, Float64}
 end
 
-function Grid(geometry::P; resolution=nothing) where {N, P<:PhysicalGeometry{N}}
+function Grid(geometry::P; resolution=nothing, debug=false) where {N, P<:PhysicalGeometry{N}}
+    debug isa Bool || throw(ArgumentError("debug must be a Bool"))
     boxes = InternalBoundingBox{N}[]
     indices = Vector{intersection_type(P)}()
     _flatten_leaf_bounding_boxes!(boxes, indices, leaf_bounding_boxes(geometry), ())
     grid = IntersectionGrid(boxes; resolution, delayed=true)
     inside_type = inside_indices_eltype(P)
     fully_inside_indices = Dict{SVector{N, Int}, Vector{inside_type}}()
-    Grid{N, P, eltype(indices), inside_indices_eltype(P)}(
-        geometry, grid, indices, fully_inside_indices, resolution,
+    Grid{N, P, eltype(indices), inside_indices_eltype(P), debug}(
+        geometry, grid, indices, fully_inside_indices, resolution
     )
 end
 
@@ -107,8 +116,9 @@ function _flatten_inside_bounding_boxes!(boxes, indices, children::Union{Tuple, 
     nothing
 end
 
+debug_mode(::Grid{N, P, I, V, D}) where {N, P, I, V, D} = D
 rewrap(wrapper::Grid{N}, geometry::PhysicalGeometry{N}) where {N} =
-    Grid(geometry; resolution=wrapper.user_resolution)
+    Grid(geometry; resolution=wrapper.user_resolution, debug=debug_mode(wrapper))
 has_equivalent_wrapper(first::Grid{N}, second::Grid{N}) where {N} =
     first.user_resolution == second.user_resolution
 
@@ -199,9 +209,17 @@ function find_intersection(
 ) where {N}
     isnothing(candidate) || throw(ArgumentError("Grid requires an unrestricted incoming candidate"))
     _require_finalised(geometry.grid)
-    iszero(destination - start) && return nothing
+    if iszero(destination - start)
+        if debug_mode(geometry)
+            DebugCounters.record!(geometry, :ncells, 0)
+        end
+        return nothing
+    end
     start_coordinate = _grid_coordinate(geometry.grid, start)
     destination_coordinate = _grid_coordinate(geometry.grid, destination)
+    if debug_mode(geometry)
+        DebugCounters.record!(geometry, :ncells, sum(abs.(destination_coordinate - start_coordinate)) + 1)
+    end
     if !isnothing(start_coordinate) && start_coordinate == destination_coordinate
         return _find_intersection_candidates(
             geometry, start, destination, previous_hit, inside,
