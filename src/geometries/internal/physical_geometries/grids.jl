@@ -13,7 +13,7 @@ import .....DebugCounters
 
 function __init__()
     DebugCounters.register!(Grid, [
-        (:ncells, "Number of grid cells between start and end of trajectory in single steps", DebugCounters.FrequencyCounter(Int)),
+        (:ncells, "Number of grid cells between start and end of trajectory in single steps; 0 means that the start and end were identical, so no collision checks were required.", DebugCounters.FrequencyCounter(Int)),
     ])
 end
 
