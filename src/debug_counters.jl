@@ -360,9 +360,27 @@ reset!(instance) = debug_mode(instance) ? reset!(_instance_table(instance)) : no
 snapshot(instance, name::Symbol) = snapshot(_instance_table(instance), name)
 snapshot(instance) = snapshot(_instance_table(instance))
 
-"""Report the metrics associated with this instance."""
+"""
+    report()
+    report(instance)
+
+Report the metrics.
+
+If `instance` is provided it only prints that instance.
+"""
 report(io::IO, instance) = debug_mode(instance) ? report(io, _instance_table(instance)) : nothing
 report(instance; io::IO=stdout) = report(io, instance)
+function report(io::IO)
+    lock(_registry_lock) do
+        for instance in keys(_instance_table)
+            println("")
+            println("** $instance **")
+            println("")
+            report(io, instance)
+        end
+    end
+end
+report(; io::IO=stdout) = report(io)
 
 """Discard all per-instance tables while retaining registered metric definitions."""
 function reset!()
