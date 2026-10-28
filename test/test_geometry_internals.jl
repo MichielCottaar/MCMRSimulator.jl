@@ -155,20 +155,36 @@ end
     sphere = BaseObstructions.Sphere(1.0)
     geometry = GeometryVector([sphere])
     grid = finalised_grid(geometry; resolution=0.5, debug=true)
-    debug_mode = GI.PhysicalGeometries.Grids.debug_mode
+    debug_mode = mr.DebugCounters.debug_mode
     @test debug_mode(grid)
 
     intersect = GI.PhysicalGeometries.find_intersection
     intersect(grid, SVector(-0.9, 0.0, 0.0), SVector(-0.7, 0.0, 0.0)) # one cell
     intersect(grid, SVector(-0.9, 0.0, 0.0), SVector(0.9, 0.0, 0.0)) # four cells
     intersect(grid, SVector(-0.5, 0.0, 0.0), SVector(-0.5, 0.0, 0.0)) # zero-length path
+    intersect(grid, SVector(-2.0, 0.0, 0.0), SVector(-0.7, 0.0, 0.0)) # start outside
+    intersect(grid, SVector(-0.7, 0.0, 0.0), SVector(-2.0, 0.0, 0.0)) # destination outside
+    intersect(grid, SVector(2.0, 0.0, 0.0), SVector(3.0, 0.0, 0.0)) # both outside
 
-    traversed_cells = mr.DebugCounters.snapshot(grid)[:ncells]
+    metrics = mr.DebugCounters.snapshot(grid)
+    expected_occupancy = Dict{Int, Int}()
+    for cell in grid.grid.indices
+        occupancy = length(cell)
+        expected_occupancy[occupancy] = get(expected_occupancy, occupancy, 0) + 1
+    end
+    @test metrics[:cell_occupancy].counts == expected_occupancy
+
+    traversed_cells = metrics[:ncells]
     @test traversed_cells isa mr.DebugCounters.FrequencyCounter{Int}
     @test traversed_cells.counts == Dict(0 => 1, 1 => 1, 4 => 1)
-    candidate_counts = mr.DebugCounters.snapshot(grid)[:ncandidates]
+    candidate_counts = metrics[:ncandidates]
     @test candidate_counts isa mr.DebugCounters.FrequencyCounter{Int}
-    @test candidate_counts.counts == Dict(0 => 1, 1 => 1, 4 => 1)
+    @test candidate_counts.counts == Dict(0 => 2, 1 => 3, 4 => 1)
+    @test metrics[:duplicate_candidates].counts == Dict(0 => 5, 3 => 1)
+    @test metrics[:cells_visited].counts == Dict(0 => 2, 1 => 3, 4 => 1)
+    @test metrics[:start_out_of_grid] isa mr.DebugCounters.FrequencyTable{Bool}
+    @test metrics[:start_out_of_grid].counts == Dict(false => 3, true => 2)
+    @test metrics[:dest_out_of_grid].counts == Dict(false => 3, true => 2)
 
     normal_grid = finalised_grid(geometry; resolution=0.5)
     @test !debug_mode(normal_grid)
