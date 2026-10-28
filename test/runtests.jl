@@ -25,6 +25,7 @@ all_tests = [
     "various",
     "subsets",
     "geometry_internals",
+    "debug_counters",
     "fix",
     "swc",
     "plots",

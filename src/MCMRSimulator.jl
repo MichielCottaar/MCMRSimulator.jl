@@ -13,6 +13,7 @@ Plotting support for the sequence and resulting signal is also available based o
 """
 module MCMRSimulator
 include("constants.jl")
+include("debug_counters.jl")
 include("scanners.jl")
 include("methods.jl")
 include("geometries/geometries.jl")
@@ -58,6 +59,9 @@ import .SequenceParts: get_readouts, IndexedReadout, parts, PulseEvent, Gradient
 import .Simulations: Simulation, susceptibility_off_resonance
 export Simulation
 @compat public susceptibility_off_resonance
+
+import .DebugCounters
+export DebugCounters
 
 import .Subsets: Subset, get_subset
 export Subset
