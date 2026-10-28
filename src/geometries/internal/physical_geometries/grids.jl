@@ -14,7 +14,10 @@ import .....DebugCounters
 function __init__()
     DebugCounters.register!(Grid, [
         (:ncells, "Number of grid cells between start and end of trajectory in single steps; 0 means that the start and end were identical, so no collision checks were required.", DebugCounters.FrequencyCounter(Int)),
-        (:ncandidates, "Total number of candidate obstructions considered by the collision detector (including duplicates)", DebugCounters.FrequencyTable(Int))
+        (:cell_occupancy, "Number of obstructions in each cell", DebugCounters.FrequencyCounter(Int)),
+        (:cells_visited, "Number of grid cells actually visited before a collision was found", DebugCounters.FrequencyTable(Int)),
+        (:ncandidates, "Total number of candidate obstructions considered by the collision detector (including duplicates)", DebugCounters.FrequencyTable(Int)),
+        (:duplicate_candidates, "Number of duplicate candidate obstructions", DebugCounters.FrequencyTable(Int)),
     ])
 end
 
@@ -64,6 +67,11 @@ function finalise!(wrapper::Grid{N}) where {N}
         wrapper.fully_inside_indices,
         _fully_inside_indices(wrapper.geometry, wrapper.grid, wrapper.indices),
     )
+    if DebugCounters.debug_mode(wrapper)
+        for indices in wrapper.grid.indices
+            DebugCounters.record!(wrapper, :cell_occupancy, length(indices))
+        end
+    end
     nothing
 end
 
@@ -217,7 +225,7 @@ function find_intersection(
     end
     start_coordinate = _grid_coordinate(geometry.grid, start)
     destination_coordinate = _grid_coordinate(geometry.grid, destination)
-    if DebugCounters.debug_mode(geometry)
+    if DebugCounters.debug_mode(geometry) && !isnothing(start_coordinate) && !isnothing(destination_coordinate)
         DebugCounters.record!(geometry, :ncells, sum(abs.(destination_coordinate - start_coordinate)) + 1)
     end
     if !isnothing(start_coordinate) && start_coordinate == destination_coordinate
@@ -236,11 +244,19 @@ function _find_intersection_candidates(geometry, start, destination, previous_hi
     best = nothing
     if DebugCounters.debug_mode(geometry)
         ncandidates = 0
+        visited = Set{Int}()
+        cells_visited = 0
+        prev_entry_time = -Inf
     end
     for (index, entry_time) in candidates
         !isnothing(best) && best[end] < entry_time && break
         if DebugCounters.debug_mode(geometry)
             ncandidates += 1
+            push!(visited, index)
+            if prev_entry_time != entry_time
+                cells_visited += 1
+                prev_entry_time = entry_time
+            end
         end
         hit = find_intersection(
             geometry.geometry, start, destination, previous_hit, inside, geometry.indices[index],
@@ -251,6 +267,8 @@ function _find_intersection_candidates(geometry, start, destination, previous_hi
     end
     if DebugCounters.debug_mode(geometry)
         DebugCounters.record!(geometry, :ncandidates, ncandidates)
+        DebugCounters.record!(geometry, :duplicate_candidates, ncandidates - length(visited))
+        DebugCounters.record!(geometry, :cells_visited, cells_visited)
     end
     best
 end
