@@ -35,6 +35,9 @@ import Compat: @compat
 import .Constants: gyromagnetic_ratio
 @compat public gyromagnetic_ratio
 
+import .DebugCounters: report
+@compat public report
+
 import .Scanners: Scanner, B0, gradient_strength, slew_rate, Default_Scanner, Siemens_Prisma, Siemens_Terra, Siemens_Connectom, Siemens_Connectom_v2
 export Scanner, Default_Scanner, Siemens_Prisma, Siemens_Terra, Siemens_Connectom, Siemens_Connectom_v2
 @compat public B0, gradient_strength, slew_rate
