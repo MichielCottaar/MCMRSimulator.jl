@@ -293,7 +293,7 @@ report(table::DebugTable; io::IO=stdout) = report(io, table)
 
 const _registry_lock = ReentrantLock()
 const _registered_tables = Dict{Any, DebugTable}()
-const _instance_tables = Dict{UInt, DebugTable}()
+const _instance_tables = Dict{UInt, Tuple{Any, DebugTable}}()
 
 function _metric_definitions(table::DebugTable)
     lock(table.lock) do
@@ -345,9 +345,9 @@ function _instance_table(instance)
     lock(_registry_lock) do
         get!(_instance_tables, instance_id) do
             registered_type = _registered_table_type(instance)
-            DebugTable(_metric_definitions(_registered_tables[registered_type]))
+            (instance, DebugTable(_metric_definitions(_registered_tables[registered_type])))
         end
-    end
+    end[2]
 end
 
 """Record a metric value for this instance, creating its table on first use."""
@@ -372,11 +372,11 @@ report(io::IO, instance) = debug_mode(instance) ? report(io, _instance_table(ins
 report(instance; io::IO=stdout) = report(io, instance)
 function report(io::IO)
     lock(_registry_lock) do
-        for instance in keys(_instance_table)
-            println("")
-            println("** $instance **")
-            println("")
-            report(io, instance)
+        for (instance, table) in values(_instance_tables)
+            println(io, "")
+            println(io, "** $instance **")
+            println(io, "")
+            report(io, table)
         end
     end
 end
