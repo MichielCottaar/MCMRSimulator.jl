@@ -42,6 +42,17 @@ module DebugCounters
 export AbstractMetric, DebugTable, FrequencyCounter, FrequencyTable,
     Counter, SummaryMeasures, Histogram, register!, record!, reset!, snapshot, report
 
+
+"""
+    debug_mode(my_object)
+
+Whether debug mode is enabled for `my_object`.
+
+Ideally this is a defined based on the object type, in which case any calls to `record!` are a noop if debugging is disabled.
+It can also be a runtime operation, which will slightly slow down the code even if debugging is disabled.
+"""
+function debug_mode end
+
 abstract type AbstractMetric end
 
 """Exact occurrence counts for integer values."""
@@ -334,17 +345,17 @@ function _instance_table(instance)
 end
 
 """Record a metric value for this instance, creating its table on first use."""
-record!(instance, name::Symbol, value) = record!(_instance_table(instance), name, value)
+record!(instance, name::Symbol, value) = debug_mode(instance) ? record!(_instance_table(instance), name, value) : nothing
 
 """Reset the metrics associated with this instance."""
-reset!(instance) = reset!(_instance_table(instance))
+reset!(instance) = debug_mode(instance) ? reset!(_instance_table(instance)) : nothing
 
 """Return independent metric copies associated with this instance."""
 snapshot(instance, name::Symbol) = snapshot(_instance_table(instance), name)
 snapshot(instance) = snapshot(_instance_table(instance))
 
 """Report the metrics associated with this instance."""
-report(io::IO, instance) = report(io, _instance_table(instance))
+report(io::IO, instance) = debug_mode(instance) ? report(io, _instance_table(instance)) : nothing
 report(instance; io::IO=stdout) = report(io, instance)
 
 """Discard all per-instance tables while retaining registered metric definitions."""

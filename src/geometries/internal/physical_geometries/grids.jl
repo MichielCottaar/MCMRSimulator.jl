@@ -117,9 +117,9 @@ function _flatten_inside_bounding_boxes!(boxes, indices, children::Union{Tuple, 
     nothing
 end
 
-debug_mode(::Grid{N, P, I, V, D}) where {N, P, I, V, D} = D
+DebugCounters.debug_mode(::Grid{N, P, I, V, D}) where {N, P, I, V, D} = D
 rewrap(wrapper::Grid{N}, geometry::PhysicalGeometry{N}) where {N} =
-    Grid(geometry; resolution=wrapper.user_resolution, debug=debug_mode(wrapper))
+    Grid(geometry; resolution=wrapper.user_resolution, debug=DebugCounters.debug_mode(wrapper))
 has_equivalent_wrapper(first::Grid{N}, second::Grid{N}) where {N} =
     first.user_resolution == second.user_resolution
 
@@ -211,15 +211,13 @@ function find_intersection(
     isnothing(candidate) || throw(ArgumentError("Grid requires an unrestricted incoming candidate"))
     _require_finalised(geometry.grid)
     if iszero(destination - start)
-        if debug_mode(geometry)
-            DebugCounters.record!(geometry, :ncells, 0)
-            DebugCounters.record!(geometry, :ncandidates, 0)
-        end
+        DebugCounters.record!(geometry, :ncells, 0)
+        DebugCounters.record!(geometry, :ncandidates, 0)
         return nothing
     end
     start_coordinate = _grid_coordinate(geometry.grid, start)
     destination_coordinate = _grid_coordinate(geometry.grid, destination)
-    if debug_mode(geometry)
+    if DebugCounters.debug_mode(geometry)
         DebugCounters.record!(geometry, :ncells, sum(abs.(destination_coordinate - start_coordinate)) + 1)
     end
     if !isnothing(start_coordinate) && start_coordinate == destination_coordinate
@@ -236,12 +234,12 @@ end
 
 function _find_intersection_candidates(geometry, start, destination, previous_hit, inside, candidates)
     best = nothing
-    if debug_mode(geometry)
+    if DebugCounters.debug_mode(geometry)
         ncandidates = 0
     end
     for (index, entry_time) in candidates
         !isnothing(best) && best[end] < entry_time && break
-        if debug_mode(geometry)
+        if DebugCounters.debug_mode(geometry)
             ncandidates += 1
         end
         hit = find_intersection(
@@ -251,7 +249,7 @@ function _find_intersection_candidates(geometry, start, destination, previous_hi
             best = hit
         end
     end
-    if debug_mode(geometry)
+    if DebugCounters.debug_mode(geometry)
         DebugCounters.record!(geometry, :ncandidates, ncandidates)
     end
     best
