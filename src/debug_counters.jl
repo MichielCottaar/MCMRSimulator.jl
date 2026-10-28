@@ -1,8 +1,45 @@
-"""Metric collectors and thread-safe tables for opt-in diagnostics."""
+"""
+    DebugCounters
+
+Thread-safe, per-instance metrics for opt-in diagnostics.
+
+Call [`register!`](@ref) once for each instrumented instance type, providing
+named metric templates and descriptions. Metrics are instances of an
+[`AbstractMetric`](@ref) subtype:
+
+- [`FrequencyCounter`](@ref) records exact integer-value frequencies and is
+  constructed with its key type, for example `FrequencyCounter(Int)`.
+- [`SummaryMeasures`](@ref) tracks count, extrema, mean, and sample variance.
+- [`Histogram`](@ref) records values into explicitly specified edges, with
+  separate underflow and overflow counts.
+
+For example:
+
+```julia
+register!(MyInstrumentedType, [
+    (:cells_visited, "Cells visited per query", FrequencyCounter(Int)),
+    (:step_length, "Step length", SummaryMeasures()),
+    (:step_distribution, "Step-length distribution", Histogram(0:1:10)),
+])
+
+record!(instance, :cells_visited, 3)
+report(instance)
+```
+
+`register!` stores metric templates for the supplied type. On the first
+`record!`, `snapshot`, or `report` for an instance, a private [`DebugTable`](@ref)
+is created with copies of those templates. If registrations exist for both a
+type and its supertype, the most-specific registration is used.
+
+`record!(instance, name, value)`, `reset!(instance)`, `snapshot(instance)`, and
+`report(instance)` operate on that instance's table under its lock. `reset!()`
+without an argument discards all per-instance tables while preserving type
+registrations. Snapshots contain independent copies of the metrics.
+"""
 module DebugCounters
 
 export AbstractMetric, DebugTable, FrequencyCounter, FrequencyTable,
-    SummaryMeasures, Histogram, record!, reset!, snapshot, report
+    SummaryMeasures, Histogram, register!, record!, reset!, snapshot, report
 
 abstract type AbstractMetric end
 
@@ -204,5 +241,86 @@ function report(io::IO, table::DebugTable)
 end
 
 report(table::DebugTable; io::IO=stdout) = report(io, table)
+
+const _registry_lock = ReentrantLock()
+const _registered_tables = Dict{Any, DebugTable}()
+const _instance_tables = Dict{UInt, DebugTable}()
+
+function _metric_definitions(table::DebugTable)
+    lock(table.lock) do
+        [
+            (name, table.metrics[name][2], deepcopy(table.metrics[name][1]))
+            for name in table.order
+        ]
+    end
+end
+
+"""
+    register!(T::Type, metrics)
+
+Register `(name, description, metric)` definitions for instances of `T`.
+Each instance receives its own lazily-created `DebugTable` with fresh copies of
+these metric templates. A more-specific registered type takes precedence over
+its registered supertypes.
+"""
+function register!(::Type{T}, metrics) where {T}
+    table_template = DebugTable(metrics)
+    definitions = _metric_definitions(table_template)
+    lock(_registry_lock) do
+        haskey(_registered_tables, T) && throw(ArgumentError(
+            "debug metrics are already registered for $T",
+        ))
+        _registered_tables[T] = DebugTable(definitions)
+    end
+    nothing
+end
+
+function _registered_table_type(instance)
+    instance_type = typeof(instance)
+    matches = [registered for registered in keys(_registered_tables) if instance_type <: registered]
+    isempty(matches) && throw(ArgumentError(
+        "no debug metrics registered for instance type $instance_type",
+    ))
+    most_specific = [
+        registered for registered in matches
+        if !any(other -> other !== registered && other <: registered, matches)
+    ]
+    length(most_specific) == 1 || throw(ArgumentError(
+        "ambiguous debug metric registrations for instance type $instance_type: $most_specific",
+    ))
+    only(most_specific)
+end
+
+function _instance_table(instance)
+    instance_id = UInt(objectid(instance))
+    lock(_registry_lock) do
+        get!(_instance_tables, instance_id) do
+            registered_type = _registered_table_type(instance)
+            DebugTable(_metric_definitions(_registered_tables[registered_type]))
+        end
+    end
+end
+
+"""Record a metric value for this instance, creating its table on first use."""
+record!(instance, name::Symbol, value) = record!(_instance_table(instance), name, value)
+
+"""Reset the metrics associated with this instance."""
+reset!(instance) = reset!(_instance_table(instance))
+
+"""Return independent metric copies associated with this instance."""
+snapshot(instance, name::Symbol) = snapshot(_instance_table(instance), name)
+snapshot(instance) = snapshot(_instance_table(instance))
+
+"""Report the metrics associated with this instance."""
+report(io::IO, instance) = report(io, _instance_table(instance))
+report(instance; io::IO=stdout) = report(io, instance)
+
+"""Discard all per-instance tables while retaining registered metric definitions."""
+function reset!()
+    lock(_registry_lock) do
+        empty!(_instance_tables)
+    end
+    nothing
+end
 
 end

@@ -1,6 +1,11 @@
 using Test
 import MCMRSimulator.DebugCounters
 
+abstract type DebugCounterProbe end
+mutable struct GenericDebugCounterProbe <: DebugCounterProbe end
+mutable struct SpecializedDebugCounterProbe <: DebugCounterProbe end
+mutable struct UnregisteredDebugCounterProbe end
+
 @testset "DebugCounters DebugTable" begin
     metrics = DebugCounters.DebugTable([
         (:cells_visited, "Cells visited per query", DebugCounters.FrequencyCounter(Int)),
@@ -10,7 +15,7 @@ import MCMRSimulator.DebugCounters
     ])
 
     @test DebugCounters.FrequencyTable === DebugCounters.FrequencyCounter
-    @test_throws MethodError DebugCounters.snapshot(DebugCounters.FrequencyCounter(Int))
+    @test_throws ArgumentError DebugCounters.snapshot(DebugCounters.FrequencyCounter(Int))
     DebugCounters.record!(metrics, :cells_visited, 0)
     DebugCounters.record!(metrics, :cells_visited, 2)
     foreach(_ -> DebugCounters.record!(metrics, :cells_visited, 2), 1:3)
@@ -79,4 +84,53 @@ import MCMRSimulator.DebugCounters
     ])
     @test_throws ArgumentError DebugCounters.Histogram([0, 1, 1])
     @test_throws ArgumentError DebugCounters.Histogram([0])
+end
+
+@testset "DebugCounters instance registry" begin
+    DebugCounters.reset!()
+    DebugCounters.register!(DebugCounterProbe, [
+        (:calls, "Calls", DebugCounters.FrequencyCounter(Int)),
+        (:values, "Values", DebugCounters.SummaryMeasures()),
+    ])
+    DebugCounters.register!(SpecializedDebugCounterProbe, [
+        (:specialized_calls, "Specialized calls", DebugCounters.FrequencyCounter(Int)),
+    ])
+
+    first_instance = GenericDebugCounterProbe()
+    second_instance = GenericDebugCounterProbe()
+    specialized_instance = SpecializedDebugCounterProbe()
+
+    DebugCounters.record!(first_instance, :calls, 1)
+    DebugCounters.record!(first_instance, :values, 2.5)
+    DebugCounters.record!(second_instance, :calls, 2)
+    DebugCounters.record!(specialized_instance, :specialized_calls, 7)
+
+    @test DebugCounters.snapshot(first_instance)[:calls].counts == Dict(1 => 1)
+    @test DebugCounters.snapshot(first_instance)[:values].count == 1
+    @test DebugCounters.snapshot(second_instance)[:calls].counts == Dict(2 => 1)
+    specialized_snapshot = DebugCounters.snapshot(specialized_instance)
+    @test specialized_snapshot[:specialized_calls] isa DebugCounters.FrequencyCounter{Int}
+    @test specialized_snapshot[:specialized_calls].counts == Dict(7 => 1)
+    @test_throws KeyError DebugCounters.record!(specialized_instance, :calls, 1)
+    @test_throws ArgumentError DebugCounters.snapshot(UnregisteredDebugCounterProbe())
+
+    concurrent_instance = GenericDebugCounterProbe()
+    Threads.@threads for _ in 1:1500
+        DebugCounters.record!(concurrent_instance, :calls, 3)
+    end
+    @test DebugCounters.snapshot(concurrent_instance)[:calls].counts == Dict(3 => 1500)
+
+    report_output = sprint(DebugCounters.report, first_instance)
+    @test occursin("# calls: Calls", report_output)
+    DebugCounters.reset!(first_instance)
+    @test isempty(DebugCounters.snapshot(first_instance)[:calls].counts)
+
+    # Global reset drops per-instance tables but leaves registrations available.
+    DebugCounters.reset!()
+    @test isempty(DebugCounters.snapshot(first_instance)[:calls].counts)
+    DebugCounters.record!(first_instance, :calls, 9)
+    @test DebugCounters.snapshot(first_instance)[:calls].counts == Dict(9 => 1)
+
+    @test_throws ArgumentError DebugCounters.register!(DebugCounterProbe, [])
+    DebugCounters.reset!()
 end
