@@ -223,6 +223,8 @@ function find_intersection(
     if iszero(destination - start)
         DebugCounters.record!(geometry, :ncells, 0)
         DebugCounters.record!(geometry, :ncandidates, 0)
+        DebugCounters.record!(geometry, :cells_visited, 0)
+        DebugCounters.record!(geometry, :duplicate_candidates, 0)
         return nothing
     end
     start_coordinate = _grid_coordinate(geometry.grid, start)
