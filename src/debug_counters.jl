@@ -1,11 +1,16 @@
 """
     DebugCounters
 
-Thread-safe, per-instance metrics for opt-in diagnostics.
+Thread-safe, per-instance metrics for opt-in diagnostics. To instrument a type:
 
-Call [`register!`](@ref) once for each instrumented instance type, providing
-named metric templates and descriptions. Metrics are instances of an
-[`AbstractMetric`](@ref) subtype:
+1. Define [`debug_mode`](@ref) for that type. It must return a `Bool`; the
+   method should ideally return a compile-time constant based on the object's
+   type so disabled recording can compile to a no-op.
+2. Call [`register!`](@ref) once for the type with named metric templates and
+   descriptions.
+3. Call [`record!`](@ref) with the instance, metric name, and observed value.
+
+Metrics are instances of an [`AbstractMetric`](@ref) subtype:
 
 - [`FrequencyCounter`](@ref) records exact integer-value frequencies and is
   constructed with its key type, for example `FrequencyCounter(Int)`.
@@ -17,25 +22,33 @@ named metric templates and descriptions. Metrics are instances of an
 For example:
 
 ```julia
+struct MyInstrumentedType{Debug} end
+DebugCounters.debug_mode(::MyInstrumentedType{Debug}) where {Debug} = Debug
+
 register!(MyInstrumentedType, [
     (:cells_visited, "Cells visited per query", FrequencyCounter(Int)),
+    (:candidate_tests, "Candidate tests per query", Counter()),
     (:step_length, "Step length", SummaryMeasures()),
     (:step_distribution, "Step-length distribution", Histogram(0:1:10)),
 ])
 
+instance = MyInstrumentedType{true}()
 record!(instance, :cells_visited, 3)
 report(instance)
 ```
 
-`register!` stores metric templates for the supplied type. On the first
-`record!`, `snapshot`, or `report` for an instance, a private [`DebugTable`](@ref)
-is created with copies of those templates. If registrations exist for both a
-type and its supertype, the most-specific registration is used.
+The type's `debug_mode` method is required for calls to instance-level
+`record!`, `reset!`, and `report`. If it returns `false`, those operations are
+no-ops and do not create an instance table. If it returns `true`, `record!`
+lazily creates a private [`DebugTable`](@ref) from copies of the registered
+metric templates. `snapshot(instance)` also lazily creates a table if needed,
+and returns independent metric copies. If registrations exist for both a type
+and its supertype, the most-specific registration is used.
 
-`record!(instance, name, value)`, `reset!(instance)`, `snapshot(instance)`, and
-`report(instance)` operate on that instance's table under its lock. `reset!()`
-without an argument discards all per-instance tables while preserving type
-registrations. Snapshots contain independent copies of the metrics.
+Enabled instance operations use the table's lock. `reset!(instance)` clears that
+instance's metrics, while `reset!()` without an argument discards all
+per-instance tables but preserves type registrations. `report(instance)` prints
+the instance's metrics and descriptions.
 """
 module DebugCounters
 
@@ -43,14 +56,7 @@ export AbstractMetric, DebugTable, FrequencyCounter, FrequencyTable,
     Counter, SummaryMeasures, Histogram, register!, record!, reset!, snapshot, report
 
 
-"""
-    debug_mode(my_object)
-
-Whether debug mode is enabled for `my_object`.
-
-Ideally this is a defined based on the object type, in which case any calls to `record!` are a noop if debugging is disabled.
-It can also be a runtime operation, which will slightly slow down the code even if debugging is disabled.
-"""
+"""Return whether diagnostics are enabled for an instrumented object."""
 function debug_mode end
 
 abstract type AbstractMetric end
