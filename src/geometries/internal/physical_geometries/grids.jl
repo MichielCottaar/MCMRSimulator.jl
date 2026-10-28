@@ -13,11 +13,13 @@ import .....DebugCounters
 
 function __init__()
     DebugCounters.register!(Grid, [
-        (:ncells, "Number of grid cells between start and end of trajectory in single steps; 0 means that the start and end were identical, so no collision checks were required.", DebugCounters.FrequencyCounter(Int)),
+        (:ncells, "Number of grid cells between start and end of trajectory in single steps; 0 means that the start and end were identical, so no collision checks were required. This is only counted if start and destination are both inside of the grid", DebugCounters.FrequencyCounter(Int)),
         (:cell_occupancy, "Number of obstructions in each cell", DebugCounters.FrequencyCounter(Int)),
-        (:cells_visited, "Number of grid cells actually visited before a collision was found", DebugCounters.FrequencyTable(Int)),
+        (:cells_visited, "Number of grid cells actually visited before a collision was found. Empty cells will not be counted.", DebugCounters.FrequencyTable(Int)),
         (:ncandidates, "Total number of candidate obstructions considered by the collision detector (including duplicates)", DebugCounters.FrequencyTable(Int)),
         (:duplicate_candidates, "Number of duplicate candidate obstructions", DebugCounters.FrequencyTable(Int)),
+        (:start_out_of_grid, "Is the start position outside of the grid", DebugCounters.FrequencyTable(Bool)),
+        (:dest_out_of_grid, "Is the destination position outside of the grid", DebugCounters.FrequencyTable(Bool)),
     ])
 end
 
@@ -225,8 +227,12 @@ function find_intersection(
     end
     start_coordinate = _grid_coordinate(geometry.grid, start)
     destination_coordinate = _grid_coordinate(geometry.grid, destination)
-    if DebugCounters.debug_mode(geometry) && !isnothing(start_coordinate) && !isnothing(destination_coordinate)
-        DebugCounters.record!(geometry, :ncells, sum(abs.(destination_coordinate - start_coordinate)) + 1)
+    if DebugCounters.debug_mode(geometry) 
+        DebugCounters.record!(geometry, :start_out_of_grid, isnothing(start_coordinate))
+        DebugCounters.record!(geometry, :dest_out_of_grid, isnothing(destination_coordinate))
+        if !isnothing(start_coordinate) && !isnothing(destination_coordinate)
+            DebugCounters.record!(geometry, :ncells, sum(abs.(destination_coordinate - start_coordinate)) + 1)
+        end
     end
     if !isnothing(start_coordinate) && start_coordinate == destination_coordinate
         return _find_intersection_candidates(
