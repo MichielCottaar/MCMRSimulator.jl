@@ -5,6 +5,11 @@ abstract type DebugCounterProbe end
 mutable struct GenericDebugCounterProbe <: DebugCounterProbe end
 mutable struct SpecializedDebugCounterProbe <: DebugCounterProbe end
 mutable struct UnregisteredDebugCounterProbe end
+mutable struct DisabledDebugCounterProbe end
+
+DebugCounters.debug_mode(::GenericDebugCounterProbe) = true
+DebugCounters.debug_mode(::SpecializedDebugCounterProbe) = true
+DebugCounters.debug_mode(::DisabledDebugCounterProbe) = false
 
 @testset "DebugCounters DebugTable" begin
     metrics = DebugCounters.DebugTable([
@@ -150,4 +155,14 @@ end
 
     @test_throws ArgumentError DebugCounters.register!(DebugCounterProbe, [])
     DebugCounters.reset!()
+end
+
+@testset "DebugCounters disabled instrumented type" begin
+    instance = DisabledDebugCounterProbe()
+    @test !DebugCounters.debug_mode(instance)
+    @test DebugCounters.record!(instance, :unregistered_metric, 1) === nothing
+    @test DebugCounters.reset!(instance) === nothing
+    @test DebugCounters.report(instance) === nothing
+    # Disabled operations do not require registration or allocate an instance table.
+    @test_throws ArgumentError DebugCounters.snapshot(instance)
 end
