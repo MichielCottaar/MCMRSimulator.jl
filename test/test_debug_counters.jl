@@ -10,6 +10,7 @@ mutable struct UnregisteredDebugCounterProbe end
     metrics = DebugCounters.DebugTable([
         (:cells_visited, "Cells visited per query", DebugCounters.FrequencyCounter(Int)),
         (:wide_integer, "Wide integer key", DebugCounters.FrequencyCounter(Int128)),
+        (:net_count, "Net count", DebugCounters.Counter()),
         (:segment_length, "Segment length", DebugCounters.Histogram(0:1:10)),
         (:diffusion, "Diffusion summary", DebugCounters.SummaryMeasures()),
     ])
@@ -27,6 +28,15 @@ mutable struct UnregisteredDebugCounterProbe end
     @test_throws ArgumentError DebugCounters.record!(metrics, :cells_visited, 1.5)
     @test_throws KeyError DebugCounters.record!(metrics, :missing, 1)
     @test_throws KeyError DebugCounters.snapshot(metrics, :missing)
+
+    DebugCounters.record!(metrics, :net_count, 5)
+    DebugCounters.record!(metrics, :net_count, -2)
+    counter_snapshot = DebugCounters.snapshot(metrics, :net_count)
+    @test counter_snapshot isa DebugCounters.Counter{Int}
+    @test counter_snapshot.count == 3
+    counter_snapshot.count = 99
+    @test DebugCounters.snapshot(metrics, :net_count).count == 3
+    @test_throws ArgumentError DebugCounters.record!(metrics, :net_count, 1.5)
 
     for value in (-1.0, 0.0, 0.5, 1.0, 9.9, 10.0, 11.0)
         DebugCounters.record!(metrics, :segment_length, value)
@@ -57,16 +67,19 @@ mutable struct UnregisteredDebugCounterProbe end
     # A single table lock protects concurrent updates across its collectors.
     concurrent = DebugCounters.DebugTable([
         (:count, "count", DebugCounters.FrequencyCounter(Int)),
+        (:counter, "counter", DebugCounters.Counter()),
         (:summary, "summary", DebugCounters.SummaryMeasures()),
         (:histogram, "histogram", DebugCounters.Histogram(0:1:10)),
     ])
     Threads.@threads for _ in 1:2000
         DebugCounters.record!(concurrent, :count, 1)
+        DebugCounters.record!(concurrent, :counter, 2)
         DebugCounters.record!(concurrent, :summary, 1.0)
         DebugCounters.record!(concurrent, :histogram, 1.0)
     end
     concurrent_snapshot = DebugCounters.snapshot(concurrent)
     @test concurrent_snapshot[:count].counts == Dict(1 => 2000)
+    @test concurrent_snapshot[:counter].count == 4000
     @test concurrent_snapshot[:summary].count == 2000
     @test concurrent_snapshot[:histogram].counts[2] == 2000
 
@@ -75,6 +88,7 @@ mutable struct UnregisteredDebugCounterProbe end
     @test occursin("underflow = 1", output)
     DebugCounters.reset!(metrics)
     @test isempty(DebugCounters.snapshot(metrics, :cells_visited).counts)
+    @test DebugCounters.snapshot(metrics, :net_count).count == 0
     @test DebugCounters.snapshot(metrics, :segment_length).counts == zeros(Int, 10)
     @test DebugCounters.snapshot(metrics, :diffusion).count == 0
 
@@ -84,6 +98,9 @@ mutable struct UnregisteredDebugCounterProbe end
     ])
     @test_throws ArgumentError DebugCounters.Histogram([0, 1, 1])
     @test_throws ArgumentError DebugCounters.Histogram([0])
+    overflow_counter = DebugCounters.Counter(Int8)
+    overflow_counter.count = typemax(Int8)
+    @test_throws OverflowError DebugCounters.record!(overflow_counter, 1)
 end
 
 @testset "DebugCounters instance registry" begin

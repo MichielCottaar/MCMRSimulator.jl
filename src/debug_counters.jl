@@ -9,6 +9,7 @@ named metric templates and descriptions. Metrics are instances of an
 
 - [`FrequencyCounter`](@ref) records exact integer-value frequencies and is
   constructed with its key type, for example `FrequencyCounter(Int)`.
+- [`Counter`](@ref) accumulates signed integer increments.
 - [`SummaryMeasures`](@ref) tracks count, extrema, mean, and sample variance.
 - [`Histogram`](@ref) records values into explicitly specified edges, with
   separate underflow and overflow counts.
@@ -39,7 +40,7 @@ registrations. Snapshots contain independent copies of the metrics.
 module DebugCounters
 
 export AbstractMetric, DebugTable, FrequencyCounter, FrequencyTable,
-    SummaryMeasures, Histogram, register!, record!, reset!, snapshot, report
+    Counter, SummaryMeasures, Histogram, register!, record!, reset!, snapshot, report
 
 abstract type AbstractMetric end
 
@@ -74,6 +75,37 @@ reset!(metric::FrequencyCounter) = (empty!(metric.counts); nothing)
 
 function report(io::IO, metric::FrequencyCounter)
     show(io, metric.counts)
+    nothing
+end
+
+"""An integer accumulator updated by signed integer increments."""
+mutable struct Counter{T<:Integer} <: AbstractMetric
+    count::T
+end
+
+Counter(::Type{T}=Int) where {T<:Integer} = Counter{T}(zero(T))
+
+function record!(metric::Counter{T}, increment::Integer) where {T<:Integer}
+    converted = try
+        convert(T, increment)
+    catch
+        throw(ArgumentError("increment $increment cannot be represented by counter type $T"))
+    end
+    converted == increment || throw(ArgumentError(
+        "increment $increment cannot be represented exactly by counter type $T",
+    ))
+    metric.count = Base.checked_add(metric.count, converted)
+    nothing
+end
+
+record!(::Counter, increment::Real) = throw(ArgumentError(
+    "counters accept only integer increments, got $(typeof(increment))",
+))
+
+reset!(metric::Counter{T}) where {T<:Integer} = (metric.count = zero(T); nothing)
+
+function report(io::IO, metric::Counter)
+    show(io, metric.count)
     nothing
 end
 
