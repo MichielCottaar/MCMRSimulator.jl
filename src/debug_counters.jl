@@ -91,7 +91,24 @@ record!(::FrequencyCounter, value::Real) = throw(ArgumentError(
 reset!(metric::FrequencyCounter) = (empty!(metric.counts); nothing)
 
 function report(io::IO, metric::FrequencyCounter)
-    show(io, metric.counts)
+    value_width = max(
+        length("Value"),
+        maximum((length(string(value)) for value in keys(metric.counts)); init=0),
+    )
+    count_width = max(
+        length("Count"),
+        maximum((length(string(count)) for count in values(metric.counts)); init=0),
+    )
+    println(io, lpad("Value", value_width), " | ", lpad("Count", count_width))
+    println(io, repeat("-", value_width), "-+-", repeat("-", count_width))
+    for value in sort!(collect(keys(metric.counts)))
+        println(
+            io,
+            lpad(string(value), value_width),
+            " | ",
+            lpad(string(metric.counts[value]), count_width),
+        )
+    end
     nothing
 end
 

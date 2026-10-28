@@ -26,6 +26,10 @@ DebugCounters.debug_mode(::DisabledDebugCounterProbe) = false
     DebugCounters.record!(metrics, :cells_visited, 2)
     foreach(_ -> DebugCounters.record!(metrics, :cells_visited, 2), 1:3)
     @test DebugCounters.snapshot(metrics, :cells_visited).counts == Dict(0 => 1, 2 => 4)
+    @test sprint(DebugCounters.report, DebugCounters.snapshot(metrics, :cells_visited)) ==
+        "Value | Count\n------+------\n    0 |     1\n    2 |     4\n"
+    @test sprint(DebugCounters.report, DebugCounters.FrequencyCounter(Int)) ==
+        "Value | Count\n------+------\n"
 
     wide_value = Int128(2)^100
     DebugCounters.record!(metrics, :wide_integer, wide_value)
