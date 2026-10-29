@@ -189,12 +189,15 @@ function inside_indices(
     isnothing(coordinate) && return indices
 
     append!(indices, get(wrapper.fully_inside_indices, coordinate, inside_type[]))
-    checked = Set{inside_type}()
+    previous_inside_index = nothing
     for collision_index in wrapper.grid.indices[coordinate...]
         inside_index = to_inside_index(wrapper.geometry, wrapper.indices[collision_index])
-        isnothing(inside_index) && continue
-        inside_index in checked && continue
-        push!(checked, inside_index)
+        if isnothing(inside_index)
+            previous_inside_index = nothing
+            continue
+        end
+        inside_index == previous_inside_index && continue
+        previous_inside_index = inside_index
         isinside_single(
             wrapper.geometry, position, intersection;
             candidate=inside_index, no_deproject, kwargs...,
