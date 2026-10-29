@@ -487,6 +487,11 @@ function random_surface_positions(geometry::GroupGeometry{N}, density::GeometryP
     bounding_box::InternalBoundingBox{N}, scale_density;
     include_gap=false, kwargs...
 ) where {N}
+    IndexType = _append_type(intersection_type(typeof(geometry)), Bool)
+    (iszero(scale_density) ||
+     (density isa GeometryLeafProperties && iszero(density.value))) &&
+        return SVector{N, Float64}[], IndexType[]
+
     _combine((let
         values = random_surface_positions(
             child,
@@ -498,10 +503,7 @@ function random_surface_positions(geometry::GroupGeometry{N}, density::GeometryP
         (values[1], [(index, child_index...) for child_index in values[2]])
     end for (index, child) in enumerate(group_geometries(geometry; include_gap=include_gap))),
         Val(N),
-        _prepend_type(
-            Int,
-            _append_type(intersection_type(child_type(typeof(geometry))), Bool),
-        ),
+        IndexType,
     )
 end
 

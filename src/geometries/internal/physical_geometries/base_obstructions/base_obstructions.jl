@@ -59,6 +59,9 @@ function random_surface_positions(
     include_gap=false,
     kwargs...,
 ) where {N}
+    (iszero(scale_density) || iszero(density.value)) &&
+        return SVector{N, Float64}[], Tuple{Bool}[]
+
     positions = surface_sampling(geometry, density, scale_density)
     inside = rand(Bool, length(positions))
     return positions, [(i, ) for i in inside]
