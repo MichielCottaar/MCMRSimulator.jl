@@ -30,7 +30,7 @@
     "#repeats_description": "Length scale on which the obstructions are repeated (um). Field can be null. Expected type: StaticArraysCore.MVector{2, Float64}.",
     "repeats": [2.5,2.5],
     "#use_boundingbox_description": "Use bounding boxes for an initial filtering of possible intersections. Field can be null. Expected type: Bool.",
-    "use_boundingbox": true,
+    "use_boundingbox": false,
     "#grid_resolution_description": "Resolution of the grid that the volume is split up into (um). Defaults to roughly one grid element per obstruction. Field can be null. Expected type: Float64.",
     "grid_resolution": null,
     "#dwell_time_description": "Average time a particle stays stuck to the surface (ms). Surface property. Field can be null. Expected type: Float64.",
