@@ -40,16 +40,27 @@ end
 get_intersection_params_requires_inside(::Type{<:GeometryVectorLike{N, P}}) where {N, P} =
     get_intersection_params_requires_inside(P)
 
-_requires_inside(::Type{Tuple{}}) = Val(false)
+_trait_as_val(::Val{value}) where {value} = Val(value)
+_trait_as_val(value::Bool) = Val(value)
 
-_requires_inside(::Type{P}) where {P<:Tuple} =
-    _requires_inside(
-        get_intersection_params_requires_inside(Base.tuple_type_head(P)),
+_tuple_trait_any(::F, ::Type{Tuple{}}) where {F} = Val(false)
+
+_tuple_trait_any(trait, ::Type{P}) where {P<:Tuple} =
+    _tuple_trait_any(
+        trait,
+        _trait_as_val(trait(Base.tuple_type_head(P))),
         Base.tuple_type_tail(P),
     )
 
-_requires_inside(::Val{true}, ::Type) = Val(true)
-_requires_inside(::Val{false}, remaining::Type{<:Tuple}) = _requires_inside(remaining)
+_tuple_trait_any(::F, ::Val{true}, ::Type) where {F} = Val(true)
+_tuple_trait_any(::F, ::Val{false}, ::Type{Tuple{}}) where {F} = Val(false)
+
+_tuple_trait_any(trait, ::Val{false}, ::Type{P}) where {P<:Tuple} =
+    _tuple_trait_any(
+        trait,
+        _trait_as_val(trait(Base.tuple_type_head(P))),
+        Base.tuple_type_tail(P),
+    )
 
 function Base.show(io::IO, ::Type{T}) where {T <: GeometryVectorLike}
     print(io, "GeometryVector")
@@ -194,10 +205,11 @@ struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} <: GroupGeometry{
 end
 
 function find_intersection_requires_inside(::Type{<:GeometryTuple{N, P}}) where {N, P}
-    any(type -> find_intersection_requires_inside(type) === Val(true), P.parameters) ? Val(true) : Val(false)
+    _tuple_trait_any(find_intersection_requires_inside, P)
 end
 
-get_intersection_params_requires_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = _requires_inside(P)
+get_intersection_params_requires_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} =
+    _tuple_trait_any(get_intersection_params_requires_inside, P)
 
 group_geometries(group::GeometryTuple; include_gap=true) = group.geometries
 
@@ -339,7 +351,8 @@ intersection_candidates(group::GeometryVectorBoundingBox, start, destination) =
     )
 
 has_inside(::Type{<:GeometryVectorLike{N, P}}) where {N, P} = has_inside(P)
-has_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} = any(has_inside, P.parameters)
+has_inside(::Type{<:GeometryTuple{N, P}}) where {N, P} =
+    _tuple_trait_any(has_inside, P) === Val(true)
 has_single_inside(::Type{<:GroupGeometry}) = false
 
 function InternalBoundingBox(geometry::GroupGeometry{N, P}; kwargs...) where {N, P}

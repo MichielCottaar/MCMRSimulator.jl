@@ -1805,6 +1805,21 @@ end
         @test (@inferred requires_inside(typeof(GeometryTuple{3}(())))) === Val(false)
         @test (@inferred requires_inside(typeof(GeometryTuple((sphere, sphere))))) === Val(false)
         @test (@inferred requires_inside(typeof(GeometryTuple((sphere, IgnoreOverlapping(sphere)))))) === Val(true)
+        find_requires_inside = GI.PhysicalGeometries.find_intersection_requires_inside
+        liminal = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(
+            [BaseObstructions.Sphere(1.)], [1.], 0.2,
+        )
+        @test (@inferred find_requires_inside(typeof(GeometryTuple{3}(())))) === Val(false)
+        @test (@inferred find_requires_inside(typeof(GeometryTuple((sphere, sphere))))) === Val(false)
+        @test (@inferred find_requires_inside(typeof(GeometryTuple((sphere, liminal))))) === Val(true)
+        has_inside = GI.PhysicalGeometries.has_inside
+        @test (@inferred has_inside(typeof(GeometryTuple{3}(())))) === false
+        @test (@inferred has_inside(typeof(GeometryTuple((sphere, sphere))))) === true
+        triangle = BaseObstructions.FullTriangle(
+            SVector(0., 0., 0.), SVector(1., 0., 0.), SVector(0., 1., 0.),
+        )
+        @test (@inferred has_inside(typeof(GeometryTuple((sphere, triangle))))) === true
+        @test (@inferred has_inside(typeof(GeometryTuple((triangle,))))) === false
         nested = GeometryTuple((sphere, Shift(GeometryTuple((sphere, IgnoreOverlapping(sphere))), zero(SVector{3}))))
         @test (@inferred requires_inside(typeof(nested))) === Val(true)
     end
