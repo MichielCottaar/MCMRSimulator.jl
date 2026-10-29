@@ -395,13 +395,13 @@ function spin_sampling(geometry::FixedGeometry, bounding_box::BoundingBox, volum
     spins
 end
 
-function _expand_sample(sample::Spin{0}, geometry::FixedGeometry, nsequences::Integer; kwargs...)
+function _expand_sample(sample::Spin{0}, ::Type{S}; kwargs...) where {S <: Spin}
     orientation = SpinOrientation(
         get(kwargs, :longitudinal, 1.),
         get(kwargs, :transverse, 0.),
         get(kwargs, :phase, 0.),
     )
-    S = spin_type(geometry, nsequences)
+    nsequences = S.parameters[1]
     S(
         sample.position,
         static_vector_type(nsequences)(fill(orientation, nsequences)),
@@ -429,7 +429,8 @@ function Snapshot(nspins::Integer, bounding_box=500, geometry=(); time::Real=0.,
     end
     samples = Random.shuffle(samples)[1:nspins]
     nsequences = get(kwargs, :nsequences, 1)
-    Snapshot(map(sample -> _expand_sample(sample, geometry, nsequences; kwargs...), samples), time)
+    S = spin_type(geometry, nsequences)
+    Snapshot(map(sample -> _expand_sample(sample, S; kwargs...), samples), time)
 end
 
 Base.show(io::IO, snap::Snapshot{1}) = print(io, "Snapshot($(length(snap)) spins with total magnetisation of $(repr(SpinOrientationSum(snap), context=io)) at t=$(get_time(snap))ms)")
