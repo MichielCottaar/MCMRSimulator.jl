@@ -789,6 +789,7 @@ end
     original_positions = copy(sampling.positions)
     original_indices = copy(sampling.surface_indices)
     result = simplify(geometry, Val(:unwrap_liminal_test))
+    GI.PhysicalGeometries.finalise!(result)
     @test result isa Liminal.FixedLiminalGeometry
     @test result !== geometry
     @test result.geometries == [sphere, smaller]
@@ -796,12 +797,12 @@ end
     @test result.number_fractions == geometry.number_fractions
     @test result.extracellular_fraction == geometry.extracellular_fraction
     @test result.tortuosity_strength == geometry.tortuosity_strength
-    @test result.total_surface_area == geometry.total_surface_area
-    @test result.weighted_cell_volume == geometry.weighted_cell_volume
-    @test result.spherical_surface_area === geometry.spherical_surface_area
-    @test result.normal_second_moment_tensor == geometry.normal_second_moment_tensor
-    @test result.tortuosity_transform == geometry.tortuosity_transform
-    @test result.inverse_tortuosity_transform == geometry.inverse_tortuosity_transform
+    @test isfinite(result.total_surface_area[])
+    @test isfinite(result.weighted_cell_volume[])
+    @test result.spherical_surface_area[] !== geometry.spherical_surface_area[]
+    @test isapprox(result.normal_second_moment_tensor[], geometry.normal_second_moment_tensor[]; atol=0.01)
+    @test isapprox(result.tortuosity_transform[], geometry.tortuosity_transform[]; atol=0.01)
+    @test isapprox(result.inverse_tortuosity_transform[], geometry.inverse_tortuosity_transform[]; atol=0.01)
     fresh = result.outer_surface_sampling
     @test fresh !== sampling
     @test fresh.lock !== sampling.lock
@@ -824,14 +825,14 @@ end
     # Liminal collections can accept heterogeneous child types after rewriting.
     homogeneous = rewrap(geometry, [singleton, GeometryTuple((smaller,))])
     heterogeneous = simplify(homogeneous, Val(:unwrap_liminal_test))
+    GI.PhysicalGeometries.finalise!(heterogeneous)
     @test heterogeneous.geometries[1] === sphere
     @test heterogeneous.geometries[2] === homogeneous.geometries[2]
     @test length(Base.uniontypes(eltype(heterogeneous.geometries))) == 2
-    @test heterogeneous.weighted_cell_volume == geometry.weighted_cell_volume
-    @test heterogeneous.spherical_surface_area === geometry.spherical_surface_area
+    @test isfinite(heterogeneous.weighted_cell_volume[])
+    @test heterogeneous.spherical_surface_area[] !== geometry.spherical_surface_area[]
 
-    # Partial precomputation skips volume estimation; complete precomputation
-    # also skips area and large spherical-statistics sampling during rewrap.
+    # Construction defers expensive volume, surface, and sampling work.
     struct LiminalEstimationProbe <: Transparent{3, BaseObstructions.Sphere}
         geometry::BaseObstructions.Sphere
         volume_calls::Base.RefValue{Int}
@@ -855,19 +856,23 @@ end
     end
     probe = LiminalEstimationProbe(sphere, Ref(0), Ref(0), Ref(0))
     volume = 4π / 3
-    precomputed_volume = Liminal.FixedLiminalGeometry(
-        [probe], [1.], 0.2; precomputed=(weighted_cell_volume=volume,),
-    )
-    @test precomputed_volume.weighted_cell_volume == volume
+    delayed = Liminal.FixedLiminalGeometry([probe], [1.], 0.2)
+    @test isnan(delayed.total_surface_area[])
+    @test isnan(delayed.weighted_cell_volume[])
     @test probe.volume_calls[] == 0
-    @test probe.surface_calls[] == 1
-    @test probe.sampling_calls[] == 2
-    rebuilt = rewrap(precomputed_volume, [probe])
-    @test probe.volume_calls[] == 0
-    @test probe.surface_calls[] == 1
-    @test probe.sampling_calls[] == 3
-    @test rebuilt.spherical_surface_area === precomputed_volume.spherical_surface_area
-    @test rebuilt.outer_surface_sampling !== precomputed_volume.outer_surface_sampling
+    @test probe.surface_calls[] == 0
+    @test probe.sampling_calls[] == 0
+    Liminal.finalise!(delayed)
+    @test delayed.weighted_cell_volume[] == volume
+    @test probe.volume_calls[] == 1
+    @test probe.surface_calls[] >= 1
+    @test probe.sampling_calls[] > 0
+    calls_after_finalise = (probe.volume_calls[], probe.surface_calls[], probe.sampling_calls[])
+    rebuilt = rewrap(delayed, [probe])
+    @test isnan(rebuilt.total_surface_area[])
+    @test isnan(rebuilt.weighted_cell_volume[])
+    @test (probe.volume_calls[], probe.surface_calls[], probe.sampling_calls[]) == calls_after_finalise
+    @test rebuilt.outer_surface_sampling !== delayed.outer_surface_sampling
     @test rebuilt.outer_surface_sampling.index_to_sample == 1
 end
 
@@ -2136,7 +2141,7 @@ end
             geometries=[(1., sparse_cells)],
             extracellular_fraction=0.2,
         ))
-        @test sparse_liminal.geometry.weighted_cell_volume ≈
+        @test sparse_liminal.geometry.weighted_cell_volume[] ≈
             length(sparse_centers) * 4π * 0.1^3 / 3 rtol=0.04
         geometry_mesh_error = try
             GI.geometry_mesh(fixed_cells.geometry)
@@ -2170,8 +2175,8 @@ end
         )
         @test fixed_cells.geometry.outer_surface_sampling isa
             GI.PhysicalGeometries.LiminalGeometries.OuterSurfaceSampling
-        @test fixed_cells.geometry.total_surface_area > 0
-        spherical_surface_area = fixed_cells.geometry.spherical_surface_area
+        @test fixed_cells.geometry.total_surface_area[] > 0
+        spherical_surface_area = fixed_cells.geometry.spherical_surface_area[]
         spherical_coefficients = copy(spherical_surface_area.coefficients)
         sampling = fixed_cells.geometry.outer_surface_sampling
         GI.PhysicalGeometries.LiminalGeometries.sample!(sampling, fixed_cells.geometry, 100)
@@ -2187,7 +2192,7 @@ end
         @test spherical_surface_area.coefficients == spherical_coefficients
         @test GI.inverse_mean_free_path(fixed_cells.geometry, direction) ≈
             (1 - fixed_cells.geometry.extracellular_fraction) /
-            (fixed_cells.geometry.extracellular_fraction * fixed_cells.geometry.weighted_cell_volume) *
+            (fixed_cells.geometry.extracellular_fraction * fixed_cells.geometry.weighted_cell_volume[]) *
             GI.projected_surface_area(spherical_surface_area, direction)
         @test_throws ArgumentError GI.projected_surface_area(sampling, zero(SVector{3}))
         @test fixed_cells.geometry.geometries isa Vector{<:GI.PhysicalGeometry}
@@ -2204,8 +2209,10 @@ end
         mixed_cells = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(
             [sphere, cylinder], [0.5, 0.5], 0.2,
         )
-        @test mixed_cells.total_surface_area ≈ 3π atol=0.1
-        @test mixed_cells.weighted_cell_volume ≈ 7π / 6 atol=0.05
+        @test isnan(mixed_cells.total_surface_area[])
+        GI.PhysicalGeometries.finalise!(mixed_cells)
+        @test mixed_cells.total_surface_area[] ≈ 3π atol=0.1
+        @test mixed_cells.weighted_cell_volume[] ≈ 7π / 6 atol=0.05
 
         parallel_direction = SVector(0., 0., 1.)
         perpendicular_direction = SVector(1., 0., 0.)
@@ -2250,6 +2257,7 @@ end
         sphere_geometry = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(
             [BaseObstructions.Sphere(1.)], [1.], 0.2,
         )
+        GI.PhysicalGeometries.finalise!(sphere_geometry)
         GI.PhysicalGeometries.LiminalGeometries.sample!(sphere_sampling, sphere_geometry, 100)
         @test all(
             position ⋅ normal > 0
@@ -2411,7 +2419,7 @@ end
             extracellular_fraction=0.2,
             tortuosity_strength=0.4,
         ))
-        expected_tensor = I - 0.4 * (1 - 0.2) * fixed_liminal.geometry.normal_second_moment_tensor
+        expected_tensor = I - 0.4 * (1 - 0.2) * fixed_liminal.geometry.normal_second_moment_tensor[]
         @test GI.tortuosity_tensor(
             fixed_liminal,
             GI.IsInside(()),
@@ -2537,6 +2545,7 @@ end
     liminal_cylinder = GI.PhysicalGeometries.LiminalGeometries.FixedLiminalGeometry(
         [cylinder_rotation], [1.], 0.2,
     )
+    GI.PhysicalGeometries.finalise!(liminal_cylinder)
     @test !isempty(liminal_cylinder.outer_surface_sampling.positions)
     GI.PhysicalGeometries.LiminalGeometries.sample!(
         liminal_cylinder.outer_surface_sampling, liminal_cylinder, 100,

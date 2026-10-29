@@ -412,7 +412,7 @@ function tortuosity_tensor(
     inside::IsInside,
 )
     if is_liminal(geometry) && isempty(inside.inside_of)
-        transform = geometry.geometry.tortuosity_transform
+        transform = geometry.geometry.tortuosity_transform[]
         return transform * transform
     end
     SMatrix{3, 3, Float64, 9}(I)
@@ -423,7 +423,7 @@ function tortuosity_transform(
     inside::IsInside,
 )
     if is_liminal(geometry) && isempty(inside.inside_of)
-        return geometry.geometry.tortuosity_transform
+        return geometry.geometry.tortuosity_transform[]
     end
     SMatrix{3, 3, Float64, 9}(I)
 end
