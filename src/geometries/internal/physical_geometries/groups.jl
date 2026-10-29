@@ -309,19 +309,11 @@ function isinside_single(
     ))
 
     child_index = candidate[1]
-    child = nothing
-    for (index, candidate_child) in inside_candidates(group, position)
-        if index == child_index
-            child = candidate_child
-            break
-        end
-    end
-    isnothing(child) && return false
+    child, child_candidate = get_child(group, candidate)
     has_inside(typeof(child)) || throw(ArgumentError(
         "candidate index selects a geometry without an inside region",
     ))
 
-    child_candidate = candidate[2:end]
     child_intersection = !isnothing(previous_intersection) &&
         previous_intersection[1] == child_index ? previous_intersection[2:end] : nothing
     if has_single_inside(typeof(child))

@@ -1388,6 +1388,11 @@ end
 
     wrapped_group = Shift(group, [1., 2., 0.])
     @test isinside_single(wrapped_group, SVector(-2., 2., 0.); candidate=(1,))
+
+    repeated = Repeat(sphere, [4., 4., 4.])
+    @test isinside_single(
+        repeated, SVector(4., 0., 0.); candidate=(SVector(1, 0, 0),),
+    )
 end
 
 @testset "intersection types" begin
