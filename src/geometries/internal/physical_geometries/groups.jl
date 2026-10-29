@@ -155,7 +155,15 @@ function find_intersection(group::GroupGeometry{N}, start::SVector{N, Float64}, 
 end
 
 _is_fully_concrete(::Type{T}) where {T} =
-    isconcretetype(T) && all(parameter -> !(parameter isa Type) || _is_fully_concrete(parameter), T.parameters)
+    isconcretetype(T) && all(_child_geometry_types_are_concrete, T.parameters)
+
+function _child_geometry_types_are_concrete(::Type{T}) where {T}
+    T isa Union && return all(_child_geometry_types_are_concrete, Base.uniontypes(T))
+    T <: PhysicalGeometry && return _is_fully_concrete(T)
+    T <: Tuple && return all(_child_geometry_types_are_concrete, T.parameters)
+    true
+end
+_child_geometry_types_are_concrete(::Any) = true
 
 struct GeometryVector{N, P<:PhysicalGeometry{N}} <: GeometryVectorLike{N, P}
     geometries::Vector{P}

@@ -180,6 +180,9 @@ const fix = mr.Geometries.Fix.fix
 end
 
 @testset "Fix dispatcher" begin
+    swc_geometry = mr.read_geometry(joinpath(@__DIR__, "geometries", "cylinder.swc"))
+    @test fix([swc_geometry, swc_geometry]) isa mr.Geometries.Fix.FixedGeometry
+
     group = mr.Spheres(
         radius=1.0,
         R1_inside=2.0,
