@@ -98,7 +98,7 @@ const fix = mr.Geometries.Fix.fix
         FixBaseGeometry.fix_base_geometry(grid_group),
     )
     @test gridded isa mr.Geometries.Internal.PhysicalGeometries.Grids.Grid
-    @test gridded.geometry isa Groups.GeometryVectorBoundingBox
+    @test gridded.geometry isa Groups.GeometryVector
     debug_gridded = FixTransformations.fix_transformations(
         grid_group,
         FixBaseGeometry.fix_base_geometry(grid_group);
@@ -112,7 +112,7 @@ const fix = mr.Geometries.Fix.fix
         ungridded_group,
         FixBaseGeometry.fix_base_geometry(ungridded_group),
     )
-    @test ungridded isa Groups.GeometryVectorBoundingBox
+    @test ungridded isa Groups.GeometryVector
 
     repeated_group = mr.Spheres(radius=1.0, repeats=[4.0, 4.0, 4.0])
     repeated = FixTransformations.fix_transformations(
