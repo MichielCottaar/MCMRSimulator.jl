@@ -465,8 +465,21 @@ _density_child(density::GeometryProperties, ::SVector) = density
 
 function _combine(draws, ::Val{N}, ::Type{IndexType}) where {N, IndexType}
     draws = collect(draws)
-    positions = reduce(vcat, (draw[1] for draw in draws); init=SVector{N, Float64}[])
-    indices = reduce(vcat, (draw[2] for draw in draws); init=IndexType[])
+    npositions = sum(length(draw[1]) for draw in draws; init=0)
+    nindices = sum(length(draw[2]) for draw in draws; init=0)
+    positions = Vector{SVector{N, Float64}}(undef, npositions)
+    indices = Vector{IndexType}(undef, nindices)
+
+    position_start = 1
+    index_start = 1
+    for (child_positions, child_indices) in draws
+        position_end = position_start + length(child_positions) - 1
+        index_end = index_start + length(child_indices) - 1
+        copyto!(positions, position_start, child_positions, firstindex(child_positions), length(child_positions))
+        copyto!(indices, index_start, child_indices, firstindex(child_indices), length(child_indices))
+        position_start = position_end + 1
+        index_start = index_end + 1
+    end
     positions, indices
 end
 
