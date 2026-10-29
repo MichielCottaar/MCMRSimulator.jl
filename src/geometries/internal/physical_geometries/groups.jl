@@ -100,15 +100,36 @@ function _append_type(::Type{T}, ::Type{Suffix}) where {T, Suffix}
     Tuple{T.parameters..., Suffix}
 end
 
-function inside_indices_eltype(::Type{T}) where {T}
-    T isa Union || throw(MethodError(inside_indices_eltype, (Type{T},)))
-    Union{(inside_indices_eltype(element) for element in Base.uniontypes(T))...}
-end
+_union_val(::Val{A}, ::Val{B}) where {A, B} = Val(Union{A, B})
+_type_from_val(::Val{T}) where {T} = T
 
-function intersection_type(::Type{T}) where {T}
-    T isa Union || throw(MethodError(intersection_type, (Type{T},)))
-    Union{(intersection_type(element) for element in Base.uniontypes(T))...}
-end
+_inside_indices_union(::Type{Union{A, B}}) where {A, B} = _union_val(
+    Val(inside_indices_eltype(A)),
+    Val(inside_indices_eltype(B)),
+)
+
+_intersection_type_union(::Type{Union{A, B}}) where {A, B} = _union_val(
+    Val(intersection_type(A)),
+    Val(intersection_type(B)),
+)
+
+_inside_indices_tuple(::Type{Tuple{}}) = Val(Union{})
+_inside_indices_tuple(::Type{P}) where {P<:Tuple} = _union_val(
+    Val(_prepend_type(Int, inside_indices_eltype(Base.tuple_type_head(P)))),
+    _inside_indices_tuple(Base.tuple_type_tail(P)),
+)
+
+_intersection_type_tuple(::Type{Tuple{}}) = Val(Union{})
+_intersection_type_tuple(::Type{P}) where {P<:Tuple} = _union_val(
+    Val(_prepend_type(Int, intersection_type(Base.tuple_type_head(P)))),
+    _intersection_type_tuple(Base.tuple_type_tail(P)),
+)
+
+inside_indices_eltype(::Type{Union{A, B}}) where {A, B} =
+    _type_from_val(_inside_indices_union(Union{A, B}))
+
+intersection_type(::Type{Union{A, B}}) where {A, B} =
+    _type_from_val(_intersection_type_union(Union{A, B}))
 
 inside_indices_eltype(::Type{<:GroupGeometry{N, P}}) where {N, P} =
     _prepend_type(Int, inside_indices_eltype(P))
@@ -274,10 +295,10 @@ end
 child_type(::Type{<:GeometryTuple{N, P}}) where {N, P} = Union{P.parameters...}
 
 inside_indices_eltype(::Type{<:GeometryTuple{N, P}}) where {N, P} =
-    _prepend_type(Int, inside_indices_eltype(Union{P.parameters...}))
+    _type_from_val(_inside_indices_tuple(P))
 
 intersection_type(::Type{<:GeometryTuple{N, P}}) where {N, P} =
-    _prepend_type(Int, intersection_type(Union{P.parameters...}))
+    _type_from_val(_intersection_type_tuple(P))
 
 function bound_intersection_type(geometry::GeometryTuple, density)
     _merge_types(

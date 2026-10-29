@@ -1822,6 +1822,15 @@ end
         @test (@inferred has_inside(typeof(GeometryTuple((triangle,))))) === false
         nested = GeometryTuple((sphere, Shift(GeometryTuple((sphere, IgnoreOverlapping(sphere))), zero(SVector{3}))))
         @test (@inferred requires_inside(typeof(nested))) === Val(true)
+
+        nested_tuple = GeometryTuple((sphere, sphere))
+        heterogeneous_tuple = GeometryTuple((nested_tuple, sphere))
+        inside_indices_type = GI.PhysicalGeometries.inside_indices_eltype
+        intersection_type = GI.PhysicalGeometries.intersection_type
+        @test (@inferred inside_indices_type(typeof(heterogeneous_tuple))) ==
+            Union{Tuple{Int}, Tuple{Int, Int}}
+        @test (@inferred intersection_type(typeof(heterogeneous_tuple))) ==
+            Union{Tuple{Int}, Tuple{Int, Int}}
     end
 
     @testset "Inside index conversion" begin
