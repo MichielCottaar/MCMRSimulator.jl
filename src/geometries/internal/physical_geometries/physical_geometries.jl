@@ -297,18 +297,40 @@ function inside_sampling_per_obstruction(
     ))
 end
 
-"""Sample points uniformly within a geometry, returning positions and inside indices."""
+"""Sample points uniformly within a geometry, returning positions and inside indices.
+
+When `bounding_box` is provided, retain only samples within that box. The box
+does not affect how proposals are generated.
+"""
 function inside_sampling(
     geometry::PhysicalGeometry{N},
     density::Real;
     rng=default_rng(),
     no_deproject=false,
+    bounding_box=nothing,
 ) where {N}
     isfinite(density) && density >= 0 ||
         throw(ArgumentError("inside-sampling density must be finite and nonnegative"))
+    if bounding_box isa BoundingBox
+        bounding_box = InternalBoundingBox(bounding_box)
+    end
+    if !isnothing(bounding_box)
+        bounding_box isa InternalBoundingBox{N} || throw(ArgumentError(
+            "inside-sampling bounding box must be an InternalBoundingBox{$N} or a compatible BoundingBox",
+        ))
+    end
+
     proposals = inside_sampling_per_obstruction(
         geometry, density, rng; no_deproject,
     )
+    if !isnothing(bounding_box)
+        lower_bound = InternalBoundingBoxes.lower(bounding_box)
+        upper_bound = InternalBoundingBoxes.upper(bounding_box)
+        filter!(
+            position -> all((lower_bound .<= position) .& (position .<= upper_bound)),
+            proposals,
+        )
+    end
     inside_type = inside_indices_eltype(typeof(geometry))
     positions = SVector{N, Float64}[]
     indices = Vector{inside_type}[]

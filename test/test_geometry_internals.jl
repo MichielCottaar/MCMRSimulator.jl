@@ -2010,6 +2010,23 @@ end
                 for position in sphere_positions
             ])
 
+            sample_box = PublicBoundingBoxes.BoundingBox(
+                [-0.5, -0.5, -0.5], [0.5, 0.5, 0.5],
+            )
+            bounded_positions, bounded_indices = GI.inside_sampling(
+                sphere, 1000.; bounding_box=sample_box,
+                rng=Random.MersenneTwister(5678),
+            )
+            @test length(bounded_positions) / 1000 ≈ 1. rtol=0.1
+            @test all(
+                all((sample_box.lower .<= position) .& (position .<= sample_box.upper))
+                for position in bounded_positions
+            )
+            @test all(index == [()] for index in bounded_indices)
+            @test_throws ArgumentError GI.inside_sampling(
+                sphere, 10.; bounding_box=BoundingBoxes.InternalBoundingBox{2}(1.),
+            )
+
             circle = BaseObstructions.InfiniteCylinder(1.)
             circle_positions, circle_indices = GI.PhysicalGeometries.inside_sampling(
                 circle, sample_density; rng=Random.MersenneTwister(1234),
