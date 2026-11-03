@@ -281,12 +281,12 @@ leaf_bounding_boxes(group::GeometryTuple; inside=false) = map(
 
 function get_child(group::GeometryVectorLike, indices::Tuple)
     child_index = indices[1]
-    group_geometries(group)[child_index], indices[2:end]
+    group_geometries(group)[child_index], Base.tail(indices)
 end
 
 function get_child(group::GeometryTuple, indices::Tuple)
     child_index = indices[1]
-    group_geometries(group)[child_index], indices[2:end]
+    group_geometries(group)[child_index], Base.tail(indices)
 end
 
 child_type(::Type{<:GeometryTuple{N, P}}) where {N, P} = Union{P.parameters...}
