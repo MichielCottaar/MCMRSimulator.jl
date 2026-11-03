@@ -324,12 +324,7 @@ function inside_sampling(
         geometry, density, rng; no_deproject,
     )
     if !isnothing(bounding_box)
-        lower_bound = InternalBoundingBoxes.lower(bounding_box)
-        upper_bound = InternalBoundingBoxes.upper(bounding_box)
-        filter!(
-            position -> all((lower_bound .<= position) .& (position .<= upper_bound)),
-            proposals,
-        )
+        filter!(position -> InternalBoundingBoxes.isinside(bounding_box, position), proposals)
     end
     inside_type = inside_indices_eltype(typeof(geometry))
     positions = SVector{N, Float64}[]
