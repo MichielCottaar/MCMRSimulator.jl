@@ -290,6 +290,7 @@ function inside_sampling_per_obstruction(
     density::Real,
     rng;
     no_deproject=false,
+    bounding_box=nothing,
 ) where {N}
     has_inside(typeof(geometry)) || return SVector{N, Float64}[]
     throw(ArgumentError(
@@ -299,8 +300,9 @@ end
 
 """Sample points uniformly within a geometry, returning positions and inside indices.
 
-When `bounding_box` is provided, retain only samples within that box. The box
-does not affect how proposals are generated.
+When `bounding_box` is provided, retain only samples within that box. The box is
+also passed to proposal samplers that need it to bound otherwise infinite
+geometries, such as `Repeat`.
 """
 function inside_sampling(
     geometry::PhysicalGeometry{N},
@@ -321,7 +323,7 @@ function inside_sampling(
     end
 
     proposals = inside_sampling_per_obstruction(
-        geometry, density, rng; no_deproject,
+        geometry, density, rng; no_deproject, bounding_box,
     )
     if !isnothing(bounding_box)
         filter!(position -> InternalBoundingBoxes.isinside(bounding_box, position), proposals)

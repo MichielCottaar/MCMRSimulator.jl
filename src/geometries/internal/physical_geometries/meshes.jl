@@ -242,6 +242,7 @@ function inside_sampling_per_obstruction(
     density::Real,
     rng;
     no_deproject=false,
+    bounding_box=nothing,
 )
     grid = mesh.grid
     lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)

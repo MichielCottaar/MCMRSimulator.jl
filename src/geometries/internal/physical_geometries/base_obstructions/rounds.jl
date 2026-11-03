@@ -12,7 +12,7 @@ has_inside(::Type{<:Round}) = true
 has_single_inside(::Type{<:Round}) = true
 
 function inside_sampling_per_obstruction(
-    round::Round{N}, density::Real, rng; no_deproject=false,
+    round::Round{N}, density::Real, rng; no_deproject=false, bounding_box=nothing,
 ) where {N}
     volume = N == 2 ? π * round.radius^2 : 4π * round.radius^3 / 3
     nsamples = rand(rng, Poisson(density * volume))

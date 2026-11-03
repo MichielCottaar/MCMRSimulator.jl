@@ -53,8 +53,12 @@ _transform_leaf_bounding_boxes(transformation, boxes::Union{Tuple, AbstractVecto
     map(box -> _transform_leaf_bounding_boxes(transformation, box), boxes)
 
 function inside_sampling_per_obstruction(
-    transformation::Transformation{N, M}, density::Real, rng; no_deproject=false,
+    transformation::Transformation{N, M}, density::Real, rng;
+    no_deproject=false,
+    bounding_box=nothing,
 ) where {N, M}
+    child_bounding_box = isnothing(bounding_box) ? nothing :
+        to_child_coordinates(transformation, bounding_box)
     if N != M
         if !no_deproject
             bounding_box = InternalBoundingBox(transformation; no_deproject)
@@ -71,7 +75,8 @@ function inside_sampling_per_obstruction(
         end
         null_basis = nullspace(Matrix(transformation.matrix'))
         child_samples = inside_sampling_per_obstruction(
-            transformation.geometry, density, rng; no_deproject,
+            transformation.geometry, density, rng;
+            no_deproject, bounding_box=child_bounding_box,
         )
         return [
             from_child_coordinates(transformation, sample) +
@@ -86,6 +91,7 @@ function inside_sampling_per_obstruction(
         density * volume_scale,
         rng;
         no_deproject,
+        bounding_box=child_bounding_box,
     )
     [from_child_coordinates(transformation, sample) for sample in child_samples]
 end

@@ -7,6 +7,7 @@ import ...InternalBoundingBoxes
 import ....BoundingBoxes: BoundingBoxNotSupported
 import ..PhysicalGeometries: PhysicalGeometry, child_geometry, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _translate_native, to_property_index
+import ..PhysicalGeometries: inside_sampling, inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: has_equivalent_wrapper
 import ..PhysicalGeometries: rewrap
@@ -212,6 +213,36 @@ function random_surface_positions(
         for (repeat_index, child_indices) in zip(repeat_indices, indices)
     ]
     shifted_positions, shifted_indices
+end
+
+function inside_sampling_per_obstruction(
+    repeat::Repeat{N},
+    density::Real,
+    rng;
+    no_deproject=false,
+    bounding_box=nothing,
+) where {N}
+    has_inside(typeof(repeat)) || return SVector{N, Float64}[]
+    isnothing(bounding_box) && throw(BoundingBoxNotSupported(
+        "inside_sampling of repeated geometries requires a bounding box",
+    ))
+
+    lower = first_repeat(repeat, InternalBoundingBoxes.lower(bounding_box))
+    upper = last_repeat(repeat, InternalBoundingBoxes.upper(bounding_box))
+    any(lower .> upper) && return SVector{N, Float64}[]
+
+    ranges = ntuple(index -> lower[index]:upper[index], N)
+    number_of_repeats = prod(length, ranges)
+    positions, _ = inside_sampling(
+        repeat.geometry,
+        density * number_of_repeats;
+        rng,
+        no_deproject,
+    )
+    [
+        position + SVector{N, Int}(rand(rng, ranges[index]) for index in 1:N) .* repeat.repeats
+        for position in positions
+    ]
 end
 
 has_inside(::Type{<:Repeat{N, P}}) where {N, P} = has_inside(P)

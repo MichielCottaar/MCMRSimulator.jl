@@ -23,12 +23,12 @@ child_geometry(group::GroupGeometry) = throw(ArgumentError(
 ))
 
 function inside_sampling_per_obstruction(
-    group::GroupGeometry{N}, density::Real, rng; no_deproject=false,
+    group::GroupGeometry{N}, density::Real, rng; no_deproject=false, bounding_box=nothing,
 ) where {N}
     proposals = SVector{N, Float64}[]
     for child in group_geometries(group; include_gap=false)
         append!(proposals, inside_sampling_per_obstruction(
-            child, density, rng; no_deproject,
+            child, density, rng; no_deproject, bounding_box,
         ))
     end
     proposals

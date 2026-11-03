@@ -49,6 +49,7 @@ function inside_sampling_per_obstruction(
     density::Real,
     rng;
     no_deproject=false,
+    bounding_box=nothing,
 )
     r₁ = cylinder.radius_first
     r₂ = cylinder.radius_second

@@ -2027,6 +2027,27 @@ end
                 sphere, 10.; bounding_box=BoundingBoxes.InternalBoundingBox{2}(1.),
             )
 
+            repeated_sphere = Repeat(sphere, [4., 4., 4.])
+            repeat_box = PublicBoundingBoxes.BoundingBox(
+                [3., 3., 3.], [5., 5., 5.],
+            )
+            repeat_positions, repeat_indices = GI.inside_sampling(
+                repeated_sphere, 800.; bounding_box=repeat_box,
+                rng=Random.MersenneTwister(6789),
+            )
+            @test length(repeat_positions) / 800 ≈ 4π / 3 rtol=0.08
+            @test all(
+                all((repeat_box.lower .<= position) .& (position .<= repeat_box.upper))
+                for position in repeat_positions
+            )
+            @test all(
+                inside -> inside[1] == SVector(1, 1, 1),
+                (only(indices) for indices in repeat_indices),
+            )
+            @test_throws PublicBoundingBoxes.BoundingBoxNotSupported GI.inside_sampling(
+                repeated_sphere, 10.,
+            )
+
             circle = BaseObstructions.InfiniteCylinder(1.)
             circle_positions, circle_indices = GI.PhysicalGeometries.inside_sampling(
                 circle, sample_density; rng=Random.MersenneTwister(1234),
