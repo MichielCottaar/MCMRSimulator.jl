@@ -27,34 +27,6 @@ import ...Properties: GeometryProperties, GeometryLeafProperties
 export FixedLiminalGeometry, OuterSurfaceSampling, SphericalSurfaceArea, normal_second_moment, sample!
 
 const SPHERICAL_SURFACE_AREA_SAMPLE_COUNT = 100_000
-const INSIDE_VOLUME_SAMPLE_COUNT = 100_000
-const MINIMUM_INSIDE_VOLUME_SAMPLES = 10_000
-const MAXIMUM_INSIDE_VOLUME_ATTEMPTS = 5
-
-function _estimate_inside_volume(
-    geometry::PhysicalGeometry{3};
-    nsamples=INSIDE_VOLUME_SAMPLE_COUNT,
-    minimum_samples=MINIMUM_INSIDE_VOLUME_SAMPLES,
-    maximum_attempts=MAXIMUM_INSIDE_VOLUME_ATTEMPTS,
-    rng=default_rng(),
-)
-    nsamples > 0 || throw(ArgumentError("nsamples must be positive"))
-    minimum_samples >= 0 || throw(ArgumentError("minimum_samples must be nonnegative"))
-    maximum_attempts > 0 || throw(ArgumentError("maximum_attempts must be positive"))
-    bounding_box = InternalBoundingBox(geometry; no_deproject=true)
-    box_volume = prod(2 .* InternalBoundingBoxes.half_size(bounding_box))
-    density = nsamples / box_volume
-    sampled_volume = 0.
-    for attempt in 1:maximum_attempts
-        positions, _ = inside_sampling(
-            geometry, density; rng, no_deproject=true,
-        )
-        sampled_volume = length(positions) / density
-        length(positions) >= minimum_samples && break
-        attempt == maximum_attempts || (density *= 10)
-    end
-    sampled_volume
-end
 
 struct SphericalSurfaceArea{C}
     degree::Int
@@ -398,7 +370,7 @@ function finalise!(geometry::FixedLiminalGeometry)
         for (fraction, child) in zip(geometry.number_fractions, geometry.geometries)
     )
     geometry.weighted_cell_volume[] = sum(
-        fraction * _estimate_inside_volume(child)
+        fraction * estimate_volume(child)
         for (fraction, child) in zip(geometry.number_fractions, geometry.geometries)
     )
     spherical_sampling = _sample_outer_surface(

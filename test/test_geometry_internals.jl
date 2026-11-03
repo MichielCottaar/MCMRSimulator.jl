@@ -839,7 +839,7 @@ end
         surface_calls::Base.RefValue{Int}
         sampling_calls::Base.RefValue{Int}
     end
-    function GI.PhysicalGeometries.LiminalGeometries._estimate_inside_volume(probe::LiminalEstimationProbe; kwargs...)
+    function GI.PhysicalGeometries.estimate_volume(probe::LiminalEstimationProbe; kwargs...)
         probe.volume_calls[] += 1
         4π / 3 * probe.geometry.radius^3
     end
@@ -2047,6 +2047,13 @@ end
             @test_throws PublicBoundingBoxes.BoundingBoxNotSupported GI.inside_sampling(
                 repeated_sphere, 10.,
             )
+            @test GI.PhysicalGeometries.estimate_volume(
+                repeated_sphere;
+                bounding_box=repeat_box,
+                nsamples=10_000,
+                minimum_samples=1_000,
+                rng=Random.MersenneTwister(7890),
+            ) ≈ 4π / 3 rtol=0.1
 
             circle = BaseObstructions.InfiniteCylinder(1.)
             circle_positions, circle_indices = GI.PhysicalGeometries.inside_sampling(

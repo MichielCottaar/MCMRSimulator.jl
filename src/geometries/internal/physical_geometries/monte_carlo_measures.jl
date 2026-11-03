@@ -4,8 +4,9 @@ import Random: AbstractRNG, default_rng, rand
 import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, find_intersection,
     get_intersection_params, random_surface_positions, has_inside, has_single_inside,
-    inside_indices, isinside_single, InternalBoundingBox, to_inside_index
+    inside_indices, isinside_single, InternalBoundingBox, inside_sampling, to_inside_index
 import ...InternalBoundingBoxes: lower, upper
+import ....BoundingBoxes: BoundingBox
 import ...Properties: GeometryLeafProperties
 import ..Groups: GeometryTuple, GeometryVectorLike
 import ..Repeats: Repeat
@@ -50,27 +51,34 @@ function estimate_volume(
     minimum_samples >= 0 || throw(ArgumentError("minimum_samples must be nonnegative"))
     maximum_attempts > 0 || throw(ArgumentError("maximum_attempts must be positive"))
     has_inside(typeof(geometry)) || throw(ArgumentError("geometry has no inside volume"))
-    contains_repeat(typeof(geometry)) &&
-        throw(ArgumentError("Monte Carlo volume estimates do not support repeating geometries"))
     no_deproject = isnothing(bounding_box)
-    bounding_box = no_deproject ?
-        InternalBoundingBox(geometry; no_deproject=true) : bounding_box
+    bounding_box = bounding_box isa BoundingBox ?
+        InternalBoundingBox(bounding_box) : bounding_box
+    bounding_box = no_deproject ? InternalBoundingBox(geometry; no_deproject=true) : bounding_box
+    bounding_box isa InternalBoundingBox{N} || throw(ArgumentError(
+        "volume-estimate bounding box must be an InternalBoundingBox{$N} or a compatible BoundingBox",
+    ))
 
     box_size = upper(bounding_box) - lower(bounding_box)
     box_volume = prod(box_size)
-    current_nsamples = nsamples
-    inside_count = 0
+    isfinite(box_volume) || throw(ArgumentError("volume-estimate bounding box must have finite volume"))
+    iszero(box_volume) && return 0.0
+    density = nsamples / box_volume
+    isfinite(density) || throw(ArgumentError("sampling density is not finite for the specified bounding box"))
+    sampled_volume = 0.0
     for attempt in 1:maximum_attempts
-        inside_count = 0
-        for _ in 1:current_nsamples
-            position = SVector{N, Float64}(rand(rng, N)) .* box_size + lower(bounding_box)
-            inside_count += !isempty(_inside_indices(geometry, position; no_deproject))
-        end
-        outside_count = current_nsamples - inside_count
-        (inside_count >= minimum_samples && outside_count >= minimum_samples) && break
-        current_nsamples *= 10
+        positions, _ = inside_sampling(
+            geometry,
+            density;
+            rng,
+            no_deproject,
+            bounding_box,
+        )
+        sampled_volume = length(positions) / density
+        length(positions) >= minimum_samples && break
+        attempt == maximum_attempts || (density *= 10)
     end
-    box_volume * inside_count / current_nsamples
+    sampled_volume
 end
 
 """
