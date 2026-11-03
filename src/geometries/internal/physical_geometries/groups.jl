@@ -5,7 +5,7 @@ import StaticArrays: SVector
 import ...InternalBoundingBoxes
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, _merge_types, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh
-import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
+import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: has_equivalent_wrapper
 import ..PhysicalGeometries: rewrap, rewrap_extracted_wrapper, child_geometry, finalise!
@@ -22,15 +22,12 @@ child_geometry(group::GroupGeometry) = throw(ArgumentError(
     "geometry group $(typeof(group)) has multiple children; use group_geometries instead",
 ))
 
-function _inside_sampling_proposals(
+function inside_sampling_per_obstruction(
     group::GroupGeometry{N}, density::Real, rng; no_deproject=false,
 ) where {N}
-    has_single_inside(typeof(group)) &&
-        return _rejection_inside_sampling(group, density, rng; no_deproject)
     proposals = SVector{N, Float64}[]
     for child in group_geometries(group; include_gap=false)
-        has_inside(typeof(child)) || continue
-        append!(proposals, _inside_sampling_proposals(
+        append!(proposals, inside_sampling_per_obstruction(
             child, density, rng; no_deproject,
         ))
     end

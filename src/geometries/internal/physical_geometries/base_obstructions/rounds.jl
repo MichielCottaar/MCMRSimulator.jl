@@ -11,7 +11,7 @@ distance_to_surface(round::Round{N}, position::SVector{N, Float64}) where {N} = 
 has_inside(::Type{<:Round}) = true
 has_single_inside(::Type{<:Round}) = true
 
-function _inside_sampling_proposals(
+function inside_sampling_per_obstruction(
     round::Round{N}, density::Real, rng; no_deproject=false,
 ) where {N}
     volume = N == 2 ? π * round.radius^2 : 4π * round.radius^3 / 3

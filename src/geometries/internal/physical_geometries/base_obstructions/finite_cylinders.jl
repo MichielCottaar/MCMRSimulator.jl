@@ -44,7 +44,7 @@ has_inside(::Type{FiniteCylinder}) = true
 has_single_inside(::Type{FiniteCylinder}) = true
 intersection_type(::Type{FiniteCylinder}) = Tuple{Int}
 
-function _inside_sampling_proposals(
+function inside_sampling_per_obstruction(
     cylinder::FiniteCylinder,
     density::Real,
     rng;

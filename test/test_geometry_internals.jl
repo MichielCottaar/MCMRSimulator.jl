@@ -1977,6 +1977,12 @@ end
         sphere = BaseObstructions.Sphere(1.)
         @testset "inside_sampling" begin
             sample_density = 600.
+            wall = BaseObstructions.InfiniteWall()
+            @test isempty(GI.inside_sampling_per_obstruction(
+                wall, sample_density, Random.MersenneTwister(1234),
+            ))
+            wall_positions, wall_indices = GI.inside_sampling(wall, sample_density)
+            @test isempty(wall_positions) && isempty(wall_indices)
             approximately_uniform(values) = begin
                 bins = 10
                 all(
@@ -2065,6 +2071,12 @@ end
                 [SVector(0., 0., 0.), SVector(1., 0., 0.), SVector(0., 1., 0.), SVector(0., 0., 1.)],
                 [SVector(1, 2, 3), SVector(1, 2, 4), SVector(1, 3, 4)],
             )
+            mesh_positions, mesh_indices = GI.PhysicalGeometries.inside_sampling(
+                mesh, 1000.; rng=Random.MersenneTwister(4567),
+            )
+            @test length(mesh_positions) / 1000 ≈ 1 / 6 rtol=0.1
+            @test all(GI.PhysicalGeometries.isinside_single(mesh, position) for position in mesh_positions)
+            @test all(index == [()] for index in mesh_indices)
             mesh_fixed = GI.FixedGeometry(
                 mesh,
                 Properties.GeometryLeafProperties(0.),
@@ -2072,9 +2084,9 @@ end
                 nothing,
             )
             Random.seed!(4567)
-            mesh_positions, mesh_indices = GI.inside_sampling(mesh_fixed, 1000.)
-            @test length(mesh_positions) / 1000 ≈ 1 / 6 rtol=0.1
-            @test all(index == [()] for index in mesh_indices)
+            fixed_mesh_positions, fixed_mesh_indices = GI.inside_sampling(mesh_fixed, 1000.)
+            @test length(fixed_mesh_positions) / 1000 ≈ 1 / 6 rtol=0.1
+            @test all(index == [()] for index in fixed_mesh_indices)
         end
         volume = GI.PhysicalGeometries.estimate_volume(
             sphere; nsamples=100_000, rng=Random.MersenneTwister(1234),

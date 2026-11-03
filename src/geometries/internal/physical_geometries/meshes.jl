@@ -2,11 +2,14 @@ module Meshes
 
 import StaticArrays: SVector, MVector
 import LinearAlgebra: cross, norm, svd, ⋅
+import Random: rand
+import Distributions: Poisson
 import DelaunayTriangulation: triangulate, get_triangles
 import NearestNeighbors: KDTree, nn
 
 import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, intersection_type, isinside_single, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
+import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes, finalise!, simplify
 import ...Properties: GeometryLeafProperties
 import ..Groups
@@ -233,6 +236,37 @@ Groups.intersection_candidates(mesh::Mesh, start, destination) =
     )
 
 InternalBoundingBox(mesh::Mesh) = mesh.bounding_box
+
+function inside_sampling_per_obstruction(
+    mesh::Mesh,
+    density::Real,
+    rng;
+    no_deproject=false,
+)
+    grid = mesh.grid
+    lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)
+    voxel_size = inv.(grid.inv_resolution)
+    voxel_volume = prod(voxel_size)
+    positions = SVector{3, Float64}[]
+
+    for coordinate in CartesianIndices(grid.indices)
+        voxel = SVector{3, Int}(Tuple(coordinate))
+        candidates = grid.indices[coordinate]
+        if isempty(candidates) && !mesh.inside_mask[coordinate]
+            continue
+        end
+
+        voxel_lower = lower_bound + (voxel .- 1) .* voxel_size
+        number_of_samples = rand(rng, Poisson(density * voxel_volume))
+        for _ in 1:number_of_samples
+            position = voxel_lower + SVector{3, Float64}(rand(rng, 3)) .* voxel_size
+            if isempty(candidates) || isinside_single(mesh, position; no_deproject)
+                push!(positions, position)
+            end
+        end
+    end
+    positions
+end
 
 function _mesh_inside_mask(
     vertices,

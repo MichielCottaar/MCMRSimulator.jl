@@ -4,11 +4,12 @@ module Transformations
 import StaticArrays: SMatrix, SVector
 import LinearAlgebra: norm, nullspace, cross
 import Random: rand
+import Distributions: Poisson
 import ...InternalBoundingBoxes
 import ....BoundingBoxes: BoundingBoxNotSupported
 import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, find_intersection_requires_inside, get_child, get_intersection_params_requires_inside, has_inside, has_single_inside, inside_indices_eltype, intersection_type, bound_intersection_type, isinside_single, inside_indices, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result, _translate_native
-import ..PhysicalGeometries: _inside_sampling_proposals, _rejection_inside_sampling
+import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: simplify, rewrap, has_equivalent_wrapper, child_geometry, finalise!
 import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
@@ -51,15 +52,25 @@ _transform_leaf_bounding_boxes(transformation, box::InternalBoundingBox) =
 _transform_leaf_bounding_boxes(transformation, boxes::Union{Tuple, AbstractVector}) =
     map(box -> _transform_leaf_bounding_boxes(transformation, box), boxes)
 
-function _inside_sampling_proposals(
+function inside_sampling_per_obstruction(
     transformation::Transformation{N, M}, density::Real, rng; no_deproject=false,
 ) where {N, M}
     if N != M
-        no_deproject || return _rejection_inside_sampling(
-            transformation, density, rng; no_deproject,
-        )
+        if !no_deproject
+            bounding_box = InternalBoundingBox(transformation; no_deproject)
+            lower_bound = InternalBoundingBoxes.lower(bounding_box)
+            size = 2 .* InternalBoundingBoxes.half_size(bounding_box)
+            number_of_samples = rand(rng, Poisson(density * prod(size)))
+            return [
+                position for position in (
+                    SVector{N, Float64}(rand(rng, N) .* size .+ lower_bound)
+                    for _ in 1:number_of_samples
+                )
+                if isinside_single(transformation, position; no_deproject)
+            ]
+        end
         null_basis = nullspace(Matrix(transformation.matrix'))
-        child_samples = _inside_sampling_proposals(
+        child_samples = inside_sampling_per_obstruction(
             transformation.geometry, density, rng; no_deproject,
         )
         return [
@@ -70,7 +81,7 @@ function _inside_sampling_proposals(
     end
     has_inside(typeof(transformation)) || return SVector{N, Float64}[]
     volume_scale = transformation isa Scale ? transformation.scale^N : 1.
-    child_samples = _inside_sampling_proposals(
+    child_samples = inside_sampling_per_obstruction(
         transformation.geometry,
         density * volume_scale,
         rng;

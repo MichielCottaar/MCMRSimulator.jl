@@ -254,6 +254,8 @@ function inside_indices end
 """Sample volume positions together with their cached inside indices."""
 function volume_sampling end
 function inside_sampling end
+"""Generate volume-sampling proposals for one obstruction or a geometry group."""
+function inside_sampling_per_obstruction end
 function projected_surface_area end
 function normal_second_moment end
 function tortuosity_tensor end
@@ -283,36 +285,16 @@ function volume_sampling(
     ]
 end
 
-function _rejection_inside_sampling(
+function inside_sampling_per_obstruction(
     geometry::PhysicalGeometry{N},
     density::Real,
     rng;
     no_deproject=false,
 ) where {N}
-    bounding_box = InternalBoundingBox(geometry; no_deproject)
-    lower_bound = InternalBoundingBoxes.lower(bounding_box)
-    size = 2 .* InternalBoundingBoxes.half_size(bounding_box)
-    box_volume = prod(size)
-    nsamples = rand(rng, Poisson(density * box_volume))
-    [
-        position for position in (
-            SVector{N, Float64}(rand(rng, N) .* size .+ lower_bound)
-            for _ in 1:nsamples
-        )
-        if isinside_single(geometry, position; no_deproject)
-    ]
-end
-
-function _inside_sampling_proposals(
-    geometry::PhysicalGeometry,
-    density::Real,
-    rng;
-    no_deproject=false,
-)
-    has_single_inside(typeof(geometry)) || throw(ArgumentError(
-        "inside_sampling is not implemented for $(typeof(geometry))",
+    has_inside(typeof(geometry)) || return SVector{N, Float64}[]
+    throw(ArgumentError(
+        "inside_sampling_per_obstruction is not implemented for $(typeof(geometry))",
     ))
-    _rejection_inside_sampling(geometry, density, rng; no_deproject)
 end
 
 """Sample points uniformly within a geometry, returning positions and inside indices."""
@@ -324,16 +306,14 @@ function inside_sampling(
 ) where {N}
     isfinite(density) && density >= 0 ||
         throw(ArgumentError("inside-sampling density must be finite and nonnegative"))
-    proposals = _inside_sampling_proposals(
+    proposals = inside_sampling_per_obstruction(
         geometry, density, rng; no_deproject,
     )
     inside_type = inside_indices_eltype(typeof(geometry))
     positions = SVector{N, Float64}[]
     indices = Vector{inside_type}[]
     for position in proposals
-        inside = has_single_inside(typeof(geometry)) ?
-            (isinside_single(geometry, position; no_deproject) ? [()] : Tuple[]) :
-            inside_indices(geometry, position; no_deproject)
+        inside = _volume_inside_indices(geometry, position; no_deproject)
         isempty(inside) && continue
         rand(rng) < inv(length(inside)) || continue
         push!(positions, position)
