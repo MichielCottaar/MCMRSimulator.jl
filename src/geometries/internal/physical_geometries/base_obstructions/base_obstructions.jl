@@ -13,10 +13,13 @@ import ...Properties: all_property_values
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result
 import ..PhysicalGeometries: inside_sampling_per_obstruction, finalise!
 import ..PhysicalGeometries: filter_bounding_box, _bounding_boxes_overlap
+import ..PhysicalGeometries: number_of_leaves
 import Distributions: Poisson
 import Random: rand
 
 abstract type BaseObstruction{N} <: PhysicalGeometry{N} end
+
+number_of_leaves(::BaseObstruction) = 1
 
 child_geometry(geometry::BaseObstruction) = throw(ArgumentError(
     "base obstruction $(typeof(geometry)) does not have a child geometry",

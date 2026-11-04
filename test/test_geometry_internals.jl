@@ -162,7 +162,7 @@ end
     metrics = mr.DebugCounters.snapshot(grid)
     expected_occupancy = Dict{Int, Int}()
     for cell in grid.grid.geometries
-        occupancy = GI.PhysicalGeometries.Grids._number_of_leaves(cell)
+        occupancy = GI.PhysicalGeometries.number_of_leaves(cell)
         expected_occupancy[occupancy] = get(expected_occupancy, occupancy, 0) + 1
     end
     @test metrics[:cell_occupancy].counts == expected_occupancy
@@ -739,6 +739,17 @@ end
     @test simplify(rejected[2], pass) isa Repeat{3, BaseObstructions.Sphere}
 
     sphere = BaseObstructions.Sphere(0.5)
+    number_of_leaves = GI.PhysicalGeometries.number_of_leaves
+    finite_cylinder = BaseObstructions.FiniteCylinder(
+        SVector(0., 0., 0.), SVector(0., 0., 1.), 0.5,
+    )
+    @test number_of_leaves(sphere) == 1
+    @test number_of_leaves(finite_cylinder) == 3
+    @test number_of_leaves(GeometryVector([sphere, sphere])) == 2
+    @test number_of_leaves(GeometryVector([sphere, sphere]; bounding_box=true)) == 2
+    @test number_of_leaves(GeometryTuple((sphere, finite_cylinder))) == 4
+    @test number_of_leaves(Shift(GeometryVector([sphere, sphere]), ones(3))) == 2
+    @test number_of_leaves(IgnoreOverlapping(GeometryTuple((sphere, finite_cylinder)))) == 4
     @test simplify(sphere) === sphere
     for unchanged in (sphere, first[1], GeometryVector([a, b]), GeometryTuple((a, b)),
                       GeometryVector(typeof(a)[]), GeometryTuple{3}(()), Shift(sphere, ones(3)),
@@ -1626,6 +1637,8 @@ end
     struct TestGeometry{N} <: PhysicalGeometry{N}
         value::Int
     end
+
+    @test_throws MethodError GI.PhysicalGeometries.number_of_leaves(TestGeometry{3}(1))
 
     geometries = [TestGeometry{3}(1), TestGeometry{3}(2)]
     vector = GeometryVector{3}(geometries)
@@ -2714,6 +2727,7 @@ end
     @test has_inside(typeof(mesh))
     @test mesh.vertices[2] == SVector(1.0, 0.0, 0.0)
     @test mesh.first_index_of_gap == 4
+    @test GI.PhysicalGeometries.number_of_leaves(mesh) == length(mesh.indices)
     @test mesh.original_indices === nothing
     @test mesh.centre_inside[1] == SVector(0.5, 0.5, 0.5)
     @test !mesh.centre_inside[2]

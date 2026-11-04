@@ -2,14 +2,11 @@
 module Grids
 
 import StaticArrays: SVector
-import ..PhysicalGeometries: PhysicalGeometry, InternalBoundingBox, leaf_bounding_boxes, child_geometry
+import ..PhysicalGeometries: PhysicalGeometry, InternalBoundingBox, number_of_leaves
 import ..PhysicalGeometries: find_intersection, inside_indices, inside_indices_eltype, finalise!
 import ..PhysicalGeometries: filter_bounding_box, rewrap, has_equivalent_wrapper
-import ..PhysicalGeometries.Groups: inside_indices_for_any_type, GeometryVectorLike, GeometryTuple, group_geometries
+import ..PhysicalGeometries.Groups: inside_indices_for_any_type
 import ..Transparents: Transparent
-import ..Transformations: Transformation
-import ..BaseObstructions: BaseObstruction
-import ..Meshes: Mesh
 import ..GridDispatch: IntersectionGrid, GridIterator
 import ...InternalBoundingBoxes
 import .....DebugCounters
@@ -57,9 +54,9 @@ end
 function Grid(geometry::P; resolution=nothing, debug=false) where {N, P<:PhysicalGeometry{N}}
     debug isa Bool || throw(ArgumentError("debug must be a Bool"))
     bounding_box = InternalBoundingBox(geometry)
-    number_of_leaves = _number_of_leaves(geometry)
-    number_of_leaves > 0 || throw(ArgumentError("cannot construct a Grid around a geometry without leaves"))
-    grid = IntersectionGrid(bounding_box, number_of_leaves; resolution)
+    nleaves = number_of_leaves(geometry)
+    nleaves > 0 || throw(ArgumentError("cannot construct a Grid around a geometry without leaves"))
+    grid = IntersectionGrid(bounding_box, nleaves; resolution)
     Grid{N, P, debug}(geometry, grid, resolution)
 end
 
@@ -68,29 +65,21 @@ function finalise!(wrapper::Grid{N}) where {N}
     finalise!(wrapper.grid, wrapper.geometry)
     if DebugCounters.debug_mode(wrapper)
         for geometry in wrapper.grid.geometries
-            DebugCounters.record!(wrapper, :cell_occupancy, _number_of_leaves(geometry))
+            DebugCounters.record!(
+                wrapper, :cell_occupancy,
+                isnothing(geometry) ? 0 : number_of_leaves(geometry),
+            )
         end
     end
     nothing
 end
-
-_number_of_leaves(::Nothing) = 0
-_leaf_box_count(::InternalBoundingBox) = 1
-_leaf_box_count(boxes::Union{Tuple, AbstractVector}) = sum(_leaf_box_count, boxes; init=0)
-_number_of_leaves(geometry::BaseObstruction) = _leaf_box_count(leaf_bounding_boxes(geometry))
-_number_of_leaves(mesh::Mesh) = length(mesh.indices)
-_number_of_leaves(group::GeometryVectorLike) =
-    sum(_number_of_leaves, group_geometries(group); init=0)
-_number_of_leaves(group::GeometryTuple) =
-    sum(_number_of_leaves, group.geometries; init=0)
-_number_of_leaves(transformation::Transformation) = _number_of_leaves(child_geometry(transformation))
-_number_of_leaves(wrapper::Transparent) = _number_of_leaves(child_geometry(wrapper))
 
 DebugCounters.debug_mode(::Grid{N, P, D}) where {N, P, D} = D
 rewrap(wrapper::Grid{N}, geometry::PhysicalGeometry{N}) where {N} =
     Grid(geometry; resolution=wrapper.user_resolution, debug=DebugCounters.debug_mode(wrapper))
 has_equivalent_wrapper(first::Grid{N}, second::Grid{N}) where {N} =
     first.user_resolution == second.user_resolution
+number_of_leaves(grid::Grid) = number_of_leaves(grid.geometry)
 
 InternalBoundingBox(geometry::Grid; kwargs...) = geometry.grid.bounding_box
 

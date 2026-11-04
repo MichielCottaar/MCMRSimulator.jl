@@ -8,6 +8,7 @@ import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_s
 import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: filter_bounding_box
+import ..PhysicalGeometries: number_of_leaves
 import ..PhysicalGeometries: has_equivalent_wrapper
 import ..PhysicalGeometries: rewrap, rewrap_extracted_wrapper, child_geometry, finalise!
 import ..PhysicalGeometries: simplify
@@ -18,6 +19,9 @@ import ....BoundingBoxes: BoundingBoxNotSupported
 
 abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
+
+number_of_leaves(group::GeometryVectorLike) =
+    sum(number_of_leaves, group_geometries(group); init=0)
 
 function indices end
 
@@ -319,6 +323,9 @@ struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}, I<:Union{Nothing,
         new{N, P, I}(geometries, indices)
     end
 end
+
+number_of_leaves(group::GeometryTuple) =
+    sum(number_of_leaves, group.geometries; init=0)
 
 indices(group::Union{GeometryVector, GeometryVectorBoundingBox}) =
     isnothing(group.indices) ? eachindex(group.geometries) : group.indices

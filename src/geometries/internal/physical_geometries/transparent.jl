@@ -6,6 +6,7 @@ import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: filter_bounding_box
+import ..PhysicalGeometries: number_of_leaves
 import ..PhysicalGeometries: distance_to_surface
 import ..PhysicalGeometries: simplify, rewrap, rewrap_extracted_wrapper, has_equivalent_wrapper
 import ..PhysicalGeometries: child_geometry, finalise!
@@ -69,6 +70,7 @@ function SizeScaleOverride(geometry::P, size_scale::Real) where {N, P <: Physica
 end
 
 child_geometry(wrapper::Transparent) = wrapper.geometry
+number_of_leaves(wrapper::Transparent) = number_of_leaves(child_geometry(wrapper))
 
 function filter_bounding_box(wrapper::Transparent{N}, box::InternalBoundingBox{N}, ::Val{false}) where {N}
     child = filter_bounding_box(child_geometry(wrapper), box, Val(false))

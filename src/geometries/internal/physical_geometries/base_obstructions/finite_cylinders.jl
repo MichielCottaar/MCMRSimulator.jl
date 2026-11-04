@@ -10,6 +10,8 @@ struct FiniteCylinder <: BaseObstruction{3}
     caps_are_gaps::Bool
 end
 
+number_of_leaves(::FiniteCylinder) = 3
+
 function FiniteCylinder(
     first::AbstractVector, second::AbstractVector,
     radius::Real;

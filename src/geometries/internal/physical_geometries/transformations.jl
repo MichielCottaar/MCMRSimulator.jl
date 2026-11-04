@@ -12,6 +12,7 @@ import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_s
 import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: filter_bounding_box
+import ..PhysicalGeometries: number_of_leaves
 import ..PhysicalGeometries: simplify, rewrap, has_equivalent_wrapper, child_geometry, finalise!
 import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
 import ...Properties: GeometryProperties
@@ -29,6 +30,7 @@ parent coordinate system.
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
 
 child_geometry(transformation::Transformation) = transformation.geometry
+number_of_leaves(transformation::Transformation) = number_of_leaves(child_geometry(transformation))
 
 function filter_bounding_box(
     transformation::Transformation{N},

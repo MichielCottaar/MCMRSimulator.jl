@@ -377,6 +377,9 @@ function random_surface_positions end
 """Return the axis-aligned bounding box containing a physical geometry."""
 function InternalBoundingBox end
 
+"""Return the number of leaf surfaces represented by a physical geometry."""
+function number_of_leaves end
+
 """Return the subset of a geometry overlapping `bounding_box`, or `nothing`."""
 function filter_bounding_box end
 
