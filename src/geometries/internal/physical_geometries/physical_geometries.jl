@@ -377,6 +377,19 @@ function random_surface_positions end
 """Return the axis-aligned bounding box containing a physical geometry."""
 function InternalBoundingBox end
 
+"""Return the subset of a geometry overlapping `bounding_box`, or `nothing`."""
+function filter_bounding_box end
+
+filter_bounding_box(geometry::PhysicalGeometry{N}, box::InternalBoundingBox{N}) where {N} =
+    filter_bounding_box(geometry, box, Val(false))
+
+function _bounding_boxes_overlap(
+    first::InternalBoundingBox{N}, second::InternalBoundingBox{N},
+) where {N}
+    all(InternalBoundingBoxes.lower(first) .<= InternalBoundingBoxes.upper(second)) &&
+        all(InternalBoundingBoxes.lower(second) .<= InternalBoundingBoxes.upper(first))
+end
+
 """
     leaf_bounding_boxes(geometry::PhysicalGeometry; inside=false)
 

@@ -7,6 +7,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, fi
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh
 import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes
+import ..PhysicalGeometries: filter_bounding_box
 import ..PhysicalGeometries: has_equivalent_wrapper
 import ..PhysicalGeometries: rewrap, rewrap_extracted_wrapper, child_geometry, finalise!
 import ..PhysicalGeometries: simplify
@@ -75,6 +76,66 @@ indices(group::GeometryVectorLike) = Base.OneTo(length(group_geometries(group)))
 
 function _indexed_children(group::GeometryVectorLike; include_gap=true)
     zip(indices(group), group_geometries(group; include_gap))
+end
+
+function _selected_vector_children(group::GeometryVectorLike, box)
+    selected = Tuple{Int, Any}[]
+    for (index, child) in _indexed_children(group)
+        filtered = filter_bounding_box(child, box, Val(false))
+        isnothing(filtered) || push!(selected, (index, filtered))
+    end
+    selected
+end
+
+function _filter_vector_children(group::GeometryVectorLike, box, ::Val{true}, selected)
+    source_children = group_geometries(group)
+    isempty(source_children) && return rewrap(
+        group, eltype(source_children)[]; indices=Int[],
+    )
+    child_type = typeof(filter_bounding_box(first(source_children), box, Val(true)))
+    child_type <: PhysicalGeometry || throw(ArgumentError(
+        "type-preserving filtering must return a PhysicalGeometry",
+    ))
+    indices = Int[]
+    children = child_type[]
+    for (index, _) in selected
+        original_child = group_geometries(group)[_stored_index(group, index)]
+        child = filter_bounding_box(original_child, box, Val(true))
+        typeof(child) === child_type || throw(ArgumentError(
+            "type-preserving filtering produced an inconsistent GeometryVectorLike child type",
+        ))
+        push!(indices, index)
+        push!(children, child)
+    end
+    rewrap(group, children; indices)
+end
+
+function _filter_vector_children(group::GeometryVectorLike, box, ::Val{false}, selected)
+    isempty(selected) && return nothing
+    child_type = typeof(last(first(selected)))
+    all(candidate -> typeof(last(candidate)) === child_type, selected) ||
+        return _filter_vector_children(group, box, Val(true), selected)
+    indices = first.(selected)
+    children = child_type[last(candidate) for candidate in selected]
+    rewrap(group, children; indices)
+end
+
+function filter_bounding_box(
+    group::GeometryVectorLike{N},
+    box::InternalBoundingBoxes.InternalBoundingBox{N},
+    ::Val{false},
+) where {N}
+    selected = _selected_vector_children(group, box)
+    _filter_vector_children(group, box, Val(false), selected)
+end
+
+function filter_bounding_box(
+    group::GeometryVectorLike{N},
+    box::InternalBoundingBoxes.InternalBoundingBox{N},
+    ::Val{true},
+) where {N}
+    selected = _selected_vector_children(group, box)
+    _filter_vector_children(group, box, Val(true), selected)
 end
 
 function distance_to_surface(group::GroupGeometry{N}, position::SVector{N, Float64}) where {N}
@@ -285,6 +346,34 @@ end
 
 _indexed_children(group::GeometryTuple; include_gap=true) = zip(indices(group), group.geometries)
 
+function filter_bounding_box(
+    group::GeometryTuple{N},
+    box::InternalBoundingBoxes.InternalBoundingBox{N},
+    ::Val{false},
+) where {N}
+    children = Any[]
+    child_indices = Int[]
+    for (index, child) in _indexed_children(group)
+        filtered = filter_bounding_box(child, box, Val(false))
+        isnothing(filtered) && continue
+        push!(child_indices, index)
+        push!(children, filtered)
+    end
+    isempty(children) && return nothing
+    rewrap(group, tuple(children...); indices=child_indices)
+end
+
+function filter_bounding_box(
+    group::GeometryTuple{N},
+    box::InternalBoundingBoxes.InternalBoundingBox{N},
+    ::Val{true},
+) where {N}
+    children = map(child -> filter_bounding_box(child, box, Val(true)), group.geometries)
+    all(index -> children[index] === group.geometries[index], eachindex(children)) &&
+        return group
+    rewrap(group, children; indices=group.indices)
+end
+
 function has_equivalent_wrapper(group::Union{GeometryVectorLike, GeometryTuple})
     children = group_geometries(group)
     isempty(children) && return false
@@ -292,9 +381,12 @@ function has_equivalent_wrapper(group::Union{GeometryVectorLike, GeometryTuple})
     all(child -> has_equivalent_wrapper(reference, child), children)
 end
 
-rewrap(group::GeometryVector, children::AbstractVector{<:PhysicalGeometry}) = GeometryVector(children; indices=group.indices)
-rewrap(group::GeometryVectorBoundingBox, children::AbstractVector{<:PhysicalGeometry}) = GeometryVectorBoundingBox(children; indices=group.indices)
-rewrap(group::GeometryTuple, children::Tuple) = GeometryTuple(children; indices=group.indices)
+rewrap(group::GeometryVector, children::AbstractVector{<:PhysicalGeometry}; indices=group.indices) =
+    GeometryVector(children; indices)
+rewrap(group::GeometryVectorBoundingBox, children::AbstractVector{<:PhysicalGeometry}; indices=group.indices) =
+    GeometryVectorBoundingBox(children; indices)
+rewrap(group::GeometryTuple, children::Tuple; indices=group.indices) =
+    GeometryTuple(children; indices)
 
 function finalise!(group::Union{GeometryVector, GeometryVectorBoundingBox, GeometryTuple})
     foreach(finalise!, group_geometries(group))

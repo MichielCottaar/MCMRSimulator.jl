@@ -11,6 +11,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, find_intersection, fi
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result, _translate_native
 import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes
+import ..PhysicalGeometries: filter_bounding_box
 import ..PhysicalGeometries: simplify, rewrap, has_equivalent_wrapper, child_geometry, finalise!
 import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
 import ...Properties: GeometryProperties
@@ -28,6 +29,32 @@ parent coordinate system.
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
 
 child_geometry(transformation::Transformation) = transformation.geometry
+
+function filter_bounding_box(
+    transformation::Transformation{N},
+    box::InternalBoundingBoxes.InternalBoundingBox{N},
+    ::Val{false},
+) where {N}
+    child = filter_bounding_box(
+        child_geometry(transformation), to_child_coordinates(transformation, box), Val(false),
+    )
+    isnothing(child) ? nothing : rewrap(transformation, child)
+end
+
+function filter_bounding_box(
+    transformation::Transformation{N},
+    box::InternalBoundingBoxes.InternalBoundingBox{N},
+    ::Val{true},
+) where {N}
+    original_child = child_geometry(transformation)
+    child = filter_bounding_box(
+        original_child, to_child_coordinates(transformation, box), Val(true),
+    )
+    child isa PhysicalGeometry || throw(ArgumentError(
+        "type-preserving filtering returned nothing for a transformation child",
+    ))
+    child === original_child ? transformation : rewrap(transformation, child)
+end
 
 finalise!(transformation::Transformation) = finalise!(child_geometry(transformation))
 

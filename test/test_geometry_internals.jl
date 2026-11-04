@@ -1700,6 +1700,121 @@ end
     @test_throws ArgumentError GeometryVector([sphere]; indices=[1, 2])
     @test_throws ArgumentError GeometryTuple((sphere,); indices=[1, 2])
 
+    @testset "Bounding-box geometry filtering" begin
+        filter_box = GI.PhysicalGeometries.filter_bounding_box
+        box_at(centre; radius=0.1) = BoundingBoxes.InternalBoundingBox{3}(
+            SVector(radius, radius, radius), SVector{3, Float64}(centre),
+        )
+        near_box = box_at((0., 0., 0.))
+        far_box = box_at((10., 0., 0.))
+
+        @test filter_box(sphere, far_box) === nothing
+        @test filter_box(sphere, far_box, Val(true)) === sphere
+        @test_throws MethodError filter_box(TestGeometry{3}(1), near_box)
+        shifted = Shift(sphere, [2., 0., 0.])
+        @test filter_box(shifted, box_at((2., 0., 0.))) === shifted
+        @test filter_box(shifted, near_box) === nothing
+        transparent = IgnoreOverlapping(Shift(sphere, zeros(3)))
+        filtered_transparent = filter_box(transparent, near_box)
+        @test filtered_transparent isa typeof(transparent)
+
+        indexed = GeometryVector([
+            Shift(sphere, zeros(3)), Shift(sphere, [10., 0., 0.]),
+        ]; indices=[5, 12])
+        filtered_vector = filter_box(indexed, near_box)
+        @test filtered_vector isa GeometryVector
+        @test groups.indices(filtered_vector) == [5]
+        @test filtered_vector[1] === indexed[1]
+
+        indexed_bbox = GeometryVector([
+            Shift(sphere, zeros(3)), Shift(sphere, [10., 0., 0.]),
+        ]; bounding_box=true, indices=[7, 15])
+        filtered_bbox = filter_box(indexed_bbox, near_box)
+        @test filtered_bbox isa GeometryVectorBoundingBox
+        @test groups.indices(filtered_bbox) == [7]
+        @test length(filtered_bbox.bounding_boxes) == 1
+
+        indexed_tuple = GeometryTuple((
+            Shift(sphere, zeros(3)), Shift(sphere, [10., 0., 0.]),
+        ); indices=[3, 9])
+        filtered_tuple = filter_box(indexed_tuple, near_box)
+        @test filtered_tuple isa GeometryTuple
+        @test groups.indices(filtered_tuple) == [3]
+        @test length(filtered_tuple) == 1
+        preserved_tuple = filter_box(indexed_tuple, near_box, Val(true))
+        @test typeof(preserved_tuple) === typeof(indexed_tuple)
+        @test groups.indices(preserved_tuple) == [3, 9]
+
+        # Different shortened tuple shapes trigger the vector's type-preserving fallback.
+        vector_of_tuples = GeometryVector([
+            GeometryTuple((Shift(sphere, zeros(3)), Shift(sphere, [10., 0., 0.]))),
+            GeometryTuple((Shift(sphere, zeros(3)), Shift(sphere, [0.5, 0., 0.]))),
+        ]; indices=[20, 30])
+        preserved_vector = filter_box(vector_of_tuples, near_box)
+        @test typeof(preserved_vector) === typeof(vector_of_tuples)
+        @test groups.indices(preserved_vector) == [20, 30]
+        @test all(child -> typeof(child) === eltype(vector_of_tuples), preserved_vector)
+
+        inner_vectors = [
+            GeometryVector([Shift(sphere, zeros(3)), Shift(sphere, [10., 0., 0.])]),
+            GeometryVector([Shift(sphere, zeros(3)), Shift(sphere, [0.5, 0., 0.])]),
+        ]
+        nested_vectors = GeometryVector([Shift(inner, zeros(3)) for inner in inner_vectors]; indices=[40, 50])
+        converted_nested = filter_box(nested_vectors, near_box, Val(true))
+        @test groups.indices(converted_nested) == [40, 50]
+        @test typeof(converted_nested) !== typeof(nested_vectors)
+        @test all(child -> typeof(child) === eltype(converted_nested), converted_nested)
+        empty_box = box_at((100., 0., 0.))
+        empty_nested = filter_box(nested_vectors, empty_box, Val(true))
+        @test isempty(empty_nested)
+        @test eltype(empty_nested) ===
+            typeof(filter_box(first(nested_vectors), empty_box, Val(true)))
+
+        struct FilterTypeProbe <: PhysicalGeometry{3}
+            index::Int
+        end
+        struct FilteredTypeA <: PhysicalGeometry{3} end
+        struct FilteredTypeB <: PhysicalGeometry{3} end
+        GI.PhysicalGeometries.filter_bounding_box(
+            probe::FilterTypeProbe, ::BoundingBoxes.InternalBoundingBox{3}, ::Val{false},
+        ) = probe
+        GI.PhysicalGeometries.filter_bounding_box(
+            probe::FilterTypeProbe, ::BoundingBoxes.InternalBoundingBox{3}, ::Val{true},
+        ) = isodd(probe.index) ? FilteredTypeA() : FilteredTypeB()
+        inconsistent_preserved = GeometryVector([FilterTypeProbe(1), FilterTypeProbe(2)])
+        @test_throws ArgumentError filter_box(inconsistent_preserved, near_box, Val(true))
+
+        cube_mesh = Mesh(
+            [SVector(0., 0., 0.), SVector(1., 0., 0.), SVector(0., 1., 0.),
+             SVector(1., 1., 0.), SVector(0., 0., 1.), SVector(1., 0., 1.),
+             SVector(0., 1., 1.), SVector(1., 1., 1.)],
+            [SVector(1, 2, 3), SVector(2, 3, 4), SVector(5, 6, 7),
+             SVector(6, 7, 8), SVector(1, 7, 5), SVector(1, 3, 7),
+             SVector(2, 8, 6), SVector(2, 4, 8), SVector(1, 2, 6),
+             SVector(1, 5, 6), SVector(3, 4, 8), SVector(3, 7, 8)],
+        )
+        interior_box = box_at((0.5, 0.5, 0.5); radius=0.1)
+        interior_mesh = filter_box(cube_mesh, interior_box)
+        @test interior_mesh isa Mesh
+        @test isempty(interior_mesh.indices)
+        @test interior_mesh.centre_inside == (SVector(0.5, 0.5, 0.5), true)
+        @test isinside_single(interior_mesh, SVector(0.5, 0.5, 0.5))
+        @test filter_box(cube_mesh, far_box) === nothing
+        preserved_far_mesh = filter_box(cube_mesh, far_box, Val(true))
+        @test preserved_far_mesh isa Mesh
+        @test isempty(preserved_far_mesh.vertices)
+        @test isempty(preserved_far_mesh.indices)
+        @test isempty(preserved_far_mesh.original_indices)
+        @test preserved_far_mesh.centre_inside == (SVector(10., 0., 0.), false)
+
+        surface_box = box_at((0.5, 0.5, 0.05); radius=0.1)
+        surface_mesh = filter_box(cube_mesh, surface_box)
+        @test surface_mesh.original_indices == [1, 2]
+        @test surface_mesh.first_index_of_gap == 3
+        @test !isinside_single(surface_mesh, SVector(0.5, 0.5, -0.05))
+        @test isinside_single(surface_mesh, SVector(0.5, 0.5, 0.1))
+    end
+
     tuple = GeometryTuple{3}((TestGeometry{3}(4), TestGeometry{3}(5)))
     @test tuple isa GI.PhysicalGeometries.Groups.GroupGeometry{3}
     @test length(tuple) == 2

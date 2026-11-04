@@ -5,6 +5,7 @@ import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, child_type, f
 import ..PhysicalGeometries: random_surface_positions, _geometry_mesh
 import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes
+import ..PhysicalGeometries: filter_bounding_box
 import ..PhysicalGeometries: distance_to_surface
 import ..PhysicalGeometries: simplify, rewrap, rewrap_extracted_wrapper, has_equivalent_wrapper
 import ..PhysicalGeometries: child_geometry, finalise!
@@ -68,6 +69,20 @@ function SizeScaleOverride(geometry::P, size_scale::Real) where {N, P <: Physica
 end
 
 child_geometry(wrapper::Transparent) = wrapper.geometry
+
+function filter_bounding_box(wrapper::Transparent{N}, box::InternalBoundingBox{N}, ::Val{false}) where {N}
+    child = filter_bounding_box(child_geometry(wrapper), box, Val(false))
+    isnothing(child) ? nothing : rewrap(wrapper, child)
+end
+
+function filter_bounding_box(wrapper::Transparent{N}, box::InternalBoundingBox{N}, ::Val{true}) where {N}
+    original_child = child_geometry(wrapper)
+    child = filter_bounding_box(original_child, box, Val(true))
+    child isa PhysicalGeometry || throw(ArgumentError(
+        "type-preserving filtering returned nothing for a transparent child",
+    ))
+    child === original_child ? wrapper : rewrap(wrapper, child)
+end
 
 finalise!(wrapper::Transparent) = finalise!(child_geometry(wrapper))
 

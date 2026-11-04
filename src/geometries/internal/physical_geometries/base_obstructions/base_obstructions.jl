@@ -12,6 +12,7 @@ import ...Properties: GeometryLeafProperties
 import ...Properties: all_property_values
 import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_surface, _geometry_mesh, _mesh_result
 import ..PhysicalGeometries: inside_sampling_per_obstruction, finalise!
+import ..PhysicalGeometries: filter_bounding_box, _bounding_boxes_overlap
 import Distributions: Poisson
 import Random: rand
 
@@ -27,6 +28,11 @@ function leaf_bounding_boxes(geometry::BaseObstruction{N}; inside=false) where {
     inside && !has_inside(typeof(geometry)) && return InternalBoundingBox{N}[]
     InternalBoundingBox(geometry)
 end
+
+filter_bounding_box(geometry::BaseObstruction{N}, ::InternalBoundingBox{N}, ::Val{true}) where {N} = geometry
+
+filter_bounding_box(geometry::BaseObstruction{N}, box::InternalBoundingBox{N}, ::Val{false}) where {N} =
+    _bounding_boxes_overlap(InternalBoundingBox(geometry), box) ? geometry : nothing
 
 function Base.show(io::IO, ::Type{T}) where {T <: BaseObstruction}
     print(io, nameof(T))

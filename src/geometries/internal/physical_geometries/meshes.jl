@@ -10,6 +10,7 @@ import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, find_intersec
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
 import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes, finalise!, simplify
+import ..PhysicalGeometries: filter_bounding_box, _bounding_boxes_overlap
 import ...Properties: GeometryLeafProperties
 import ..Groups
 import ...InternalBoundingBoxes
@@ -73,8 +74,11 @@ function _mesh_indices(indices, nvertices)
     result
 end
 
-function _mesh_bounding_box(vertices)
-    isempty(vertices) && throw(ArgumentError("cannot construct a Mesh without vertices"))
+function _mesh_bounding_box(vertices, empty_center=nothing)
+    if isempty(vertices)
+        isnothing(empty_center) && throw(ArgumentError("cannot construct a Mesh without vertices"))
+        return InternalBoundingBox{3}(zero(SVector{3, Float64}), empty_center)
+    end
     lower = reduce((a, b) -> min.(a, b), vertices)
     upper = reduce((a, b) -> max.(a, b), vertices)
     InternalBoundingBox{3}((upper - lower) / 2, (upper + lower) / 2)
@@ -89,7 +93,7 @@ triangle(mesh::Mesh, original_index::Int) = _triangle_at(mesh, Groups._stored_in
 function _mesh_subset(mesh::Mesh, selected_indices, centre_inside::Tuple{SVector{3, Float64}, Bool})
     # Keep source triangle IDs while compacting both the triangle list and vertices.
     positions = sort!(unique!([Groups._stored_index(mesh, index) for index in selected_indices]))
-    isempty(positions) && return nothing
+    isempty(positions) && return Mesh(SVector{3, Float64}[], SVector{3, Int}[], 1, Int[], centre_inside)
 
     physical_positions = filter(position -> position < mesh.first_index_of_gap, positions)
     gap_positions = filter(position -> position >= mesh.first_index_of_gap, positions)
@@ -270,7 +274,27 @@ end
 Groups.intersection_candidates(mesh::Mesh, start, destination) =
     ((index, child, 0.0) for (index, child) in Groups._indexed_children(mesh))
 
-InternalBoundingBox(mesh::Mesh) = _mesh_bounding_box(mesh.vertices)
+InternalBoundingBox(mesh::Mesh) = _mesh_bounding_box(mesh.vertices, mesh.centre_inside[1])
+
+function _filter_mesh_bounding_box(mesh::Mesh, box::InternalBoundingBox{3})
+    centre = InternalBoundingBoxes.center(box)
+    centre_inside = isinside_single(mesh, centre)
+    selected_indices = Int[]
+    for (position, original_index) in enumerate(Groups.indices(mesh))
+        triangle_box = InternalBoundingBox(_triangle_at(mesh, position))
+        _bounding_boxes_overlap(triangle_box, box) && push!(selected_indices, original_index)
+    end
+    _mesh_subset(mesh, selected_indices, (centre, centre_inside))
+end
+
+function filter_bounding_box(mesh::Mesh, box::InternalBoundingBox{3}, ::Val{false})
+    _bounding_boxes_overlap(InternalBoundingBox(mesh), box) || return nothing
+    _filter_mesh_bounding_box(mesh, box)
+end
+
+function filter_bounding_box(mesh::Mesh, box::InternalBoundingBox{3}, ::Val{true})
+    _filter_mesh_bounding_box(mesh, box)
+end
 
 function inside_sampling_per_obstruction(
     mesh::Mesh,
