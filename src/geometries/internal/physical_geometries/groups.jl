@@ -18,6 +18,8 @@ import ....BoundingBoxes: BoundingBoxNotSupported
 abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 abstract type GeometryVectorLike{N, P<:PhysicalGeometry{N}} <: GroupGeometry{N, P} end
 
+function indices end
+
 child_geometry(group::GroupGeometry) = throw(ArgumentError(
     "geometry group $(typeof(group)) has multiple children; use group_geometries instead",
 ))
@@ -62,12 +64,18 @@ _tuple_trait_any(trait, ::Val{false}, ::Type{P}) where {P<:Tuple} =
 function Base.show(io::IO, ::Type{T}) where {T <: GeometryVectorLike}
     print(io, "GeometryVector")
     T isa UnionAll && return
+    length(T.parameters) < 2 && return
     print(io, "{")
-    show(io, T.parameters[end])
+    show(io, T.parameters[2])
     print(io, "}")
 end
 
 group_geometries(group::GeometryVectorLike; include_gap=true) = group.geometries
+_stored_index(group::GeometryVectorLike, index::Int) = index
+
+function _indexed_children(group::GeometryVectorLike; include_gap=true)
+    enumerate(group_geometries(group; include_gap))
+end
 
 function distance_to_surface(group::GroupGeometry{N}, position::SVector{N, Float64}) where {N}
     minimum(
@@ -135,14 +143,13 @@ intersection_type(::Type{<:GroupGeometry{N, P}}) where {N, P} =
     _prepend_type(Int, intersection_type(P))
 
 function bound_intersection_type(geometry::GeometryVectorLike, density)
-    children = group_geometries(geometry; include_gap=false)
     _merge_types(
         (
             _prepend_type(
                 Int,
-                bound_intersection_type(children[index], child_density),
+                bound_intersection_type(child, child_density),
             )
-            for index in eachindex(children)
+            for (index, child) in _indexed_children(geometry)
             for child_density in (_density_child(density, index),)
             if any(!iszero, all_property_values(child_density))
         )
@@ -157,7 +164,7 @@ function find_intersection(group::GroupGeometry{N}, start::SVector{N, Float64}, 
     if !isnothing(candidate)
         isempty(candidate) && throw(ArgumentError("a group candidate must identify a child"))
         index = first(candidate)
-        child = group_geometries(group)[index]
+        child = group_geometries(group)[_stored_index(group, index)]
         child_previous = isnothing(previous_hit) || previous_hit[1] != index ? nothing : Base.tail(previous_hit)
         child_inside = child_view(find_intersection_requires_inside(typeof(child)), inside, index)
         hit = find_intersection(child, start, dest, child_previous, child_inside, Base.tail(candidate))
@@ -194,33 +201,75 @@ function _child_geometry_types_are_concrete(::Type{T}) where {T}
 end
 _child_geometry_types_are_concrete(::Any) = true
 
-struct GeometryVector{N, P<:PhysicalGeometry{N}} <: GeometryVectorLike{N, P}
+struct GeometryVector{N, P<:PhysicalGeometry{N}, I<:Union{Nothing, Vector{Int}}} <: GeometryVectorLike{N, P}
     geometries::Vector{P}
+    indices::I
 
-    function GeometryVector{N, P}(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}}
+    function GeometryVector{N, P, I}(geometries::Vector{P}, indices::I) where {
+        N, P<:PhysicalGeometry{N}, I<:Union{Nothing, Vector{Int}},
+    }
         _is_fully_concrete(P) || throw(ArgumentError("GeometryVector element types must be fully concrete"))
-        new{N, P}(geometries)
+        !isnothing(indices) && length(indices) != length(geometries) && throw(ArgumentError(
+            "indices and geometries must have the same length",
+        ))
+        !isnothing(indices) && !allunique(indices) && throw(ArgumentError(
+            "group indices must be unique",
+        ))
+        new{N, P, I}(geometries, indices)
     end
 end
 
-struct GeometryVectorBoundingBox{N, P<:PhysicalGeometry{N}} <: GeometryVectorLike{N, P}
+struct GeometryVectorBoundingBox{N, P<:PhysicalGeometry{N}, I<:Union{Nothing, Vector{Int}}} <: GeometryVectorLike{N, P}
     geometries::Vector{P}
     bounding_boxes::Vector{InternalBoundingBoxes.InternalBoundingBox{N}}
+    indices::I
 
-    function GeometryVectorBoundingBox{N, P}(
+    function GeometryVectorBoundingBox{N, P, I}(
         geometries::Vector{P},
         bounding_boxes::Vector{InternalBoundingBoxes.InternalBoundingBox{N}},
-    ) where {N, P<:PhysicalGeometry{N}}
+        indices::I,
+    ) where {N, P<:PhysicalGeometry{N}, I<:Union{Nothing, Vector{Int}}}
         length(geometries) == length(bounding_boxes) ||
             throw(ArgumentError("geometries and bounding_boxes must have the same length"))
         _is_fully_concrete(P) || throw(ArgumentError("GeometryVector element types must be fully concrete"))
-        new{N, P}(geometries, bounding_boxes)
+        !isnothing(indices) && length(indices) != length(geometries) && throw(ArgumentError(
+            "indices and geometries must have the same length",
+        ))
+        !isnothing(indices) && !allunique(indices) && throw(ArgumentError(
+            "group indices must be unique",
+        ))
+        new{N, P, I}(geometries, bounding_boxes, indices)
     end
 end
 
-struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} <: GroupGeometry{N, P}
+struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}, I<:Union{Nothing, Vector{Int}}} <: GroupGeometry{N, P}
     geometries::P
+    indices::I
+
+    function GeometryTuple{N, P, I}(geometries::P, indices::I) where {
+        N, P<:Tuple{Vararg{PhysicalGeometry{N}}}, I<:Union{Nothing, Vector{Int}},
+    }
+        !isnothing(indices) && length(indices) != length(geometries) && throw(ArgumentError(
+            "indices and geometries must have the same length",
+        ))
+        !isnothing(indices) && !allunique(indices) && throw(ArgumentError(
+            "group indices must be unique",
+        ))
+        new{N, P, I}(geometries, indices)
+    end
 end
+
+indices(group::Union{GeometryVector, GeometryVectorBoundingBox}) =
+    isnothing(group.indices) ? eachindex(group.geometries) : group.indices
+
+function _stored_index(group::Union{GeometryVector, GeometryVectorBoundingBox}, index::Int)
+    position = findfirst(==(index), indices(group))
+    isnothing(position) && throw(BoundsError(group, index))
+    position
+end
+
+_indexed_children(group::Union{GeometryVector, GeometryVectorBoundingBox}; include_gap=true) =
+    ((index, group.geometries[position]) for (position, index) in enumerate(indices(group)))
 
 function find_intersection_requires_inside(::Type{<:GeometryTuple{N, P}}) where {N, P}
     _tuple_trait_any(find_intersection_requires_inside, P)
@@ -230,6 +279,15 @@ get_intersection_params_requires_inside(::Type{<:GeometryTuple{N, P}}) where {N,
     _tuple_trait_any(get_intersection_params_requires_inside, P)
 
 group_geometries(group::GeometryTuple; include_gap=true) = group.geometries
+indices(group::GeometryTuple) = isnothing(group.indices) ? Base.OneTo(length(group.geometries)) : group.indices
+
+function _stored_index(group::GeometryTuple, index::Int)
+    position = findfirst(==(index), indices(group))
+    isnothing(position) && throw(BoundsError(group, index))
+    position
+end
+
+_indexed_children(group::GeometryTuple; include_gap=true) = zip(indices(group), group.geometries)
 
 function has_equivalent_wrapper(group::Union{GeometryVectorLike, GeometryTuple})
     children = group_geometries(group)
@@ -238,9 +296,9 @@ function has_equivalent_wrapper(group::Union{GeometryVectorLike, GeometryTuple})
     all(child -> has_equivalent_wrapper(reference, child), children)
 end
 
-rewrap(::GeometryVector, children::AbstractVector{<:PhysicalGeometry}) = GeometryVector(children)
-rewrap(::GeometryVectorBoundingBox, children::AbstractVector{<:PhysicalGeometry}) = GeometryVectorBoundingBox(children)
-rewrap(::GeometryTuple, children::Tuple) = GeometryTuple(children)
+rewrap(group::GeometryVector, children::AbstractVector{<:PhysicalGeometry}) = GeometryVector(children; indices=group.indices)
+rewrap(group::GeometryVectorBoundingBox, children::AbstractVector{<:PhysicalGeometry}) = GeometryVectorBoundingBox(children; indices=group.indices)
+rewrap(group::GeometryTuple, children::Tuple) = GeometryTuple(children; indices=group.indices)
 
 function finalise!(group::Union{GeometryVector, GeometryVectorBoundingBox, GeometryTuple})
     foreach(finalise!, group_geometries(group))
@@ -279,14 +337,14 @@ leaf_bounding_boxes(group::GeometryTuple; inside=false) = map(
     child -> leaf_bounding_boxes(child; inside), group_geometries(group),
 )
 
-function get_child(group::GeometryVectorLike, indices::Tuple)
-    child_index = indices[1]
-    group_geometries(group)[child_index], Base.tail(indices)
+function get_child(group::GeometryVectorLike, child_indices::Tuple)
+    child_index = child_indices[1]
+    group_geometries(group)[_stored_index(group, child_index)], Base.tail(child_indices)
 end
 
-function get_child(group::GeometryTuple, indices::Tuple)
-    child_index = indices[1]
-    group_geometries(group)[child_index], Base.tail(indices)
+function get_child(group::GeometryTuple, child_indices::Tuple)
+    child_index = child_indices[1]
+    group_geometries(group)[_stored_index(group, child_index)], Base.tail(child_indices)
 end
 
 child_type(::Type{<:GeometryTuple{N, P}}) where {N, P} = Union{P.parameters...}
@@ -304,7 +362,7 @@ function bound_intersection_type(geometry::GeometryTuple, density)
                 Int,
                 bound_intersection_type(child, _density_child(density, index)),
             )
-            for (index, child) in enumerate(group_geometries(geometry))
+            for (index, child) in _indexed_children(geometry)
             if any(!iszero, all_property_values(_density_child(density, index)))
         )
     )
@@ -312,16 +370,16 @@ end
 
 function inside_candidates end
 
-inside_candidates(group::GeometryVector, position) = enumerate(group_geometries(group))
+inside_candidates(group::GeometryVector, position) = _indexed_children(group)
 
-inside_candidates(group::GeometryVectorBoundingBox, position) =
+inside_candidates(group::GeometryVectorBoundingBox, query_position) =
     (
-        (index, group_geometries(group)[index])
-        for index in eachindex(group_geometries(group))
-        if InternalBoundingBoxes.isinside(group.bounding_boxes[index], position)
+        (index, group_geometries(group)[child_position])
+        for (child_position, index) in enumerate(indices(group))
+        if InternalBoundingBoxes.isinside(group.bounding_boxes[child_position], query_position)
     )
 
-inside_candidates(group::GeometryTuple, position) = enumerate(group_geometries(group))
+inside_candidates(group::GeometryTuple, position) = _indexed_children(group)
 
 function isinside_single(
     group::GroupGeometry{N},
@@ -359,13 +417,13 @@ function isinside_single(
 end
 
 intersection_candidates(group::Union{GeometryVector, GeometryTuple}, start, destination) =
-    ((index, child, 0.0) for (index, child) in enumerate(group_geometries(group)))
+    ((index, child, 0.0) for (index, child) in _indexed_children(group))
 
 intersection_candidates(group::GeometryVectorBoundingBox, start, destination) =
     (
-        (index, group_geometries(group)[index], 0.0)
-        for index in eachindex(group_geometries(group))
-        if InternalBoundingBoxes.does_intersect(group.bounding_boxes[index], start, destination)
+        (index, group_geometries(group)[child_position], 0.0)
+        for (child_position, index) in enumerate(indices(group))
+        if InternalBoundingBoxes.does_intersect(group.bounding_boxes[child_position], start, destination)
     )
 
 has_inside(::Type{<:GeometryVectorLike{N, P}}) where {N, P} = has_inside(P)
@@ -429,7 +487,7 @@ function inside_indices(
     no_deproject=false,
 ) where {N}
     indices = Vector{inside_indices_eltype(typeof(geometry))}()
-    for (child_index, child) in enumerate(geometry)
+    for (child_index, child) in _indexed_children(geometry)
         child_intersection = !isnothing(intersection) && intersection[1] == child_index ? intersection[2:end] : nothing
         append!(indices, [(child_index, new_indices...) for new_indices in inside_indices_for_any_type(
             child, position, child_intersection; no_deproject,
@@ -438,27 +496,63 @@ function inside_indices(
     indices
 end
 
-GeometryVector{N}(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}} =
-    GeometryVector{N, P}(geometries)
+GeometryVector{N, P}(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}} =
+    GeometryVector{N, P, Nothing}(geometries, nothing)
+
+GeometryVector{N, P}(geometries::Vector{P}, indices::Vector{Int}) where {N, P<:PhysicalGeometry{N}} =
+    GeometryVector{N, P, Vector{Int}}(geometries, indices)
+
+GeometryVector{N}(geometries::Vector{P}; indices=nothing) where {N, P<:PhysicalGeometry{N}} =
+    isnothing(indices) ? GeometryVector{N, P}(geometries) : GeometryVector{N, P}(geometries, indices)
 
 function GeometryVector(
     geometries::Vector{P};
     bounding_box::Bool=false,
+    indices=nothing,
 ) where {N, P<:PhysicalGeometry{N}}
-    bounding_box ? GeometryVectorBoundingBox(geometries) : GeometryVector{N, P}(geometries)
+    bounding_box ? GeometryVectorBoundingBox(geometries; indices) : GeometryVector{N}(geometries; indices)
 end
 
-GeometryVectorBoundingBox(geometries::Vector{P}) where {N, P<:PhysicalGeometry{N}} =
-    GeometryVectorBoundingBox{N, P}(geometries, InternalBoundingBox.(geometries))
+GeometryVectorBoundingBox{N, P}(geometries::Vector{P}, bounding_boxes::Vector{InternalBoundingBoxes.InternalBoundingBox{N}}) where {N, P<:PhysicalGeometry{N}} =
+    GeometryVectorBoundingBox{N, P, Nothing}(geometries, bounding_boxes, nothing)
+
+GeometryVectorBoundingBox{N, P}(
+    geometries::Vector{P},
+    bounding_boxes::Vector{InternalBoundingBoxes.InternalBoundingBox{N}},
+    indices::Nothing,
+) where {N, P<:PhysicalGeometry{N}} =
+    GeometryVectorBoundingBox{N, P, Nothing}(geometries, bounding_boxes, nothing)
+
+GeometryVectorBoundingBox{N, P}(geometries::Vector{P}, bounding_boxes::Vector{InternalBoundingBoxes.InternalBoundingBox{N}}, indices::Vector{Int}) where {N, P<:PhysicalGeometry{N}} =
+    GeometryVectorBoundingBox{N, P, Vector{Int}}(geometries, bounding_boxes, indices)
+
+GeometryVectorBoundingBox(geometries::Vector{P}; indices=nothing) where {N, P<:PhysicalGeometry{N}} =
+    GeometryVectorBoundingBox{N, P}(
+        geometries, InternalBoundingBox.(geometries), indices === nothing ? nothing : Vector{Int}(indices),
+    )
 
 GeometryVectorBoundingBox(
     geometries::Vector{P},
-    bounding_boxes::Vector{InternalBoundingBoxes.InternalBoundingBox{N}},
+    bounding_boxes::Vector{InternalBoundingBoxes.InternalBoundingBox{N}};
+    indices=nothing,
 ) where {N, P<:PhysicalGeometry{N}} =
-    GeometryVectorBoundingBox{N, P}(geometries, bounding_boxes)
+    GeometryVectorBoundingBox{N, P}(
+        geometries, bounding_boxes,
+        indices === nothing ? nothing : Vector{Int}(indices),
+    )
 
-GeometryTuple{N}(geometries::Tuple{Vararg{PhysicalGeometry{N}}}) where {N} =
-    GeometryTuple{N, typeof(geometries)}(geometries)
+GeometryTuple{N, P}(geometries::P) where {N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} =
+    GeometryTuple{N, P, Nothing}(geometries, nothing)
+
+GeometryTuple{N, P}(geometries::P, indices::Vector{Int}) where {N, P<:Tuple{Vararg{PhysicalGeometry{N}}}} =
+    GeometryTuple{N, P, Vector{Int}}(geometries, indices)
+
+GeometryTuple{N}(geometries::Tuple{Vararg{PhysicalGeometry{N}}}; indices=nothing) where {N} =
+    isnothing(indices) ? GeometryTuple{N, typeof(geometries)}(geometries) :
+        GeometryTuple{N, typeof(geometries)}(geometries, Vector{Int}(indices))
+
+GeometryTuple(geometries::Tuple{Vararg{PhysicalGeometry{N}}}; indices=nothing) where {N} =
+    GeometryTuple{N}(geometries; indices)
 
 Base.size(geometry::GeometryVectorLike) = size(group_geometries(geometry))
 Base.axes(geometry::GeometryVectorLike) = axes(group_geometries(geometry))
@@ -482,7 +576,7 @@ function Base.show(io::IO, ::Type{T}) where {T <: GeometryTuple}
     print(io, "GeometryTuple")
     T isa UnionAll && return
     print(io, "{")
-    for (index, child) in enumerate(T.parameters[end].parameters)
+    for (index, child) in enumerate(T.parameters[2].parameters)
         index > 1 && print(io, ", ")
         show(io, child)
     end
@@ -532,7 +626,7 @@ function random_surface_positions(geometry::GroupGeometry{N}, density::GeometryP
             include_gap, kwargs...,
         )
         (values[1], [(index, child_index...) for child_index in values[2]])
-    end for (index, child) in enumerate(group_geometries(geometry; include_gap=include_gap))),
+     end for (index, child) in _indexed_children(geometry; include_gap)),
         Val(N),
         IndexType,
     )

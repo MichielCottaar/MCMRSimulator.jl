@@ -1656,6 +1656,50 @@ end
     vector[2] = TestGeometry{3}(3)
     @test vector[2].value == 3
 
+    sphere = BaseObstructions.Sphere(0.5)
+    indexed_vector = GeometryVector([
+        Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.]),
+    ]; indices=[4, 9])
+    indexed_bounded = GeometryVector([
+        Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.]),
+    ]; bounding_box=true, indices=[12, 18])
+    indexed_tuple = GeometryTuple((
+        Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.]),
+    ); indices=[3, 8])
+    groups = GI.PhysicalGeometries.Groups
+    @test groups.indices(indexed_vector) == [4, 9]
+    @test groups.indices(indexed_bounded) == [12, 18]
+    @test groups.indices(indexed_tuple) == [3, 8]
+    @test groups.indices(vector) == 1:2
+    @test typeof(indexed_vector).parameters[3] === Vector{Int}
+    @test typeof(indexed_bounded).parameters[3] === Vector{Int}
+    @test typeof(indexed_tuple).parameters[3] === Vector{Int}
+    @test GI.PhysicalGeometries.get_child(indexed_vector, (9,)) ===
+        (indexed_vector[2], ())
+    @test GI.PhysicalGeometries.get_child(indexed_tuple, (8,)) ===
+        (indexed_tuple[2], ())
+    @test inside_indices(indexed_vector, SVector(-2., 0., 0.)) == [(4,)]
+    @test inside_indices(indexed_bounded, SVector(2., 0., 0.)) == [(18,)]
+    @test inside_indices(indexed_tuple, SVector(2., 0., 0.)) == [(8,)]
+    @test GI.PhysicalGeometries.find_intersection(
+        indexed_vector, SVector(-3., 0., 0.), SVector(0., 0., 0.),
+    )[1] == 4
+    @test GI.PhysicalGeometries.find_intersection(
+        indexed_bounded, SVector(0., 0., 0.), SVector(3., 0., 0.),
+    )[1] == 18
+    @test GI.PhysicalGeometries.find_intersection(
+        indexed_tuple, SVector(0., 0., 0.), SVector(3., 0., 0.),
+    )[1] == 8
+
+    nested_indexed = GeometryTuple((indexed_vector,); indices=[21])
+    @test inside_indices(nested_indexed, SVector(-2., 0., 0.)) == [(21, 4)]
+    @test GI.PhysicalGeometries.find_intersection(
+        nested_indexed, SVector(-3., 0., 0.), SVector(0., 0., 0.),
+    )[1:2] == (21, 4)
+    @test groups.indices(GI.PhysicalGeometries.rewrap(indexed_tuple, Tuple(indexed_tuple))) == [3, 8]
+    @test_throws ArgumentError GeometryVector([sphere]; indices=[1, 2])
+    @test_throws ArgumentError GeometryTuple((sphere,); indices=[1, 2])
+
     tuple = GeometryTuple{3}((TestGeometry{3}(4), TestGeometry{3}(5)))
     @test tuple isa GI.PhysicalGeometries.Groups.GroupGeometry{3}
     @test length(tuple) == 2
@@ -1664,6 +1708,7 @@ end
     @test tuple[1].value == 4
     @test [g.value for g in tuple] == [4, 5]
     @test Tuple(tuple) == (TestGeometry{3}(4), TestGeometry{3}(5))
+    @test groups.indices(tuple) == 1:2
 
     @test length(GeometryVector{3}(TestGeometry{3}[])) == 0
     @test length(GeometryTuple{3}(())) == 0
