@@ -97,40 +97,6 @@ end
         end
     end
 end
-if false
-    @testset "1x1x1 grid mesh intersection" begin
-        mesh = box_mesh(grid_size=1)
-        @test size(mesh.grid) == (1, 1, 1)
-        @test size(mesh.vertices) == (8, )
-        @test length(mesh) == 12
-        @test length(mesh.grid[1, 1, 1]) == 12
-        @test mesh.grid[1, 1, 1] == collect(1:12)
-    end
-    @testset "Actual grid mesh intersection" begin
-        mesh = box_mesh(grid_size=5)
-        @test size(mesh.grid) == (5, 5, 5)
-        @test mesh.grid[2, 2, 2] == Int[]
-        @test mesh.grid[3, 4, 2] == Int[]
-        @test mesh.grid[3, 3, 1] == Int[1, 2]
-        @test mesh.grid[2, 4, 1] == Int[1, 2]
-        @test mesh.grid[1, 1, 1] == Int[1, 5, 6, 9, 10]
-        @test mesh.grid[1, 3, 1] == Int[1, 6]
-        @test mesh.grid[3, 1, 1] == Int[1, 9]
-    end
-    @testset "grid mesh box is closed" begin
-        mesh = box_mesh().grid
-        for edge in (
-            mesh[1, :, :],
-            mesh[end, :, :],
-            mesh[:, 1, :],
-            mesh[:, end, :],
-            mesh[:, :, 1],
-            mesh[:, :, end],
-        )
-            @test all(map(l->length(l) > 0, edge))
-        end
-    end
-end
 @testset "Simple bounces against mesh box" begin
     function compare(ms1 :: AbstractVector, ms2 :: AbstractVector)
         @test length(ms1) == length(ms2)

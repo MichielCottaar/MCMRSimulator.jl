@@ -5,7 +5,6 @@ import LinearAlgebra: cross, norm, svd, ⋅
 import Random: rand
 import Distributions: Poisson
 import DelaunayTriangulation: triangulate, get_triangles
-import NearestNeighbors: KDTree, nn
 
 import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, find_intersection, get_intersection_params, has_inside, has_single_inside, inside_indices_eltype, intersection_type, isinside_single, InternalBoundingBox
 import ..PhysicalGeometries: random_surface_positions, size_scale, _geometry_mesh
@@ -13,23 +12,22 @@ import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes, finalise!, simplify
 import ...Properties: GeometryLeafProperties
 import ..Groups
-import ..GridDispatch: IntersectionGrid, GridIterator
 import ...InternalBoundingBoxes
 import ..BaseObstructions: FullTriangle, normal
 
 """A connected mesh component backed by lazily materialized triangles.
 
 `indices` contains physical mesh triangles followed by triangles that close a
-mesh gap. `first_index_of_gap` marks the first gap triangle. All indices use
-one-based indices into `vertices`.
+mesh gap. `first_index_of_gap` marks the first gap triangle. `original_indices`
+maps stored triangles to their IDs in the source mesh, or is `nothing` for an
+original mesh. `centre_inside` provides a reference point and its inside state.
 """
 struct Mesh <: Groups.GeometryVectorLike{3, FullTriangle}
     vertices::Vector{SVector{3, Float64}}
     indices::Vector{SVector{3, Int}}
     first_index_of_gap::Int
-    bounding_box::InternalBoundingBox{3}
-    grid::IntersectionGrid{3}
-    inside_mask::BitArray{3}
+    original_indices::Union{Nothing, Vector{Int}}
+    centre_inside::Tuple{SVector{3, Float64}, Bool}
 end
 
 Base.show(io::IO, ::Type{Mesh}) = print(io, "Mesh")
@@ -45,21 +43,22 @@ struct MeshGeometryView
 end
 
 Groups.group_geometries(mesh::Mesh; include_gap=true) = MeshGeometryView(mesh, include_gap)
+Groups.indices(mesh::Mesh) = isnothing(mesh.original_indices) ? Base.OneTo(length(mesh.indices)) : mesh.original_indices
 
 leaf_bounding_boxes(mesh::Mesh; inside=false) = inside ?
     InternalBoundingBox(mesh) :
-    [leaf_bounding_boxes(triangle(mesh, index)) for index in eachindex(mesh.indices)]
+    [leaf_bounding_boxes(_triangle_at(mesh, index)) for index in eachindex(mesh.indices)]
 
 Base.size(view::MeshGeometryView) = (length(view),)
 Base.axes(view::MeshGeometryView) = (Base.OneTo(length(view)),)
 Base.length(view::MeshGeometryView) = view.include_gap ? length(view.mesh.indices) : view.mesh.first_index_of_gap - 1
 Base.firstindex(view::MeshGeometryView) = firstindex(view.mesh.indices)
 Base.lastindex(view::MeshGeometryView) = length(view)
-Base.getindex(view::MeshGeometryView, index::Int) = triangle(view.mesh, index)
+Base.getindex(view::MeshGeometryView, index::Int) = _triangle_at(view.mesh, index)
 Base.iterate(view::MeshGeometryView, state=firstindex(view)) = begin
     next = state
     next > lastindex(view) && return nothing
-    (triangle(view.mesh, next), next + 1)
+    (_triangle_at(view.mesh, next), next + 1)
 end
 Base.eltype(::Type{MeshGeometryView}) = FullTriangle
 
@@ -72,6 +71,62 @@ function _mesh_indices(indices, nvertices)
     all(all(triangle .>= 1) && all(triangle .<= nvertices) for triangle in result) ||
         throw(ArgumentError("mesh triangle indices must refer to existing vertices"))
     result
+end
+
+function _mesh_bounding_box(vertices)
+    isempty(vertices) && throw(ArgumentError("cannot construct a Mesh without vertices"))
+    lower = reduce((a, b) -> min.(a, b), vertices)
+    upper = reduce((a, b) -> max.(a, b), vertices)
+    InternalBoundingBox{3}((upper - lower) / 2, (upper + lower) / 2)
+end
+
+function _triangle_at(mesh::Mesh, position::Int)
+    _mesh_triangle(mesh.vertices, mesh.indices[position])
+end
+
+triangle(mesh::Mesh, original_index::Int) = _triangle_at(mesh, Groups._stored_index(mesh, original_index))
+
+function _mesh_subset(mesh::Mesh, selected_indices, centre_inside::Tuple{SVector{3, Float64}, Bool})
+    # Keep source triangle IDs while compacting both the triangle list and vertices.
+    positions = sort!(unique!([Groups._stored_index(mesh, index) for index in selected_indices]))
+    isempty(positions) && return nothing
+
+    physical_positions = filter(position -> position < mesh.first_index_of_gap, positions)
+    gap_positions = filter(position -> position >= mesh.first_index_of_gap, positions)
+    ordered_positions = [physical_positions; gap_positions]
+    original_indices = [Groups.indices(mesh)[position] for position in ordered_positions]
+    selected_triangles = mesh.indices[ordered_positions]
+    vertex_ids = unique!(reduce(vcat, (collect(triangle) for triangle in selected_triangles)))
+    vertex_position = Dict(vertex_id => position for (position, vertex_id) in enumerate(vertex_ids))
+    vertices = mesh.vertices[vertex_ids]
+    triangles = [
+        SVector{3, Int}(vertex_position[triangle[1]], vertex_position[triangle[2]], vertex_position[triangle[3]])
+        for triangle in selected_triangles
+    ]
+    Mesh(vertices, triangles, length(physical_positions) + 1, original_indices, centre_inside)
+end
+
+function _inside_between(vertices, triangles, start, destination, initial_inside)
+    intersections = SVector{3, Float64}[]
+    for triangle_indices in triangles
+        hit = find_intersection(_mesh_triangle(vertices, triangle_indices), start, destination)
+        isnothing(hit) && continue
+        _, distance = hit
+        0 <= distance < 1 || continue
+        point = start + distance .* (destination - start)
+        any(norm(point - existing) < 1e-8 for existing in intersections) ||
+            push!(intersections, point)
+    end
+    isodd(length(intersections)) ? !initial_inside : initial_inside
+end
+
+function _centre_inside(vertices, triangles)
+    bounding_box = _mesh_bounding_box(vertices)
+    centre = InternalBoundingBoxes.center(bounding_box)
+    upper = InternalBoundingBoxes.upper(bounding_box)
+    extent = InternalBoundingBoxes.upper(bounding_box) - InternalBoundingBoxes.lower(bounding_box)
+    outside = upper .+ max(maximum(extent), 1.0) .* SVector(1.317, 1.713, 2.117)
+    (centre, _inside_between(vertices, triangles, outside, centre, false))
 end
 
 "Helper function to compute holes in meshes (`_mesh_gap_indices`)"
@@ -152,11 +207,14 @@ function _mesh_gap_indices(vertices, indices)
     gap_indices
 end
 
-function Mesh(
-    vertices,
-    indices;
-    grid_resolution=nothing,
-)
+"""
+    Mesh(vertices, triangle_indices)
+
+Construct a complete mesh component and its gap-closing triangles. Meshes do not
+build a private spatial grid: their triangles are traversed directly, and inside
+queries start from the bounding-box centre and its computed inside state.
+"""
+function Mesh(vertices, indices)
     fixed_vertices = [SVector{3, Float64}(vertex) for vertex in vertices]
     isempty(indices) && throw(ArgumentError("cannot construct a Mesh without triangles"))
     fixed_indices = [MVector{3, Int}(triangle) for triangle in _mesh_indices(indices, length(fixed_vertices))]
@@ -177,35 +235,14 @@ function Mesh(
     end
     fixed_indices = [SVector{3, Int}(triangle) for triangle in fixed_indices]
 
-    triangle_boxes = [
-        InternalBoundingBox(FullTriangle(fixed_vertices[triangle[1]], fixed_vertices[triangle[2]], fixed_vertices[triangle[3]]))
-        for triangle in fixed_indices
-    ]
-    grid = IntersectionGrid(triangle_boxes; resolution=grid_resolution)
-    inside_mask = _mesh_inside_mask(
-        fixed_vertices,
-        fixed_indices,
-        grid,
-    )
     Mesh(
         fixed_vertices,
         fixed_indices,
         first_index_of_gap,
-        grid.bounding_box,
-        grid,
-        inside_mask,
+        nothing,
+        _centre_inside(fixed_vertices, fixed_indices),
     )
 end
-
-function _mesh_triangle(mesh::Mesh, triangle::SVector{3, Int})
-    FullTriangle(
-        mesh.vertices[triangle[1]],
-        mesh.vertices[triangle[2]],
-        mesh.vertices[triangle[3]],
-    )
-end
-
-triangle(mesh::Mesh, index::Int) = _mesh_triangle(mesh, mesh.indices[index])
 
 function get_intersection_params(
     mesh::Mesh,
@@ -215,6 +252,7 @@ function get_intersection_params(
     isinside=nothing,
 )
     triangle_index = indices[1]
+    triangle_position = Groups._stored_index(mesh, triangle_index)
     result = get_intersection_params(
         triangle(mesh, triangle_index),
         start,
@@ -225,17 +263,14 @@ function get_intersection_params(
     IntersectionParams{3}(
         result.inside,
         result.normal,
-        triangle_index >= mesh.first_index_of_gap,
+        triangle_position >= mesh.first_index_of_gap,
     )
 end
 
 Groups.intersection_candidates(mesh::Mesh, start, destination) =
-    (
-        (triangle_index, triangle(mesh, triangle_index), dist_all_checked)
-        for (triangle_index, dist_all_checked) in GridIterator(mesh.grid, start, destination)
-    )
+    ((index, child, 0.0) for (index, child) in Groups._indexed_children(mesh))
 
-InternalBoundingBox(mesh::Mesh) = mesh.bounding_box
+InternalBoundingBox(mesh::Mesh) = _mesh_bounding_box(mesh.vertices)
 
 function inside_sampling_per_obstruction(
     mesh::Mesh,
@@ -244,73 +279,21 @@ function inside_sampling_per_obstruction(
     no_deproject=false,
     bounding_box=nothing,
 )
-    grid = mesh.grid
-    lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)
-    voxel_size = inv.(grid.inv_resolution)
-    voxel_volume = prod(voxel_size)
+    box = InternalBoundingBox(mesh)
+    lower_bound = InternalBoundingBoxes.lower(box)
+    size = InternalBoundingBoxes.upper(box) - lower_bound
+    number_of_samples = rand(rng, Poisson(density * prod(size)))
     positions = SVector{3, Float64}[]
-
-    for coordinate in CartesianIndices(grid.indices)
-        voxel = SVector{3, Int}(Tuple(coordinate))
-        candidates = grid.indices[coordinate]
-        if isempty(candidates) && !mesh.inside_mask[coordinate]
-            continue
-        end
-
-        voxel_lower = lower_bound + (voxel .- 1) .* voxel_size
-        number_of_samples = rand(rng, Poisson(density * voxel_volume))
-        for _ in 1:number_of_samples
-            position = voxel_lower + SVector{3, Float64}(rand(rng, 3)) .* voxel_size
-            if isempty(candidates) || isinside_single(mesh, position; no_deproject)
-                push!(positions, position)
-            end
-        end
+    sizehint!(positions, number_of_samples)
+    for _ in 1:number_of_samples
+        position = lower_bound + SVector{3, Float64}(rand(rng, 3)) .* size
+        isinside_single(mesh, position; no_deproject) && push!(positions, position)
     end
     positions
 end
 
-function _mesh_inside_mask(
-    vertices,
-    indices,
-    grid::IntersectionGrid{3},
-)
-    centroids = [
-        sum((vertices[vertex] for vertex in triangle)) / 3
-        for triangle in indices
-    ]
-    tree = KDTree(centroids)
-    mask = falses(size(grid.indices))
-    lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)
-    for coordinate in CartesianIndices(mask)
-        grid_coordinate = SVector{3, Float64}(Tuple(coordinate)) .- 0.5
-        centre = lower_bound .+ grid_coordinate ./ grid.inv_resolution
-        triangle_index = nn(tree, centre)[1]
-        destination = centre + 1.001 .* (centroids[triangle_index] - centre)
-        hit_index = nothing
-        hit_distance = Inf
-        for (candidate_index, _) in GridIterator(grid, centre, destination)
-            triangle = _mesh_triangle(vertices, indices[candidate_index])
-            hit = find_intersection(triangle, centre, destination)
-            isnothing(hit) && continue
-            _, distance = hit
-            distance < hit_distance || continue
-            hit_index = candidate_index
-            hit_distance = distance
-        end
-        isnothing(hit_index) && continue
-        hit_triangle = _mesh_triangle(vertices, indices[hit_index])
-        mask[coordinate] = (centre - centroids[hit_index]) ⋅ normal(hit_triangle) < 0
-    end
-    mask
-end
-
 function _mesh_triangle(vertices, triangle::SVector{3, Int})
     FullTriangle(vertices[triangle[1]], vertices[triangle[2]], vertices[triangle[3]])
-end
-
-function _mesh_grid_coordinate(mesh::Mesh, position)
-    coordinate = Int.(floor.((position - InternalBoundingBoxes.lower(mesh.grid.grid_bounding_box)) .* mesh.grid.inv_resolution)) .+ 1
-    any(coordinate .< 1) || any(coordinate .> size(mesh.grid.indices)) ? nothing : SVector{3, Int}(coordinate)
 end
 
 function isinside_single(
@@ -323,28 +306,12 @@ function isinside_single(
         triangle_index = previous_intersection[1]
         triangle_index isa Int ||
             throw(ArgumentError("a non-empty mesh intersection must have one triangle index"))
-        1 <= triangle_index <= length(mesh.indices) ||
-            throw(ArgumentError("previous-hit triangle index is not part of the mesh"))
+        Groups._stored_index(mesh, triangle_index)
         return previous_intersection[2]
     end
 
-    coordinate = _mesh_grid_coordinate(mesh, position)
-    isnothing(coordinate) && return false
-
-    lower_bound = InternalBoundingBoxes.lower(mesh.grid.grid_bounding_box)
-    centre = lower_bound .+ (SVector{3, Float64}(coordinate) .- 0.5) ./ mesh.grid.inv_resolution
-    inside = mesh.inside_mask[coordinate...]
-    intersection_points = SVector{3, Float64}[]
-    for triangle_index in mesh.grid.indices[coordinate...]
-        triangle_intersection = find_intersection(triangle(mesh, triangle_index), centre, position)
-        if !isnothing(triangle_intersection) && 0 <= triangle_intersection[2] < 1
-            point = centre + triangle_intersection[2] .* (position - centre)
-            any(norm(point - existing) < 1e-8 for existing in intersection_points) ||
-                push!(intersection_points, point)
-        end
-    end
-    isodd(length(intersection_points)) && (inside = !inside)
-    inside
+    centre, centre_inside = mesh.centre_inside
+    _inside_between(mesh.vertices, mesh.indices, centre, position, centre_inside)
 end
 
 function find_intersection(
@@ -365,9 +332,9 @@ function find_intersection(
         return isnothing(hit) ? nothing : (triangle_index, hit...)
     end
     best = nothing
-    for (triangle_index, _) in GridIterator(mesh.grid, start, destination)
+    for (triangle_index, child) in Groups._indexed_children(mesh)
         triangle_index == previous_index && continue
-        hit = find_intersection(triangle(mesh, triangle_index), start, destination)
+        hit = find_intersection(child, start, destination)
         isnothing(hit) && continue
         inside, distance = hit
         (isnothing(best) || distance < best[3]) || continue

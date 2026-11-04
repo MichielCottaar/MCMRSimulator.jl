@@ -71,10 +71,10 @@ function Base.show(io::IO, ::Type{T}) where {T <: GeometryVectorLike}
 end
 
 group_geometries(group::GeometryVectorLike; include_gap=true) = group.geometries
-_stored_index(group::GeometryVectorLike, index::Int) = index
+indices(group::GeometryVectorLike) = Base.OneTo(length(group_geometries(group)))
 
 function _indexed_children(group::GeometryVectorLike; include_gap=true)
-    enumerate(group_geometries(group; include_gap))
+    zip(indices(group), group_geometries(group; include_gap))
 end
 
 function distance_to_surface(group::GroupGeometry{N}, position::SVector{N, Float64}) where {N}
@@ -262,15 +262,6 @@ end
 indices(group::Union{GeometryVector, GeometryVectorBoundingBox}) =
     isnothing(group.indices) ? eachindex(group.geometries) : group.indices
 
-function _stored_index(group::Union{GeometryVector, GeometryVectorBoundingBox}, index::Int)
-    position = findfirst(==(index), indices(group))
-    isnothing(position) && throw(BoundsError(group, index))
-    position
-end
-
-_indexed_children(group::Union{GeometryVector, GeometryVectorBoundingBox}; include_gap=true) =
-    ((index, group.geometries[position]) for (position, index) in enumerate(indices(group)))
-
 function find_intersection_requires_inside(::Type{<:GeometryTuple{N, P}}) where {N, P}
     _tuple_trait_any(find_intersection_requires_inside, P)
 end
@@ -281,8 +272,13 @@ get_intersection_params_requires_inside(::Type{<:GeometryTuple{N, P}}) where {N,
 group_geometries(group::GeometryTuple; include_gap=true) = group.geometries
 indices(group::GeometryTuple) = isnothing(group.indices) ? Base.OneTo(length(group.geometries)) : group.indices
 
-function _stored_index(group::GeometryTuple, index::Int)
-    position = findfirst(==(index), indices(group))
+function _stored_index(group::Union{GeometryVectorLike, GeometryTuple}, index::Int)
+    group_indices = indices(group)
+    if group_indices isa Base.OneTo
+        checkbounds(Bool, group_indices, index) || throw(BoundsError(group, index))
+        return index
+    end
+    position = findfirst(==(index), group_indices)
     isnothing(position) && throw(BoundsError(group, index))
     position
 end

@@ -2605,13 +2605,53 @@ end
             SVector(1, 2, 4),
             SVector(1, 3, 4),
         ],
-        grid_resolution=0.5,
     )
     @test mesh isa PhysicalGeometry{3}
     @test has_inside(typeof(mesh))
     @test mesh.vertices[2] == SVector(1.0, 0.0, 0.0)
     @test mesh.first_index_of_gap == 4
+    @test mesh.original_indices === nothing
+    @test mesh.centre_inside[1] == SVector(0.5, 0.5, 0.5)
+    @test !mesh.centre_inside[2]
+    @test fieldnames(typeof(mesh)) ==
+        (:vertices, :indices, :first_index_of_gap, :original_indices, :centre_inside)
     @test length(mesh.indices) == 4
+    gap_subset = Meshes._mesh_subset(
+        mesh, [4, 1], (SVector(0.2, 0.2, 0.2), true),
+    )
+    @test gap_subset.original_indices == [1, 4]
+    @test gap_subset.first_index_of_gap == 2
+    @test GI.PhysicalGeometries.get_intersection_params(
+        gap_subset,
+        SVector(0., 0., 0.), SVector(1., 1., 1.),
+        (4, false, 0.5),
+    ).hit_gap
+    @test_throws MethodError Mesh(
+        [SVector(0., 0., 0.), SVector(1., 0., 0.), SVector(0., 1., 0.)],
+        [SVector(1, 2, 3)]; grid_resolution=0.5,
+    )
+
+    # A subset retains source triangle IDs and gets a reference inside state
+    # supplied for the local cell by the caller.
+    closed_mesh = Mesh(
+        [SVector(0., 0., 0.), SVector(1., 0., 0.), SVector(0., 1., 0.),
+         SVector(1., 1., 0.), SVector(0., 0., 1.), SVector(1., 0., 1.),
+         SVector(0., 1., 1.), SVector(1., 1., 1.)],
+        [SVector(1, 2, 3), SVector(2, 3, 4), SVector(5, 6, 7),
+         SVector(6, 7, 8), SVector(1, 7, 5), SVector(1, 3, 7),
+         SVector(2, 8, 6), SVector(2, 4, 8), SVector(1, 2, 6),
+         SVector(1, 5, 6), SVector(3, 4, 8), SVector(3, 7, 8)],
+    )
+    local_inside = (SVector(0.5, 0.5, 0.1), true)
+    subset = Meshes._mesh_subset(closed_mesh, [1, 2], local_inside)
+    @test subset.original_indices == [1, 2]
+    @test subset.first_index_of_gap == 3
+    @test length(subset.vertices) == 4
+    @test isinside_single(subset, SVector(0.5, 0.5, 0.2))
+    @test !isinside_single(subset, SVector(0.5, 0.5, -0.1))
+    @test GI.PhysicalGeometries.find_intersection(
+        subset, SVector(0.5, 0.5, 0.2), SVector(0.5, 0.5, -0.1),
+    )[1] in (1, 2)
     render_mesh = GI.geometry_mesh(mesh)
     @test length(render_mesh) == 1
     @test render_mesh[1].vertices == mesh.vertices
@@ -2761,20 +2801,21 @@ end
     @test isinside_single(mesh, SVector(1.2, 0.2, 0.2), stuck_inside_mesh)
     @test !isinside_single(mesh, SVector(0.2, 0.2, 0.2), stuck_outside_mesh)
     @test Set(mesh.indices[mesh.first_index_of_gap]) == Set((4, 2, 3))
-    @test BoundingBoxes.lower(mesh.bounding_box) == SVector(0.0, 0.0, 0.0)
-    @test BoundingBoxes.upper(mesh.bounding_box) == SVector(1.0, 1.0, 1.0)
+    mesh_box = BoundingBoxes.InternalBoundingBox(mesh)
+    @test BoundingBoxes.lower(mesh_box) == SVector(0.0, 0.0, 0.0)
+    @test BoundingBoxes.upper(mesh_box) == SVector(1.0, 1.0, 1.0)
     surface_density = Properties.GeometryLeafProperties(1.)
     _, surface_indices_without_gap = GI.PhysicalGeometries.random_surface_positions(
         mesh,
         surface_density,
-        mesh.bounding_box,
+        mesh_box,
         10_000;
         include_gap=false,
     )
     _, surface_indices_with_gap = GI.PhysicalGeometries.random_surface_positions(
         mesh,
         surface_density,
-        mesh.bounding_box,
+        mesh_box,
         10_000;
         include_gap=true,
     )

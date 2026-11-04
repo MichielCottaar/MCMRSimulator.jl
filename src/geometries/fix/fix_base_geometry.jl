@@ -77,8 +77,7 @@ function fix_base_geometry(group::Mesh)
     [
         Meshes.Mesh(
             vertices,
-            triangles[triangle_components .== component];
-            grid_resolution=group.grid_resolution.value,
+            triangles[triangle_components .== component],
         )
         for component in unique_components
     ]
