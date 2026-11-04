@@ -15,6 +15,7 @@ Logging.disable_logging(Logging.Info)
 all_tests = [
     "collisions",
     "evolve",
+    "sequence_parts",
     "known_sequences",
     "meshes",
     "offresonance",

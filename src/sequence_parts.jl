@@ -94,6 +94,18 @@ end
 
 PulsePart(pulse::Vector{ConstantPulse}, gradient::T) where {T<:NoPulsePart} = PulsePart{T}(pulse, gradient, 1., 1.)
 
+Base.promote_rule(::Type{EmptyPart}, ::Type{ConstantPart}) = ConstantPart
+Base.promote_rule(::Type{EmptyPart}, ::Type{LinearPart}) = LinearPart
+Base.promote_rule(::Type{ConstantPart}, ::Type{LinearPart}) = LinearPart
+
+Base.convert(::Type{ConstantPart}, ::EmptyPart) = ConstantPart(zero(SVector{3, Float64}))
+Base.convert(::Type{LinearPart}, ::EmptyPart) = LinearPart(zero(SVector{3, Float64}), zero(SVector{3, Float64}))
+Base.convert(::Type{LinearPart}, part::ConstantPart) = LinearPart(part.strength, part.strength)
+
+Base.promote_rule(::Type{PulsePart{G1}}, ::Type{PulsePart{G2}}) where {G1<:NoPulsePart, G2<:NoPulsePart} = PulsePart{promote_type(G1, G2)}
+Base.convert(::Type{PulsePart{G}}, part::PulsePart{H}) where {G<:NoPulsePart, H<:NoPulsePart} =
+    PulsePart{G}(part.pulse, convert(G, part.gradient), part.first_duration, part.last_duration)
+
 
 function split_fraction(part::PulsePart{T}, fraction::Number) where {T<:NoPulsePart}
     grad1, grad2 = split_fraction(part.gradient, fraction)
@@ -699,17 +711,42 @@ function MultSequencePart{VT}(duration::Number, parts::AbstractVector, instants:
         return new{0, EmptyPart, SVector{0, EmptyPart}}(Float64(duration), SVector{0, EmptyPart}())
     end
 
-    base_type = typeof(parts[1])
-    if all(p -> p isa base_type, parts)
-        T = base_type
+    no_pulse_type = nothing
+    pulse_type = nothing
+    for part in parts
+        if part isa NoPulsePart
+            no_pulse_type = isnothing(no_pulse_type) ? typeof(part) : promote_type(no_pulse_type, typeof(part))
+        elseif part isa PulsePart
+            pulse_type = isnothing(pulse_type) ? typeof(part) : promote_type(pulse_type, typeof(part))
+        end
+    end
+    T = if isnothing(no_pulse_type)
+        pulse_type
+    elseif isnothing(pulse_type)
+        no_pulse_type
     else
-        T = SequencePart
+        Union{no_pulse_type, pulse_type}
+    end
+
+    # Preserve the previous fallback for any future SequencePart subtypes that
+    # are not covered by the no-pulse and RF representations above.
+    if any(p -> !(p isa NoPulsePart || p isa PulsePart), parts)
+        if all(p -> p isa typeof(parts[1]), parts)
+            T = typeof(parts[1])
+        else
+            T = SequencePart
+        end
+    end
+
+    promoted_parts = map(parts) do part
+        part isa NoPulsePart ? convert(no_pulse_type, part) :
+        part isa PulsePart ? convert(pulse_type, part) : part
     end
     instants_obj = InstantSequencePart{VT}(instants)
     (IT, IST) = (eltype(instants_obj.instants), typeof(instants_obj.instants))
     return MultSequencePart{N, T, VT{T}, IT, IST}(
         Float64(duration),
-        VT{T}(parts),
+        VT{T}(promoted_parts),
         instants_obj,
     )
 end
