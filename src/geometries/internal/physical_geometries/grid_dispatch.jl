@@ -3,7 +3,7 @@ module GridDispatch
 import StaticArrays: SVector
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
-import ..PhysicalGeometries: finalise!
+import ..PhysicalGeometries: PhysicalGeometry, filter_bounding_box, finalise!
 
 struct IntersectionGrid{N}
     bounding_box::InternalBoundingBoxes.InternalBoundingBox{N}
@@ -11,12 +11,12 @@ struct IntersectionGrid{N}
     inv_resolution::SVector{N, Float64}
     dimensions::SVector{N, Int}
     number_of_children::Int
-    indices::Array{Vector{Int}, N}
+    geometries::Array{Union{Nothing, PhysicalGeometry{N}}, N}
 end
 
-"""Iterate over grid child indices in ray order."""
-struct GridIterator{N, I, R}
-    indices::I
+"""Iterate over non-empty cell geometries in ray order."""
+struct GridIterator{N, G, R}
+    geometries::G
     ray::R
     grid_size::SVector{N, Int}
 end
@@ -26,81 +26,56 @@ function GridIterator(
     start::SVector{N, Float64},
     destination::SVector{N, Float64},
 ) where {N}
-    indices = _require_grid_indices(grid)
+    geometries = _require_grid_geometries(grid)
     grid_size = grid.dimensions
-    iszero(destination - start) && return GridIterator{N, typeof(indices), Nothing}(indices, nothing, grid_size)
+    iszero(destination - start) && return GridIterator{N, typeof(geometries), Nothing}(geometries, nothing, grid_size)
     InternalBoundingBoxes.does_intersect(grid.grid_bounding_box, start, destination) ||
-        return GridIterator{N, typeof(indices), Nothing}(indices, nothing, grid_size)
+        return GridIterator{N, typeof(geometries), Nothing}(geometries, nothing, grid_size)
 
     lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)
     scaled_start = (start - lower_bound) .* grid.inv_resolution
     scaled_destination = (destination - lower_bound) .* grid.inv_resolution
-    GridIterator{N, typeof(indices), typeof(ray_grid_intersections(scaled_start, scaled_destination))}(
-        indices,
+    GridIterator{N, typeof(geometries), typeof(ray_grid_intersections(scaled_start, scaled_destination))}(
+        geometries,
         ray_grid_intersections(scaled_start, scaled_destination),
         grid_size,
     )
 end
 
 Base.IteratorSize(::Type{<:GridIterator}) = Base.SizeUnknown()
-Base.eltype(::Type{<:GridIterator}) = Tuple{Int, Float64}
+Base.eltype(::Type{<:GridIterator{N}}) where {N} = Tuple{PhysicalGeometry{N}, Float64}
 
-Base.iterate(iterator::GridIterator{N, I, Nothing}) where {N, I} = nothing
+Base.iterate(iterator::GridIterator{N, G, Nothing}) where {N, G} = nothing
 
 function Base.iterate(iterator::GridIterator)
-    state = _first_grid_state(iterator)
-    isnothing(state) && return nothing
-    _iterate_grid_candidates(iterator, state)
+    _iterate_grid_geometries(iterator, nothing, false)
 end
 
-Base.iterate(iterator::GridIterator, state) = _iterate_grid_candidates(iterator, state)
+Base.iterate(iterator::GridIterator, state) = _iterate_grid_geometries(iterator, state...)
 
-function _first_grid_state(iterator::GridIterator)
-    next_voxel = iterate(iterator.ray)
+function _iterate_grid_geometries(iterator::GridIterator, ray_state, entered_grid)
+    next_voxel = isnothing(ray_state) ? iterate(iterator.ray) : iterate(iterator.ray, ray_state)
     while !isnothing(next_voxel)
         ((voxel, entry_time, _, _), ray_state) = next_voxel
-        if !any(voxel .< 0) && !any(voxel .>= iterator.grid_size)
-            children = iterator.indices[voxel .+ 1...]
-            return (ray_state, children, 1, true, entry_time)
+        if any(voxel .< 0) || any(voxel .>= iterator.grid_size)
+            entered_grid && return nothing
+        else
+            entered_grid = true
+            geometry = iterator.geometries[voxel .+ 1...]
+            if !isnothing(geometry)
+                return ((geometry, entry_time), (ray_state, entered_grid))
+            end
         end
         next_voxel = iterate(iterator.ray, ray_state)
     end
     nothing
 end
 
-function _iterate_grid_candidates(iterator::GridIterator, state)
-    ray_state, children, child_position, entered_grid, entry_time = state
-
-    while true
-        while child_position <= length(children)
-            child_index = children[child_position]
-            child_position += 1
-            return (
-                (child_index, entry_time),
-                (ray_state, children, child_position, entered_grid, entry_time),
-            )
-        end
-
-        next_voxel = isnothing(ray_state) ? iterate(iterator.ray) : iterate(iterator.ray, ray_state)
-        isnothing(next_voxel) && return nothing
-        ((voxel, entry_time, _, _), ray_state) = next_voxel
-
-        if any(voxel .< 0) || any(voxel .>= iterator.grid_size)
-            entered_grid && return nothing
-            continue
-        end
-
-        entered_grid = true
-        children = iterator.indices[voxel .+ 1...]
-        child_position = 1
-    end
-end
-
-function _require_grid_indices(grid::IntersectionGrid)
-    isassigned(grid.indices, lastindex(grid.indices)) || throw(ArgumentError(
-        "IntersectionGrid indices are delayed; call finalise!(grid, bounding_boxes) before traversal",
+function _require_grid_geometries(grid::IntersectionGrid)
+    isassigned(grid.geometries, lastindex(grid.geometries)) || throw(ArgumentError(
+        "IntersectionGrid is not finalised; call finalise!(grid, geometry) before traversal",
     ))
-    grid.indices
+    grid.geometries
 end
 
 function _grid_bounding_box(box::InternalBoundingBoxes.InternalBoundingBox{N}, minimum_thickness) where {N}
@@ -114,12 +89,23 @@ function _grid_bounding_box(box::InternalBoundingBoxes.InternalBoundingBox{N}, m
     )
 end
 
-"""Build an intersection grid; `delayed=true` defers its per-cell indices."""
+function cell_bounding_box(grid::IntersectionGrid{N}, coordinate::CartesianIndex{N}) where {N}
+    cell_size = inv.(grid.inv_resolution)
+    lower = InternalBoundingBoxes.lower(grid.grid_bounding_box) .+
+        (SVector{N, Float64}(Tuple(coordinate)) .- 1) .* cell_size
+    upper = lower + cell_size
+    padding = 30 * eps(max(1.0, maximum(abs.(lower)), maximum(abs.(upper))))
+    InternalBoundingBoxes.InternalBoundingBox(
+        cell_size / 2 .+ padding,
+        lower + cell_size / 2,
+    )
+end
+
+"""Build an unfinalised spatial grid layout from leaf bounding boxes."""
 function IntersectionGrid(
     bounding_boxes::AbstractVector{<:InternalBoundingBoxes.InternalBoundingBox{N}};
     resolution=nothing,
     bounding_box=nothing,
-    delayed::Bool=false,
 ) where {N}
     isempty(bounding_boxes) && throw(ArgumentError("cannot construct a grid for an empty bounding-box vector"))
     bounding_box = if isnothing(bounding_box)
@@ -144,32 +130,26 @@ function IntersectionGrid(
     dimensions = isinf(resolution) ? SVector{N, Int}(ones(Int, N)) :
         max.(SVector{N, Int}(ceil.(Int, extent ./ resolution)), 1)
     cell_size = extent ./ dimensions
-    indices = delayed ? Array{Vector{Int}, N}(undef, Tuple(dimensions)) :
-        InternalBoundingBoxes.grid_indices(grid_bounding_box, dimensions, bounding_boxes)
+    geometries = Array{Union{Nothing, PhysicalGeometry{N}}, N}(undef, Tuple(dimensions))
     IntersectionGrid{N}(
         bounding_box,
         grid_bounding_box,
         SVector{N, Float64}(1 ./ cell_size),
         dimensions,
         length(bounding_boxes),
-        indices,
+        geometries,
     )
 end
 
-"""Populate the per-cell candidate indices of a delayed intersection grid."""
+"""Populate the per-cell geometry payloads by filtering `geometry` to each cell."""
 function finalise!(
-    grid::IntersectionGrid{N},
-    bounding_boxes::AbstractVector{<:InternalBoundingBoxes.InternalBoundingBox{N}},
+    grid::IntersectionGrid{N}, geometry::PhysicalGeometry{N},
 ) where {N}
-    length(bounding_boxes) == grid.number_of_children || throw(ArgumentError(
-        "cannot finalise IntersectionGrid with a different number of bounding boxes",
-    ))
-    isassigned(grid.indices, lastindex(grid.indices)) && return grid
-    indices = InternalBoundingBoxes.grid_indices(
-        grid.grid_bounding_box, grid.dimensions, bounding_boxes,
-    )
-    for index in eachindex(indices)
-        grid.indices[index] = indices[index]
+    isassigned(grid.geometries, lastindex(grid.geometries)) && return grid
+    for coordinate in CartesianIndices(grid.geometries)
+        grid.geometries[coordinate] = filter_bounding_box(
+            geometry, cell_bounding_box(grid, coordinate),
+        )
     end
     grid
 end

@@ -78,35 +78,32 @@ end
     ]
     grid = IntersectionGrid(child_boxes; resolution=2.0, bounding_box=grid_box)
     @test grid.bounding_box == grid_box
-    @test size(grid.indices) == (2, 1, 1)
-    @test grid.indices[1, 1, 1] == [1]
-    @test grid.indices[2, 1, 1] == [2]
-
-    delayed_grid = IntersectionGrid(
-        child_boxes; resolution=2.0, bounding_box=grid_box, delayed=true,
-    )
-    @test !isassigned(delayed_grid.indices, firstindex(delayed_grid.indices))
-    @test delayed_grid.dimensions == SVector(2, 1, 1)
+    @test size(grid.geometries) == (2, 1, 1)
+    @test !isassigned(grid.geometries, lastindex(grid.geometries))
+    @test grid.dimensions == SVector(2, 1, 1)
     start, destination = SVector(-2., 0., 0.), SVector(2., 0., 0.)
     @test_throws ArgumentError GI.PhysicalGeometries.GridDispatch.GridIterator(
-        delayed_grid, start, destination,
-    )
-    @test GI.PhysicalGeometries.finalise!(delayed_grid, child_boxes) === delayed_grid
-    @test delayed_grid.indices == grid.indices
-    @test collect(GI.PhysicalGeometries.GridDispatch.GridIterator(
-        delayed_grid, start, destination,
-    )) == collect(GI.PhysicalGeometries.GridDispatch.GridIterator(
         grid, start, destination,
-    ))
-    @test GI.PhysicalGeometries.finalise!(delayed_grid, child_boxes) === delayed_grid
-    @test_throws ArgumentError GI.PhysicalGeometries.finalise!(delayed_grid, child_boxes[1:1])
+    )
+    spheres = GeometryVector([
+        Shift(BaseObstructions.Sphere(0.5), [-1., 0., 0.]),
+        Shift(BaseObstructions.Sphere(0.5), [1., 0., 0.]),
+    ])
+    @test GI.PhysicalGeometries.finalise!(grid, spheres) === grid
+    @test isassigned(grid.geometries, lastindex(grid.geometries))
+    @test GI.PhysicalGeometries.Groups.indices(grid.geometries[1, 1, 1]) == [1]
+    @test GI.PhysicalGeometries.Groups.indices(grid.geometries[2, 1, 1]) == [2]
+    @test length(collect(GI.PhysicalGeometries.GridDispatch.GridIterator(
+        grid, start, destination,
+    ))) == 2
+    @test GI.PhysicalGeometries.finalise!(grid, spheres) === grid
 
     planar_box = BoundingBoxes.InternalBoundingBox([1.0, 1.0, 0.0])
     planar_grid = IntersectionGrid([planar_box]; resolution=1.0)
     @test planar_grid.bounding_box == planar_box
     @test all(isfinite, planar_grid.inv_resolution)
     @test BoundingBoxes.upper(planar_grid.grid_bounding_box)[3] - BoundingBoxes.lower(planar_grid.grid_bounding_box)[3] == 1.0
-    @test size(planar_grid.indices) == (2, 2, 1)
+    @test size(planar_grid.geometries) == (2, 2, 1)
 
     # Even positive extents smaller than a cell are expanded symmetrically.
     thin_box = BoundingBoxes.InternalBoundingBox([0.125, 1.0, 0.0], [1.0, 2.0, 3.0])
@@ -114,7 +111,7 @@ end
     @test thin_grid.bounding_box == thin_box
     @test BoundingBoxes.lower(thin_grid.grid_bounding_box) == SVector(0.5, 1.0, 2.5)
     @test BoundingBoxes.upper(thin_grid.grid_bounding_box) == SVector(1.5, 3.0, 3.5)
-    @test size(thin_grid.indices) == (1, 2, 1)
+    @test size(thin_grid.geometries) == (1, 2, 1)
     @test thin_grid.inv_resolution == SVector(1.0, 1.0, 1.0)
 
     # Zero-extent geometry uses a 1 um fallback for automatic and Inf resolution.
@@ -125,9 +122,9 @@ end
         @test point_grid.bounding_box == point_box
         @test BoundingBoxes.lower(point_grid.grid_bounding_box) == SVector(3.0, 4.0, 5.0) .- thickness / 2
         @test BoundingBoxes.upper(point_grid.grid_bounding_box) == SVector(3.0, 4.0, 5.0) .+ thickness / 2
-        @test size(point_grid.indices) == (1, 1, 1)
+        @test size(point_grid.geometries) == (1, 1, 1)
         @test all(isfinite, point_grid.inv_resolution)
-        @test point_grid.indices[1, 1, 1] == [1]
+        @test !isassigned(point_grid.geometries, lastindex(point_grid.geometries))
     end
 
     # Inf still means one cell, with finite bounds based on the original extent.
@@ -137,7 +134,7 @@ end
         @test single.bounding_box == planar_box
         @test BoundingBoxes.lower(single.grid_bounding_box) == SVector(-1.0, -1.0, -1.0)
         @test BoundingBoxes.upper(single.grid_bounding_box) == SVector(1.0, 1.0, 1.0)
-        @test size(single.indices) == (1, 1, 1)
+        @test size(single.geometries) == (1, 1, 1)
     end
 
     # Traversal from outside the geometry stays at a physical, rather than eps, scale.
@@ -168,8 +165,8 @@ end
 
     metrics = mr.DebugCounters.snapshot(grid)
     expected_occupancy = Dict{Int, Int}()
-    for cell in grid.grid.indices
-        occupancy = length(cell)
+    for cell in grid.grid.geometries
+        occupancy = GI.PhysicalGeometries.Grids._cell_leaf_count(cell)
         expected_occupancy[occupancy] = get(expected_occupancy, occupancy, 0) + 1
     end
     @test metrics[:cell_occupancy].counts == expected_occupancy
@@ -180,7 +177,7 @@ end
     candidate_counts = metrics[:ncandidates]
     @test candidate_counts isa mr.DebugCounters.FrequencyCounter{Int}
     @test candidate_counts.counts == Dict(0 => 2, 1 => 3, 4 => 1)
-    @test metrics[:duplicate_candidates].counts == Dict(0 => 5, 3 => 1)
+    @test metrics[:duplicate_candidates].counts == Dict(0 => 6)
     @test metrics[:cells_visited].counts == Dict(0 => 2, 1 => 3, 4 => 1)
     @test metrics[:start_out_of_grid] isa mr.DebugCounters.FrequencyTable{Bool}
     @test metrics[:start_out_of_grid].counts == Dict(false => 3, true => 2)
@@ -921,7 +918,7 @@ end
     for resolution in (nothing, 0.5, Inf)
         grid = Grid(tree; resolution)
         @test grid.user_resolution === resolution
-        @test grid.indices == [(1, 1), (2,)]
+        @test !isassigned(grid.grid.geometries, lastindex(grid.grid.geometries))
         @test simplify(grid, Val(:traverse_only)) === grid
         @test simplify(grid) === grid
         result = simplify(grid, Val(:unwrap_acceleration_test))
@@ -930,14 +927,12 @@ end
         GI.PhysicalGeometries.finalise!(result)
         @test result.user_resolution === resolution
         @test result.geometry.geometries === (sphere, shifted)
-        @test result.indices == [(1,), (2,)]
-        @test eltype(result.indices) == intersection_type(typeof(result.geometry))
+        @test isassigned(result.grid.geometries, lastindex(result.grid.geometries))
         @test grid.geometry === tree
-        @test grid.indices == [(1, 1), (2,)]
         expected = IntersectionGrid([
             BoundingBoxes.InternalBoundingBox(sphere), BoundingBoxes.InternalBoundingBox(shifted),
         ]; resolution)
-        @test result.grid.indices == expected.indices
+        @test result.grid.dimensions == expected.dimensions
         @test result.grid.grid_bounding_box == expected.grid_bounding_box
         @test result.grid.inv_resolution == expected.inv_resolution
         hit = intersect(result, start, destination)
@@ -1197,20 +1192,19 @@ end
         Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.]),
     ]), finite))
     grid = Grid(tree; resolution=0.5)
-    @test !isassigned(grid.grid.indices, lastindex(grid.grid.indices))
-    @test all(isempty, grid.fully_inside_indices)
+    @test !isassigned(grid.grid.geometries, lastindex(grid.grid.geometries))
     @test_throws ArgumentError inside_indices(grid, SVector(0., 0., 0.))
     @test_throws ArgumentError intersect(grid, SVector(-5., 0., 0.), SVector(5., 0., 0.))
     @test_throws ArgumentError intersect(grid, SVector(0., 0., 0.), SVector(0., 0., 0.))
     GI.PhysicalGeometries.finalise!(grid)
     @test grid isa Transparent{3}
     @test grid.geometry === tree
-    @test grid.indices == [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3)]
-    @test eltype(grid.indices) == intersection_type(typeof(tree))
+    @test isassigned(grid.grid.geometries, lastindex(grid.grid.geometries))
+    @test any(!isnothing, grid.grid.geometries)
     @test BoundingBoxes.InternalBoundingBox(grid) == BoundingBoxes.InternalBoundingBox(tree)
     @test leaf_bounding_boxes(grid) == leaf_bounding_boxes(tree)
     @test size_scale(grid) == size_scale(tree)
-    @test Grid(sphere).indices == [()]
+    @test inside_indices(finalised_grid(sphere), SVector(0., 0., 0.)) == [()]
 
     rng = Random.MersenneTwister(19)
     for resolution in (nothing, 0.5, Inf)
@@ -1267,7 +1261,6 @@ end
         [[1, 2, 3], [1, 2, 4], [1, 3, 4]],
     )
     mesh_grid = finalised_grid(mesh; resolution=0.25)
-    @test mesh_grid.indices == [(index,) for index in eachindex(mesh.indices)]
     a, b = SVector(0.1, 0.1, 0.1), SVector(1., 1., 1.)
     mesh_hit = intersect(mesh_grid, a, b)
     @test mesh_hit == intersect(mesh, a, b)
@@ -1280,21 +1273,19 @@ end
     sphere_mesh = Mesh(sphere_vertices, sphere_triangles)
     sphere_mesh_grid = finalised_grid(sphere_mesh; resolution=0.25)
 
-    # Surface candidates are mapped to inside paths before excluding cells that
-    # may intersect a surface. Several triangle candidates can map to the same
-    # mesh inside region.
+    # Filtered mesh cells retain source triangle IDs and local inside state.
     surface_voxel = CartesianIndex(4, 3, 1)
+    surface_cell = mesh_grid.grid.geometries[surface_voxel]
+    @test surface_cell isa Mesh
     surface_inside = [
-        GI.PhysicalGeometries.to_inside_index(sphere_mesh, sphere_mesh_grid.indices[index])
-        for index in sphere_mesh_grid.grid.indices[surface_voxel]
+        GI.PhysicalGeometries.to_inside_index(sphere_mesh, (index,))
+        for index in GI.PhysicalGeometries.Groups.indices(surface_cell)
     ]
     @test () in surface_inside
-    surface_coordinate = SVector{3, Int}(Tuple(surface_voxel))
-    @test isempty(get(sphere_mesh_grid.fully_inside_indices, surface_coordinate, ()))
-
-    fully_inside_voxel, fully_inside_indices = first(sphere_mesh_grid.fully_inside_indices)
-    @test !isempty(fully_inside_indices)
-    @test only(fully_inside_indices) == ()
+    @test any(
+        cell -> cell isa Mesh && isempty(cell.indices) && cell.centre_inside[2],
+        sphere_mesh_grid.grid.geometries,
+    )
     for _ in 1:40
         position = SVector{3, Float64}(2 .* rand(rng, 3) .- 1)
         @test inside_indices(sphere_mesh_grid, position) ==
@@ -1336,7 +1327,7 @@ end
         probe::GridProbe, a::SVector{3, Float64}, b::SVector{3, Float64},
         previous=nothing, inside=nothing, candidate=nothing,
     )
-        @test candidate == ()
+        @test isnothing(candidate)
         probe.calls[] += 1
         nothing
     end

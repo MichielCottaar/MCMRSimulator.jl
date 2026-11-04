@@ -3,9 +3,9 @@ module Grids
 
 import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, InternalBoundingBox, leaf_bounding_boxes
-import ..PhysicalGeometries: intersection_type, inside_indices_eltype, find_intersection
-import ..PhysicalGeometries: inside_indices, isinside_single, rewrap, has_equivalent_wrapper
-import ..PhysicalGeometries: to_inside_index, finalise!
+import ..PhysicalGeometries: find_intersection, inside_indices, inside_indices_eltype, finalise!
+import ..PhysicalGeometries: filter_bounding_box, rewrap, has_equivalent_wrapper
+import ..PhysicalGeometries.Groups: inside_indices_for_any_type
 import ..Transparents: Transparent
 import ..GridDispatch: IntersectionGrid, GridIterator
 import ...InternalBoundingBoxes
@@ -14,10 +14,10 @@ import .....DebugCounters
 function __init__()
     DebugCounters.register!(Grid, [
         (:ncells, "Number of grid cells between start and end of trajectory in single steps; 0 means that the start and end were identical, so no collision checks were required. This is only counted if start and destination are both inside of the grid", DebugCounters.FrequencyCounter(Int)),
-        (:cell_occupancy, "Number of obstructions in each cell", DebugCounters.FrequencyCounter(Int)),
+        (:cell_occupancy, "Number of leaf surfaces in each cell geometry", DebugCounters.FrequencyCounter(Int)),
         (:cells_visited, "Number of grid cells actually visited before a collision was found. Empty cells will not be counted.", DebugCounters.FrequencyTable(Int)),
-        (:ncandidates, "Total number of candidate obstructions considered by the collision detector (including duplicates)", DebugCounters.FrequencyTable(Int)),
-        (:duplicate_candidates, "Number of duplicate candidate obstructions", DebugCounters.FrequencyTable(Int)),
+        (:ncandidates, "Number of non-empty cell geometries checked by the collision detector", DebugCounters.FrequencyTable(Int)),
+        (:duplicate_candidates, "Legacy candidate counter; geometry payload traversal records zero duplicates", DebugCounters.FrequencyTable(Int)),
         (:start_out_of_grid, "Is the start position outside of the grid", DebugCounters.FrequencyTable(Bool)),
         (:dest_out_of_grid, "Is the destination position outside of the grid", DebugCounters.FrequencyTable(Bool)),
     ])
@@ -31,22 +31,21 @@ Wrap a finite geometry in an intersection grid over its leaf bounding boxes.
 estimate. The requested value is stored in `user_resolution` and reused when
 rewrapping a simplified child. Leaf indices follow the hierarchy returned by
 `leaf_bounding_boxes`, so intersection paths and properties retain their original
-geometry indices.
+geometry indices. Each cell stores a filtered geometry subset, or `nothing` if
+the cell does not overlap the geometry.
 
-The wrapper expects an unrestricted incoming candidate and supplies individual
-candidate paths to its child during grid traversal. For periodic geometries,
+The wrapper expects an unrestricted incoming candidate and supplies each visited
+cell's filtered geometry to its normal query methods. For periodic geometries,
 place the grid inside `Repeat`. Set `debug=true` to collect per-instance debug
 metrics.
 """
-struct Grid{N, P<:PhysicalGeometry{N}, I, V, D} <: Transparent{N, P}
+struct Grid{N, P<:PhysicalGeometry{N}, D} <: Transparent{N, P}
     geometry::P
     grid::IntersectionGrid{N}
-    indices::Vector{I}
-    fully_inside_indices::Dict{SVector{N, Int}, Vector{V}}
     user_resolution::Union{Nothing, Float64}
 end
 
-function Base.show(io::IO, ::Type{Grid{N, P, I, V, D}}) where {N, P, I, V, D}
+function Base.show(io::IO, ::Type{Grid{N, P, D}}) where {N, P, D}
     print(io, "Grid{")
     show(io, P)
     print(io, "}")
@@ -55,102 +54,36 @@ end
 function Grid(geometry::P; resolution=nothing, debug=false) where {N, P<:PhysicalGeometry{N}}
     debug isa Bool || throw(ArgumentError("debug must be a Bool"))
     boxes = InternalBoundingBox{N}[]
-    indices = Vector{intersection_type(P)}()
-    _flatten_leaf_bounding_boxes!(boxes, indices, leaf_bounding_boxes(geometry), ())
-    grid = IntersectionGrid(boxes; resolution, delayed=true)
-    inside_type = inside_indices_eltype(P)
-    fully_inside_indices = Dict{SVector{N, Int}, Vector{inside_type}}()
-    Grid{N, P, eltype(indices), inside_indices_eltype(P), debug}(
-        geometry, grid, indices, fully_inside_indices, resolution
-    )
+    _flatten_leaf_bounding_boxes!(boxes, leaf_bounding_boxes(geometry))
+    grid = IntersectionGrid(boxes; resolution)
+    Grid{N, P, debug}(geometry, grid, resolution)
 end
 
 function finalise!(wrapper::Grid{N}) where {N}
     finalise!(wrapper.geometry)
-    boxes = InternalBoundingBox{N}[]
-    _flatten_leaf_bounding_boxes!(boxes, leaf_bounding_boxes(wrapper.geometry))
-    finalise!(wrapper.grid, boxes)
-    empty!(wrapper.fully_inside_indices)
-    merge!(
-        wrapper.fully_inside_indices,
-        _fully_inside_indices(wrapper.geometry, wrapper.grid, wrapper.indices),
-    )
+    finalise!(wrapper.grid, wrapper.geometry)
     if DebugCounters.debug_mode(wrapper)
-        for indices in wrapper.grid.indices
-            DebugCounters.record!(wrapper, :cell_occupancy, length(indices))
+        for geometry in wrapper.grid.geometries
+            DebugCounters.record!(wrapper, :cell_occupancy, _cell_leaf_count(geometry))
         end
     end
     nothing
 end
 
-function _fully_inside_indices(geometry, grid::IntersectionGrid{N}, collision_indices) where {N}
-    inside_type = inside_indices_eltype(typeof(geometry))
-    result = Dict{SVector{N, Int}, Vector{inside_type}}()
+_cell_leaf_count(::Nothing) = 0
 
-    inside_boxes = InternalBoundingBox{N}[]
-    inside_leaf_indices = Vector{inside_type}()
-    _flatten_inside_bounding_boxes!(
-        inside_boxes, inside_leaf_indices, leaf_bounding_boxes(geometry; inside=true), (),
-    )
-    isempty(inside_boxes) && return result
+_cell_leaf_count(box::InternalBoundingBox) = 1
 
-    inside_grid_indices = InternalBoundingBoxes.grid_indices(
-        grid.grid_bounding_box, grid.dimensions, inside_boxes,
-    )
-    collision_inside_indices = [
-        to_inside_index(geometry, collision_index) for collision_index in collision_indices
-    ]
-    lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)
-    cell_size = 1 ./ grid.inv_resolution
-    for voxel in CartesianIndices(Tuple(grid.dimensions))
-        isempty(inside_grid_indices[voxel]) && continue
-        centre = lower_bound .+ (SVector{N, Float64}(Tuple(voxel)) .- 0.5) .* cell_size
-        for inside_leaf_index in inside_grid_indices[voxel]
-            inside_index = inside_leaf_indices[inside_leaf_index]
-            any(
-                collision_index -> collision_inside_indices[collision_index] == inside_index,
-                grid.indices[voxel],
-            ) && continue
-            if isinside_single(geometry, centre; candidate=inside_index)
-                coordinate = SVector{N, Int}(Tuple(voxel))
-                push!(get!(result, coordinate, inside_type[]), inside_index)
-            end
-        end
-    end
-    result
-end
+_cell_leaf_count(boxes::Union{Tuple, AbstractVector}) =
+    sum(_cell_leaf_count, boxes; init=0)
 
-function _flatten_inside_bounding_boxes!(boxes, indices, box::InternalBoundingBox, path)
-    push!(boxes, box)
-    push!(indices, path)
-    nothing
-end
+_cell_leaf_count(geometry::PhysicalGeometry) = _cell_leaf_count(leaf_bounding_boxes(geometry))
 
-function _flatten_inside_bounding_boxes!(boxes, indices, children::Union{Tuple, AbstractVector}, path)
-    for (index, child) in enumerate(children)
-        _flatten_inside_bounding_boxes!(boxes, indices, child, (path..., index))
-    end
-    nothing
-end
-
-DebugCounters.debug_mode(::Grid{N, P, I, V, D}) where {N, P, I, V, D} = D
+DebugCounters.debug_mode(::Grid{N, P, D}) where {N, P, D} = D
 rewrap(wrapper::Grid{N}, geometry::PhysicalGeometry{N}) where {N} =
     Grid(geometry; resolution=wrapper.user_resolution, debug=DebugCounters.debug_mode(wrapper))
 has_equivalent_wrapper(first::Grid{N}, second::Grid{N}) where {N} =
     first.user_resolution == second.user_resolution
-
-function _flatten_leaf_bounding_boxes!(boxes, indices, box::InternalBoundingBox, path)
-    push!(boxes, box)
-    push!(indices, path)
-    nothing
-end
-
-function _flatten_leaf_bounding_boxes!(boxes, indices, children::Union{Tuple, AbstractVector}, path)
-    for (index, child) in enumerate(children)
-        _flatten_leaf_bounding_boxes!(boxes, indices, child, (path..., index))
-    end
-    nothing
-end
 
 function _flatten_leaf_bounding_boxes!(boxes, box::InternalBoundingBox)
     push!(boxes, box)
@@ -171,7 +104,7 @@ function _grid_coordinate(grid::IntersectionGrid{N}, position::SVector{N, Float6
     upper_bound = InternalBoundingBoxes.upper(grid.grid_bounding_box)
     (any(position .< lower_bound) || any(position .> upper_bound)) && return nothing
     coordinate = Int.(floor.((position - lower_bound) .* grid.inv_resolution)) .+ 1
-    coordinate = clamp.(coordinate, 1, SVector{N, Int}(size(grid.indices)))
+    coordinate = clamp.(coordinate, 1, grid.dimensions)
     SVector{N, Int}(coordinate)
 end
 
@@ -187,27 +120,16 @@ function inside_indices(
     _require_finalised(wrapper.grid)
     coordinate = _grid_coordinate(wrapper.grid, position)
     isnothing(coordinate) && return indices
-
-    append!(indices, get(wrapper.fully_inside_indices, coordinate, inside_type[]))
-    previous_inside_index = nothing
-    for collision_index in wrapper.grid.indices[coordinate...]
-        inside_index = to_inside_index(wrapper.geometry, wrapper.indices[collision_index])
-        if isnothing(inside_index)
-            previous_inside_index = nothing
-            continue
-        end
-        inside_index == previous_inside_index && continue
-        previous_inside_index = inside_index
-        isinside_single(
-            wrapper.geometry, position, intersection;
-            candidate=inside_index, no_deproject, kwargs...,
-        ) && push!(indices, inside_index)
-    end
+    cell_geometry = wrapper.grid.geometries[coordinate...]
+    isnothing(cell_geometry) && return indices
+    append!(indices, inside_indices_for_any_type(
+        cell_geometry, position, intersection; no_deproject,
+    ))
     sort!(indices; lt=isless)
 end
 
 function _require_finalised(grid::IntersectionGrid)
-    isassigned(grid.indices, lastindex(grid.indices)) || throw(ArgumentError(
+    isassigned(grid.geometries, lastindex(grid.geometries)) || throw(ArgumentError(
         "Grid is not finalised; call finalise!(grid) before querying it",
     ))
     nothing
@@ -232,8 +154,8 @@ function find_intersection(
     if iszero(destination - start)
         DebugCounters.record!(geometry, :ncells, 0)
         DebugCounters.record!(geometry, :ncandidates, 0)
-        DebugCounters.record!(geometry, :cells_visited, 0)
         DebugCounters.record!(geometry, :duplicate_candidates, 0)
+        DebugCounters.record!(geometry, :cells_visited, 0)
         return nothing
     end
     start_coordinate = _grid_coordinate(geometry.grid, start)
@@ -246,9 +168,9 @@ function find_intersection(
         end
     end
     if !isnothing(start_coordinate) && start_coordinate == destination_coordinate
-        return _find_intersection_candidates(
-            geometry, start, destination, previous_hit, inside,
-            ((index, 0.0) for index in geometry.grid.indices[start_coordinate...]),
+        cell_geometry = geometry.grid.geometries[start_coordinate...]
+        return isnothing(cell_geometry) ? nothing : _find_intersection_candidates(
+            geometry, start, destination, previous_hit, inside, ((cell_geometry, 0.0),),
         )
     end
     _find_intersection_candidates(
@@ -261,30 +183,26 @@ function _find_intersection_candidates(geometry, start, destination, previous_hi
     best = nothing
     if DebugCounters.debug_mode(geometry)
         ncandidates = 0
-        visited = Set{Int}()
         cells_visited = 0
         prev_entry_time = -Inf
     end
-    for (index, entry_time) in candidates
+    for (cell_geometry, entry_time) in candidates
         !isnothing(best) && best[end] < entry_time && break
         if DebugCounters.debug_mode(geometry)
             ncandidates += 1
-            push!(visited, index)
             if prev_entry_time != entry_time
                 cells_visited += 1
                 prev_entry_time = entry_time
             end
         end
-        hit = find_intersection(
-            geometry.geometry, start, destination, previous_hit, inside, geometry.indices[index],
-        )
+        hit = find_intersection(cell_geometry, start, destination, previous_hit, inside)
         if !isnothing(hit) && _earlier_hit(hit, best)
             best = hit
         end
     end
     if DebugCounters.debug_mode(geometry)
         DebugCounters.record!(geometry, :ncandidates, ncandidates)
-        DebugCounters.record!(geometry, :duplicate_candidates, ncandidates - length(visited))
+        DebugCounters.record!(geometry, :duplicate_candidates, 0)
         DebugCounters.record!(geometry, :cells_visited, cells_visited)
     end
     best
