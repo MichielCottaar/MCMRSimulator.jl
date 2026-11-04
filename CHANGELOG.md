@@ -28,8 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stuck spins no longer cause an error to be raised. Instead, the number of stuck spins is reported in a warning and the remaining spins are still used to compute the signal. If the number of stuck spins is large, the resulting signal may be unreliable.
 
 ### Optimisation
+- Each `Grid` cell now stores the relevant piece of the geometry. This greatly reduces the need for multiple memory lookups giving a significant boost to simulating small geometries.
 - Collision detection algorithm has been sped up, especially for small geometries
 - Whether spins are inside/outside of a specific geometry is now cached.
+- Fixed a type instability, which caused the code to slow down when simulating more than ~100 sequences.
 
 ## [v1.1.0]
 `v1.1.0` requires Julia 1.12 or later! This is a big change from `v1.0.0` which only supports Julia 1.11.
