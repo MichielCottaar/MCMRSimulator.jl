@@ -327,10 +327,6 @@ function isinside_single(
     ; kwargs...,
 )
     if !isnothing(previous_intersection)
-        triangle_index = previous_intersection[1]
-        triangle_index isa Int ||
-            throw(ArgumentError("a non-empty mesh intersection must have one triangle index"))
-        Groups._stored_index(mesh, triangle_index)
         return previous_intersection[2]
     end
 
