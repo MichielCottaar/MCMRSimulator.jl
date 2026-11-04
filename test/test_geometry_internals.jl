@@ -72,11 +72,7 @@ end
 
 @testset "intersection grids" begin
     grid_box = BoundingBoxes.InternalBoundingBox([2.0, 1.0, 1.0])
-    child_boxes = [
-        BoundingBoxes.InternalBoundingBox([0.5, 1.0, 1.0], [-1.0, 0.0, 0.0]),
-        BoundingBoxes.InternalBoundingBox([0.5, 1.0, 1.0], [1.0, 0.0, 0.0]),
-    ]
-    grid = IntersectionGrid(child_boxes; resolution=2.0, bounding_box=grid_box)
+    grid = IntersectionGrid(grid_box, 2; resolution=2.0)
     @test grid.bounding_box == grid_box
     @test size(grid.geometries) == (2, 1, 1)
     @test !isassigned(grid.geometries, lastindex(grid.geometries))
@@ -99,7 +95,7 @@ end
     @test GI.PhysicalGeometries.finalise!(grid, spheres) === grid
 
     planar_box = BoundingBoxes.InternalBoundingBox([1.0, 1.0, 0.0])
-    planar_grid = IntersectionGrid([planar_box]; resolution=1.0)
+    planar_grid = IntersectionGrid(planar_box, 1; resolution=1.0)
     @test planar_grid.bounding_box == planar_box
     @test all(isfinite, planar_grid.inv_resolution)
     @test BoundingBoxes.upper(planar_grid.grid_bounding_box)[3] - BoundingBoxes.lower(planar_grid.grid_bounding_box)[3] == 1.0
@@ -107,7 +103,7 @@ end
 
     # Even positive extents smaller than a cell are expanded symmetrically.
     thin_box = BoundingBoxes.InternalBoundingBox([0.125, 1.0, 0.0], [1.0, 2.0, 3.0])
-    thin_grid = IntersectionGrid([thin_box]; resolution=1.0)
+    thin_grid = IntersectionGrid(thin_box, 1; resolution=1.0)
     @test thin_grid.bounding_box == thin_box
     @test BoundingBoxes.lower(thin_grid.grid_bounding_box) == SVector(0.5, 1.0, 2.5)
     @test BoundingBoxes.upper(thin_grid.grid_bounding_box) == SVector(1.5, 3.0, 3.5)
@@ -117,7 +113,7 @@ end
     # Zero-extent geometry uses a 1 um fallback for automatic and Inf resolution.
     point_box = BoundingBoxes.InternalBoundingBox{3}(0.0, [3.0, 4.0, 5.0])
     for resolution in (nothing, 0.5, Inf)
-        point_grid = IntersectionGrid([point_box]; resolution)
+        point_grid = IntersectionGrid(point_box, 1; resolution)
         thickness = resolution == 0.5 ? 0.5 : 1.0
         @test point_grid.bounding_box == point_box
         @test BoundingBoxes.lower(point_grid.grid_bounding_box) == SVector(3.0, 4.0, 5.0) .- thickness / 2
@@ -128,8 +124,8 @@ end
     end
 
     # Inf still means one cell, with finite bounds based on the original extent.
-    planar_single = IntersectionGrid([planar_box]; resolution=Inf)
-    planar_auto = IntersectionGrid([planar_box])
+    planar_single = IntersectionGrid(planar_box, 1; resolution=Inf)
+    planar_auto = IntersectionGrid(planar_box, 1)
     for single in (planar_single, planar_auto)
         @test single.bounding_box == planar_box
         @test BoundingBoxes.lower(single.grid_bounding_box) == SVector(-1.0, -1.0, -1.0)
@@ -166,7 +162,7 @@ end
     metrics = mr.DebugCounters.snapshot(grid)
     expected_occupancy = Dict{Int, Int}()
     for cell in grid.grid.geometries
-        occupancy = GI.PhysicalGeometries.Grids._cell_leaf_count(cell)
+        occupancy = GI.PhysicalGeometries.Grids._number_of_leaves(cell)
         expected_occupancy[occupancy] = get(expected_occupancy, occupancy, 0) + 1
     end
     @test metrics[:cell_occupancy].counts == expected_occupancy
@@ -929,9 +925,11 @@ end
         @test result.geometry.geometries === (sphere, shifted)
         @test isassigned(result.grid.geometries, lastindex(result.grid.geometries))
         @test grid.geometry === tree
-        expected = IntersectionGrid([
-            BoundingBoxes.InternalBoundingBox(sphere), BoundingBoxes.InternalBoundingBox(shifted),
-        ]; resolution)
+        expected = IntersectionGrid(
+            BoundingBoxes.InternalBoundingBox(GeometryTuple((sphere, shifted))),
+            2;
+            resolution,
+        )
         @test result.grid.dimensions == expected.dimensions
         @test result.grid.grid_bounding_box == expected.grid_bounding_box
         @test result.grid.inv_resolution == expected.inv_resolution
@@ -1313,7 +1311,7 @@ end
         @test inside_indices(periodic_grid, shift) == inside_indices(periodic, shift)
     end
     @test_throws ArgumentError intersect(grid, start, destination, nothing, nothing, ())
-    @test_throws ArgumentError Grid(GeometryTuple{3}(()))
+    @test_throws PublicBoundingBoxes.BoundingBoxNotSupported Grid(GeometryTuple{3}(()))
     @test_throws ArgumentError Grid(sphere; resolution=0.)
     @test_throws PublicBoundingBoxes.BoundingBoxNotSupported Grid(periodic)
 

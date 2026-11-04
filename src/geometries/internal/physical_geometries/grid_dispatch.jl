@@ -10,7 +10,7 @@ struct IntersectionGrid{N}
     grid_bounding_box::InternalBoundingBoxes.InternalBoundingBox{N}
     inv_resolution::SVector{N, Float64}
     dimensions::SVector{N, Int}
-    number_of_children::Int
+    number_of_leaves::Int
     geometries::Array{Union{Nothing, PhysicalGeometry{N}}, N}
 end
 
@@ -101,27 +101,17 @@ function cell_bounding_box(grid::IntersectionGrid{N}, coordinate::CartesianIndex
     )
 end
 
-"""Build an unfinalised spatial grid layout from leaf bounding boxes."""
+"""Build an unfinalised grid layout from the full bounds and leaf count."""
 function IntersectionGrid(
-    bounding_boxes::AbstractVector{<:InternalBoundingBoxes.InternalBoundingBox{N}};
+    bounding_box::InternalBoundingBoxes.InternalBoundingBox{N},
+    number_of_leaves::Integer;
     resolution=nothing,
-    bounding_box=nothing,
 ) where {N}
-    isempty(bounding_boxes) && throw(ArgumentError("cannot construct a grid for an empty bounding-box vector"))
-    bounding_box = if isnothing(bounding_box)
-        lower_bound = reduce((a, b) -> min.(a, b), (InternalBoundingBoxes.lower(box) for box in bounding_boxes))
-        upper_bound = reduce((a, b) -> max.(a, b), (InternalBoundingBoxes.upper(box) for box in bounding_boxes))
-        InternalBoundingBoxes.InternalBoundingBox(
-            (upper_bound - lower_bound) / 2,
-            (upper_bound + lower_bound) / 2,
-        )
-    else
-        bounding_box
-    end
+    number_of_leaves > 0 || throw(ArgumentError("cannot construct a grid for geometry without leaves"))
     extent = InternalBoundingBoxes.upper(bounding_box) - InternalBoundingBoxes.lower(bounding_box)
     maximum_extent = maximum(extent)
     resolution = isnothing(resolution) ?
-        (iszero(maximum_extent) ? 1.0 : maximum_extent / max(ceil(Int, length(bounding_boxes)^(1 / N)), 1)) : resolution
+        (iszero(maximum_extent) ? 1.0 : maximum_extent / max(ceil(Int, number_of_leaves^(1 / N)), 1)) : resolution
     isinf(resolution) || resolution > 0 || throw(ArgumentError("grid resolution must be positive"))
     # Keep single-cell (Inf) grids finite, including fully zero-extent geometry.
     minimum_thickness = isinf(resolution) ? (iszero(maximum_extent) ? 1.0 : maximum_extent) : resolution
@@ -136,7 +126,7 @@ function IntersectionGrid(
         grid_bounding_box,
         SVector{N, Float64}(1 ./ cell_size),
         dimensions,
-        length(bounding_boxes),
+        Int(number_of_leaves),
         geometries,
     )
 end
