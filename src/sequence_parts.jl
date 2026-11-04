@@ -245,14 +245,21 @@ The control times include:
 """
 function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep; readouts=nothing, nTR=nothing, skip_TR=nothing, kwargs...)
     waveforms = [SequenceWaveform(seq) for seq in sequences]
-    (repeats, readouts) = zip([
-        get_readouts(waveform.samples, waveform.TR, start_time; readouts=readouts, nTR=nTR, skip_TR=skip_TR)
-        for waveform in waveforms
-    ]...)
+    repeats = Vector{Bool}(undef, length(waveforms))
+    sequence_readouts = Vector{Vector{IndexedReadout}}(undef, length(waveforms))
+    for i in eachindex(waveforms)
+        waveform = waveforms[i]
+        repeating, scheduled_readouts = get_readouts(
+            waveform.samples, waveform.TR, start_time;
+            readouts=readouts, nTR=nTR, skip_TR=skip_TR,
+        )
+        repeats[i] = repeating
+        sequence_readouts[i] = scheduled_readouts
+    end
 
     # Figure out control times
     set_control_times = Set{Float64}([start_time])
-    for ro in readouts
+    for ro in sequence_readouts
         union!(set_control_times, [r.time for r in ro])
     end
     max_ro = maximum(set_control_times)
@@ -348,9 +355,13 @@ function parts(sequences::AbstractVector, start_time::Number, timestep::TimeStep
                 end
             end
             i_ro = index_ro[index_seq]
-            if i_ro <= length(readouts[index_seq]) && (t == readouts[index_seq][i_ro].time)
-                index_ro[index_seq] += 1
-                pushfirst!(instants, readouts[index_seq][i_ro])
+            scheduled_readouts = sequence_readouts[index_seq]
+            if i_ro <= length(scheduled_readouts)
+                next_readout = scheduled_readouts[i_ro]
+                if t == next_readout.time
+                    index_ro[index_seq] = i_ro + 1
+                    pushfirst!(instants, next_readout)
+                end
             end
             return Tuple(instants)
         end
