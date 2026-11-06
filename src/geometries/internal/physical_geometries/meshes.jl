@@ -103,13 +103,26 @@ function _mesh_subset(mesh::Mesh, selected_indices, centre_inside::Tuple{SVector
     ordered_positions = [physical_positions; gap_positions]
     original_indices = [Groups.indices(mesh)[position] for position in ordered_positions]
     selected_triangles = mesh.indices[ordered_positions]
-    vertex_ids = unique!(reduce(vcat, (collect(triangle) for triangle in selected_triangles)))
-    vertex_position = Dict(vertex_id => position for (position, vertex_id) in enumerate(vertex_ids))
-    vertices = mesh.vertices[vertex_ids]
-    triangles = [
-        SVector{3, Int}(vertex_position[triangle[1]], vertex_position[triangle[2]], vertex_position[triangle[3]])
-        for triangle in selected_triangles
-    ]
+    vertex_ids = Int[]
+    sizehint!(vertex_ids, 3 * length(selected_triangles))
+    vertices = SVector{3, Float64}[]
+    sizehint!(vertices, 3 * length(selected_triangles))
+    vertex_position = Dict{Int, Int}()
+    sizehint!(vertex_position, 3 * length(selected_triangles))
+    triangles = SVector{3, Int}[]
+    sizehint!(triangles, length(selected_triangles))
+    for triangle in selected_triangles
+        local_ids = MVector{3, Int}(undef)
+        for corner in 1:3
+            vertex_id = triangle[corner]
+            local_ids[corner] = get!(vertex_position, vertex_id) do
+                push!(vertex_ids, vertex_id)
+                push!(vertices, mesh.vertices[vertex_id])
+                length(vertex_ids)
+            end
+        end
+        push!(triangles, SVector{3, Int}(local_ids))
+    end
     Mesh(vertices, triangles, length(physical_positions) + 1, original_indices, centre_inside)
 end
 
