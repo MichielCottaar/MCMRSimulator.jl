@@ -1809,6 +1809,16 @@ end
         @test isempty(preserved_far_mesh.original_indices)
         @test preserved_far_mesh.centre_inside == (SVector(10., 0., 0.), false)
 
+        separated_triangles = Mesh(
+            [SVector(0., 0., 0.), SVector(1., 0., 0.), SVector(0., 1., 0.),
+             SVector(9., 0., 0.), SVector(10., 0., 0.), SVector(9., 1., 0.)],
+            [SVector(1, 2, 3), SVector(4, 5, 6)],
+            3,
+            nothing,
+            (SVector(5., 0.5, 0.), false),
+        )
+        @test filter_box(separated_triangles, box_at((5., 0.5, 0.); radius=0.1)) === nothing
+
         surface_box = box_at((0.5, 0.5, 0.05); radius=0.1)
         surface_mesh = filter_box(cube_mesh, surface_box)
         @test surface_mesh.original_indices == [1, 2]
