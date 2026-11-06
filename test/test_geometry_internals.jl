@@ -94,6 +94,23 @@ end
     ))) == 2
     @test GI.PhysicalGeometries.finalise!(grid, spheres) === grid
 
+    irregular = GeometryVector([
+        Shift(BaseObstructions.Sphere(0.5), [-0.75, -0.25, 0.]),
+        Shift(BaseObstructions.Sphere(0.5), [0.75, 0.25, 0.]),
+    ])
+    irregular_grid = finalised_grid(irregular; resolution=0.5)
+    @test size(irregular_grid.grid.geometries) == (5, 3, 2)
+    @test all(isassigned(irregular_grid.grid.geometries, coordinate)
+              for coordinate in CartesianIndices(irregular_grid.grid.geometries))
+    for coordinate in CartesianIndices(irregular_grid.grid.geometries)
+        position = BoundingBoxes.center(
+            GI.PhysicalGeometries.GridDispatch.cell_bounding_box(
+                irregular_grid.grid, coordinate,
+            ),
+        )
+        @test inside_indices(irregular_grid, position) == inside_indices(irregular, position)
+    end
+
     planar_box = BoundingBoxes.InternalBoundingBox([1.0, 1.0, 0.0])
     planar_grid = IntersectionGrid(planar_box, 1; resolution=1.0)
     @test planar_grid.bounding_box == planar_box
