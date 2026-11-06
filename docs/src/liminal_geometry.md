@@ -29,7 +29,7 @@ Extracellular displacement steps use the relative diffusion tensor
 T = I - s(1 - \alpha)\langle nn^\mathsf{T}\rangle,
 ```
 
-where ``s`` is `tortuosity_strength`, ``\alpha`` is `extracellular_fraction`, and the average is over sampled unit outer-surface normals. The default strength is `1.0`. This approximation produces an orientation-dependent tortuosity for aligned, elongated cells and gives free diffusion when the extracellular fraction is one.
+where ``s`` is `tortuosity_strength` (default `2.0`), ``\alpha`` is `extracellular_fraction`, and the average is over sampled unit outer-surface normals. This approximation produces an orientation-dependent tortuosity for aligned, elongated cells and gives free diffusion when the extracellular fraction is one.
 
 For **spheres**, the effective diffusivity relative to the free diffusivity ``D_0`` is the same in every direction:
 
@@ -37,7 +37,7 @@ For **spheres**, the effective diffusivity relative to the free diffusivity ``D_
 \frac{D_{\mathrm{eff}}}{D_0} = 1 - \frac{s(1-\alpha)}{3}.
 ```
 
-At the default ``s=1``, this reduces to ``D_{\mathrm{eff}}/D_0 = (2+\alpha)/3``.
+At the default ``s=2``, this reduces to ``D_{\mathrm{eff}}/D_0 = (1+\alpha)/3``.
 
 For **parallel, infinitely long cylinders**, let ``\theta`` be the angle between the direction of travel and the cylinder axis. The directional effective diffusivity reduction is
 
@@ -46,11 +46,11 @@ For **parallel, infinitely long cylinders**, let ``\theta`` be the angle between
 1 - \frac{s(1-\alpha)}{2}\left(1-\cos^2\theta\right).
 ```
 
-Thus the relative diffusivity perpendicular to the cylinders is ``1-s(1-\alpha)/2``, while parallel to the cylinders it remains ``1``. At the default ``s=1``, the perpendicular component is ``(1+\alpha)/2``.
+Thus the diffusivity perpendicular to the cylinders is ``1-s(1-\alpha)/2 D_0``, while parallel to the cylinders it remains ``D_0``. At the default ``s=2``, the perpendicular component is ``\alpha D_0``.
 
 The simulator applies the cached symmetric square root of ``T`` to Gaussian displacement vectors. Intracellular displacement steps retain their original diffusivity. Set `tortuosity_strength=0.0` to disable the liminal extracellular displacement reduction.
 
-Strengths must be finite and nonnegative. Values above one are allowed if the resulting tensor is positive semidefinite, which is checked when fixing the geometry. The default strength guarantees positive semidefiniteness for extracellular fractions between zero and one.
+Strengths must be finite and nonnegative. Values above one are allowed if the resulting tensor is positive semidefinite, which is checked when fixing the geometry.
 
 ## Julia usage
 

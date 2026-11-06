@@ -287,7 +287,7 @@ end
 
 """
     FixedLiminalGeometry(geometries, number_fractions, extracellular_fraction;
-        tortuosity_strength=1.)
+        tortuosity_strength=2.)
 
 Construct independently placed cell geometries. Derived volume, surface, and
 tortuosity statistics are computed by `finalise!`.
@@ -312,7 +312,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
         geometries::AbstractVector{<:PhysicalGeometry{3}},
         number_fractions::AbstractVector{<:Real},
         extracellular_fraction::Real;
-        tortuosity_strength::Real=1.,
+        tortuosity_strength::Real=2.,
     )
         isfinite(extracellular_fraction) && 0 <= extracellular_fraction <= 1 ||
             throw(ArgumentError("extracellular_fraction must be between 0 and 1"))

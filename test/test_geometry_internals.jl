@@ -2632,7 +2632,7 @@ end
             geometries=[(1., mr.Spheres(radius=1.))],
             extracellular_fraction=0.2,
         )
-        @test default_tortuosity.tortuosity_strength == 1.
+        @test default_tortuosity.tortuosity_strength == 2.
         fixed_tortuosity = mr.fix(mr.LiminalGeometry(
             geometries=[(1., mr.Spheres(radius=1.))],
             extracellular_fraction=0.2,
@@ -2664,7 +2664,7 @@ end
                 extracellular_fraction=alpha,
             ))
             @test GI.tortuosity_tensor(fixed, GI.IsInside(())) ≈
-                ((2 + alpha) / 3) * I atol=0.01
+                ((1 + 2alpha) / 3) * I atol=0.01
         end
         # A singular PSD tensor is supported, but a negative eigenvalue is not.
         LG = GI.PhysicalGeometries.LiminalGeometries
