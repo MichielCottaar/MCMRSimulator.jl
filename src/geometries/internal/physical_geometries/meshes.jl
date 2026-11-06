@@ -291,7 +291,8 @@ function _filter_mesh_bounding_box(mesh::Mesh, box::InternalBoundingBox{3})
 end
 
 function filter_bounding_box(mesh::Mesh, box::InternalBoundingBox{3}, ::Val{false})
-    _bounding_boxes_overlap(InternalBoundingBox(mesh), box) || return nothing
+    isnothing(mesh.original_indices) &&
+        !_bounding_boxes_overlap(InternalBoundingBox(mesh), box) && return nothing
     filtered_mesh = _filter_mesh_bounding_box(mesh, box)
     isempty(filtered_mesh.vertices) && !filtered_mesh.centre_inside[2] && return nothing
     filtered_mesh

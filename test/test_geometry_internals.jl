@@ -1801,6 +1801,13 @@ end
         @test isempty(interior_mesh.indices)
         @test interior_mesh.centre_inside == (SVector(0.5, 0.5, 0.5), true)
         @test isinside_single(interior_mesh, SVector(0.5, 0.5, 0.5))
+        outside_parent = filter_box(cube_mesh, box_at((-0.05, 0.3, 0.3); radius=0.1))
+        @test outside_parent isa Mesh
+        @test !outside_parent.centre_inside[2]
+        inside_child = filter_box(outside_parent, box_at((0.2, 0.3, 0.3); radius=0.05))
+        @test inside_child isa Mesh
+        @test isempty(inside_child.vertices)
+        @test inside_child.centre_inside[2]
         @test filter_box(cube_mesh, far_box) === nothing
         preserved_far_mesh = filter_box(cube_mesh, far_box, Val(true))
         @test preserved_far_mesh isa Mesh
