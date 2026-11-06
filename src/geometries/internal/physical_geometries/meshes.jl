@@ -24,7 +24,7 @@ mesh gap. `first_index_of_gap` marks the first gap triangle. `original_indices`
 maps stored triangles to their IDs in the source mesh, or is `nothing` for an
 original mesh. `centre_inside` provides a reference point and its inside state.
 """
-struct Mesh <: Groups.GeometryVectorLike{3, FullTriangle}
+struct Mesh <: Groups.GroupGeometry{3, FullTriangle}
     vertices::Vector{SVector{3, Float64}}
     indices::Vector{SVector{3, Int}}
     first_index_of_gap::Int

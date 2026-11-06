@@ -1,7 +1,6 @@
 const GI = mr.Geometries.Internal
 const PhysicalGeometry = GI.PhysicalGeometries.PhysicalGeometry
 const GeometryVector = GI.PhysicalGeometries.Groups.GeometryVector
-const GeometryVectorBoundingBox = GI.PhysicalGeometries.Groups.GeometryVectorBoundingBox
 const GeometryTuple = GI.PhysicalGeometries.Groups.GeometryTuple
 const Transformations = GI.PhysicalGeometries.Transformations
 const Shift = Transformations.Shift
@@ -763,7 +762,6 @@ end
     @test number_of_leaves(sphere) == 1
     @test number_of_leaves(finite_cylinder) == 3
     @test number_of_leaves(GeometryVector([sphere, sphere])) == 2
-    @test number_of_leaves(GeometryVector([sphere, sphere]; bounding_box=true)) == 2
     @test number_of_leaves(GeometryTuple((sphere, finite_cylinder))) == 4
     @test number_of_leaves(Shift(GeometryVector([sphere, sphere]), ones(3))) == 2
     @test number_of_leaves(IgnoreOverlapping(GeometryTuple((sphere, finite_cylinder)))) == 4
@@ -897,39 +895,33 @@ end
     @test rebuilt.outer_surface_sampling.index_to_sample == 1
 end
 
-@testset "simplify accelerated geometry" begin
+@testset "simplify geometry vectors" begin
     pass = Val(:extract_common_wrapper)
     children = [SimplifiableSphere(0.5), SimplifiableSphere(0.75)]
-    bounded = GeometryVectorBoundingBox(children)
-    original_boxes = copy(bounded.bounding_boxes)
-    @test simplify(bounded, Val(:traverse_only)) === bounded
-    rebuilt = simplify(bounded, pass)
-    @test rebuilt isa GeometryVectorBoundingBox{3, BaseObstructions.Sphere}
+    vector = GeometryVector(children)
+    @test simplify(vector, Val(:traverse_only)) === vector
+    rebuilt = simplify(vector, pass)
+    @test rebuilt isa GeometryVector{3, BaseObstructions.Sphere}
     @test rebuilt.geometries == [BaseObstructions.Sphere(0.5), BaseObstructions.Sphere(0.75)]
-    @test rebuilt.bounding_boxes == BoundingBoxes.InternalBoundingBox.(rebuilt.geometries)
-    @test rebuilt.bounding_boxes !== bounded.bounding_boxes
-    @test bounded.bounding_boxes == original_boxes
-    @test bounded.geometries === children
+    @test vector.geometries === children
     @test simplify(rebuilt, pass) === rebuilt
     @test simplify(rebuilt) === rebuilt
-    @test simplify(bounded).geometries == rebuilt.geometries
 
-    inconsistent = GeometryVectorBoundingBox([SimplifiableSphere(0.1), SimplifiableSphere(0.5)])
+    inconsistent = GeometryVector([SimplifiableSphere(0.1), SimplifiableSphere(0.5)])
     @test simplify(inconsistent, pass) === inconsistent
     @test all(child -> child isa SimplifiableSphere, inconsistent.geometries)
-    empty_group = GeometryVectorBoundingBox(BaseObstructions.Sphere[])
+    empty_group = GeometryVector(BaseObstructions.Sphere[])
     @test simplify(empty_group, pass) === empty_group
     @test simplify(empty_group) === empty_group
 
-    # Bounding-box groups preserve acceleration rather than extracting wrappers.
     sphere = BaseObstructions.Sphere(1.)
     smaller = BaseObstructions.Sphere(0.5)
-    wrapped = GeometryVectorBoundingBox([
+    wrapped = GeometryVector([
         ExtractionWrapper{3, typeof(sphere)}(sphere),
         ExtractionWrapper{3, typeof(smaller)}(smaller),
     ])
     @test has_equivalent_wrapper(wrapped)
-    @test simplify(wrapped, pass) === wrapped
+    @test simplify(wrapped, pass) !== wrapped
 
     intersect = GI.PhysicalGeometries.find_intersection
     start, destination = SVector(-2., 0., 0.), SVector(5., 0., 0.)
@@ -1016,7 +1008,7 @@ end
         BoundingBoxes.InternalBoundingBox{3}[],
         BoundingBoxes.InternalBoundingBox(finite),
     )
-    for group in (GeometryVector([sphere]), GeometryVector([sphere]; bounding_box=true))
+    for group in (GeometryVector([sphere]),)
         @test leaf_bounding_boxes(group) == [BoundingBoxes.InternalBoundingBox(sphere)]
     end
     @test leaf_bounding_boxes(GeometryTuple{3}(())) === ()
@@ -1085,7 +1077,7 @@ end
     sphere = BaseObstructions.Sphere(1.)
     start, destination = SVector(-5., 0., 0.), SVector(5., 0., 0.)
     children = [Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.])]
-    for group in (GeometryVector(children), GeometryVector(children; bounding_box=true), GeometryTuple(Tuple(children)))
+    for group in (GeometryVector(children), GeometryTuple(Tuple(children)))
         @test intersect(group, start, destination, nothing, nothing, nothing) == intersect(group, start, destination)
         @test intersect(group, start, destination, nothing, nothing, (1,)) == (1, false, 0.2)
         @test intersect(group, start, destination, nothing, nothing, (2,)) == (2, false, 0.6)
@@ -1660,8 +1652,9 @@ end
     geometries = [TestGeometry{3}(1), TestGeometry{3}(2)]
     vector = GeometryVector{3}(geometries)
     @test GeometryVector(geometries) isa GeometryVector{3, TestGeometry{3}}
-    @test GeometryVector([BaseObstructions.Sphere(1.0)]; bounding_box=true) isa GeometryVectorBoundingBox{3, BaseObstructions.Sphere}
-    @test_throws MethodError GeometryVector([BaseObstructions.Sphere(1.0)]; grid=true)
+    @test !(:use_boundingbox in propertynames(mr.Spheres(radius=1.)))
+    @test_throws KeyError mr.Spheres(radius=1., use_boundingbox=true)
+    @test_throws MethodError GeometryVector([BaseObstructions.Sphere(1.0)]; bounding_box=true)
     @test vector isa GI.PhysicalGeometries.Groups.GroupGeometry{3}
     @test size(vector) == (2,)
     @test axes(vector) == (Base.OneTo(2),)
@@ -1679,33 +1672,24 @@ end
     indexed_vector = GeometryVector([
         Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.]),
     ]; indices=[4, 9])
-    indexed_bounded = GeometryVector([
-        Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.]),
-    ]; bounding_box=true, indices=[12, 18])
     indexed_tuple = GeometryTuple((
         Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.]),
     ); indices=[3, 8])
     groups = GI.PhysicalGeometries.Groups
     @test groups.indices(indexed_vector) == [4, 9]
-    @test groups.indices(indexed_bounded) == [12, 18]
     @test groups.indices(indexed_tuple) == [3, 8]
     @test groups.indices(vector) == 1:2
     @test typeof(indexed_vector).parameters[3] === Vector{Int}
-    @test typeof(indexed_bounded).parameters[3] === Vector{Int}
     @test typeof(indexed_tuple).parameters[3] === Vector{Int}
     @test GI.PhysicalGeometries.get_child(indexed_vector, (9,)) ===
         (indexed_vector[2], ())
     @test GI.PhysicalGeometries.get_child(indexed_tuple, (8,)) ===
         (indexed_tuple[2], ())
     @test inside_indices(indexed_vector, SVector(-2., 0., 0.)) == [(4,)]
-    @test inside_indices(indexed_bounded, SVector(2., 0., 0.)) == [(18,)]
     @test inside_indices(indexed_tuple, SVector(2., 0., 0.)) == [(8,)]
     @test GI.PhysicalGeometries.find_intersection(
         indexed_vector, SVector(-3., 0., 0.), SVector(0., 0., 0.),
     )[1] == 4
-    @test GI.PhysicalGeometries.find_intersection(
-        indexed_bounded, SVector(0., 0., 0.), SVector(3., 0., 0.),
-    )[1] == 18
     @test GI.PhysicalGeometries.find_intersection(
         indexed_tuple, SVector(0., 0., 0.), SVector(3., 0., 0.),
     )[1] == 8
@@ -1744,14 +1728,6 @@ end
         @test filtered_vector isa GeometryVector
         @test groups.indices(filtered_vector) == [5]
         @test filtered_vector[1] === indexed[1]
-
-        indexed_bbox = GeometryVector([
-            Shift(sphere, zeros(3)), Shift(sphere, [10., 0., 0.]),
-        ]; bounding_box=true, indices=[7, 15])
-        filtered_bbox = filter_box(indexed_bbox, near_box)
-        @test filtered_bbox isa GeometryVectorBoundingBox
-        @test groups.indices(filtered_bbox) == [7]
-        @test length(filtered_bbox.bounding_boxes) == 1
 
         indexed_tuple = GeometryTuple((
             Shift(sphere, zeros(3)), Shift(sphere, [10., 0., 0.]),
@@ -3317,12 +3293,11 @@ end
     grouped_box = BoundingBoxes.InternalBoundingBox(grouped_spheres)
     @test BoundingBoxes.lower(grouped_box) == SVector(-3.0, -1.0, -1.0)
     @test BoundingBoxes.upper(grouped_box) == SVector(3.0, 1.0, 1.0)
-    filtered_spheres = GeometryVectorBoundingBox([
+    filtered_spheres = GeometryVector([
         Shift(sphere, [-0.5, 0.0, 0.0]),
         Shift(sphere, [5.0, 0.0, 0.0]),
     ])
-    @test filtered_spheres isa GI.PhysicalGeometries.Groups.GeometryVectorLike{3}
-    @test length(filtered_spheres.bounding_boxes) == 2
+    @test filtered_spheres isa GeometryVector{3}
     filtered_hit = GI.PhysicalGeometries.find_intersection(
         filtered_spheres,
         SVector(-2.0, 0.0, 0.0),
@@ -3362,10 +3337,6 @@ end
         grid_spheres, same_voxel_start, same_voxel_destination,
     ) == GI.PhysicalGeometries.find_intersection(
         grid_spheres.geometry, same_voxel_start, same_voxel_destination,
-    )
-    @test_throws ArgumentError GeometryVectorBoundingBox(
-        [sphere],
-        BoundingBoxes.InternalBoundingBox{3}[],
     )
     @test_throws mr.BoundingBoxNotSupported BoundingBoxes.InternalBoundingBox(GeometryVector{3}(TestGeometry{3}[]))
     @test_throws mr.BoundingBoxNotSupported BoundingBoxes.InternalBoundingBox(GeometryTuple{3}(()))

@@ -406,7 +406,7 @@ end
     internal = mr.Geometries.Internal
     @test sprint(show, internal.PhysicalGeometries.BaseObstructions.BaseObstruction) == "BaseObstruction"
     @test sprint(show, internal.PhysicalGeometries.BaseObstructions.BaseObstruction{3}) == "BaseObstruction{3}"
-    @test sprint(show, internal.PhysicalGeometries.Groups.GeometryVectorLike) == "GeometryVector"
+    @test sprint(show, internal.PhysicalGeometries.Groups.GeometryVector) == "GeometryVector"
     @test sprint(show, internal.PhysicalGeometries.Groups.GeometryTuple) == "GeometryTuple"
     @test sprint(show, internal.PhysicalGeometries.Transformations.Transformation) == "Transformation"
     liminal = internal.PhysicalGeometries.LiminalGeometries

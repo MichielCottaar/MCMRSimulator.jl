@@ -53,7 +53,7 @@ const fix = mr.Geometries.Fix.fix
     )
     fixed_cylinder_only = fix(cylinder_only)
     @test fixed_cylinder_only.geometry.geometry isa mr.Geometries.Internal.PhysicalGeometries.Grids.Grid
-    @test fixed_cylinder_only.geometry.geometry.geometry isa Groups.GeometryVectorLike
+    @test fixed_cylinder_only.geometry.geometry.geometry isa Groups.GeometryVector
 
     mesh = mr.Mesh(
         vertices=[
