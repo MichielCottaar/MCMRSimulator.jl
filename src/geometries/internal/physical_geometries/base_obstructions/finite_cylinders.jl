@@ -119,7 +119,7 @@ function leaf_bounding_boxes(cylinder::FiniteCylinder; inside=false)
     )
 end
 
-size_scale(cylinder::FiniteCylinder) = min(cylinder.length, min(cylinder.radius_first, cylinder.radius_second))
+size_scale(cylinder::FiniteCylinder) = min(cylinder.radius_first, cylinder.radius_second)
 
 function _finite_cylinder_side_distance(cylinder, axial, radial_distance)
     radius_difference = cylinder.radius_second - cylinder.radius_first
