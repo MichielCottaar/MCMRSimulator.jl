@@ -12,6 +12,7 @@ import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes, finalise!, simplify
 import ..PhysicalGeometries: filter_bounding_box, _bounding_boxes_overlap
 import ..PhysicalGeometries: number_of_leaves
+import ..PhysicalGeometries: contains_mesh
 import ...Properties: GeometryLeafProperties
 import ..Groups
 import ...InternalBoundingBoxes
@@ -31,6 +32,8 @@ struct Mesh <: Groups.GroupGeometry{3, FullTriangle}
     original_indices::Union{Nothing, Vector{Int}}
     centre_inside::Tuple{SVector{3, Float64}, Bool}
 end
+
+contains_mesh(::Type{Mesh}) = true
 
 number_of_leaves(mesh::Mesh) = length(mesh.indices)
 

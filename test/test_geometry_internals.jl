@@ -84,6 +84,16 @@ end
         Shift(BaseObstructions.Sphere(0.5), [-1., 0., 0.]),
         Shift(BaseObstructions.Sphere(0.5), [1., 0., 0.]),
     ])
+    contains_mesh = GI.PhysicalGeometries.contains_mesh
+    @test !contains_mesh(typeof(BaseObstructions.Sphere(1.)))
+    @test !contains_mesh(typeof(spheres))
+    mesh = Mesh(
+        [SVector(0., 0., 0.), SVector(1., 0., 0.), SVector(0., 1., 0.), SVector(0., 0., 1.)],
+        [SVector(1, 2, 3), SVector(1, 2, 4), SVector(1, 3, 4)],
+    )
+    @test contains_mesh(typeof(mesh))
+    @test contains_mesh(typeof(GeometryVector([mesh])))
+    @test contains_mesh(typeof(GeometryTuple{3}((spheres, mesh))))
     @test GI.PhysicalGeometries.finalise!(grid, spheres) === grid
     @test isassigned(grid.geometries, lastindex(grid.geometries))
     @test GI.PhysicalGeometries.Groups.indices(grid.geometries[1, 1, 1]) == [1]

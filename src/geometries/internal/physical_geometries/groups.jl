@@ -9,6 +9,7 @@ import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: filter_bounding_box
 import ..PhysicalGeometries: number_of_leaves
+import ..PhysicalGeometries: contains_mesh
 import ..PhysicalGeometries: has_equivalent_wrapper
 import ..PhysicalGeometries: rewrap, rewrap_extracted_wrapper, child_geometry, finalise!
 import ..PhysicalGeometries: simplify
@@ -18,6 +19,8 @@ import ...InsideViews: child_view
 import ....BoundingBoxes: BoundingBoxNotSupported
 
 abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
+
+contains_mesh(::Type{<:GroupGeometry{N, P}}) where {N, P} = contains_mesh(P)
 
 struct GeometryVector{N, P<:PhysicalGeometry{N}, I<:Union{Nothing, Vector{Int}}} <: GroupGeometry{N, P}
     geometries::Vector{P}
@@ -340,6 +343,9 @@ struct GeometryTuple{N, P<:Tuple{Vararg{PhysicalGeometry{N}}}, I<:Union{Nothing,
         new{N, P, I}(geometries, indices)
     end
 end
+
+contains_mesh(::Type{<:GeometryTuple{N, P}}) where {N, P} =
+    _tuple_trait_any(contains_mesh, P) === Val(true)
 
 number_of_leaves(group::GeometryTuple) =
     sum(number_of_leaves, group.geometries; init=0)

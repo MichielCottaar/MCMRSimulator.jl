@@ -15,6 +15,7 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_singl
     projected_surface_area, normal_second_moment, inverse_mean_free_path, _geometry_mesh,
     distance_to_surface, size_scale, SurfaceEstimate, is_liminal
 import ..PhysicalGeometries: leaf_bounding_boxes
+import ..PhysicalGeometries: contains_mesh
 import ..PhysicalGeometries: simplify, rewrap, finalise!
 import ..Groups: GeometryTuple
 import ..Groups: inside_indices_for_any_type, _append_type
@@ -616,6 +617,8 @@ function inside_indices(
 end
 
 child_type(::Type{<:FixedLiminalGeometry{P}}) where {P} = Shift{3, P}
+contains_mesh(::Type{<:FixedLiminalGeometry{P}}) where {P} =
+    P isa Union ? any(contains_mesh, Base.uniontypes(P)) : contains_mesh(P)
 has_single_inside(::Type{<:FixedLiminalGeometry}) = false
 
 _child_types(::Type{P}) where {P} = P isa Union ? Base.uniontypes(P) : (P,)

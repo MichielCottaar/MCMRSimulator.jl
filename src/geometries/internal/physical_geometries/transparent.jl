@@ -7,6 +7,7 @@ import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: filter_bounding_box
 import ..PhysicalGeometries: number_of_leaves
+import ..PhysicalGeometries: contains_mesh
 import ..PhysicalGeometries: distance_to_surface
 import ..PhysicalGeometries: simplify, rewrap, rewrap_extracted_wrapper, has_equivalent_wrapper
 import ..PhysicalGeometries: child_geometry, finalise!
@@ -14,6 +15,8 @@ import ...Properties: GeometryProperties
 import ...InsideViews: has_other
 
 abstract type Transparent{N, P <: PhysicalGeometry{N}} <: PhysicalGeometry{N} end
+
+contains_mesh(::Type{<:Transparent{N, P}}) where {N, P} = contains_mesh(P)
 
 inside_sampling_per_obstruction(wrapper::Transparent, density::Real, rng; kwargs...) =
     inside_sampling_per_obstruction(

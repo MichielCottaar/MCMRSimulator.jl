@@ -13,6 +13,7 @@ import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: filter_bounding_box
 import ..PhysicalGeometries: number_of_leaves
+import ..PhysicalGeometries: contains_mesh
 import ..PhysicalGeometries: simplify, rewrap, has_equivalent_wrapper, child_geometry, finalise!
 import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
 import ...Properties: GeometryProperties
@@ -28,6 +29,8 @@ coordinate system. `from_child_coordinates` maps child coordinates to the
 parent coordinate system.
 """
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
+
+contains_mesh(::Type{<:Transformation{N, M, P}}) where {N, M, P} = contains_mesh(P)
 
 child_geometry(transformation::Transformation) = transformation.geometry
 number_of_leaves(transformation::Transformation) = number_of_leaves(child_geometry(transformation))

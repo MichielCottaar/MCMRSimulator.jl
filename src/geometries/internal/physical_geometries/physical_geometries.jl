@@ -167,6 +167,9 @@ Return the type of the child geometry represented by a physical geometry type.
 """
 function child_type end
 
+"""Whether a geometry contains a mesh in its child hierarchy."""
+function contains_mesh end
+
 
 """
      get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, indices[, isinside]) -> IntersectionParams{N}

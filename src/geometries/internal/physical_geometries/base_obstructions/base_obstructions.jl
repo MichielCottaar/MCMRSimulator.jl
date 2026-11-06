@@ -14,10 +14,13 @@ import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_s
 import ..PhysicalGeometries: inside_sampling_per_obstruction, finalise!
 import ..PhysicalGeometries: filter_bounding_box, _bounding_boxes_overlap
 import ..PhysicalGeometries: number_of_leaves
+import ..PhysicalGeometries: contains_mesh
 import Distributions: Poisson
 import Random: rand
 
 abstract type BaseObstruction{N} <: PhysicalGeometry{N} end
+
+contains_mesh(::Type{<:BaseObstruction}) = false
 
 number_of_leaves(::BaseObstruction) = 1
 
