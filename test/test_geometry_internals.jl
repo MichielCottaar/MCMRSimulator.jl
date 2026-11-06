@@ -2294,6 +2294,26 @@ end
             @test length(mesh_positions) / 1000 ≈ 1 / 6 rtol=0.1
             @test all(GI.PhysicalGeometries.isinside_single(mesh, position) for position in mesh_positions)
             @test all(index == [()] for index in mesh_indices)
+
+            mesh_grid = finalised_grid(mesh; resolution=0.25)
+            gridded_positions, gridded_indices = GI.PhysicalGeometries.inside_sampling(
+                mesh_grid, 1000.; rng=Random.MersenneTwister(4567),
+            )
+            @test length(gridded_positions) / 1000 ≈ 1 / 6 rtol=0.16
+            @test all(GI.PhysicalGeometries.isinside_single(mesh, position) for position in gridded_positions)
+            @test all(index == [()] for index in gridded_indices)
+
+            bounded_mesh_positions = Meshes.inside_sampling_per_obstruction(
+                mesh, 1000., Random.MersenneTwister(5678);
+                bounding_box=BoundingBoxes.InternalBoundingBox(
+                    SVector(0.25, 0.25, 0.25), SVector(0.5, 0.5, 0.5),
+                ),
+            )
+            @test all(
+                all((SVector(0.25, 0.25, 0.25) .<= position) .&
+                    (position .<= SVector(0.75, 0.75, 0.75)))
+                for position in bounded_mesh_positions
+            )
             mesh_fixed = GI.FixedGeometry(
                 mesh,
                 Properties.GeometryLeafProperties(0.),

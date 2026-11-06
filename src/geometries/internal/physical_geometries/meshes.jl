@@ -322,7 +322,7 @@ function inside_sampling_per_obstruction(
     no_deproject=false,
     bounding_box=nothing,
 )
-    box = InternalBoundingBox(mesh)
+    box = isnothing(bounding_box) ? InternalBoundingBox(mesh) : bounding_box
     lower_bound = InternalBoundingBoxes.lower(box)
     size = InternalBoundingBoxes.upper(box) - lower_bound
     number_of_samples = rand(rng, Poisson(density * prod(size)))
