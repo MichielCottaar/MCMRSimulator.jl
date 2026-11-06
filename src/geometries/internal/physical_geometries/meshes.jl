@@ -336,7 +336,7 @@ function inside_sampling_per_obstruction(
 end
 
 function _mesh_triangle(vertices, triangle::SVector{3, Int})
-    FullTriangle(vertices[triangle[1]], vertices[triangle[2]], vertices[triangle[3]])
+    @inbounds FullTriangle(vertices[triangle[1]], vertices[triangle[2]], vertices[triangle[3]])
 end
 
 function isinside_single(
@@ -370,16 +370,25 @@ function find_intersection(
         hit = find_intersection(child, start, destination, nothing, nothing, ())
         return isnothing(hit) ? nothing : (triangle_index, hit...)
     end
-    best = nothing
-    for (triangle_index, child) in Groups._indexed_children(mesh)
-        triangle_index == previous_index && continue
-        hit = find_intersection(child, start, destination)
+    previous_position = isnothing(previous_index) ? nothing :
+        findfirst(==(previous_index), Groups.indices(mesh))
+    best_position = 0
+    best_inside = false
+    best_distance = Inf
+    for position in eachindex(mesh.indices)
+        position == previous_position && continue
+        hit = find_intersection(_triangle_at(mesh, position), start, destination)
         isnothing(hit) && continue
         inside, distance = hit
-        (isnothing(best) || distance < best[3]) || continue
-        best = (triangle_index, inside, distance)
+        distance < best_distance || continue
+        best_position = position
+        best_inside = inside
+        best_distance = distance
     end
-    best
+    iszero(best_position) && return nothing
+    triangle_index = isnothing(mesh.original_indices) ? best_position :
+        mesh.original_indices[best_position]
+    (triangle_index, best_inside, best_distance)
 end
 
 function _mesh_neighbours(indices)
