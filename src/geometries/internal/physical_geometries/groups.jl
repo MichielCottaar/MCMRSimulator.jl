@@ -100,12 +100,36 @@ function _indexed_children(group::GroupGeometry; include_gap=true)
 end
 
 function _selected_vector_children(group::GeometryVector, box)
-    selected = Tuple{Int, Any}[]
     for (index, child) in _indexed_children(group)
         filtered = filter_bounding_box(child, box, Val(false))
-        isnothing(filtered) || push!(selected, (index, filtered))
+        isnothing(filtered) || return _selected_vector_children(
+            group, box, typeof(filtered),
+        )
     end
-    selected
+    Tuple{Int, Nothing}[]
+end
+
+function _selected_vector_children(
+    group::GeometryVector, box, ::Type{Child},
+) where {Child}
+    selected = Tuple{Int, Child}[]
+    inconsistent_indices = nothing
+    for (index, child) in _indexed_children(group)
+        filtered = filter_bounding_box(child, box, Val(false))
+        isnothing(filtered) && continue
+        if isnothing(inconsistent_indices) && typeof(filtered) === Child
+            push!(selected, (index, filtered))
+        else
+            if isnothing(inconsistent_indices)
+                inconsistent_indices = first.(selected)
+                push!(inconsistent_indices, index)
+            else
+                push!(inconsistent_indices, index)
+            end
+        end
+    end
+    isnothing(inconsistent_indices) ? selected :
+        [(index, nothing) for index in inconsistent_indices]
 end
 
 function _filter_vector_children(group::GeometryVector, box, ::Val{true}, selected)
@@ -114,15 +138,21 @@ function _filter_vector_children(group::GeometryVector, box, ::Val{true}, select
         group, eltype(source_children)[]; indices=Int[],
     )
     child_type = typeof(filter_bounding_box(first(source_children), box, Val(true)))
-    child_type <: PhysicalGeometry || throw(ArgumentError(
+    _filter_vector_children(group, box, Val(true), selected, child_type)
+end
+
+function _filter_vector_children(
+    group::GeometryVector, box, ::Val{true}, selected, ::Type{Child},
+) where {Child}
+    Child <: PhysicalGeometry || throw(ArgumentError(
         "type-preserving filtering must return a PhysicalGeometry",
     ))
     indices = Int[]
-    children = child_type[]
+    children = Child[]
     for (index, _) in selected
         original_child = group_geometries(group)[_stored_index(group, index)]
         child = filter_bounding_box(original_child, box, Val(true))
-        typeof(child) === child_type || throw(ArgumentError(
+        typeof(child) === Child || throw(ArgumentError(
             "type-preserving filtering produced an inconsistent GeometryVector child type",
         ))
         push!(indices, index)
@@ -131,14 +161,25 @@ function _filter_vector_children(group::GeometryVector, box, ::Val{true}, select
     rewrap(group, children; indices)
 end
 
-function _filter_vector_children(group::GeometryVector, box, ::Val{false}, selected)
+function _filter_vector_children(
+    group::GeometryVector, box, ::Val{false},
+    selected::Vector{Tuple{Int, Child}},
+) where {Child}
     isempty(selected) && return nothing
-    child_type = typeof(last(first(selected)))
-    all(candidate -> typeof(last(candidate)) === child_type, selected) ||
-        return _filter_vector_children(group, box, Val(true), selected)
     indices = first.(selected)
-    children = child_type[last(candidate) for candidate in selected]
+    children = last.(selected)
     rewrap(group, children; indices)
+end
+
+function _filter_vector_children(
+    group::GeometryVector, box, ::Val{false},
+    selected::Vector{Tuple{Int, Nothing}},
+)
+    isempty(selected) && return nothing
+    _filter_vector_children(
+        group, box, Val(true), selected,
+        typeof(filter_bounding_box(first(group_geometries(group)), box, Val(true))),
+    )
 end
 
 function filter_bounding_box(
