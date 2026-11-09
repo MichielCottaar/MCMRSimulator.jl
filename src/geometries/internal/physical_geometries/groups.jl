@@ -123,7 +123,7 @@ function filter_bounding_box_indices(group::GroupGeometry, box, selection::Group
     children = S(undef, length(selection.child_selections))
     group_members = group_geometries(group)
     for index in eachindex(children)
-        children[index] = filter_bounding_box_indices(group_members[index], box, selection.child_selections[index])
+        @inbounds children[index] = filter_bounding_box_indices(group_members[index], box, selection.child_selections[index])
     end
     GroupSelection(selection.original, children, box)
 end
