@@ -4,6 +4,8 @@ import StaticArrays: SVector
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
 import ..PhysicalGeometries: PhysicalGeometry, filter_bounding_box, finalise!
+import ..PhysicalGeometries: filter_bounding_box_indices, geometry_from_indices
+import ..PhysicalGeometries: selection_overlaps
 
 struct IntersectionGrid{N}
     bounding_box::InternalBoundingBoxes.InternalBoundingBox{N}
@@ -107,8 +109,8 @@ function cell_bounding_box(grid::IntersectionGrid{N}, coordinate::CartesianIndex
     _range_bounding_box(grid, ntuple(d -> coordinate[d]:coordinate[d], N))
 end
 
-function _populate_grid_range!(grid::IntersectionGrid{N}, geometry, ranges) where {N}
-    if isnothing(geometry)
+function _populate_grid_range!(grid::IntersectionGrid{N}, geometry, ranges, selection) where {N}
+    if !selection_overlaps(selection)
         for coordinate in CartesianIndices(ranges)
             grid.geometries[coordinate] = nothing
         end
@@ -118,9 +120,7 @@ function _populate_grid_range!(grid::IntersectionGrid{N}, geometry, ranges) wher
     split_dimension = argmax(length.(ranges))
     if length(ranges[split_dimension]) == 1
         coordinate = CartesianIndex(ntuple(d -> first(ranges[d]), N))
-        grid.geometries[coordinate] = filter_bounding_box(
-            geometry, _range_bounding_box(grid, ranges),
-        )
+        grid.geometries[coordinate] = geometry_from_indices(geometry, selection, Val(false))
         return grid
     end
 
@@ -130,10 +130,10 @@ function _populate_grid_range!(grid::IntersectionGrid{N}, geometry, ranges) wher
         child_ranges = ntuple(
             d -> d == split_dimension ? child_range : ranges[d], N,
         )
-        child_geometry = filter_bounding_box(
-            geometry, _range_bounding_box(grid, child_ranges),
+        child_selection = filter_bounding_box_indices(
+            geometry, _range_bounding_box(grid, child_ranges), selection,
         )
-        _populate_grid_range!(grid, child_geometry, child_ranges)
+        _populate_grid_range!(grid, geometry, child_ranges, child_selection)
     end
     grid
 end
@@ -174,7 +174,8 @@ function finalise!(
 ) where {N}
     isassigned(grid.geometries, lastindex(grid.geometries)) && return grid
     ranges = ntuple(d -> 1:grid.dimensions[d], N)
-    _populate_grid_range!(grid, geometry, ranges)
+    selection = filter_bounding_box_indices(geometry, _range_bounding_box(grid, ranges))
+    _populate_grid_range!(grid, geometry, ranges, selection)
 end
 
 end

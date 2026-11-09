@@ -384,10 +384,48 @@ function InternalBoundingBox end
 function number_of_leaves end
 
 """Return the subset of a geometry overlapping `bounding_box`, or `nothing`."""
-function filter_bounding_box end
+filter_bounding_box(
+    geometry::PhysicalGeometry{N}, box::InternalBoundingBox{N}, preserve_type::Val=Val(false),
+) where {N} = geometry_from_indices(
+    geometry, filter_bounding_box_indices(geometry, box), preserve_type,
+)
 
-filter_bounding_box(geometry::PhysicalGeometry{N}, box::InternalBoundingBox{N}) where {N} =
-    filter_bounding_box(geometry, box, Val(false))
+"""
+    filter_bounding_box_indices(geometry, box[, parent_selection])
+
+Select candidates within `box`, optionally refining a parent selection against
+the same source geometry. Selection is independent of materialization policy.
+Selections preserve original geometry indices and may
+contain additional state for inside queries. `nothing` denotes no overlap.
+"""
+function filter_bounding_box_indices end
+
+"""
+    geometry_from_indices(geometry, selection, preserve_type)
+
+Materialize a bounding-box selection against its original source geometry.
+With `Val(true)`, preserve child structure so vector children have consistent types.
+"""
+function geometry_from_indices end
+
+geometry_from_indices(
+    geometry::PhysicalGeometry, ::Nothing, ::Val{preserve_type},
+) where {preserve_type} = preserve_type ? geometry : nothing
+
+"""
+    selection_overlaps(selection) -> Bool
+
+Whether a bounding-box selection retains any geometry. Grid construction uses
+this predicate to prune empty subtrees without materializing intermediate
+geometries. Selection representations with additional state should specialize
+this function when they can represent an empty selection without returning
+`nothing`.
+"""
+function selection_overlaps end
+
+selection_overlaps(::Nothing) = false
+selection_overlaps(::Any) = true
+selection_overlaps(selection::Bool) = selection
 
 function _bounding_boxes_overlap(
     first::InternalBoundingBox{N}, second::InternalBoundingBox{N},

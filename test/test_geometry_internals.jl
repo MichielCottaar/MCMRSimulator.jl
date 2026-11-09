@@ -94,6 +94,29 @@ end
     @test contains_mesh(typeof(mesh))
     @test contains_mesh(typeof(GeometryVector([mesh])))
     @test contains_mesh(typeof(GeometryTuple{3}((spheres, mesh))))
+    select = GI.PhysicalGeometries.filter_bounding_box_indices
+    materialize = GI.PhysicalGeometries.geometry_from_indices
+    parent_box = BoundingBoxes.InternalBoundingBox([2., 2., 2.], [0.5, 0.5, 0.5])
+    child_box = BoundingBoxes.InternalBoundingBox([0.1, 0.1, 0.1], [0.2, 0.2, 0.2])
+    for source in (spheres, mesh, GeometryVector([mesh]),
+                   GeometryTuple{3}((spheres, mesh)),
+                   Shift(mesh, [0.1, 0., 0.]), IgnoreOverlapping(mesh))
+        parent_selection = select(source, parent_box)
+        child_selection = select(source, child_box, parent_selection)
+        refined = materialize(source, child_selection, Val(false))
+        direct = GI.PhysicalGeometries.filter_bounding_box(source, child_box, Val(false))
+        @test isnothing(refined) == isnothing(direct)
+        if !isnothing(refined)
+            @test inside_indices(refined, BoundingBoxes.center(child_box)) ==
+                inside_indices(direct, BoundingBoxes.center(child_box))
+        end
+    end
+    inside_selection = select(mesh, BoundingBoxes.InternalBoundingBox([0.01, 0.01, 0.01], [0.2, 0.2, 0.2]))
+    inside_mesh = materialize(mesh, inside_selection, Val(false))
+    @test isinside_single(inside_mesh, SVector(0.2, 0.2, 0.2))
+    @test !GI.PhysicalGeometries.selection_overlaps(
+        select(mesh, BoundingBoxes.InternalBoundingBox([0.1, 0.1, 0.1], [3., 3., 3.])),
+    )
     @test GI.PhysicalGeometries.finalise!(grid, spheres) === grid
     @test isassigned(grid.geometries, lastindex(grid.geometries))
     @test GI.PhysicalGeometries.Groups.indices(grid.geometries[1, 1, 1]) == [1]
@@ -1760,6 +1783,28 @@ end
         @test groups.indices(preserved_vector) == [20, 30]
         @test all(child -> typeof(child) === eltype(vector_of_tuples), preserved_vector)
 
+        select_indices = GI.PhysicalGeometries.filter_bounding_box_indices
+        materialize = GI.PhysicalGeometries.geometry_from_indices
+        vector_selection = select_indices(vector_of_tuples, near_box)
+        @test vector_selection.original isa Ref{typeof(vector_of_tuples)}
+        @test vector_selection.original[] === vector_of_tuples
+        selected_vector = materialize(vector_of_tuples, vector_selection, Val(false))
+        @test typeof(selected_vector) === typeof(preserved_vector)
+        @test groups.indices(selected_vector) == [20, 30]
+        @test all(length(child) == 2 for child in selected_vector)
+        preserved_unselected_vector = materialize(vector_of_tuples, nothing, Val(true))
+        @test groups.indices(preserved_unselected_vector) == [20, 30]
+        @test all(child -> typeof(child) === eltype(vector_of_tuples), preserved_unselected_vector)
+        tuple_selection = select_indices(indexed_tuple, near_box)
+        selected_tuple = materialize(indexed_tuple, tuple_selection, Val(true))
+        @test selected_tuple === indexed_tuple
+        @test groups.indices(selected_tuple) == [3, 9]
+        @test materialize(indexed_tuple, nothing, Val(true)) === indexed_tuple
+        refined_selection = select_indices(vector_of_tuples, box_at((0., 0., 0.); radius=0.05), vector_selection)
+        @test refined_selection.original === vector_selection.original
+        @test refined_selection.original[] === vector_of_tuples
+        @test typeof(materialize(vector_of_tuples, refined_selection, Val(true))) === typeof(preserved_vector)
+
         inner_vectors = [
             GeometryVector([Shift(sphere, zeros(3)), Shift(sphere, [10., 0., 0.])]),
             GeometryVector([Shift(sphere, zeros(3)), Shift(sphere, [0.5, 0., 0.])]),
@@ -1780,11 +1825,14 @@ end
         end
         struct FilteredTypeA <: PhysicalGeometry{3} end
         struct FilteredTypeB <: PhysicalGeometry{3} end
-        GI.PhysicalGeometries.filter_bounding_box(
-            probe::FilterTypeProbe, ::BoundingBoxes.InternalBoundingBox{3}, ::Val{false},
+        GI.PhysicalGeometries.filter_bounding_box_indices(
+            ::FilterTypeProbe, ::BoundingBoxes.InternalBoundingBox{3},
+        ) = true
+        GI.PhysicalGeometries.geometry_from_indices(
+            probe::FilterTypeProbe, ::Bool, ::Val{false},
         ) = probe
-        GI.PhysicalGeometries.filter_bounding_box(
-            probe::FilterTypeProbe, ::BoundingBoxes.InternalBoundingBox{3}, ::Val{true},
+        GI.PhysicalGeometries.geometry_from_indices(
+            probe::FilterTypeProbe, ::Bool, ::Val{true},
         ) = isodd(probe.index) ? FilteredTypeA() : FilteredTypeB()
         inconsistent_preserved = GeometryVector([FilterTypeProbe(1), FilterTypeProbe(2)])
         @test_throws ArgumentError filter_box(inconsistent_preserved, near_box, Val(true))
@@ -1804,6 +1852,16 @@ end
         @test isempty(interior_mesh.indices)
         @test interior_mesh.centre_inside == (SVector(0.5, 0.5, 0.5), true)
         @test isinside_single(interior_mesh, SVector(0.5, 0.5, 0.5))
+        interior_selection = GI.PhysicalGeometries.filter_bounding_box_indices(cube_mesh, interior_box)
+        selected_interior = GI.PhysicalGeometries.geometry_from_indices(cube_mesh, interior_selection, Val(false))
+        @test isempty(selected_interior.indices)
+        @test selected_interior.centre_inside == interior_mesh.centre_inside
+        child_selection = GI.PhysicalGeometries.filter_bounding_box_indices(
+            cube_mesh, box_at((0.52, 0.52, 0.52); radius=0.01), interior_selection,
+        )
+        selected_child = GI.PhysicalGeometries.geometry_from_indices(cube_mesh, child_selection, Val(false))
+        @test isempty(selected_child.indices)
+        @test selected_child.centre_inside == (SVector(0.52, 0.52, 0.52), true)
         outside_parent = filter_box(cube_mesh, box_at((-0.05, 0.3, 0.3); radius=0.1))
         @test outside_parent isa Mesh
         @test !outside_parent.centre_inside[2]

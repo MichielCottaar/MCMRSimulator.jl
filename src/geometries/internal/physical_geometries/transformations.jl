@@ -14,6 +14,7 @@ import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: filter_bounding_box
 import ..PhysicalGeometries: number_of_leaves
 import ..PhysicalGeometries: contains_mesh
+import ..PhysicalGeometries: filter_bounding_box_indices, geometry_from_indices
 import ..PhysicalGeometries: simplify, rewrap, has_equivalent_wrapper, child_geometry, finalise!
 import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
 import ...Properties: GeometryProperties
@@ -33,33 +34,20 @@ abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N
 contains_mesh(::Type{<:Transformation{N, M, P}}) where {N, M, P} = contains_mesh(P)
 
 child_geometry(transformation::Transformation) = transformation.geometry
+
+filter_bounding_box_indices(wrapper::Transformation, box) =
+    filter_bounding_box_indices(child_geometry(wrapper), to_child_coordinates(wrapper, box))
+filter_bounding_box_indices(wrapper::Transformation, box, selection) =
+    filter_bounding_box_indices(child_geometry(wrapper), to_child_coordinates(wrapper, box), selection)
+function geometry_from_indices(wrapper::Transformation, selection, ::Val{preserve_type}) where {preserve_type}
+    original_child = child_geometry(wrapper)
+    child = geometry_from_indices(original_child, selection, Val(preserve_type))
+    isnothing(child) && !preserve_type && return nothing
+    child === original_child ? wrapper : rewrap(wrapper, child)
+end
+geometry_from_indices(wrapper::Transformation, ::Nothing, ::Val{preserve_type}) where {preserve_type} =
+    preserve_type ? wrapper : nothing
 number_of_leaves(transformation::Transformation) = number_of_leaves(child_geometry(transformation))
-
-function filter_bounding_box(
-    transformation::Transformation{N},
-    box::InternalBoundingBoxes.InternalBoundingBox{N},
-    ::Val{false},
-) where {N}
-    child = filter_bounding_box(
-        child_geometry(transformation), to_child_coordinates(transformation, box), Val(false),
-    )
-    isnothing(child) ? nothing : rewrap(transformation, child)
-end
-
-function filter_bounding_box(
-    transformation::Transformation{N},
-    box::InternalBoundingBoxes.InternalBoundingBox{N},
-    ::Val{true},
-) where {N}
-    original_child = child_geometry(transformation)
-    child = filter_bounding_box(
-        original_child, to_child_coordinates(transformation, box), Val(true),
-    )
-    child isa PhysicalGeometry || throw(ArgumentError(
-        "type-preserving filtering returned nothing for a transformation child",
-    ))
-    child === original_child ? transformation : rewrap(transformation, child)
-end
 
 finalise!(transformation::Transformation) = finalise!(child_geometry(transformation))
 

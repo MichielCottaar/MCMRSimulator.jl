@@ -8,6 +8,7 @@ import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: filter_bounding_box
 import ..PhysicalGeometries: number_of_leaves
 import ..PhysicalGeometries: contains_mesh
+import ..PhysicalGeometries: filter_bounding_box_indices, geometry_from_indices
 import ..PhysicalGeometries: distance_to_surface
 import ..PhysicalGeometries: simplify, rewrap, rewrap_extracted_wrapper, has_equivalent_wrapper
 import ..PhysicalGeometries: child_geometry, finalise!
@@ -17,6 +18,19 @@ import ...InsideViews: has_other
 abstract type Transparent{N, P <: PhysicalGeometry{N}} <: PhysicalGeometry{N} end
 
 contains_mesh(::Type{<:Transparent{N, P}}) where {N, P} = contains_mesh(P)
+
+filter_bounding_box_indices(wrapper::Transparent, box) =
+    filter_bounding_box_indices(child_geometry(wrapper), box)
+filter_bounding_box_indices(wrapper::Transparent, box, selection) =
+    filter_bounding_box_indices(child_geometry(wrapper), box, selection)
+function geometry_from_indices(wrapper::Transparent, selection, ::Val{preserve_type}) where {preserve_type}
+    original_child = child_geometry(wrapper)
+    child = geometry_from_indices(original_child, selection, Val(preserve_type))
+    isnothing(child) && !preserve_type && return nothing
+    child === original_child ? wrapper : rewrap(wrapper, child)
+end
+geometry_from_indices(wrapper::Transparent, ::Nothing, ::Val{preserve_type}) where {preserve_type} =
+    preserve_type ? wrapper : nothing
 
 inside_sampling_per_obstruction(wrapper::Transparent, density::Real, rng; kwargs...) =
     inside_sampling_per_obstruction(
@@ -74,20 +88,6 @@ end
 
 child_geometry(wrapper::Transparent) = wrapper.geometry
 number_of_leaves(wrapper::Transparent) = number_of_leaves(child_geometry(wrapper))
-
-function filter_bounding_box(wrapper::Transparent{N}, box::InternalBoundingBox{N}, ::Val{false}) where {N}
-    child = filter_bounding_box(child_geometry(wrapper), box, Val(false))
-    isnothing(child) ? nothing : rewrap(wrapper, child)
-end
-
-function filter_bounding_box(wrapper::Transparent{N}, box::InternalBoundingBox{N}, ::Val{true}) where {N}
-    original_child = child_geometry(wrapper)
-    child = filter_bounding_box(original_child, box, Val(true))
-    child isa PhysicalGeometry || throw(ArgumentError(
-        "type-preserving filtering returned nothing for a transparent child",
-    ))
-    child === original_child ? wrapper : rewrap(wrapper, child)
-end
 
 finalise!(wrapper::Transparent) = finalise!(child_geometry(wrapper))
 

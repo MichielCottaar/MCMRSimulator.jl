@@ -13,6 +13,8 @@ import ..PhysicalGeometries: leaf_bounding_boxes, finalise!, simplify
 import ..PhysicalGeometries: filter_bounding_box, _bounding_boxes_overlap
 import ..PhysicalGeometries: number_of_leaves
 import ..PhysicalGeometries: contains_mesh
+import ..PhysicalGeometries: filter_bounding_box_indices, geometry_from_indices
+import ..PhysicalGeometries: selection_overlaps
 import ...Properties: GeometryLeafProperties
 import ..Groups
 import ...InternalBoundingBoxes
@@ -295,27 +297,29 @@ Groups.intersection_candidates(mesh::Mesh, start, destination) =
 
 InternalBoundingBox(mesh::Mesh) = _mesh_bounding_box(mesh.vertices, mesh.centre_inside[1])
 
-function _filter_mesh_bounding_box(mesh::Mesh, box::InternalBoundingBox{3})
+struct MeshSelection
+    indices::Vector{Int}
+    centre_inside::Tuple{SVector{3, Float64}, Bool}
+    overlaps::Bool
+end
+
+function filter_bounding_box_indices(mesh::Mesh, box)
     centre = InternalBoundingBoxes.center(box)
     centre_inside = isinside_single(mesh, centre)
-    selected_indices = Int[]
-    for (position, original_index) in enumerate(Groups.indices(mesh))
-        triangle_box = InternalBoundingBox(_triangle_at(mesh, position))
-        _bounding_boxes_overlap(triangle_box, box) && push!(selected_indices, original_index)
+    selected = Int[]
+    for (position, index) in enumerate(Groups.indices(mesh))
+        _bounding_boxes_overlap(InternalBoundingBox(_triangle_at(mesh, position)), box) &&
+            push!(selected, index)
     end
-    _mesh_subset(mesh, selected_indices, (centre, centre_inside))
+    MeshSelection(selected, (centre, centre_inside), !isempty(selected) || centre_inside)
 end
 
-function filter_bounding_box(mesh::Mesh, box::InternalBoundingBox{3}, ::Val{false})
-    isnothing(mesh.original_indices) &&
-        !_bounding_boxes_overlap(InternalBoundingBox(mesh), box) && return nothing
-    filtered_mesh = _filter_mesh_bounding_box(mesh, box)
-    isempty(filtered_mesh.vertices) && !filtered_mesh.centre_inside[2] && return nothing
-    filtered_mesh
-end
-
-function filter_bounding_box(mesh::Mesh, box::InternalBoundingBox{3}, ::Val{true})
-    _filter_mesh_bounding_box(mesh, box)
+filter_bounding_box_indices(mesh::Mesh, box, selection::MeshSelection) =
+    filter_bounding_box_indices(geometry_from_indices(mesh, selection, Val(true)), box)
+selection_overlaps(selection::MeshSelection) = selection.overlaps
+function geometry_from_indices(mesh::Mesh, selection::MeshSelection, ::Val{preserve_type}) where {preserve_type}
+    selection_overlaps(selection) || preserve_type || return nothing
+    _mesh_subset(mesh, selection.indices, selection.centre_inside)
 end
 
 function inside_sampling_per_obstruction(

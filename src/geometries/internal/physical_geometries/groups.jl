@@ -10,6 +10,8 @@ import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: filter_bounding_box
 import ..PhysicalGeometries: number_of_leaves
 import ..PhysicalGeometries: contains_mesh
+import ..PhysicalGeometries: filter_bounding_box_indices, geometry_from_indices
+import ..PhysicalGeometries: selection_overlaps
 import ..PhysicalGeometries: has_equivalent_wrapper
 import ..PhysicalGeometries: rewrap, rewrap_extracted_wrapper, child_geometry, finalise!
 import ..PhysicalGeometries: simplify
@@ -102,101 +104,72 @@ function _indexed_children(group::GroupGeometry; include_gap=true)
     zip(indices(group), group_geometries(group; include_gap))
 end
 
-function _selected_vector_children(group::GeometryVector, box)
-    for (index, child) in _indexed_children(group)
-        filtered = filter_bounding_box(child, box, Val(false))
-        isnothing(filtered) || return _selected_vector_children(
-            group, box, typeof(filtered),
-        )
-    end
-    (Int[], nothing)
+struct GroupSelection{G, S, B}
+    original::Ref{G}
+    indices::Vector{Int}
+    child_selections::S
+    box::B
 end
 
-function _selected_vector_children(
-    group::GeometryVector, box, ::Type{Child},
-) where {Child}
-    selected_indices = Int[]
-    selected_children = Child[]
-    consistent_type = true
-    for (index, child) in _indexed_children(group)
-        filtered = filter_bounding_box(child, box, Val(false))
-        isnothing(filtered) && continue
-        push!(selected_indices, index)
-        if consistent_type && typeof(filtered) === Child
-            push!(selected_children, filtered)
-        else
-            consistent_type = false
-        end
-    end
-    (selected_indices, consistent_type ? selected_children : nothing)
+selection_overlaps(selection::GroupSelection) = any(selection_overlaps, selection.child_selections)
+
+function filter_bounding_box_indices(group::GroupGeometry, box)
+    children = [filter_bounding_box_indices(child, box) for child in group_geometries(group)]
+    GroupSelection(Ref(group), collect(indices(group)), children, box)
 end
 
-function _filter_vector_children(group::GeometryVector, box, ::Val{true}, selected_indices)
+function filter_bounding_box_indices(group::GroupGeometry, box, selection::GroupSelection)
+    children = map(selection.indices, selection.child_selections) do index, child_selection
+        child = group_geometries(group)[_stored_index(group, index)]
+        selection_overlaps(child_selection) ?
+            filter_bounding_box_indices(child, box, child_selection) : nothing
+    end
+    GroupSelection(selection.original, selection.indices, children, box)
+end
+
+function geometry_from_indices(
+    group::GeometryVector, selection::GroupSelection, ::Val{preserve_type},
+) where {preserve_type}
+    retained = findall(selection_overlaps, selection.child_selections)
+    selected_indices = selection.indices[retained]
+    isempty(selected_indices) && !preserve_type && return nothing
+    if isempty(selected_indices)
+        source_children = group_geometries(selection.original[])
+        isempty(source_children) && return rewrap(group, eltype(source_children)[]; indices=Int[])
+        first_child = first(source_children)
+        child_selection = filter_bounding_box_indices(first_child, selection.box)
+        child_type = typeof(geometry_from_indices(first_child, child_selection, Val(true)))
+        return rewrap(group, child_type[]; indices=Int[])
+    end
+    selected_selections = selection.child_selections[retained]
+    children = map(selected_indices, selected_selections) do index, child_selection
+        original = selection.original[]
+        geometry_from_indices(group_geometries(original)[_stored_index(original, index)], child_selection, Val(preserve_type))
+    end
+    Child = typeof(first(children))
+    if all(child -> typeof(child) === Child, children)
+        typed_children = children isa Vector{Child} ? children : Vector{Child}(children)
+        return rewrap(group, typed_children; indices=selected_indices)
+    end
+    preserve_type && throw(ArgumentError(
+        "type-preserving filtering produced an inconsistent GeometryVector child type",
+    ))
+    geometry_from_indices(group, selection, Val(true))
+end
+
+geometry_from_indices(::GroupGeometry, ::Nothing, ::Val{false}) = nothing
+
+function geometry_from_indices(group::GeometryVector, ::Nothing, ::Val{true})
     source_children = group_geometries(group)
     isempty(source_children) && return rewrap(
         group, eltype(source_children)[]; indices=Int[],
     )
-    child_type = typeof(filter_bounding_box(first(source_children), box, Val(true)))
-    _filter_vector_children(group, box, Val(true), selected_indices, child_type)
-end
-
-function _filter_vector_children(
-    group::GeometryVector, box, ::Val{true}, selected_indices, ::Type{Child},
-) where {Child}
-    Child <: PhysicalGeometry || throw(ArgumentError(
-        "type-preserving filtering must return a PhysicalGeometry",
+    children = [geometry_from_indices(child, nothing, Val(true)) for child in source_children]
+    Child = typeof(first(children))
+    all(child -> typeof(child) === Child, children) || throw(ArgumentError(
+        "type-preserving filtering produced an inconsistent GeometryVector child type",
     ))
-    indices = Int[]
-    children = Child[]
-    for index in selected_indices
-        original_child = group_geometries(group)[_stored_index(group, index)]
-        child = filter_bounding_box(original_child, box, Val(true))
-        typeof(child) === Child || throw(ArgumentError(
-            "type-preserving filtering produced an inconsistent GeometryVector child type",
-        ))
-        push!(indices, index)
-        push!(children, child)
-    end
-    rewrap(group, children; indices)
-end
-
-function _filter_vector_children(
-    group::GeometryVector, box, ::Val{false},
-    selected::Tuple{Vector{Int}, Vector{Child}},
-) where {Child}
-    indices, children = selected
-    isempty(indices) && return nothing
-    rewrap(group, children; indices)
-end
-
-function _filter_vector_children(
-    group::GeometryVector, box, ::Val{false},
-    selected::Tuple{Vector{Int}, Nothing},
-)
-    indices, _ = selected
-    isempty(indices) && return nothing
-    _filter_vector_children(
-        group, box, Val(true), indices,
-        typeof(filter_bounding_box(first(group_geometries(group)), box, Val(true))),
-    )
-end
-
-function filter_bounding_box(
-    group::GeometryVector{N},
-    box::InternalBoundingBoxes.InternalBoundingBox{N},
-    ::Val{false},
-) where {N}
-    selected = _selected_vector_children(group, box)
-    _filter_vector_children(group, box, Val(false), selected)
-end
-
-function filter_bounding_box(
-    group::GeometryVector{N},
-    box::InternalBoundingBoxes.InternalBoundingBox{N},
-    ::Val{true},
-) where {N}
-    selected_indices, _ = _selected_vector_children(group, box)
-    _filter_vector_children(group, box, Val(true), selected_indices)
+    rewrap(group, Vector{Child}(children); indices=group.indices)
 end
 
 function distance_to_surface(group::GroupGeometry{N}, position::SVector{N, Float64}) where {N}
@@ -343,6 +316,36 @@ end
 contains_mesh(::Type{<:GeometryTuple{N, P}}) where {N, P} =
     _tuple_trait_any(contains_mesh, P) === Val(true)
 
+function geometry_from_indices(
+    group::GeometryTuple, selection::GroupSelection, ::Val{preserve_type},
+) where {preserve_type}
+    preserve_type || begin
+        retained = findall(selection_overlaps, selection.child_selections)
+        children = map(selection.indices[retained], selection.child_selections[retained]) do index, child_selection
+            geometry_from_indices(group_geometries(group)[_stored_index(group, index)], child_selection, Val(false))
+        end
+        isempty(children) && return nothing
+        return rewrap(group, Tuple(children); indices=selection.indices[retained])
+    end
+    original = selection.original[]
+    children = map(indices(original), original.geometries) do index, child
+        position = findfirst(==(index), selection.indices)
+        isnothing(position) ? geometry_from_indices(
+            child, filter_bounding_box_indices(child, selection.box), Val(true),
+        ) :
+            geometry_from_indices(child, selection.child_selections[position], Val(true))
+    end
+    child_tuple = Tuple(children)
+    all(child_tuple[i] === original.geometries[i] for i in eachindex(child_tuple)) && return original
+    rewrap(original, child_tuple; indices=original.indices)
+end
+
+function geometry_from_indices(group::GeometryTuple, ::Nothing, ::Val{true})
+    children = map(child -> geometry_from_indices(child, nothing, Val(true)), group.geometries)
+    all(children[index] === group.geometries[index] for index in eachindex(children)) && return group
+    rewrap(group, Tuple(children); indices=group.indices)
+end
+
 number_of_leaves(group::GeometryTuple) =
     sum(number_of_leaves, group.geometries; init=0)
 
@@ -368,34 +371,6 @@ function _stored_index(group::GroupGeometry, index::Int)
 end
 
 _indexed_children(group::GeometryTuple; include_gap=true) = zip(indices(group), group.geometries)
-
-function filter_bounding_box(
-    group::GeometryTuple{N},
-    box::InternalBoundingBoxes.InternalBoundingBox{N},
-    ::Val{false},
-) where {N}
-    children = Any[]
-    child_indices = Int[]
-    for (index, child) in _indexed_children(group)
-        filtered = filter_bounding_box(child, box, Val(false))
-        isnothing(filtered) && continue
-        push!(child_indices, index)
-        push!(children, filtered)
-    end
-    isempty(children) && return nothing
-    rewrap(group, tuple(children...); indices=child_indices)
-end
-
-function filter_bounding_box(
-    group::GeometryTuple{N},
-    box::InternalBoundingBoxes.InternalBoundingBox{N},
-    ::Val{true},
-) where {N}
-    children = map(child -> filter_bounding_box(child, box, Val(true)), group.geometries)
-    all(index -> children[index] === group.geometries[index], eachindex(children)) &&
-        return group
-    rewrap(group, children; indices=group.indices)
-end
 
 function has_equivalent_wrapper(group::GroupGeometry)
     children = group_geometries(group)
