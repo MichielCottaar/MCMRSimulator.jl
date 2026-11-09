@@ -108,7 +108,7 @@ end
 
 struct GroupSelection{G, S, B}
     original::Ref{G}
-    child_selections::S
+    child_selections::Vector{S}
     box::B
 end
 
@@ -120,7 +120,7 @@ function filter_bounding_box_indices(group::GroupGeometry, box)
 end
 
 function filter_bounding_box_indices(group::GroupGeometry, box, selection::GroupSelection{G, S}) where {G, S}
-    children = S(undef, length(selection.child_selections))
+    children = Vector{S}(undef, length(selection.child_selections))
     group_members = group_geometries(group)
     for index in eachindex(children)
         @inbounds children[index] = filter_bounding_box_indices(group_members[index], box, selection.child_selections[index])
