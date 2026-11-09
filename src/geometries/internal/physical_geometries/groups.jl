@@ -156,21 +156,6 @@ function geometry_from_indices(
     geometry_from_indices(group, selection, Val(true))
 end
 
-geometry_from_indices(::GroupGeometry, ::Nothing, ::Val{false}) = nothing
-
-function geometry_from_indices(group::GeometryVector, ::Nothing, ::Val{true})
-    source_children = group_geometries(group)
-    isempty(source_children) && return rewrap(
-        group, eltype(source_children)[]; indices=Int[],
-    )
-    children = [geometry_from_indices(child, nothing, Val(true)) for child in source_children]
-    Child = typeof(first(children))
-    all(child -> typeof(child) === Child, children) || throw(ArgumentError(
-        "type-preserving filtering produced an inconsistent GeometryVector child type",
-    ))
-    rewrap(group, Vector{Child}(children); indices=group.indices)
-end
-
 function distance_to_surface(group::GroupGeometry{N}, position::SVector{N, Float64}) where {N}
     minimum(
         (distance_to_surface(child, position)
@@ -344,12 +329,6 @@ function geometry_from_indices(
     child_tuple = Tuple(children)
     all(child_tuple[i] === original.geometries[i] for i in eachindex(child_tuple)) && return original
     rewrap(original, child_tuple; indices=original.indices)
-end
-
-function geometry_from_indices(group::GeometryTuple, ::Nothing, ::Val{true})
-    children = map(child -> geometry_from_indices(child, nothing, Val(true)), group.geometries)
-    all(children[index] === group.geometries[index] for index in eachindex(children)) && return group
-    rewrap(group, Tuple(children); indices=group.indices)
 end
 
 number_of_leaves(group::GeometryTuple) =

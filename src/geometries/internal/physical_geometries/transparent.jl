@@ -31,9 +31,6 @@ function geometry_from_indices(wrapper::Transparent, selection, ::Val{preserve_t
     isnothing(child) && !preserve_type && return nothing
     child === original_child ? wrapper : rewrap(wrapper, child)
 end
-geometry_from_indices(wrapper::Transparent, ::Nothing, ::Val{preserve_type}) where {preserve_type} =
-    preserve_type ? wrapper : nothing
-
 inside_sampling_per_obstruction(wrapper::Transparent, density::Real, rng; kwargs...) =
     inside_sampling_per_obstruction(
         child_geometry(wrapper), density, rng; kwargs...,

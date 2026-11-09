@@ -1801,14 +1801,10 @@ end
         @test typeof(selected_vector) === typeof(preserved_vector)
         @test groups.indices(selected_vector) == [20, 30]
         @test all(length(child) == 2 for child in selected_vector)
-        preserved_unselected_vector = materialize(vector_of_tuples, nothing, Val(true))
-        @test groups.indices(preserved_unselected_vector) == [20, 30]
-        @test all(child -> typeof(child) === eltype(vector_of_tuples), preserved_unselected_vector)
         tuple_selection = select_indices(indexed_tuple, near_box)
         selected_tuple = materialize(indexed_tuple, tuple_selection, Val(true))
         @test selected_tuple === indexed_tuple
         @test groups.indices(selected_tuple) == [3, 9]
-        @test materialize(indexed_tuple, nothing, Val(true)) === indexed_tuple
         refined_selection = select_indices(vector_of_tuples, box_at((0., 0., 0.); radius=0.05), vector_selection)
         @test refined_selection.original === vector_selection.original
         @test refined_selection.original[] === vector_of_tuples

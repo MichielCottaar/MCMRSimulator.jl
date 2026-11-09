@@ -400,7 +400,8 @@ filter_bounding_box(
 Select candidates within `box`, optionally refining a parent selection against
 the same source geometry. Selection is independent of materialization policy.
 Selections preserve original geometry indices and may
-contain additional state for inside queries. `nothing` denotes no overlap.
+contain additional state for inside queries. A selection is always returned;
+use `selection_overlaps` to test whether it retains geometry.
 """
 function filter_bounding_box_indices end
 
@@ -411,10 +412,6 @@ Materialize a bounding-box selection against its original source geometry.
 With `Val(true)`, preserve child structure so vector children have consistent types.
 """
 function geometry_from_indices end
-
-geometry_from_indices(
-    geometry::PhysicalGeometry, ::Nothing, ::Val{preserve_type},
-) where {preserve_type} = preserve_type ? geometry : nothing
 
 """
     selection_overlaps(selection) -> Bool
@@ -427,7 +424,6 @@ this function when they can represent an empty selection without returning
 """
 function selection_overlaps end
 
-selection_overlaps(::Nothing) = false
 selection_overlaps(::Any) = true
 selection_overlaps(selection::Bool) = selection
 

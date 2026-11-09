@@ -30,7 +30,7 @@ filter_bounding_box_indices(geometry::BaseObstruction, box) =
 filter_bounding_box_indices(geometry::BaseObstruction, box, parent_selection::Bool) =
     parent_selection && filter_bounding_box_indices(geometry, box)
 function geometry_from_indices(
-    geometry::BaseObstruction, selection::Union{Bool, Nothing}, ::Val{preserve_type},
+    geometry::BaseObstruction, selection::Bool, ::Val{preserve_type},
 ) where {preserve_type}
     preserve_type || selection === true ? geometry : nothing
 end

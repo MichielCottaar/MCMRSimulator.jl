@@ -47,8 +47,6 @@ function geometry_from_indices(wrapper::Transformation, selection, ::Val{preserv
     isnothing(child) && !preserve_type && return nothing
     child === original_child ? wrapper : rewrap(wrapper, child)
 end
-geometry_from_indices(wrapper::Transformation, ::Nothing, ::Val{preserve_type}) where {preserve_type} =
-    preserve_type ? wrapper : nothing
 number_of_leaves(transformation::Transformation) = number_of_leaves(child_geometry(transformation))
 
 finalise!(transformation::Transformation) = finalise!(child_geometry(transformation))
