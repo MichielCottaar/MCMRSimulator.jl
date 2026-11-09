@@ -113,7 +113,7 @@ struct GroupSelection{G, S, B}
 end
 
 selection_overlaps(selection::GroupSelection) = any(selection_overlaps, selection.child_selections)
-selection_overlaps(selection::GroupSelection{G, Bool}) where {G} = iszero(sum(selection.child_selections))
+selection_overlaps(selection::GroupSelection{G, Bool}) where {G} = !iszero(sum(selection.child_selections))
 
 function filter_bounding_box_indices(group::GroupGeometry, box)
     children = [filter_bounding_box_indices(child, box) for child in group_geometries(group)]
