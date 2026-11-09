@@ -119,9 +119,11 @@ function filter_bounding_box_indices(group::GroupGeometry, box)
     GroupSelection(Ref(group), children, box)
 end
 
-function filter_bounding_box_indices(group::GroupGeometry, box, selection::GroupSelection)
-    children = map(group_geometries(group), selection.child_selections) do child, child_selection
-        filter_bounding_box_indices(child, box, child_selection)
+function filter_bounding_box_indices(group::GroupGeometry, box, selection::GroupSelection{G, S}) where {G, S}
+    children = S(undef, length(selection.child_selections))
+    group_members = group_geometries(group)
+    for index in eachindex(children)
+        children[index] = filter_bounding_box_indices(group_members[index], box, selection.child_selections[index])
     end
     GroupSelection(selection.original, children, box)
 end
