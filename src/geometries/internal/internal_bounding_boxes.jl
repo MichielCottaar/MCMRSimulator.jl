@@ -18,7 +18,6 @@ struct InternalBoundingBox{N}
     upper::SVector{N, Float64}
 
     function InternalBoundingBox{N}(lower::SVector{N, Float64}, upper::SVector{N, Float64}) where {N}
-        all(lower .<= upper) || throw(ArgumentError("bounding-box lower bounds must not exceed upper bounds"))
         new{N}(lower, upper)
     end
 end

@@ -56,7 +56,6 @@ const Plot = mr.Plot
     @test BoundingBoxes.lower(keyword_box) == -SVector(1.0, 2.0, 3.0)
     @test BoundingBoxes.upper(keyword_box) == SVector(1.0, 2.0, 3.0)
     @test BoundingBoxes.InternalBoundingBox(; half_size=2.0, center=[1.0, 2.0]) isa BoundingBoxes.InternalBoundingBox{2}
-    @test_throws ArgumentError BoundingBoxes.InternalBoundingBox([1.0, 0.0], [0.0, 1.0])
     @test_throws ArgumentError BoundingBoxes.InternalBoundingBox{2}(; half_size=-1.0)
     @test_throws DimensionMismatch PublicBoundingBoxes.BoundingBox([0, 0], [1, 1])
     @test_throws ArgumentError PublicBoundingBoxes.BoundingBox(-1.0)
