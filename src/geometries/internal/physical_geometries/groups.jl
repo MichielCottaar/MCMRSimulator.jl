@@ -108,7 +108,6 @@ end
 
 struct GroupSelection{G, S, B}
     original::Ref{G}
-    indices::Vector{Int}
     child_selections::S
     box::B
 end
@@ -117,26 +116,25 @@ selection_overlaps(selection::GroupSelection) = any(selection_overlaps, selectio
 
 function filter_bounding_box_indices(group::GroupGeometry, box)
     children = [filter_bounding_box_indices(child, box) for child in group_geometries(group)]
-    GroupSelection(Ref(group), collect(indices(group)), children, box)
+    GroupSelection(Ref(group), children, box)
 end
 
 function filter_bounding_box_indices(group::GroupGeometry, box, selection::GroupSelection)
-    children = map(selection.indices, selection.child_selections) do index, child_selection
-        child = group_geometries(group)[_stored_index(group, index)]
-        selection_overlaps(child_selection) ?
-            filter_bounding_box_indices(child, box, child_selection) : nothing
+    children = map(group_geometries(group), selection.child_selections) do child, child_selection
+        filter_bounding_box_indices(child, box, child_selection)
     end
-    GroupSelection(selection.original, selection.indices, children, box)
+    GroupSelection(selection.original, children, box)
 end
 
 function geometry_from_indices(
     group::GeometryVector, selection::GroupSelection, ::Val{preserve_type},
 ) where {preserve_type}
     retained = findall(selection_overlaps, selection.child_selections)
-    selected_indices = selection.indices[retained]
+    original = selection.original[]
+    selected_indices = [indices(original)[position] for position in retained]
     isempty(selected_indices) && !preserve_type && return nothing
     if isempty(selected_indices)
-        source_children = group_geometries(selection.original[])
+        source_children = group_geometries(original)
         isempty(source_children) && return rewrap(group, eltype(source_children)[]; indices=Int[])
         first_child = first(source_children)
         child_selection = filter_bounding_box_indices(first_child, selection.box)
@@ -144,9 +142,8 @@ function geometry_from_indices(
         return rewrap(group, child_type[]; indices=Int[])
     end
     selected_selections = selection.child_selections[retained]
-    children = map(selected_indices, selected_selections) do index, child_selection
-        original = selection.original[]
-        geometry_from_indices(group_geometries(original)[_stored_index(original, index)], child_selection, Val(preserve_type))
+    children = map(retained, selected_selections) do position, child_selection
+        geometry_from_indices(group_geometries(original)[position], child_selection, Val(preserve_type))
     end
     Child = typeof(first(children))
     if all(child -> typeof(child) === Child, children)
@@ -325,19 +322,24 @@ function geometry_from_indices(
 ) where {preserve_type}
     preserve_type || begin
         retained = findall(selection_overlaps, selection.child_selections)
-        children = map(selection.indices[retained], selection.child_selections[retained]) do index, child_selection
-            geometry_from_indices(group_geometries(group)[_stored_index(group, index)], child_selection, Val(false))
+        original = selection.original[]
+        children = map(retained) do position
+            geometry_from_indices(
+                group_geometries(original)[position],
+                selection.child_selections[position],
+                Val(false),
+            )
         end
         isempty(children) && return nothing
-        return rewrap(group, Tuple(children); indices=selection.indices[retained])
+        selected_indices = [indices(original)[position] for position in retained]
+        return rewrap(group, Tuple(children); indices=selected_indices)
     end
     original = selection.original[]
-    children = map(indices(original), original.geometries) do index, child
-        position = findfirst(==(index), selection.indices)
-        isnothing(position) ? geometry_from_indices(
-            child, filter_bounding_box_indices(child, selection.box), Val(true),
-        ) :
-            geometry_from_indices(child, selection.child_selections[position], Val(true))
+    children = map(enumerate(original.geometries)) do (position, child)
+        child_selection = selection.child_selections[position]
+        selection_overlaps(child_selection) ?
+            geometry_from_indices(child, child_selection, Val(true)) :
+            geometry_from_indices(child, filter_bounding_box_indices(child, selection.box), Val(true))
     end
     child_tuple = Tuple(children)
     all(child_tuple[i] === original.geometries[i] for i in eachindex(child_tuple)) && return original
