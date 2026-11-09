@@ -15,6 +15,7 @@ import ..PhysicalGeometries: inside_sampling_per_obstruction, finalise!
 import ..PhysicalGeometries: filter_bounding_box, _bounding_boxes_overlap
 import ..PhysicalGeometries: number_of_leaves
 import ..PhysicalGeometries: contains_mesh
+import ..PhysicalGeometries: contains_repeat
 import ..PhysicalGeometries: filter_bounding_box_indices, geometry_from_indices
 import Distributions: Poisson
 import Random: rand
@@ -22,6 +23,7 @@ import Random: rand
 abstract type BaseObstruction{N} <: PhysicalGeometry{N} end
 
 contains_mesh(::Type{<:BaseObstruction}) = false
+contains_repeat(::Type{<:BaseObstruction}) = false
 
 filter_bounding_box_indices(geometry::BaseObstruction, box) =
     _bounding_boxes_overlap(InternalBoundingBox(geometry), box)

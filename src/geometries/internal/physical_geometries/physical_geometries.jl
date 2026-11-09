@@ -170,6 +170,10 @@ function child_type end
 """Whether a geometry contains a mesh in its child hierarchy."""
 function contains_mesh end
 
+"""Whether a geometry's child hierarchy contains a periodic `Repeat`."""
+function contains_repeat end
+contains_repeat(::Type{<:PhysicalGeometry}) = false
+
 
 """
      get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, indices[, isinside]) -> IntersectionParams{N}
@@ -485,7 +489,7 @@ include("grids.jl")
 include("monte_carlo_measures.jl")
 include("liminal_geometries.jl")
 
-import .MonteCarloMeasures: SurfaceEstimate, contains_repeat, estimate_volume, estimate_surface
+import .MonteCarloMeasures: SurfaceEstimate, estimate_volume, estimate_surface
 import .Transparents: Transparent, IgnoreOverlapping
 import .LiminalGeometries: FixedLiminalGeometry
 

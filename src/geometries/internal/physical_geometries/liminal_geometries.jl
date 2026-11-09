@@ -10,10 +10,10 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_singl
     get_intersection_params_requires_inside, inside_indices_eltype, intersection_type,
     inside_indices, find_intersection, find_intersection_requires_inside, get_child,
     volume_sampling, inside_sampling, random_surface_positions, bound_intersection_type,
-    _merge_types, InternalBoundingBox, estimate_surface, estimate_volume,
-    get_intersection_params, to_inside_index, to_property_index,
+    _merge_types, InternalBoundingBox, get_intersection_params, to_inside_index, to_property_index,
     projected_surface_area, normal_second_moment, inverse_mean_free_path, _geometry_mesh,
-    distance_to_surface, size_scale, SurfaceEstimate, is_liminal
+    distance_to_surface, size_scale, is_liminal
+import ..MonteCarloMeasures: estimate_volume, estimate_surface, SurfaceEstimate
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: contains_mesh
 import ..PhysicalGeometries: simplify, rewrap, finalise!

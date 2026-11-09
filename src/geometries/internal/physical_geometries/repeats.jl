@@ -13,6 +13,7 @@ import ..PhysicalGeometries: has_equivalent_wrapper
 import ..PhysicalGeometries: rewrap
 import ..PhysicalGeometries: simplify
 import ..PhysicalGeometries: finalise!
+import ..PhysicalGeometries: contains_repeat
 import ...Properties: GeometryProperties
 import ..Groups
 import ...InsideViews: child_view
@@ -39,6 +40,8 @@ struct Repeat{N, P<:PhysicalGeometry{N}} <: Groups.GroupGeometry{N, Shift{N, P}}
         new{N, P}(geometry, repeats, normalized_bounding_box)
     end
 end
+
+contains_repeat(::Type{<:Repeat}) = true
 
 child_geometry(repeat::Repeat) = repeat.geometry
 

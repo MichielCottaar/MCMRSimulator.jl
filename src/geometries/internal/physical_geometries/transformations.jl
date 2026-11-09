@@ -14,6 +14,7 @@ import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: filter_bounding_box
 import ..PhysicalGeometries: number_of_leaves
 import ..PhysicalGeometries: contains_mesh
+import ..PhysicalGeometries: contains_repeat
 import ..PhysicalGeometries: filter_bounding_box_indices, geometry_from_indices
 import ..PhysicalGeometries: simplify, rewrap, has_equivalent_wrapper, child_geometry, finalise!
 import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
@@ -32,6 +33,7 @@ parent coordinate system.
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
 
 contains_mesh(::Type{<:Transformation{N, M, P}}) where {N, M, P} = contains_mesh(P)
+contains_repeat(::Type{<:Transformation{N, M, P}}) where {N, M, P} = contains_repeat(P)
 
 child_geometry(transformation::Transformation) = transformation.geometry
 

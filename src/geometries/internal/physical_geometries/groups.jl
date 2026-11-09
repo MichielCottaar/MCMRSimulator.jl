@@ -10,6 +10,7 @@ import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: filter_bounding_box
 import ..PhysicalGeometries: number_of_leaves
 import ..PhysicalGeometries: contains_mesh
+import ..PhysicalGeometries: contains_repeat
 import ..PhysicalGeometries: filter_bounding_box_indices, geometry_from_indices
 import ..PhysicalGeometries: selection_overlaps
 import ..PhysicalGeometries: has_equivalent_wrapper
@@ -23,6 +24,7 @@ import ....BoundingBoxes: BoundingBoxNotSupported
 abstract type GroupGeometry{N, P} <: PhysicalGeometry{N} end
 
 contains_mesh(::Type{<:GroupGeometry{N, P}}) where {N, P} = contains_mesh(P)
+contains_repeat(::Type{<:GroupGeometry{N, P}}) where {N, P} = contains_repeat(P)
 
 struct GeometryVector{N, P<:PhysicalGeometry{N}, I<:Union{Nothing, Vector{Int}}} <: GroupGeometry{N, P}
     geometries::Vector{P}
@@ -315,6 +317,8 @@ end
 
 contains_mesh(::Type{<:GeometryTuple{N, P}}) where {N, P} =
     _tuple_trait_any(contains_mesh, P) === Val(true)
+contains_repeat(::Type{<:GeometryTuple{N, P}}) where {N, P} =
+    any(contains_repeat, P.parameters)
 
 function geometry_from_indices(
     group::GeometryTuple, selection::GroupSelection, ::Val{preserve_type},

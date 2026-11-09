@@ -94,6 +94,15 @@ end
     @test contains_mesh(typeof(mesh))
     @test contains_mesh(typeof(GeometryVector([mesh])))
     @test contains_mesh(typeof(GeometryTuple{3}((spheres, mesh))))
+    contains_repeat = GI.PhysicalGeometries.contains_repeat
+    repeat_sphere = Repeat(BaseObstructions.Sphere(0.5), [4., 4., 4.])
+    @test !contains_repeat(typeof(BaseObstructions.Sphere(1.)))
+    @test !contains_repeat(typeof(spheres))
+    @test contains_repeat(typeof(repeat_sphere))
+    @test contains_repeat(typeof(Shift(repeat_sphere, zeros(3))))
+    @test contains_repeat(typeof(IgnoreOverlapping(GeometryTuple{3}((
+        BaseObstructions.Sphere(0.5), repeat_sphere,
+    )))))
     select = GI.PhysicalGeometries.filter_bounding_box_indices
     materialize = GI.PhysicalGeometries.geometry_from_indices
     parent_box = BoundingBoxes.InternalBoundingBox([2., 2., 2.], [0.5, 0.5, 0.5])

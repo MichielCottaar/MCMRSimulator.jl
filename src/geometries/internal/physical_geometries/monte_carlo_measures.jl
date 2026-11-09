@@ -4,24 +4,13 @@ import Random: AbstractRNG, default_rng, rand
 import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, IntersectionParams, find_intersection,
     get_intersection_params, random_surface_positions, has_inside, has_single_inside,
-    inside_indices, isinside_single, InternalBoundingBox, inside_sampling, to_inside_index
+    inside_indices, isinside_single, InternalBoundingBox, inside_sampling, to_inside_index,
+    contains_repeat
 import ...InternalBoundingBoxes: lower, upper
 import ....BoundingBoxes: BoundingBox
 import ...Properties: GeometryLeafProperties
-import ..Groups: GroupGeometry, GeometryTuple
-import ..Repeats: Repeat
-import ..Transformations: Transformation
-import ..Transparents: Transparent
 
 export SurfaceEstimate, estimate_volume, estimate_surface
-
-contains_repeat(::Type{<:PhysicalGeometry}) = false
-contains_repeat(::Type{<:Repeat}) = true
-contains_repeat(::Type{<:GroupGeometry{N, P}}) where {N, P} = contains_repeat(P)
-contains_repeat(::Type{<:GeometryTuple{N, P}}) where {N, P} =
-    any(contains_repeat, P.parameters)
-contains_repeat(::Type{<:Transformation{N, M, P}}) where {N, M, P} = contains_repeat(P)
-contains_repeat(::Type{<:Transparent{N, P}}) where {N, P} = contains_repeat(P)
 
 struct SurfaceEstimate{N, I <: Tuple}
     area::Float64

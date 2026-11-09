@@ -8,6 +8,7 @@ import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: filter_bounding_box
 import ..PhysicalGeometries: number_of_leaves
 import ..PhysicalGeometries: contains_mesh
+import ..PhysicalGeometries: contains_repeat
 import ..PhysicalGeometries: filter_bounding_box_indices, geometry_from_indices
 import ..PhysicalGeometries: distance_to_surface
 import ..PhysicalGeometries: simplify, rewrap, rewrap_extracted_wrapper, has_equivalent_wrapper
@@ -18,6 +19,7 @@ import ...InsideViews: has_other
 abstract type Transparent{N, P <: PhysicalGeometry{N}} <: PhysicalGeometry{N} end
 
 contains_mesh(::Type{<:Transparent{N, P}}) where {N, P} = contains_mesh(P)
+contains_repeat(::Type{<:Transparent{N, P}}) where {N, P} = contains_repeat(P)
 
 filter_bounding_box_indices(wrapper::Transparent, box) =
     filter_bounding_box_indices(child_geometry(wrapper), box)
