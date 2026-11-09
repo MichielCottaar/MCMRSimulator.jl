@@ -286,7 +286,7 @@ function InternalBoundingBox(
         abs.(transformation.matrix) * child_half_size + null_half_size,
         eps(Float64),
     )
-    InternalBoundingBoxes.InternalBoundingBox{N}(half_size, center)
+    InternalBoundingBoxes.InternalBoundingBox{N}(; half_size, center)
 end
 
 """Transform a value from parent coordinates to child coordinates."""
@@ -338,10 +338,7 @@ end
 function _scale_box(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N}
     half_size = transformation.scale .* _box_half_size(box)
     center = transformation.scale .* _box_center(box)
-    return InternalBoundingBoxes.InternalBoundingBox{N}(
-        half_size,
-        center,
-    )
+    return InternalBoundingBoxes.InternalBoundingBox{N}(; half_size, center)
 end
 
 to_child_coordinates(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox) =
@@ -369,7 +366,7 @@ end
 function _rotate_box(transformation::Rotate{N, M}, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N, M}
     center = transformation.matrix' * _box_center(box)
     half_size = abs.(transformation.matrix') * _box_half_size(box)
-    return InternalBoundingBoxes.InternalBoundingBox{M}(half_size, center)
+    return InternalBoundingBoxes.InternalBoundingBox{M}(; half_size, center)
 end
 
 to_child_coordinates(transformation::Rotate, box::InternalBoundingBoxes.InternalBoundingBox) =
@@ -381,8 +378,8 @@ function from_child_coordinates(
 ) where {N, M, K}
     N == M && K == M || throw(ArgumentError("from_child_coordinates is not defined for dimension-reducing Rotate transformations"))
     InternalBoundingBoxes.InternalBoundingBox{N}(
-        abs.(transformation.matrix) * _box_half_size(box),
-        transformation.matrix * _box_center(box),
+        ; half_size=abs.(transformation.matrix) * _box_half_size(box),
+        center=transformation.matrix * _box_center(box),
     )
 end
 

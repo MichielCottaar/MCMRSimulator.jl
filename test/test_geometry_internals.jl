@@ -49,6 +49,15 @@ const Plot = mr.Plot
     @test BoundingBoxes.InternalBoundingBox(box) isa BoundingBoxes.InternalBoundingBox{3}
     @test BoundingBoxes.lower(BoundingBoxes.InternalBoundingBox(box)) == PublicBoundingBoxes.lower(box)
     @test BoundingBoxes.upper(BoundingBoxes.InternalBoundingBox(box)) == PublicBoundingBoxes.upper(box)
+    direct_box = BoundingBoxes.InternalBoundingBox([-1.0, -2.0, -3.0], [1.0, 2.0, 3.0])
+    @test BoundingBoxes.lower(direct_box) == SVector(-1.0, -2.0, -3.0)
+    @test BoundingBoxes.upper(direct_box) == SVector(1.0, 2.0, 3.0)
+    keyword_box = BoundingBoxes.InternalBoundingBox(; half_size=[1.0, 2.0, 3.0])
+    @test BoundingBoxes.lower(keyword_box) == -SVector(1.0, 2.0, 3.0)
+    @test BoundingBoxes.upper(keyword_box) == SVector(1.0, 2.0, 3.0)
+    @test BoundingBoxes.InternalBoundingBox(; half_size=2.0, center=[1.0, 2.0]) isa BoundingBoxes.InternalBoundingBox{2}
+    @test_throws ArgumentError BoundingBoxes.InternalBoundingBox([1.0, 0.0], [0.0, 1.0])
+    @test_throws ArgumentError BoundingBoxes.InternalBoundingBox{2}(; half_size=-1.0)
     @test_throws DimensionMismatch PublicBoundingBoxes.BoundingBox([0, 0], [1, 1])
     @test_throws ArgumentError PublicBoundingBoxes.BoundingBox(-1.0)
 end
@@ -70,7 +79,7 @@ end
 end
 
 @testset "intersection grids" begin
-    grid_box = BoundingBoxes.InternalBoundingBox([2.0, 1.0, 1.0])
+    grid_box = BoundingBoxes.InternalBoundingBox(; half_size=[2.0, 1.0, 1.0])
     grid = IntersectionGrid(grid_box, 2; resolution=2.0)
     @test grid.bounding_box == grid_box
     @test size(grid.geometries) == (2, 1, 1)
@@ -105,8 +114,8 @@ end
     )))))
     select = GI.PhysicalGeometries.filter_bounding_box_indices
     materialize = GI.PhysicalGeometries.geometry_from_indices
-    parent_box = BoundingBoxes.InternalBoundingBox([2., 2., 2.], [0.5, 0.5, 0.5])
-    child_box = BoundingBoxes.InternalBoundingBox([0.1, 0.1, 0.1], [0.2, 0.2, 0.2])
+    parent_box = BoundingBoxes.InternalBoundingBox(; half_size=[2., 2., 2.], center=[0.5, 0.5, 0.5])
+    child_box = BoundingBoxes.InternalBoundingBox(; half_size=[0.1, 0.1, 0.1], center=[0.2, 0.2, 0.2])
     for source in (spheres, mesh, GeometryVector([mesh]),
                    GeometryTuple{3}((spheres, mesh)),
                    Shift(mesh, [0.1, 0., 0.]), IgnoreOverlapping(mesh))
@@ -120,11 +129,11 @@ end
                 inside_indices(direct, BoundingBoxes.center(child_box))
         end
     end
-    inside_selection = select(mesh, BoundingBoxes.InternalBoundingBox([0.01, 0.01, 0.01], [0.2, 0.2, 0.2]))
+    inside_selection = select(mesh, BoundingBoxes.InternalBoundingBox(; half_size=[0.01, 0.01, 0.01], center=[0.2, 0.2, 0.2]))
     inside_mesh = materialize(mesh, inside_selection, Val(false))
     @test isinside_single(inside_mesh, SVector(0.2, 0.2, 0.2))
     @test !GI.PhysicalGeometries.selection_overlaps(
-        select(mesh, BoundingBoxes.InternalBoundingBox([0.1, 0.1, 0.1], [3., 3., 3.])),
+        select(mesh, BoundingBoxes.InternalBoundingBox(; half_size=[0.1, 0.1, 0.1], center=[3., 3., 3.])),
     )
     @test GI.PhysicalGeometries.finalise!(grid, spheres) === grid
     @test isassigned(grid.geometries, lastindex(grid.geometries))
@@ -152,7 +161,7 @@ end
         @test inside_indices(irregular_grid, position) == inside_indices(irregular, position)
     end
 
-    planar_box = BoundingBoxes.InternalBoundingBox([1.0, 1.0, 0.0])
+    planar_box = BoundingBoxes.InternalBoundingBox(; half_size=[1.0, 1.0, 0.0])
     planar_grid = IntersectionGrid(planar_box, 1; resolution=1.0)
     @test planar_grid.bounding_box == planar_box
     @test all(isfinite, planar_grid.inv_resolution)
@@ -160,7 +169,7 @@ end
     @test size(planar_grid.geometries) == (2, 2, 1)
 
     # Even positive extents smaller than a cell are expanded symmetrically.
-    thin_box = BoundingBoxes.InternalBoundingBox([0.125, 1.0, 0.0], [1.0, 2.0, 3.0])
+    thin_box = BoundingBoxes.InternalBoundingBox(; half_size=[0.125, 1.0, 0.0], center=[1.0, 2.0, 3.0])
     thin_grid = IntersectionGrid(thin_box, 1; resolution=1.0)
     @test thin_grid.bounding_box == thin_box
     @test BoundingBoxes.lower(thin_grid.grid_bounding_box) == SVector(0.5, 1.0, 2.5)
@@ -169,7 +178,7 @@ end
     @test thin_grid.inv_resolution == SVector(1.0, 1.0, 1.0)
 
     # Zero-extent geometry uses a 1 um fallback for automatic and Inf resolution.
-    point_box = BoundingBoxes.InternalBoundingBox{3}(0.0, [3.0, 4.0, 5.0])
+    point_box = BoundingBoxes.InternalBoundingBox{3}(; half_size=0.0, center=[3.0, 4.0, 5.0])
     for resolution in (nothing, 0.5, Inf)
         point_grid = IntersectionGrid(point_box, 1; resolution)
         thickness = resolution == 0.5 ? 0.5 : 1.0
@@ -736,7 +745,7 @@ end
     struct SimplifiableSphere <: PhysicalGeometry{3}
         radius::Float64
     end
-    BoundingBoxes.InternalBoundingBox(geometry::SimplifiableSphere) = BoundingBoxes.InternalBoundingBox{3}(geometry.radius)
+    BoundingBoxes.InternalBoundingBox(geometry::SimplifiableSphere) = BoundingBoxes.InternalBoundingBox{3}(; half_size=geometry.radius)
     GI.PhysicalGeometries.simplify(geometry::SimplifiableSphere, ::Val) = geometry
     GI.PhysicalGeometries.simplify(geometry::SimplifiableSphere, ::Val{:extract_common_wrapper}) =
         geometry.radius < 0.25 ? geometry : BaseObstructions.Sphere(geometry.radius)
@@ -1063,7 +1072,7 @@ end
     @test transformed_boxes isa Tuple
     @test transformed_boxes[2] isa Vector
     @test transformed_boxes[2][1] isa Tuple
-    @test transformed_boxes[1] == BoundingBoxes.InternalBoundingBox{3}(2., [10., 20., 30.])
+    @test transformed_boxes[1] == BoundingBoxes.InternalBoundingBox{3}(; half_size=2., center=[10., 20., 30.])
     @test BoundingBoxes.lower(transformed_boxes[2][1][2]) == SVector(4., 20., 36.)
     @test BoundingBoxes.upper(transformed_boxes[2][1][2]) == SVector(8., 24., 36.)
     @test BoundingBoxes.lower(transformed_boxes[2][1][3]) == SVector(2., 18., 44.)
@@ -1382,7 +1391,7 @@ end
         calls::Base.RefValue{Int}
     end
     GI.PhysicalGeometries.has_inside(::Type{GridProbe}) = false
-    BoundingBoxes.InternalBoundingBox(::GridProbe) = BoundingBoxes.InternalBoundingBox{3}(1.)
+    BoundingBoxes.InternalBoundingBox(::GridProbe) = BoundingBoxes.InternalBoundingBox{3}(; half_size=1.)
     function GI.PhysicalGeometries.find_intersection(
         probe::GridProbe, a::SVector{3, Float64}, b::SVector{3, Float64},
         previous=nothing, inside=nothing, candidate=nothing,
@@ -1403,9 +1412,9 @@ end
     GI.PhysicalGeometries.has_inside(::Type{GridInsideProbe}) = true
     GI.PhysicalGeometries.has_single_inside(::Type{GridInsideProbe}) = true
     GI.PhysicalGeometries.intersection_type(::Type{GridInsideProbe}) = Tuple{Int}
-    BoundingBoxes.InternalBoundingBox(::GridInsideProbe) = BoundingBoxes.InternalBoundingBox{3}(1.)
+    BoundingBoxes.InternalBoundingBox(::GridInsideProbe) = BoundingBoxes.InternalBoundingBox{3}(; half_size=1.)
     function GI.PhysicalGeometries.leaf_bounding_boxes(::GridInsideProbe; inside=false)
-        box = BoundingBoxes.InternalBoundingBox{3}(1.)
+        box = BoundingBoxes.InternalBoundingBox{3}(; half_size=1.)
         inside ? box : (box, box)
     end
     function GI.PhysicalGeometries.isinside_single(
@@ -1748,7 +1757,7 @@ end
     @testset "Bounding-box geometry filtering" begin
         filter_box = GI.PhysicalGeometries.filter_bounding_box
         box_at(centre; radius=0.1) = BoundingBoxes.InternalBoundingBox{3}(
-            SVector(radius, radius, radius), SVector{3, Float64}(centre),
+            ; half_size=SVector(radius, radius, radius), center=SVector{3, Float64}(centre),
         )
         near_box = box_at((0., 0., 0.))
         far_box = box_at((10., 0., 0.))
@@ -2269,7 +2278,7 @@ end
             )
             @test all(index == [()] for index in bounded_indices)
             @test_throws ArgumentError GI.inside_sampling(
-                sphere, 10.; bounding_box=BoundingBoxes.InternalBoundingBox{2}(1.),
+                sphere, 10.; bounding_box=BoundingBoxes.InternalBoundingBox{2}(; half_size=1.),
             )
 
             repeated_sphere = Repeat(sphere, [4., 4., 4.])
@@ -3175,8 +3184,7 @@ end
         [2.0, 4.0, 4.0],
     )
     sampled_box = BoundingBoxes.InternalBoundingBox(
-        [1.1, 1.1, 1.1],
-        [1.0, 0.0, 0.0],
+        ; half_size=[1.1, 1.1, 1.1], center=[1.0, 0.0, 0.0],
     )
     sampled_positions, sampled_indices = GI.PhysicalGeometries.random_surface_positions(
         sampled_repeat,
@@ -3542,10 +3550,10 @@ end
     @test Transformations.to_child_coordinates(projection_z, SVector(1.0, 2.0, 3.0)) == SVector(3.0)
     @test_throws ArgumentError Rotate(geometry_1d, SMatrix{2, 1, Float64}([2.0; 0.0]))
 
-    cube = BoundingBoxes.InternalBoundingBox(2.0, [1.0, 2.0, 3.0])
-    centered_cube = BoundingBoxes.InternalBoundingBox{3}(2.0)
-    rect = BoundingBoxes.InternalBoundingBox([1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
-    centered_rect = BoundingBoxes.InternalBoundingBox{3}([1.0, 2.0, 3.0])
+    cube = BoundingBoxes.InternalBoundingBox(; half_size=2.0, center=[1.0, 2.0, 3.0])
+    centered_cube = BoundingBoxes.InternalBoundingBox{3}(; half_size=2.0)
+    rect = BoundingBoxes.InternalBoundingBox(; half_size=[1.0, 2.0, 3.0], center=[1.0, 2.0, 3.0])
+    centered_rect = BoundingBoxes.InternalBoundingBox{3}(; half_size=[1.0, 2.0, 3.0])
 
     for box in (cube, centered_cube, rect, centered_rect)
         @test box isa BoundingBoxes.InternalBoundingBox{3}
@@ -3566,10 +3574,10 @@ end
     @test BoundingBoxes.upper(rect) == SVector(2.0, 4.0, 6.0)
     @test BoundingBoxes.lower(centered_rect) == SVector(-1.0, -2.0, -3.0)
     @test BoundingBoxes.upper(centered_rect) == SVector(1.0, 2.0, 3.0)
-    box_1d = BoundingBoxes.InternalBoundingBox{1}(1.0)
+    box_1d = BoundingBoxes.InternalBoundingBox{1}(; half_size=1.0)
     @test BoundingBoxes.could_intersect(box_1d, SVector(-2.0), SVector(2.0))
     @test !BoundingBoxes.could_intersect(box_1d, SVector(2.0), SVector(3.0))
-    box_2d = BoundingBoxes.InternalBoundingBox{2}(1.0)
+    box_2d = BoundingBoxes.InternalBoundingBox{2}(; half_size=1.0)
     @test BoundingBoxes.could_intersect(box_2d, SVector(-2.0, 0.0), SVector(2.0, 0.0))
     @test !BoundingBoxes.could_intersect(box_2d, SVector(2.0, 2.0), SVector(3.0, 3.0))
     @test !BoundingBoxes.could_intersect(centered_cube, SVector(3.0, 3.0, 3.0), SVector(4.0, 4.0, 4.0))
@@ -3584,18 +3592,18 @@ end
         SVector(3.0, -100.0, 0.0),
     )
 
-    @test BoundingBoxes.InternalBoundingBox{3}(2.0) isa BoundingBoxes.InternalBoundingBox{3}
-    @test BoundingBoxes.InternalBoundingBox(2.0, [1.0, 2.0, 3.0]) isa BoundingBoxes.InternalBoundingBox{3}
-    @test BoundingBoxes.InternalBoundingBox{3}([1.0, 2.0, 3.0]) isa BoundingBoxes.InternalBoundingBox{3}
+    @test BoundingBoxes.InternalBoundingBox{3}(; half_size=2.0) isa BoundingBoxes.InternalBoundingBox{3}
+    @test BoundingBoxes.InternalBoundingBox(; half_size=2.0, center=[1.0, 2.0, 3.0]) isa BoundingBoxes.InternalBoundingBox{3}
+    @test BoundingBoxes.InternalBoundingBox{3}(; half_size=[1.0, 2.0, 3.0]) isa BoundingBoxes.InternalBoundingBox{3}
     @test BoundingBoxes.InternalBoundingBox([1.0, 2.0, 3.0], [4.0, 5.0, 6.0]) isa BoundingBoxes.InternalBoundingBox{3}
 
-    grid_box = BoundingBoxes.InternalBoundingBox([2.0, 2.0])
+    grid_box = BoundingBoxes.InternalBoundingBox(; half_size=[2.0, 2.0])
     grid = BoundingBoxes.grid_indices(
         grid_box,
         [4, 4],
         [
-            BoundingBoxes.InternalBoundingBox([0.5, 0.5], [-1.5, -1.5]),
-            BoundingBoxes.InternalBoundingBox([1.0, 0.5], [0.0, 0.0]),
+            BoundingBoxes.InternalBoundingBox(; half_size=[0.5, 0.5], center=[-1.5, -1.5]),
+            BoundingBoxes.InternalBoundingBox(; half_size=[1.0, 0.5], center=[0.0, 0.0]),
         ],
     )
     @test grid[1, 1] == [1]
@@ -3605,12 +3613,12 @@ end
     @test grid[3, 3] == [2]
     @test grid[4, 4] == Int[]
     edge_grid = BoundingBoxes.grid_indices(
-        BoundingBoxes.InternalBoundingBox([2.0]),
+        BoundingBoxes.InternalBoundingBox(; half_size=[2.0]),
         [4],
         [
-            BoundingBoxes.InternalBoundingBox([0.0], [-2.0]),
-            BoundingBoxes.InternalBoundingBox([0.0], [-1.0]),
-            BoundingBoxes.InternalBoundingBox([0.0], [2.0]),
+            BoundingBoxes.InternalBoundingBox(; half_size=[0.0], center=[-2.0]),
+            BoundingBoxes.InternalBoundingBox(; half_size=[0.0], center=[-1.0]),
+            BoundingBoxes.InternalBoundingBox(; half_size=[0.0], center=[2.0]),
         ],
     )
     @test edge_grid[1] == [1, 2]
@@ -3620,9 +3628,9 @@ end
     @test_throws ArgumentError BoundingBoxes.grid_indices(grid_box, [0, 4], BoundingBoxes.InternalBoundingBox{2}[])
     @test_throws DimensionMismatch BoundingBoxes.grid_indices(grid_box, [4], BoundingBoxes.InternalBoundingBox{2}[])
 
-    repeating_box = BoundingBoxes.InternalBoundingBox([3.0])
+    repeating_box = BoundingBoxes.InternalBoundingBox(; half_size=[3.0])
     shifts, repeating_grid = BoundingBoxes.grid_indices_repeating(
-        BoundingBoxes.InternalBoundingBox([2.0]),
+        BoundingBoxes.InternalBoundingBox(; half_size=[2.0]),
         [4],
         [4.0],
         [repeating_box],
@@ -3633,10 +3641,10 @@ end
     @test repeating_grid[3] == [(Int32(1), Int32(1)), (Int32(1), Int32(0))]
     @test repeating_grid[4] == [(Int32(1), Int32(1)), (Int32(1), Int32(0))]
     repeating_zero_boundary = BoundingBoxes.grid_indices_repeating(
-        BoundingBoxes.InternalBoundingBox([2.0]),
+        BoundingBoxes.InternalBoundingBox(; half_size=[2.0]),
         [4],
         [4.0],
-        [BoundingBoxes.InternalBoundingBox([0.0], [-1.0])],
+        [BoundingBoxes.InternalBoundingBox(; half_size=[0.0], center=[-1.0])],
     )
     @test repeating_zero_boundary[1] == SVector{1, Float64}[]
     @test repeating_zero_boundary[2][1] == [(Int32(1), Int32(0))]
@@ -3645,24 +3653,24 @@ end
     @test repeating_zero_boundary[2][4] == Tuple{Int32, Int32}[]
 
     repeating_zero_lower_edge = BoundingBoxes.grid_indices_repeating(
-        BoundingBoxes.InternalBoundingBox([2.0]),
+        BoundingBoxes.InternalBoundingBox(; half_size=[2.0]),
         [4],
         [4.0],
-        [BoundingBoxes.InternalBoundingBox([0.0], [-2.0])],
+        [BoundingBoxes.InternalBoundingBox(; half_size=[0.0], center=[-2.0])],
     )
     @test repeating_zero_lower_edge[2][1] == [(Int32(1), Int32(0))]
     @test all(isempty, repeating_zero_lower_edge[2][2:end])
 
     repeating_zero_upper_edge = BoundingBoxes.grid_indices_repeating(
-        BoundingBoxes.InternalBoundingBox([2.0]),
+        BoundingBoxes.InternalBoundingBox(; half_size=[2.0]),
         [4],
         [4.0],
-        [BoundingBoxes.InternalBoundingBox([0.0], [2.0])],
+        [BoundingBoxes.InternalBoundingBox(; half_size=[0.0], center=[2.0])],
     )
     @test repeating_zero_upper_edge[2][end] == [(Int32(1), Int32(0))]
     @test all(isempty, repeating_zero_upper_edge[2][1:end-1])
     @test_throws ArgumentError BoundingBoxes.grid_indices_repeating(
-        BoundingBoxes.InternalBoundingBox([2.0]),
+        BoundingBoxes.InternalBoundingBox(; half_size=[2.0]),
         [4],
         [0.0],
         BoundingBoxes.InternalBoundingBox{1}[],

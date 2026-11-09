@@ -85,11 +85,11 @@ end
 function _mesh_bounding_box(vertices, empty_center=nothing)
     if isempty(vertices)
         isnothing(empty_center) && throw(ArgumentError("cannot construct a Mesh without vertices"))
-        return InternalBoundingBox{3}(zero(SVector{3, Float64}), empty_center)
+        return InternalBoundingBox{3}(empty_center, empty_center)
     end
     lower = reduce((a, b) -> min.(a, b), vertices)
     upper = reduce((a, b) -> max.(a, b), vertices)
-    InternalBoundingBox{3}((upper - lower) / 2, (upper + lower) / 2)
+    InternalBoundingBox{3}(lower, upper)
 end
 
 function _triangle_at(mesh::Mesh, position::Int)

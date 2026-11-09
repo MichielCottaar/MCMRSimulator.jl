@@ -486,8 +486,8 @@ function InternalBoundingBox(geometry::GroupGeometry{N, P}; kwargs...) where {N,
     lower_bound = reduce((a, b) -> min.(a, b), (InternalBoundingBoxes.lower(box) for box in boxes))
     upper_bound = reduce((a, b) -> max.(a, b), (InternalBoundingBoxes.upper(box) for box in boxes))
     InternalBoundingBoxes.InternalBoundingBox(
-        (upper_bound - lower_bound) / 2,
-        (upper_bound + lower_bound) / 2,
+        lower_bound,
+        upper_bound,
     )
 end
 

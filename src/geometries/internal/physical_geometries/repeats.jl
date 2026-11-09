@@ -34,8 +34,8 @@ struct Repeat{N, P<:PhysicalGeometry{N}} <: Groups.GroupGeometry{N, Shift{N, P}}
         normalized_lower = InternalBoundingBoxes.lower(box) ./ repeats
         normalized_upper = InternalBoundingBoxes.upper(box) ./ repeats
         normalized_bounding_box = InternalBoundingBoxes.InternalBoundingBox{N}(
-            (normalized_upper - normalized_lower) / 2,
-            (normalized_upper + normalized_lower) / 2,
+            normalized_lower,
+            normalized_upper,
         )
         new{N, P}(geometry, repeats, normalized_bounding_box)
     end

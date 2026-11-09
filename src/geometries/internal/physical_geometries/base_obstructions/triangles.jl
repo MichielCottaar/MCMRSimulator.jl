@@ -27,7 +27,7 @@ function InternalBoundingBox(triangle::FullTriangle; kwargs...)
         max(triangle.a[2], triangle.b[2], triangle.c[2]),
         max(triangle.a[3], triangle.b[3], triangle.c[3]),
     )
-    InternalBoundingBox((upper - lower) / 2, (upper + lower) / 2)
+    InternalBoundingBox(lower, upper)
 end
 
 radius(triangle::FullTriangle) = maximum(

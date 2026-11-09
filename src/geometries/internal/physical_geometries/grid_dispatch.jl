@@ -86,8 +86,8 @@ function _grid_bounding_box(box::InternalBoundingBoxes.InternalBoundingBox{N}, m
     extent = upper_bound - lower_bound
     grid_extent = max.(extent, minimum_thickness)
     InternalBoundingBoxes.InternalBoundingBox(
-        grid_extent / 2,
-        (lower_bound + upper_bound) / 2,
+        (lower_bound + upper_bound - grid_extent) / 2,
+        (lower_bound + upper_bound + grid_extent) / 2,
     )
 end
 
@@ -100,8 +100,8 @@ function _range_bounding_box(grid::IntersectionGrid{N}, ranges::NTuple{N, UnitRa
     upper = grid_lower + upper_coordinate .* cell_size
     padding = 30 * eps(max(1.0, maximum(abs.(lower)), maximum(abs.(upper))))
     InternalBoundingBoxes.InternalBoundingBox(
-        (upper - lower) / 2 .+ padding,
-        (lower + upper) / 2,
+        lower .- padding,
+        upper .+ padding,
     )
 end
 

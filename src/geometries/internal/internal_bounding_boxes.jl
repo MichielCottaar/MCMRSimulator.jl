@@ -1,43 +1,57 @@
 """Compact internal representations of axis-aligned bounding boxes."""
 module InternalBoundingBoxes
 
-import StaticArrays: SVector
+import StaticArrays: SVector, StaticVector
 import ...BoundingBoxes: BoundingBox
 
 
 """
-    InternalBoundingBox{N}(half_size, center=Nothing)
+    InternalBoundingBox(lower, upper)
+    InternalBoundingBox(; half_size, center=nothing)
 
 Bounding box used internally by the geometry engine. Bounds are normalized to
-`lower` and `upper` at construction time for efficient intersection testing.
+`lower` and `upper` for efficient intersection testing. The keyword constructor
+accepts half-sizes and an optional center (zero by default).
 """
 struct InternalBoundingBox{N}
     lower::SVector{N, Float64}
     upper::SVector{N, Float64}
 
-    function InternalBoundingBox{N}(half_size::SVector{N, Float64}, center::SVector{N, Float64}) where {N}
-        all(half_size .>= 0) || throw(ArgumentError("bounding-box half-sizes must be nonnegative"))
-        new{N}(center - half_size, center + half_size)
+    function InternalBoundingBox{N}(lower::SVector{N, Float64}, upper::SVector{N, Float64}) where {N}
+        all(lower .<= upper) || throw(ArgumentError("bounding-box lower bounds must not exceed upper bounds"))
+        new{N}(lower, upper)
     end
 end
 
 
-function InternalBoundingBox{N}(
-    half_size::Union{Real, AbstractVector},
-    center::Union{Nothing, AbstractVector}=nothing,
+function InternalBoundingBox{N}(lower::Union{AbstractVector, StaticVector}, upper::Union{AbstractVector, StaticVector}) where {N}
+    return InternalBoundingBox{N}(SVector{N, Float64}(lower), SVector{N, Float64}(upper))
+end
+
+InternalBoundingBox(lower::Union{AbstractVector, StaticVector}, upper::Union{AbstractVector, StaticVector}) =
+    InternalBoundingBox{length(lower)}(lower, upper)
+
+function InternalBoundingBox{N}(;
+    half_size,
+    center=nothing,
 ) where {N}
     half_size_int = half_size isa Real ? SVector{N, Float64}(fill(half_size, N)) : SVector{N, Float64}(half_size)
     center_int = isnothing(center) ? zero(SVector{N, Float64}) : SVector{N, Float64}(center)
-    return InternalBoundingBox{N}(half_size_int, center_int)
+    all(half_size_int .>= 0) || throw(ArgumentError("bounding-box half-sizes must be nonnegative"))
+    return InternalBoundingBox{N}(center_int - half_size_int, center_int + half_size_int)
 end
 
-InternalBoundingBox(half_size::AbstractVector) = InternalBoundingBox{length(half_size)}(half_size)
-InternalBoundingBox(half_size, center::AbstractVector) = InternalBoundingBox{length(center)}(half_size, center)
+function InternalBoundingBox(; half_size, center=nothing)
+    dimension_source = if half_size isa Real
+        isnothing(center) && throw(ArgumentError("the bounding-box dimension cannot be inferred from a scalar half_size without a center"))
+        center
+    else
+        isnothing(center) ? half_size : center
+    end
+    return InternalBoundingBox{length(dimension_source)}(; half_size, center)
+end
 
-InternalBoundingBox(box::BoundingBox) = InternalBoundingBox{3}(
-    (box.upper - box.lower) / 2,
-    (box.upper + box.lower) / 2,
-)
+InternalBoundingBox(box::BoundingBox) = InternalBoundingBox(box.lower, box.upper)
 
 
 lower(box::InternalBoundingBox) = box.lower
@@ -163,9 +177,9 @@ function grid_indices_repeating(
 end
 
 
-shift(box::InternalBoundingBox, displacement::AbstractVector{<:Real}) = begin
-    displacement_int = SVector{length(box.lower), Float64}(displacement)
-    InternalBoundingBox{length(box.lower)}(half_size(box), center(box) + displacement_int)
+function shift(box::InternalBoundingBox{N}, displacement::AbstractVector{<:Real}) where {N}
+    displacement_int = SVector{N, Float64}(displacement)
+    InternalBoundingBox(lower(box) + displacement_int, upper(box) + displacement_int)
 end
 
 isinside(box::InternalBoundingBox, position::AbstractVector) =
