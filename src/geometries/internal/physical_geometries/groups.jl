@@ -110,14 +110,16 @@ struct GroupSelection{G, S, B}
     original::Ref{G}
     child_selections::Vector{S}
     box::B
+    is_empty::Bool # This field is only used if `S === Bool`
 end
 
 selection_overlaps(selection::GroupSelection) = any(selection_overlaps, selection.child_selections)
-selection_overlaps(selection::GroupSelection{G, Bool}) where {G} = !iszero(sum(selection.child_selections))
+selection_overlaps(selection::GroupSelection{G, Bool}) where {G} = !selection.is_empty
 
 function filter_bounding_box_indices(group::GroupGeometry, box)
     children = [filter_bounding_box_indices(child, box) for child in group_geometries(group)]
-    GroupSelection(Ref(group), children, box)
+    is_empty = children isa Vector{Bool} ? iszero(sum(children)) : false
+    GroupSelection(Ref(group), children, box, is_empty)
 end
 
 function filter_bounding_box_indices(group::GroupGeometry, box, selection::GroupSelection{G, S}) where {G, S}
@@ -126,19 +128,24 @@ function filter_bounding_box_indices(group::GroupGeometry, box, selection::Group
     for index in eachindex(children)
         @inbounds children[index] = filter_bounding_box_indices(group_members[index], box, selection.child_selections[index])
     end
-    GroupSelection(selection.original, children, box)
+    GroupSelection(selection.original, children, box, false)
 end
 
 function filter_bounding_box_indices(group::GroupGeometry, box, selection::GroupSelection{G, Bool}) where {G}
-    if iszero(sum(selection.child_selections))
+    if selection.is_empty
         return selection
     end
     children = Vector{Bool}(undef, length(selection.child_selections))
     group_members = group_geometries(group)
+    is_empty = true
     for index in eachindex(group_members)
-        @inbounds children[index] = selection.child_selections[index] && filter_bounding_box_indices(group_members[index], box, selection.child_selections[index])
+        value = @inbounds selection.child_selections[index] && filter_bounding_box_indices(group_members[index], box, selection.child_selections[index])
+        if value
+            is_empty = false
+        end
+        @inbounds children[index] = value
     end
-    GroupSelection(selection.original, children, box)
+    GroupSelection(selection.original, children, box, is_empty)
 end
 
 
