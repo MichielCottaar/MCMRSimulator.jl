@@ -158,7 +158,7 @@
             mr.spin_sampling(fixed, mr.BoundingBox(4.), 1.),
         ))
         spin.position = SA[-2., 0., 0.]
-        mr.Evolve.draw_step!(spin, simulation, part, [3.], SA[2., 0., 0.])
+        mr.Evolve.draw_step!(spin, simulation, part, Float64[], SA[2., 0., 0.])
         @test spin.position ≈ SA[2., 0., 0.]
         @test isempty(spin.isinside)
 
@@ -167,7 +167,7 @@
             mr.spin_sampling(fixed, mr.BoundingBox(4.), 1.),
         ))
         destination = spin.position + SA[10., 0., 0.]
-        mr.Evolve.draw_step!(spin, simulation, part, [3.], destination)
+        mr.Evolve.draw_step!(spin, simulation, part, Float64[], destination)
 
         @test spin.position != destination
         @test !isempty(spin.isinside)

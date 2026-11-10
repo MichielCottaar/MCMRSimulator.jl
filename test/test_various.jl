@@ -393,7 +393,7 @@ end
         mr.read_pulseq(joinpath(@__DIR__, "pulseq", "dwi_te_80_bval_2.seq")),
     ]
     sim = mr.Simulation(sequences, geometry=mr.Spheres(radius=[1, 2.], repeats=[5, 5, 5]), R1=0.1, surface_relaxation=0.3)
-    @test repr(sim, context=:compact => true) == "Simulation(2 sequences, fixed(Repeat{Grid{GeometryVector{Round{3}}}}), D=3.0um^2/ms, GlobalProperties(R1=0.1kHz, ))"
+    @test repr(sim, context=:compact => true) == "Simulation(2 sequences, fixed(Repeat{Grid{GeometryVector{Round{3}}}}), D=3.0um^2/ms, GlobalProperties(R1=0.1kHz, ), 8005 time steps)"
 end
 
 @testset "Base.show for simulations with geometry" begin
