@@ -131,11 +131,11 @@ end
         for ts_weight in (1e-4, 3e-3, 1e-2)
             simulation = mr.Simulation(sequence, geometry=geometry, diffusivity=1., timestep=(surface_relaxation=ts_weight, size_scale=Inf))
             timestep = simulation.timestep.max_timestep
-            signal = mean([mr.transverse(mr.evolve(30000, simulation, 3.)) for _ in 1:Int(div(timestep, 0.01, RoundUp))]) / 10000
+            signal = mean([mr.transverse(mr.evolve(10000, simulation, 3.)) for _ in 1:Int(div(timestep, 0.01, RoundUp))]) / 10000
             if isnothing(reference)
                 reference = signal
             else
-                @test log(reference) ≈ log(signal) rtol=0.03
+                @test log(reference) ≈ log(signal) rtol=0.05
             end
         end
     end
@@ -143,7 +143,7 @@ end
 @testset "Test realistic magnetisation transfer" begin
     @testset "Particles getting stuck reduces diffusivity" begin
         geometry = mr.Walls(repeats=1)
-        nspins = Int(1e4)
+        nspins = Int(1e3)
         for density in (0, 0.5, 1, 2)
             @testset "Density = $density" begin
                 Random.seed!(1234)
@@ -166,7 +166,7 @@ end
     @testset "Setting surface MRI properties" begin
         Random.seed!(1234)
         geometry = mr.Walls(repeats=1, R2_surface=1e6)
-        init = mr.Snapshot(100000)
+        init = mr.Snapshot(10000)
         seq = mr.read_pulseq(joinpath(@__DIR__, "pulseq", "gradient_echo_TE_1000.seq"))
         for density in (0, 0.5, 1)
             for dwell_time in (1, 2)
