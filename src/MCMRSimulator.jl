@@ -59,7 +59,7 @@ export read_pulseq, write_pulseq
 import .SequenceParts: get_readouts, IndexedReadout, parts, PulseEvent, GradientEvent
 @compat public get_readouts, parts
 
-import .Simulations: Simulation, susceptibility_off_resonance
+import .Simulations: Simulation, susceptibility_off_resonance, n_timesteps
 export Simulation
 @compat public susceptibility_off_resonance
 
@@ -71,7 +71,7 @@ export Subset
 @compat public get_subset
 
 import .Evolve: evolve, readout
-export evolve, readout
+export evolve, readout, n_timesteps
 
 import .CLI: run_main
 @compat public run_main

@@ -144,7 +144,27 @@ function Base.show(io::IO, sim::Simulation{N}) where {N}
     show(io, sim.geometry)
     print(io, ", D=$(sim.diffusivity)um^2/ms, ")
     show(io, sim.properties)
-    print(io, ")")
+    print(io, ", $(n_timesteps(sim)) time steps)")
+end
+
+"""
+    n_timesteps(simulation; readout_times=nothing, start_time=0., nTR=nothing, skip_TR=nothing)
+
+Return the number of timesteps in the simulation's readout schedule as an `Int`.
+
+The timestep count is determined using the same sequence, timestep, and readout
+scheduling options as [`readout`](@ref). `start_time` is the time of the snapshot
+from which the simulation starts and defaults to zero.
+"""
+function n_timesteps(simulation::Simulation; readout_times=nothing, start_time=0., nTR=nothing, skip_TR=nothing)
+    return length(parts(
+        simulation.sequences,
+        start_time,
+        simulation.timestep;
+        readouts=readout_times,
+        nTR=nTR,
+        skip_TR=skip_TR,
+    ))
 end
 
 function _default_bounding_box(simulation::Simulation)
