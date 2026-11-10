@@ -406,7 +406,10 @@ function build_blocks(control_times, vector_type, waveforms, grad_interpolators,
         instants = [[nothing for _ in 1:length(waveforms)], instants...]
     end
 
-    return map(control_times[1:end-1], control_times[2:end], instants[2:end]) do t0, t1, instant
+    return (begin
+        t0 = control_times[index]
+        t1 = control_times[index + 1]
+        instant = instants[index + 1]
         MultSequencePart{vector_type}(
             t1 - t0,
             map(waveforms, grad_interpolators) do waveform, interpolators
@@ -414,7 +417,7 @@ function build_blocks(control_times, vector_type, waveforms, grad_interpolators,
             end,
             instant
         )
-    end
+    end for index in 1:length(control_times)-1)
 end
 
 function get_block(waveform, t0, t1, grad_interpolators)
