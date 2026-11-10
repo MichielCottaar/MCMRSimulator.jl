@@ -154,7 +154,7 @@ end
 Return the number of timesteps in the simulation's readout schedule as an `Int`.
 
 The timestep count is determined using the same sequence, timestep, and readout
-scheduling options as [`readout`](@ref). `start_time` is the time of the snapshot
+scheduling options as [`readout`](@ref MCMRSimulator.Evolve.readout). `start_time` is the time of the snapshot
 from which the simulation starts and defaults to zero.
 """
 function n_timesteps(simulation::Simulation; readout_times=nothing, start_time=0., nTR=nothing, skip_TR=nothing)
