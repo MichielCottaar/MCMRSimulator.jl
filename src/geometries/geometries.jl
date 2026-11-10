@@ -23,5 +23,6 @@ import .User:
     Ring, BendyCylinder,
     load_mesh, SWCFile, SWCNode, read_swc, read_swc_raw, read_caterpillar,
     random_positions_radii, nvolumes,
-    write_geometry, read_geometry_json, read_geometry
+    write_geometry, read_geometry_json, read_geometry,
+    sample_points_inside
 end

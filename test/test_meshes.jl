@@ -177,4 +177,22 @@ end
     end
 end
 
+@testset "Sampling points within a mesh" begin
+    mesh = box_mesh()
+    pts = mr.sample_points_inside(mesh, n_samples=100)
+    @test length(pts) == 100
+    @test all(p isa SVector{3, Float64} for p in pts)
+
+    fg = mr.fix(mesh)
+    @test all(length(mr.isinside(fg, p)) > 0 for p in pts)
+
+    # Test surface sampling
+    pts_surf = mr.sample_points_inside(mesh, n_samples=50, sampling_method=:surface)
+    @test length(pts_surf) == 50
+    # Surface points should be on the surface, but since it's exactly on the boundary,
+    # isinside might be 0 or 1 depending on implementation details.
+    # We at least check they are within the bounding box.
+    @test all(all(p .>= -0.50001) && all(p .<= 0.50001) for p in pts_surf)
+end
+
 end

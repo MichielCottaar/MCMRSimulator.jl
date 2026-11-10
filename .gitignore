@@ -10,3 +10,7 @@
 /.vscode
 /test_ext
 /test/Manifest.toml
+
+/scratches/
+/change_pulseq/
+.idea

@@ -12,6 +12,7 @@ include("json.jl")
 include("liminal_geometry.jl")
 include("load_geometry.jl")
 include("to_mesh.jl")
+include("sampling.jl")
 import .Obstructions: ObstructionGroup, IndexedObstruction, nvolumes,
     Wall, Walls,
     Cylinder, Cylinders,
@@ -27,4 +28,5 @@ import .LoadCaterpillar: read_caterpillar
 import .LoadGeometry: read_geometry
 import .JSON: write_geometry, read_geometry_json
 import .LiminalGeometries: LiminalGeometry
+import .Sampling: sample_points_inside
 end
