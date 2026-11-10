@@ -11,7 +11,7 @@ import ..Spins: Spin, Snapshot, SpinOrientation, static_vector_type, stuck, spin
 import ..Methods: get_time
 import ..Properties: GlobalProperties, R1, R2, off_resonance
 import ..TimeSteps: TimeStep
-import ..SequenceParts: MultSequencePart, parts
+import ..SequenceParts: SequenceWaveform, MultSequencePart, parts
 
 
 """
@@ -61,7 +61,7 @@ To run a [`Snapshot`](@ref) of spins through the simulations you can use one of 
 """
 struct Simulation{N, NG, G<:FixedGeometry}
     # N sequences, datatype T
-    sequences :: Vector
+    sequences :: Vector{SequenceWaveform}
     diffusivity :: Float64
     properties :: GlobalProperties
     geometry :: G
@@ -69,7 +69,7 @@ struct Simulation{N, NG, G<:FixedGeometry}
     flatten::Bool
     verbose::Bool
     function Simulation(
-        sequences::Vector, 
+        sequences::Vector,
         diffusivity::Float64,
         properties::GlobalProperties,
         geometry::FixedGeometry,
@@ -77,9 +77,10 @@ struct Simulation{N, NG, G<:FixedGeometry}
         flatten::Bool,
         verbose::Bool
     )
-        nseq = length(sequences)
+        sequence_waveforms = SequenceWaveform.(sequences)
+        nseq = length(sequence_waveforms)
         new{nseq, length(geometry), typeof(geometry)}(
-            collect(sequences),
+            sequence_waveforms,
             diffusivity,
             properties,
             geometry,

@@ -50,6 +50,8 @@ end
     sequence = build_sequence([4., :readout])
     simulation = mr.Simulation(sequence; timestep=1., verbose=false)
 
+    @test simulation.sequences isa Vector{mr.SequenceParts.SequenceWaveform}
+    @test simulation.sequences[1] === sequence
     @test mr.n_timesteps(simulation) == 5
     @test mr.n_timesteps(simulation; start_time=2.) == 3
     @test mr.n_timesteps(simulation; nTR=2) == 9
