@@ -50,6 +50,20 @@ function find_intersection(
     candidate::Union{Nothing, Tuple}=nothing,
 ) where {N}
     (isnothing(candidate) || isempty(candidate)) || throw(ArgumentError("a round obstruction candidate must be ()"))
+    if (
+        (start[1] > round.radius && destination[1] > round.radius) ||
+        (start[1] < -round.radius && destination[1] < -round.radius) ||
+        (start[2] > round.radius && destination[2] > round.radius) ||
+        (start[2] < -round.radius && destination[2] < -round.radius)
+    )
+        return nothing
+    end
+    if N == 3 && (
+        (start[3] > round.radius && destination[3] > round.radius) ||
+        (start[3] < -round.radius && destination[3] < -round.radius)
+    )
+        return nothing
+    end
     previous = !isnothing(previous_hit)
     inside = previous ? previous_hit[1] : isinside_single(round, start)
     !inside && previous && return nothing
