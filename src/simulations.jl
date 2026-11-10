@@ -142,7 +142,9 @@ function Base.show(io::IO, sim::Simulation{N}) where {N}
     seq_text = sim.flatten ? "single sequence" : "$N sequences"
     print(io, "Simulation($seq_text, ")
     show(io, sim.geometry)
-    print(io, ", D=$(sim.diffusivity)um^2/ms, $(sim.properties))")
+    print(io, ", D=$(sim.diffusivity)um^2/ms, ")
+    show(io, sim.properties)
+    print(io, ")")
 end
 
 function _default_bounding_box(simulation::Simulation)
