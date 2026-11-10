@@ -1,7 +1,6 @@
 const GI = mr.Geometries.Internal
 const PhysicalGeometry = GI.PhysicalGeometries.PhysicalGeometry
 const GeometryVector = GI.PhysicalGeometries.Groups.GeometryVector
-const GeometryVectorBoundingBox = GI.PhysicalGeometries.Groups.GeometryVectorBoundingBox
 const GeometryTuple = GI.PhysicalGeometries.Groups.GeometryTuple
 const Transformations = GI.PhysicalGeometries.Transformations
 const Shift = Transformations.Shift
@@ -50,6 +49,14 @@ const Plot = mr.Plot
     @test BoundingBoxes.InternalBoundingBox(box) isa BoundingBoxes.InternalBoundingBox{3}
     @test BoundingBoxes.lower(BoundingBoxes.InternalBoundingBox(box)) == PublicBoundingBoxes.lower(box)
     @test BoundingBoxes.upper(BoundingBoxes.InternalBoundingBox(box)) == PublicBoundingBoxes.upper(box)
+    direct_box = BoundingBoxes.InternalBoundingBox([-1.0, -2.0, -3.0], [1.0, 2.0, 3.0])
+    @test BoundingBoxes.lower(direct_box) == SVector(-1.0, -2.0, -3.0)
+    @test BoundingBoxes.upper(direct_box) == SVector(1.0, 2.0, 3.0)
+    keyword_box = BoundingBoxes.InternalBoundingBox(; half_size=[1.0, 2.0, 3.0])
+    @test BoundingBoxes.lower(keyword_box) == -SVector(1.0, 2.0, 3.0)
+    @test BoundingBoxes.upper(keyword_box) == SVector(1.0, 2.0, 3.0)
+    @test BoundingBoxes.InternalBoundingBox(; half_size=2.0, center=[1.0, 2.0]) isa BoundingBoxes.InternalBoundingBox{2}
+    @test_throws ArgumentError BoundingBoxes.InternalBoundingBox{2}(; half_size=-1.0)
     @test_throws DimensionMismatch PublicBoundingBoxes.BoundingBox([0, 0], [1, 1])
     @test_throws ArgumentError PublicBoundingBoxes.BoundingBox(-1.0)
 end
@@ -71,7 +78,7 @@ end
 end
 
 @testset "intersection grids" begin
-    grid_box = BoundingBoxes.InternalBoundingBox([2.0, 1.0, 1.0])
+    grid_box = BoundingBoxes.InternalBoundingBox(; half_size=[2.0, 1.0, 1.0])
     grid = IntersectionGrid(grid_box, 2; resolution=2.0)
     @test grid.bounding_box == grid_box
     @test size(grid.geometries) == (2, 1, 1)
@@ -85,6 +92,48 @@ end
         Shift(BaseObstructions.Sphere(0.5), [-1., 0., 0.]),
         Shift(BaseObstructions.Sphere(0.5), [1., 0., 0.]),
     ])
+    contains_mesh = GI.PhysicalGeometries.contains_mesh
+    @test !contains_mesh(typeof(BaseObstructions.Sphere(1.)))
+    @test !contains_mesh(typeof(spheres))
+    mesh = Mesh(
+        [SVector(0., 0., 0.), SVector(1., 0., 0.), SVector(0., 1., 0.), SVector(0., 0., 1.)],
+        [SVector(1, 2, 3), SVector(1, 2, 4), SVector(1, 3, 4)],
+    )
+    @test contains_mesh(typeof(mesh))
+    @test contains_mesh(typeof(GeometryVector([mesh])))
+    @test contains_mesh(typeof(GeometryTuple{3}((spheres, mesh))))
+    contains_repeat = GI.PhysicalGeometries.contains_repeat
+    repeat_sphere = Repeat(BaseObstructions.Sphere(0.5), [4., 4., 4.])
+    @test !contains_repeat(typeof(BaseObstructions.Sphere(1.)))
+    @test !contains_repeat(typeof(spheres))
+    @test contains_repeat(typeof(repeat_sphere))
+    @test contains_repeat(typeof(Shift(repeat_sphere, zeros(3))))
+    @test contains_repeat(typeof(IgnoreOverlapping(GeometryTuple{3}((
+        BaseObstructions.Sphere(0.5), repeat_sphere,
+    )))))
+    select = GI.PhysicalGeometries.filter_bounding_box_indices
+    materialize = GI.PhysicalGeometries.geometry_from_indices
+    parent_box = BoundingBoxes.InternalBoundingBox(; half_size=[2., 2., 2.], center=[0.5, 0.5, 0.5])
+    child_box = BoundingBoxes.InternalBoundingBox(; half_size=[0.1, 0.1, 0.1], center=[0.2, 0.2, 0.2])
+    for source in (spheres, mesh, GeometryVector([mesh]),
+                   GeometryTuple{3}((spheres, mesh)),
+                   Shift(mesh, [0.1, 0., 0.]), IgnoreOverlapping(mesh))
+        parent_selection = select(source, parent_box)
+        child_selection = select(source, child_box, parent_selection)
+        refined = materialize(source, child_selection, Val(false))
+        direct = GI.PhysicalGeometries.filter_bounding_box(source, child_box, Val(false))
+        @test isnothing(refined) == isnothing(direct)
+        if !isnothing(refined)
+            @test inside_indices(refined, BoundingBoxes.center(child_box)) ==
+                inside_indices(direct, BoundingBoxes.center(child_box))
+        end
+    end
+    inside_selection = select(mesh, BoundingBoxes.InternalBoundingBox(; half_size=[0.01, 0.01, 0.01], center=[0.2, 0.2, 0.2]))
+    inside_mesh = materialize(mesh, inside_selection, Val(false))
+    @test isinside_single(inside_mesh, SVector(0.2, 0.2, 0.2))
+    @test !GI.PhysicalGeometries.selection_overlaps(
+        select(mesh, BoundingBoxes.InternalBoundingBox(; half_size=[0.1, 0.1, 0.1], center=[3., 3., 3.])),
+    )
     @test GI.PhysicalGeometries.finalise!(grid, spheres) === grid
     @test isassigned(grid.geometries, lastindex(grid.geometries))
     @test GI.PhysicalGeometries.Groups.indices(grid.geometries[1, 1, 1]) == [1]
@@ -94,7 +143,24 @@ end
     ))) == 2
     @test GI.PhysicalGeometries.finalise!(grid, spheres) === grid
 
-    planar_box = BoundingBoxes.InternalBoundingBox([1.0, 1.0, 0.0])
+    irregular = GeometryVector([
+        Shift(BaseObstructions.Sphere(0.5), [-0.75, -0.25, 0.]),
+        Shift(BaseObstructions.Sphere(0.5), [0.75, 0.25, 0.]),
+    ])
+    irregular_grid = finalised_grid(irregular; resolution=0.5)
+    @test size(irregular_grid.grid.geometries) == (5, 3, 2)
+    @test all(isassigned(irregular_grid.grid.geometries, coordinate)
+              for coordinate in CartesianIndices(irregular_grid.grid.geometries))
+    for coordinate in CartesianIndices(irregular_grid.grid.geometries)
+        position = BoundingBoxes.center(
+            GI.PhysicalGeometries.GridDispatch.cell_bounding_box(
+                irregular_grid.grid, coordinate,
+            ),
+        )
+        @test inside_indices(irregular_grid, position) == inside_indices(irregular, position)
+    end
+
+    planar_box = BoundingBoxes.InternalBoundingBox(; half_size=[1.0, 1.0, 0.0])
     planar_grid = IntersectionGrid(planar_box, 1; resolution=1.0)
     @test planar_grid.bounding_box == planar_box
     @test all(isfinite, planar_grid.inv_resolution)
@@ -102,7 +168,7 @@ end
     @test size(planar_grid.geometries) == (2, 2, 1)
 
     # Even positive extents smaller than a cell are expanded symmetrically.
-    thin_box = BoundingBoxes.InternalBoundingBox([0.125, 1.0, 0.0], [1.0, 2.0, 3.0])
+    thin_box = BoundingBoxes.InternalBoundingBox(; half_size=[0.125, 1.0, 0.0], center=[1.0, 2.0, 3.0])
     thin_grid = IntersectionGrid(thin_box, 1; resolution=1.0)
     @test thin_grid.bounding_box == thin_box
     @test BoundingBoxes.lower(thin_grid.grid_bounding_box) == SVector(0.5, 1.0, 2.5)
@@ -111,7 +177,7 @@ end
     @test thin_grid.inv_resolution == SVector(1.0, 1.0, 1.0)
 
     # Zero-extent geometry uses a 1 um fallback for automatic and Inf resolution.
-    point_box = BoundingBoxes.InternalBoundingBox{3}(0.0, [3.0, 4.0, 5.0])
+    point_box = BoundingBoxes.InternalBoundingBox{3}(; half_size=0.0, center=[3.0, 4.0, 5.0])
     for resolution in (nothing, 0.5, Inf)
         point_grid = IntersectionGrid(point_box, 1; resolution)
         thickness = resolution == 0.5 ? 0.5 : 1.0
@@ -678,7 +744,7 @@ end
     struct SimplifiableSphere <: PhysicalGeometry{3}
         radius::Float64
     end
-    BoundingBoxes.InternalBoundingBox(geometry::SimplifiableSphere) = BoundingBoxes.InternalBoundingBox{3}(geometry.radius)
+    BoundingBoxes.InternalBoundingBox(geometry::SimplifiableSphere) = BoundingBoxes.InternalBoundingBox{3}(; half_size=geometry.radius)
     GI.PhysicalGeometries.simplify(geometry::SimplifiableSphere, ::Val) = geometry
     GI.PhysicalGeometries.simplify(geometry::SimplifiableSphere, ::Val{:extract_common_wrapper}) =
         geometry.radius < 0.25 ? geometry : BaseObstructions.Sphere(geometry.radius)
@@ -746,7 +812,6 @@ end
     @test number_of_leaves(sphere) == 1
     @test number_of_leaves(finite_cylinder) == 3
     @test number_of_leaves(GeometryVector([sphere, sphere])) == 2
-    @test number_of_leaves(GeometryVector([sphere, sphere]; bounding_box=true)) == 2
     @test number_of_leaves(GeometryTuple((sphere, finite_cylinder))) == 4
     @test number_of_leaves(Shift(GeometryVector([sphere, sphere]), ones(3))) == 2
     @test number_of_leaves(IgnoreOverlapping(GeometryTuple((sphere, finite_cylinder)))) == 4
@@ -880,39 +945,33 @@ end
     @test rebuilt.outer_surface_sampling.index_to_sample == 1
 end
 
-@testset "simplify accelerated geometry" begin
+@testset "simplify geometry vectors" begin
     pass = Val(:extract_common_wrapper)
     children = [SimplifiableSphere(0.5), SimplifiableSphere(0.75)]
-    bounded = GeometryVectorBoundingBox(children)
-    original_boxes = copy(bounded.bounding_boxes)
-    @test simplify(bounded, Val(:traverse_only)) === bounded
-    rebuilt = simplify(bounded, pass)
-    @test rebuilt isa GeometryVectorBoundingBox{3, BaseObstructions.Sphere}
+    vector = GeometryVector(children)
+    @test simplify(vector, Val(:traverse_only)) === vector
+    rebuilt = simplify(vector, pass)
+    @test rebuilt isa GeometryVector{3, BaseObstructions.Sphere}
     @test rebuilt.geometries == [BaseObstructions.Sphere(0.5), BaseObstructions.Sphere(0.75)]
-    @test rebuilt.bounding_boxes == BoundingBoxes.InternalBoundingBox.(rebuilt.geometries)
-    @test rebuilt.bounding_boxes !== bounded.bounding_boxes
-    @test bounded.bounding_boxes == original_boxes
-    @test bounded.geometries === children
+    @test vector.geometries === children
     @test simplify(rebuilt, pass) === rebuilt
     @test simplify(rebuilt) === rebuilt
-    @test simplify(bounded).geometries == rebuilt.geometries
 
-    inconsistent = GeometryVectorBoundingBox([SimplifiableSphere(0.1), SimplifiableSphere(0.5)])
+    inconsistent = GeometryVector([SimplifiableSphere(0.1), SimplifiableSphere(0.5)])
     @test simplify(inconsistent, pass) === inconsistent
     @test all(child -> child isa SimplifiableSphere, inconsistent.geometries)
-    empty_group = GeometryVectorBoundingBox(BaseObstructions.Sphere[])
+    empty_group = GeometryVector(BaseObstructions.Sphere[])
     @test simplify(empty_group, pass) === empty_group
     @test simplify(empty_group) === empty_group
 
-    # Bounding-box groups preserve acceleration rather than extracting wrappers.
     sphere = BaseObstructions.Sphere(1.)
     smaller = BaseObstructions.Sphere(0.5)
-    wrapped = GeometryVectorBoundingBox([
+    wrapped = GeometryVector([
         ExtractionWrapper{3, typeof(sphere)}(sphere),
         ExtractionWrapper{3, typeof(smaller)}(smaller),
     ])
     @test has_equivalent_wrapper(wrapped)
-    @test simplify(wrapped, pass) === wrapped
+    @test simplify(wrapped, pass) !== wrapped
 
     intersect = GI.PhysicalGeometries.find_intersection
     start, destination = SVector(-2., 0., 0.), SVector(5., 0., 0.)
@@ -999,7 +1058,7 @@ end
         BoundingBoxes.InternalBoundingBox{3}[],
         BoundingBoxes.InternalBoundingBox(finite),
     )
-    for group in (GeometryVector([sphere]), GeometryVector([sphere]; bounding_box=true))
+    for group in (GeometryVector([sphere]),)
         @test leaf_bounding_boxes(group) == [BoundingBoxes.InternalBoundingBox(sphere)]
     end
     @test leaf_bounding_boxes(GeometryTuple{3}(())) === ()
@@ -1012,7 +1071,7 @@ end
     @test transformed_boxes isa Tuple
     @test transformed_boxes[2] isa Vector
     @test transformed_boxes[2][1] isa Tuple
-    @test transformed_boxes[1] == BoundingBoxes.InternalBoundingBox{3}(2., [10., 20., 30.])
+    @test transformed_boxes[1] == BoundingBoxes.InternalBoundingBox{3}(; half_size=2., center=[10., 20., 30.])
     @test BoundingBoxes.lower(transformed_boxes[2][1][2]) == SVector(4., 20., 36.)
     @test BoundingBoxes.upper(transformed_boxes[2][1][2]) == SVector(8., 24., 36.)
     @test BoundingBoxes.lower(transformed_boxes[2][1][3]) == SVector(2., 18., 44.)
@@ -1068,7 +1127,7 @@ end
     sphere = BaseObstructions.Sphere(1.)
     start, destination = SVector(-5., 0., 0.), SVector(5., 0., 0.)
     children = [Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.])]
-    for group in (GeometryVector(children), GeometryVector(children; bounding_box=true), GeometryTuple(Tuple(children)))
+    for group in (GeometryVector(children), GeometryTuple(Tuple(children)))
         @test intersect(group, start, destination, nothing, nothing, nothing) == intersect(group, start, destination)
         @test intersect(group, start, destination, nothing, nothing, (1,)) == (1, false, 0.2)
         @test intersect(group, start, destination, nothing, nothing, (2,)) == (2, false, 0.6)
@@ -1331,7 +1390,7 @@ end
         calls::Base.RefValue{Int}
     end
     GI.PhysicalGeometries.has_inside(::Type{GridProbe}) = false
-    BoundingBoxes.InternalBoundingBox(::GridProbe) = BoundingBoxes.InternalBoundingBox{3}(1.)
+    BoundingBoxes.InternalBoundingBox(::GridProbe) = BoundingBoxes.InternalBoundingBox{3}(; half_size=1.)
     function GI.PhysicalGeometries.find_intersection(
         probe::GridProbe, a::SVector{3, Float64}, b::SVector{3, Float64},
         previous=nothing, inside=nothing, candidate=nothing,
@@ -1352,9 +1411,9 @@ end
     GI.PhysicalGeometries.has_inside(::Type{GridInsideProbe}) = true
     GI.PhysicalGeometries.has_single_inside(::Type{GridInsideProbe}) = true
     GI.PhysicalGeometries.intersection_type(::Type{GridInsideProbe}) = Tuple{Int}
-    BoundingBoxes.InternalBoundingBox(::GridInsideProbe) = BoundingBoxes.InternalBoundingBox{3}(1.)
+    BoundingBoxes.InternalBoundingBox(::GridInsideProbe) = BoundingBoxes.InternalBoundingBox{3}(; half_size=1.)
     function GI.PhysicalGeometries.leaf_bounding_boxes(::GridInsideProbe; inside=false)
-        box = BoundingBoxes.InternalBoundingBox{3}(1.)
+        box = BoundingBoxes.InternalBoundingBox{3}(; half_size=1.)
         inside ? box : (box, box)
     end
     function GI.PhysicalGeometries.isinside_single(
@@ -1643,8 +1702,9 @@ end
     geometries = [TestGeometry{3}(1), TestGeometry{3}(2)]
     vector = GeometryVector{3}(geometries)
     @test GeometryVector(geometries) isa GeometryVector{3, TestGeometry{3}}
-    @test GeometryVector([BaseObstructions.Sphere(1.0)]; bounding_box=true) isa GeometryVectorBoundingBox{3, BaseObstructions.Sphere}
-    @test_throws MethodError GeometryVector([BaseObstructions.Sphere(1.0)]; grid=true)
+    @test !(:use_boundingbox in propertynames(mr.Spheres(radius=1.)))
+    @test_throws KeyError mr.Spheres(radius=1., use_boundingbox=true)
+    @test_throws MethodError GeometryVector([BaseObstructions.Sphere(1.0)]; bounding_box=true)
     @test vector isa GI.PhysicalGeometries.Groups.GroupGeometry{3}
     @test size(vector) == (2,)
     @test axes(vector) == (Base.OneTo(2),)
@@ -1662,33 +1722,24 @@ end
     indexed_vector = GeometryVector([
         Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.]),
     ]; indices=[4, 9])
-    indexed_bounded = GeometryVector([
-        Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.]),
-    ]; bounding_box=true, indices=[12, 18])
     indexed_tuple = GeometryTuple((
         Shift(sphere, [-2., 0., 0.]), Shift(sphere, [2., 0., 0.]),
     ); indices=[3, 8])
     groups = GI.PhysicalGeometries.Groups
     @test groups.indices(indexed_vector) == [4, 9]
-    @test groups.indices(indexed_bounded) == [12, 18]
     @test groups.indices(indexed_tuple) == [3, 8]
     @test groups.indices(vector) == 1:2
     @test typeof(indexed_vector).parameters[3] === Vector{Int}
-    @test typeof(indexed_bounded).parameters[3] === Vector{Int}
     @test typeof(indexed_tuple).parameters[3] === Vector{Int}
     @test GI.PhysicalGeometries.get_child(indexed_vector, (9,)) ===
         (indexed_vector[2], ())
     @test GI.PhysicalGeometries.get_child(indexed_tuple, (8,)) ===
         (indexed_tuple[2], ())
     @test inside_indices(indexed_vector, SVector(-2., 0., 0.)) == [(4,)]
-    @test inside_indices(indexed_bounded, SVector(2., 0., 0.)) == [(18,)]
     @test inside_indices(indexed_tuple, SVector(2., 0., 0.)) == [(8,)]
     @test GI.PhysicalGeometries.find_intersection(
         indexed_vector, SVector(-3., 0., 0.), SVector(0., 0., 0.),
     )[1] == 4
-    @test GI.PhysicalGeometries.find_intersection(
-        indexed_bounded, SVector(0., 0., 0.), SVector(3., 0., 0.),
-    )[1] == 18
     @test GI.PhysicalGeometries.find_intersection(
         indexed_tuple, SVector(0., 0., 0.), SVector(3., 0., 0.),
     )[1] == 8
@@ -1705,7 +1756,7 @@ end
     @testset "Bounding-box geometry filtering" begin
         filter_box = GI.PhysicalGeometries.filter_bounding_box
         box_at(centre; radius=0.1) = BoundingBoxes.InternalBoundingBox{3}(
-            SVector(radius, radius, radius), SVector{3, Float64}(centre),
+            ; half_size=SVector(radius, radius, radius), center=SVector{3, Float64}(centre),
         )
         near_box = box_at((0., 0., 0.))
         far_box = box_at((10., 0., 0.))
@@ -1728,14 +1779,6 @@ end
         @test groups.indices(filtered_vector) == [5]
         @test filtered_vector[1] === indexed[1]
 
-        indexed_bbox = GeometryVector([
-            Shift(sphere, zeros(3)), Shift(sphere, [10., 0., 0.]),
-        ]; bounding_box=true, indices=[7, 15])
-        filtered_bbox = filter_box(indexed_bbox, near_box)
-        @test filtered_bbox isa GeometryVectorBoundingBox
-        @test groups.indices(filtered_bbox) == [7]
-        @test length(filtered_bbox.bounding_boxes) == 1
-
         indexed_tuple = GeometryTuple((
             Shift(sphere, zeros(3)), Shift(sphere, [10., 0., 0.]),
         ); indices=[3, 9])
@@ -1757,6 +1800,24 @@ end
         @test groups.indices(preserved_vector) == [20, 30]
         @test all(child -> typeof(child) === eltype(vector_of_tuples), preserved_vector)
 
+        select_indices = GI.PhysicalGeometries.filter_bounding_box_indices
+        materialize = GI.PhysicalGeometries.geometry_from_indices
+        vector_selection = select_indices(vector_of_tuples, near_box)
+        @test vector_selection.original isa Ref{typeof(vector_of_tuples)}
+        @test vector_selection.original[] === vector_of_tuples
+        selected_vector = materialize(vector_of_tuples, vector_selection, Val(false))
+        @test typeof(selected_vector) === typeof(preserved_vector)
+        @test groups.indices(selected_vector) == [20, 30]
+        @test all(length(child) == 2 for child in selected_vector)
+        tuple_selection = select_indices(indexed_tuple, near_box)
+        selected_tuple = materialize(indexed_tuple, tuple_selection, Val(true))
+        @test selected_tuple === indexed_tuple
+        @test groups.indices(selected_tuple) == [3, 9]
+        refined_selection = select_indices(vector_of_tuples, box_at((0., 0., 0.); radius=0.05), vector_selection)
+        @test refined_selection.original === vector_selection.original
+        @test refined_selection.original[] === vector_of_tuples
+        @test typeof(materialize(vector_of_tuples, refined_selection, Val(true))) === typeof(preserved_vector)
+
         inner_vectors = [
             GeometryVector([Shift(sphere, zeros(3)), Shift(sphere, [10., 0., 0.])]),
             GeometryVector([Shift(sphere, zeros(3)), Shift(sphere, [0.5, 0., 0.])]),
@@ -1777,11 +1838,14 @@ end
         end
         struct FilteredTypeA <: PhysicalGeometry{3} end
         struct FilteredTypeB <: PhysicalGeometry{3} end
-        GI.PhysicalGeometries.filter_bounding_box(
-            probe::FilterTypeProbe, ::BoundingBoxes.InternalBoundingBox{3}, ::Val{false},
+        GI.PhysicalGeometries.filter_bounding_box_indices(
+            ::FilterTypeProbe, ::BoundingBoxes.InternalBoundingBox{3},
+        ) = true
+        GI.PhysicalGeometries.geometry_from_indices(
+            probe::FilterTypeProbe, ::Bool, ::Val{false},
         ) = probe
-        GI.PhysicalGeometries.filter_bounding_box(
-            probe::FilterTypeProbe, ::BoundingBoxes.InternalBoundingBox{3}, ::Val{true},
+        GI.PhysicalGeometries.geometry_from_indices(
+            probe::FilterTypeProbe, ::Bool, ::Val{true},
         ) = isodd(probe.index) ? FilteredTypeA() : FilteredTypeB()
         inconsistent_preserved = GeometryVector([FilterTypeProbe(1), FilterTypeProbe(2)])
         @test_throws ArgumentError filter_box(inconsistent_preserved, near_box, Val(true))
@@ -1801,6 +1865,23 @@ end
         @test isempty(interior_mesh.indices)
         @test interior_mesh.centre_inside == (SVector(0.5, 0.5, 0.5), true)
         @test isinside_single(interior_mesh, SVector(0.5, 0.5, 0.5))
+        interior_selection = GI.PhysicalGeometries.filter_bounding_box_indices(cube_mesh, interior_box)
+        selected_interior = GI.PhysicalGeometries.geometry_from_indices(cube_mesh, interior_selection, Val(false))
+        @test isempty(selected_interior.indices)
+        @test selected_interior.centre_inside == interior_mesh.centre_inside
+        child_selection = GI.PhysicalGeometries.filter_bounding_box_indices(
+            cube_mesh, box_at((0.52, 0.52, 0.52); radius=0.01), interior_selection,
+        )
+        selected_child = GI.PhysicalGeometries.geometry_from_indices(cube_mesh, child_selection, Val(false))
+        @test isempty(selected_child.indices)
+        @test selected_child.centre_inside == (SVector(0.52, 0.52, 0.52), true)
+        outside_parent = filter_box(cube_mesh, box_at((-0.05, 0.3, 0.3); radius=0.1))
+        @test outside_parent isa Mesh
+        @test !outside_parent.centre_inside[2]
+        inside_child = filter_box(outside_parent, box_at((0.2, 0.3, 0.3); radius=0.05))
+        @test inside_child isa Mesh
+        @test isempty(inside_child.vertices)
+        @test inside_child.centre_inside[2]
         @test filter_box(cube_mesh, far_box) === nothing
         preserved_far_mesh = filter_box(cube_mesh, far_box, Val(true))
         @test preserved_far_mesh isa Mesh
@@ -1808,6 +1889,16 @@ end
         @test isempty(preserved_far_mesh.indices)
         @test isempty(preserved_far_mesh.original_indices)
         @test preserved_far_mesh.centre_inside == (SVector(10., 0., 0.), false)
+
+        separated_triangles = Mesh(
+            [SVector(0., 0., 0.), SVector(1., 0., 0.), SVector(0., 1., 0.),
+             SVector(9., 0., 0.), SVector(10., 0., 0.), SVector(9., 1., 0.)],
+            [SVector(1, 2, 3), SVector(4, 5, 6)],
+            3,
+            nothing,
+            (SVector(5., 0.5, 0.), false),
+        )
+        @test filter_box(separated_triangles, box_at((5., 0.5, 0.); radius=0.1)) === nothing
 
         surface_box = box_at((0.5, 0.5, 0.05); radius=0.1)
         surface_mesh = filter_box(cube_mesh, surface_box)
@@ -2186,7 +2277,7 @@ end
             )
             @test all(index == [()] for index in bounded_indices)
             @test_throws ArgumentError GI.inside_sampling(
-                sphere, 10.; bounding_box=BoundingBoxes.InternalBoundingBox{2}(1.),
+                sphere, 10.; bounding_box=BoundingBoxes.InternalBoundingBox{2}(; half_size=1.),
             )
 
             repeated_sphere = Repeat(sphere, [4., 4., 4.])
@@ -2284,6 +2375,26 @@ end
             @test length(mesh_positions) / 1000 ≈ 1 / 6 rtol=0.1
             @test all(GI.PhysicalGeometries.isinside_single(mesh, position) for position in mesh_positions)
             @test all(index == [()] for index in mesh_indices)
+
+            mesh_grid = finalised_grid(mesh; resolution=0.25)
+            gridded_positions, gridded_indices = GI.PhysicalGeometries.inside_sampling(
+                mesh_grid, 1000.; rng=Random.MersenneTwister(4567),
+            )
+            @test length(gridded_positions) / 1000 ≈ 1 / 6 rtol=0.16
+            @test all(GI.PhysicalGeometries.isinside_single(mesh, position) for position in gridded_positions)
+            @test all(index == [()] for index in gridded_indices)
+
+            bounded_mesh_positions = Meshes.inside_sampling_per_obstruction(
+                mesh, 1000., Random.MersenneTwister(5678);
+                bounding_box=BoundingBoxes.InternalBoundingBox(
+                    SVector(0.25, 0.25, 0.25), SVector(0.5, 0.5, 0.5),
+                ),
+            )
+            @test all(
+                all((SVector(0.25, 0.25, 0.25) .<= position) .&
+                    (position .<= SVector(0.75, 0.75, 0.75)))
+                for position in bounded_mesh_positions
+            )
             mesh_fixed = GI.FixedGeometry(
                 mesh,
                 Properties.GeometryLeafProperties(0.),
@@ -2622,7 +2733,7 @@ end
             geometries=[(1., mr.Spheres(radius=1.))],
             extracellular_fraction=0.2,
         )
-        @test default_tortuosity.tortuosity_strength == 1.
+        @test default_tortuosity.tortuosity_strength == 2.
         fixed_tortuosity = mr.fix(mr.LiminalGeometry(
             geometries=[(1., mr.Spheres(radius=1.))],
             extracellular_fraction=0.2,
@@ -2654,7 +2765,7 @@ end
                 extracellular_fraction=alpha,
             ))
             @test GI.tortuosity_tensor(fixed, GI.IsInside(())) ≈
-                ((2 + alpha) / 3) * I atol=0.01
+                ((1 + 2alpha) / 3) * I atol=0.01
         end
         # A singular PSD tensor is supported, but a negative eigenvalue is not.
         LG = GI.PhysicalGeometries.LiminalGeometries
@@ -3072,8 +3183,7 @@ end
         [2.0, 4.0, 4.0],
     )
     sampled_box = BoundingBoxes.InternalBoundingBox(
-        [1.1, 1.1, 1.1],
-        [1.0, 0.0, 0.0],
+        ; half_size=[1.1, 1.1, 1.1], center=[1.0, 0.0, 0.0],
     )
     sampled_positions, sampled_indices = GI.PhysicalGeometries.random_surface_positions(
         sampled_repeat,
@@ -3283,12 +3393,11 @@ end
     grouped_box = BoundingBoxes.InternalBoundingBox(grouped_spheres)
     @test BoundingBoxes.lower(grouped_box) == SVector(-3.0, -1.0, -1.0)
     @test BoundingBoxes.upper(grouped_box) == SVector(3.0, 1.0, 1.0)
-    filtered_spheres = GeometryVectorBoundingBox([
+    filtered_spheres = GeometryVector([
         Shift(sphere, [-0.5, 0.0, 0.0]),
         Shift(sphere, [5.0, 0.0, 0.0]),
     ])
-    @test filtered_spheres isa GI.PhysicalGeometries.Groups.GeometryVectorLike{3}
-    @test length(filtered_spheres.bounding_boxes) == 2
+    @test filtered_spheres isa GeometryVector{3}
     filtered_hit = GI.PhysicalGeometries.find_intersection(
         filtered_spheres,
         SVector(-2.0, 0.0, 0.0),
@@ -3328,10 +3437,6 @@ end
         grid_spheres, same_voxel_start, same_voxel_destination,
     ) == GI.PhysicalGeometries.find_intersection(
         grid_spheres.geometry, same_voxel_start, same_voxel_destination,
-    )
-    @test_throws ArgumentError GeometryVectorBoundingBox(
-        [sphere],
-        BoundingBoxes.InternalBoundingBox{3}[],
     )
     @test_throws mr.BoundingBoxNotSupported BoundingBoxes.InternalBoundingBox(GeometryVector{3}(TestGeometry{3}[]))
     @test_throws mr.BoundingBoxNotSupported BoundingBoxes.InternalBoundingBox(GeometryTuple{3}(()))
@@ -3444,10 +3549,10 @@ end
     @test Transformations.to_child_coordinates(projection_z, SVector(1.0, 2.0, 3.0)) == SVector(3.0)
     @test_throws ArgumentError Rotate(geometry_1d, SMatrix{2, 1, Float64}([2.0; 0.0]))
 
-    cube = BoundingBoxes.InternalBoundingBox(2.0, [1.0, 2.0, 3.0])
-    centered_cube = BoundingBoxes.InternalBoundingBox{3}(2.0)
-    rect = BoundingBoxes.InternalBoundingBox([1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
-    centered_rect = BoundingBoxes.InternalBoundingBox{3}([1.0, 2.0, 3.0])
+    cube = BoundingBoxes.InternalBoundingBox(; half_size=2.0, center=[1.0, 2.0, 3.0])
+    centered_cube = BoundingBoxes.InternalBoundingBox{3}(; half_size=2.0)
+    rect = BoundingBoxes.InternalBoundingBox(; half_size=[1.0, 2.0, 3.0], center=[1.0, 2.0, 3.0])
+    centered_rect = BoundingBoxes.InternalBoundingBox{3}(; half_size=[1.0, 2.0, 3.0])
 
     for box in (cube, centered_cube, rect, centered_rect)
         @test box isa BoundingBoxes.InternalBoundingBox{3}
@@ -3468,10 +3573,10 @@ end
     @test BoundingBoxes.upper(rect) == SVector(2.0, 4.0, 6.0)
     @test BoundingBoxes.lower(centered_rect) == SVector(-1.0, -2.0, -3.0)
     @test BoundingBoxes.upper(centered_rect) == SVector(1.0, 2.0, 3.0)
-    box_1d = BoundingBoxes.InternalBoundingBox{1}(1.0)
+    box_1d = BoundingBoxes.InternalBoundingBox{1}(; half_size=1.0)
     @test BoundingBoxes.could_intersect(box_1d, SVector(-2.0), SVector(2.0))
     @test !BoundingBoxes.could_intersect(box_1d, SVector(2.0), SVector(3.0))
-    box_2d = BoundingBoxes.InternalBoundingBox{2}(1.0)
+    box_2d = BoundingBoxes.InternalBoundingBox{2}(; half_size=1.0)
     @test BoundingBoxes.could_intersect(box_2d, SVector(-2.0, 0.0), SVector(2.0, 0.0))
     @test !BoundingBoxes.could_intersect(box_2d, SVector(2.0, 2.0), SVector(3.0, 3.0))
     @test !BoundingBoxes.could_intersect(centered_cube, SVector(3.0, 3.0, 3.0), SVector(4.0, 4.0, 4.0))
@@ -3486,18 +3591,18 @@ end
         SVector(3.0, -100.0, 0.0),
     )
 
-    @test BoundingBoxes.InternalBoundingBox{3}(2.0) isa BoundingBoxes.InternalBoundingBox{3}
-    @test BoundingBoxes.InternalBoundingBox(2.0, [1.0, 2.0, 3.0]) isa BoundingBoxes.InternalBoundingBox{3}
-    @test BoundingBoxes.InternalBoundingBox{3}([1.0, 2.0, 3.0]) isa BoundingBoxes.InternalBoundingBox{3}
+    @test BoundingBoxes.InternalBoundingBox{3}(; half_size=2.0) isa BoundingBoxes.InternalBoundingBox{3}
+    @test BoundingBoxes.InternalBoundingBox(; half_size=2.0, center=[1.0, 2.0, 3.0]) isa BoundingBoxes.InternalBoundingBox{3}
+    @test BoundingBoxes.InternalBoundingBox{3}(; half_size=[1.0, 2.0, 3.0]) isa BoundingBoxes.InternalBoundingBox{3}
     @test BoundingBoxes.InternalBoundingBox([1.0, 2.0, 3.0], [4.0, 5.0, 6.0]) isa BoundingBoxes.InternalBoundingBox{3}
 
-    grid_box = BoundingBoxes.InternalBoundingBox([2.0, 2.0])
+    grid_box = BoundingBoxes.InternalBoundingBox(; half_size=[2.0, 2.0])
     grid = BoundingBoxes.grid_indices(
         grid_box,
         [4, 4],
         [
-            BoundingBoxes.InternalBoundingBox([0.5, 0.5], [-1.5, -1.5]),
-            BoundingBoxes.InternalBoundingBox([1.0, 0.5], [0.0, 0.0]),
+            BoundingBoxes.InternalBoundingBox(; half_size=[0.5, 0.5], center=[-1.5, -1.5]),
+            BoundingBoxes.InternalBoundingBox(; half_size=[1.0, 0.5], center=[0.0, 0.0]),
         ],
     )
     @test grid[1, 1] == [1]
@@ -3507,12 +3612,12 @@ end
     @test grid[3, 3] == [2]
     @test grid[4, 4] == Int[]
     edge_grid = BoundingBoxes.grid_indices(
-        BoundingBoxes.InternalBoundingBox([2.0]),
+        BoundingBoxes.InternalBoundingBox(; half_size=[2.0]),
         [4],
         [
-            BoundingBoxes.InternalBoundingBox([0.0], [-2.0]),
-            BoundingBoxes.InternalBoundingBox([0.0], [-1.0]),
-            BoundingBoxes.InternalBoundingBox([0.0], [2.0]),
+            BoundingBoxes.InternalBoundingBox(; half_size=[0.0], center=[-2.0]),
+            BoundingBoxes.InternalBoundingBox(; half_size=[0.0], center=[-1.0]),
+            BoundingBoxes.InternalBoundingBox(; half_size=[0.0], center=[2.0]),
         ],
     )
     @test edge_grid[1] == [1, 2]
@@ -3522,9 +3627,9 @@ end
     @test_throws ArgumentError BoundingBoxes.grid_indices(grid_box, [0, 4], BoundingBoxes.InternalBoundingBox{2}[])
     @test_throws DimensionMismatch BoundingBoxes.grid_indices(grid_box, [4], BoundingBoxes.InternalBoundingBox{2}[])
 
-    repeating_box = BoundingBoxes.InternalBoundingBox([3.0])
+    repeating_box = BoundingBoxes.InternalBoundingBox(; half_size=[3.0])
     shifts, repeating_grid = BoundingBoxes.grid_indices_repeating(
-        BoundingBoxes.InternalBoundingBox([2.0]),
+        BoundingBoxes.InternalBoundingBox(; half_size=[2.0]),
         [4],
         [4.0],
         [repeating_box],
@@ -3535,10 +3640,10 @@ end
     @test repeating_grid[3] == [(Int32(1), Int32(1)), (Int32(1), Int32(0))]
     @test repeating_grid[4] == [(Int32(1), Int32(1)), (Int32(1), Int32(0))]
     repeating_zero_boundary = BoundingBoxes.grid_indices_repeating(
-        BoundingBoxes.InternalBoundingBox([2.0]),
+        BoundingBoxes.InternalBoundingBox(; half_size=[2.0]),
         [4],
         [4.0],
-        [BoundingBoxes.InternalBoundingBox([0.0], [-1.0])],
+        [BoundingBoxes.InternalBoundingBox(; half_size=[0.0], center=[-1.0])],
     )
     @test repeating_zero_boundary[1] == SVector{1, Float64}[]
     @test repeating_zero_boundary[2][1] == [(Int32(1), Int32(0))]
@@ -3547,24 +3652,24 @@ end
     @test repeating_zero_boundary[2][4] == Tuple{Int32, Int32}[]
 
     repeating_zero_lower_edge = BoundingBoxes.grid_indices_repeating(
-        BoundingBoxes.InternalBoundingBox([2.0]),
+        BoundingBoxes.InternalBoundingBox(; half_size=[2.0]),
         [4],
         [4.0],
-        [BoundingBoxes.InternalBoundingBox([0.0], [-2.0])],
+        [BoundingBoxes.InternalBoundingBox(; half_size=[0.0], center=[-2.0])],
     )
     @test repeating_zero_lower_edge[2][1] == [(Int32(1), Int32(0))]
     @test all(isempty, repeating_zero_lower_edge[2][2:end])
 
     repeating_zero_upper_edge = BoundingBoxes.grid_indices_repeating(
-        BoundingBoxes.InternalBoundingBox([2.0]),
+        BoundingBoxes.InternalBoundingBox(; half_size=[2.0]),
         [4],
         [4.0],
-        [BoundingBoxes.InternalBoundingBox([0.0], [2.0])],
+        [BoundingBoxes.InternalBoundingBox(; half_size=[0.0], center=[2.0])],
     )
     @test repeating_zero_upper_edge[2][end] == [(Int32(1), Int32(0))]
     @test all(isempty, repeating_zero_upper_edge[2][1:end-1])
     @test_throws ArgumentError BoundingBoxes.grid_indices_repeating(
-        BoundingBoxes.InternalBoundingBox([2.0]),
+        BoundingBoxes.InternalBoundingBox(; half_size=[2.0]),
         [4],
         [0.0],
         BoundingBoxes.InternalBoundingBox{1}[],

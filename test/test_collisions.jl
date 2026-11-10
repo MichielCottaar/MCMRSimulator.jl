@@ -158,7 +158,7 @@
             mr.spin_sampling(fixed, mr.BoundingBox(4.), 1.),
         ))
         spin.position = SA[-2., 0., 0.]
-        mr.Evolve.draw_step!(spin, simulation, part, [3.], SA[2., 0., 0.])
+        mr.Evolve.draw_step!(spin, simulation, part, Float64[], SA[2., 0., 0.])
         @test spin.position ≈ SA[2., 0., 0.]
         @test isempty(spin.isinside)
 
@@ -167,7 +167,7 @@
             mr.spin_sampling(fixed, mr.BoundingBox(4.), 1.),
         ))
         destination = spin.position + SA[10., 0., 0.]
-        mr.Evolve.draw_step!(spin, simulation, part, [3.], destination)
+        mr.Evolve.draw_step!(spin, simulation, part, Float64[], destination)
 
         @test spin.position != destination
         @test !isempty(spin.isinside)
@@ -219,7 +219,7 @@
             @test mr.isinside(geometry, spin) == 2
             inside = true
             empty_sequence = build_sequence([10., :readout])
-            seq_part = mr.parts([empty_sequence], 0., mr.TimeStep(0.5, Inf))[1]
+            seq_part = first(mr.parts([empty_sequence], 0., mr.TimeStep(0.5, Inf)))
             for _ in 1:100
                 mr.Evolve.draw_step!(spin, mr.Simulation(empty_sequence, diffusivity=3., geometry=geometry), seq_part, [3.])
                 inside &= mr.isinside(geometry, spin) == 2

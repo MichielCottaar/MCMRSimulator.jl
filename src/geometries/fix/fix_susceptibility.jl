@@ -174,16 +174,16 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     susceptibilities = susceptibilities[keep]
 
     individual_bbs = map(positions, radii) do p, r
-        InternalBoundingBox(r, p)
+        InternalBoundingBox(; half_size=r, center=p)
     end
     if isnothing(user.repeats.value)
         half_repeats = nothing
         lower_bound = reduce((a, b) -> min.(a, b), (lower(bb) for bb in individual_bbs))
         upper_bound = reduce((a, b) -> max.(a, b), (upper(bb) for bb in individual_bbs))
-        bb_indices = InternalBoundingBox((upper_bound - lower_bound) / 2, (upper_bound + lower_bound) / 2)
+        bb_indices = InternalBoundingBox(lower_bound, upper_bound)
     else
         half_repeats = SVector{N}(user.repeats.value) ./ 2
-        bb_indices = InternalBoundingBox(half_repeats)
+        bb_indices = InternalBoundingBox{N}(; half_size=half_repeats)
         bb_off_resonance = bb_indices
     end
     resolution_guess = grid_resolution(user, bb_indices)
@@ -196,15 +196,15 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
     if isnothing(user.repeats.value)
         size_grid_indices = orig_size_grid .+ 2
         bb_indices = InternalBoundingBox(
-            (upper(bb_indices) - lower(bb_indices)) / 2 + resolution,
-            (upper(bb_indices) + lower(bb_indices)) / 2,
+            lower(bb_indices) .- resolution,
+            upper(bb_indices) .+ resolution,
         )
         size_bb = upper(bb_indices) .- lower(bb_indices)
         size_off_resonance = maximum(size_bb) * 2
         nvoxels_add = @. Int(div((size_off_resonance - size_bb), 2 * resolution, RoundUp))
         bb_off_resonance = InternalBoundingBox(
-            (upper(bb_indices) - lower(bb_indices)) / 2 + nvoxels_add .* resolution,
-            (upper(bb_indices) + lower(bb_indices)) / 2,
+            lower(bb_indices) .- nvoxels_add .* resolution,
+            upper(bb_indices) .+ nvoxels_add .* resolution,
         )
     else
         size_grid_indices = orig_size_grid
@@ -212,7 +212,7 @@ function add_parent(user::ObstructionGroup, internal::AbstractVector{<:BaseSusce
 
     has_hit_bbs = map(positions, radii) do p, r
         half_size = @. max(resolution * 3, r) + 0.5 * resolution
-        InternalBoundingBox(half_size, p)
+        InternalBoundingBox(; half_size, center=p)
     end
 
     if isnothing(user.repeats.value)

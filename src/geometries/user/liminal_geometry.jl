@@ -3,7 +3,7 @@ module LiminalGeometries
 export LiminalGeometry
 
 """
-    LiminalGeometry(geometries; extracellular_fraction, tortuosity_strength=1.)
+    LiminalGeometry(geometries; extracellular_fraction, tortuosity_strength=2.)
 
 Create a statistical collection of cell geometry templates. `geometries` should
 be a vector of `(number_fraction, geometry)` tuples. The number fractions give
@@ -28,7 +28,7 @@ end
 function LiminalGeometry(
     geometries::AbstractVector;
     extracellular_fraction::Real,
-    tortuosity_strength::Real=1.,
+    tortuosity_strength::Real=2.,
 )
     isempty(geometries) && throw(ArgumentError("at least one cell geometry is required"))
     isfinite(extracellular_fraction) && 0 <= extracellular_fraction <= 1 ||

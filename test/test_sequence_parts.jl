@@ -45,3 +45,16 @@
     @test length(large_mixed.parts) == 50
     @test all(p -> p isa parts.EmptyPart, large_mixed.parts[1:25])
 end
+
+@testset "Number of simulation timesteps" begin
+    sequence = build_sequence([4., :readout])
+    simulation = mr.Simulation(sequence; timestep=1., verbose=false)
+
+    @test simulation.sequences isa Vector{mr.SequenceParts.SequenceWaveform}
+    @test simulation.sequences[1] === sequence
+    @test mr.n_timesteps(simulation) == 5
+    @test mr.n_timesteps(simulation; start_time=2.) == 3
+    @test mr.n_timesteps(simulation; nTR=2) == 9
+    @test mr.n_timesteps(simulation; nTR=2, skip_TR=1) == 13
+    @test occursin("5 time steps", sprint(show, simulation))
+end

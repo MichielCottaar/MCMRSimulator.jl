@@ -14,7 +14,11 @@ Represents a physical geometry in N-dimensional space. This is an abstract type 
 """
 abstract type PhysicalGeometry{N} end
 
-"""Return the single wrapped child geometry, or throw if the geometry has no single child."""
+"""
+    child_geometry(geometry::PhysicalGeometry)
+
+Return the single wrapped child geometry, or throw if the geometry has no single child.
+"""
 function child_geometry end
 
 function child_geometry(geometry::PhysicalGeometry)
@@ -42,6 +46,7 @@ has_equivalent_wrapper(::PhysicalGeometry, ::PhysicalGeometry) = false
 """
     rewrap(wrapper, geometry::PhysicalGeometry)
     rewrap(group, children)
+    rewrap(wrapper, geometry::PhysicalGeometry, pass::Val)
 
 Construct the same kind of wrapper around `geometry`, preserving the wrapper's
 parameters. Wrapper types supporting common-wrapper extraction implement this
@@ -51,6 +56,13 @@ child collection, rebuilding acceleration data where applicable.
 """
 function rewrap end
 rewrap(wrapper, geometry::PhysicalGeometry, ::Val) = rewrap(wrapper, geometry)
+
+"""
+    rewrap_extracted_wrapper(wrapper, references, geometry::PhysicalGeometry)
+
+Rebuild an extracted wrapper around `geometry`, using source `references` when
+the wrapper needs to adjust its indexing scope.
+"""
 rewrap_extracted_wrapper(wrapper, references, geometry::PhysicalGeometry) =
     rewrap(wrapper, geometry)
 
@@ -90,7 +102,11 @@ the original representation. Property paths retain their original ordering.
 """
 function simplify end
 
-"""Finalise a geometry after simplification."""
+"""
+    finalise!(geometry::PhysicalGeometry)
+
+Initialise acceleration structures and derived geometry data after simplification.
+"""
 function finalise! end
 
 function simplify(geometry::PhysicalGeometry)
@@ -104,14 +120,37 @@ function simplify(geometry::PhysicalGeometry)
     end
 end
 
+"""
+    IntersectionParams{N}(inside, normal, hit_gap)
+
+Store the incident side, surface normal, and gap status of an intersection.
+"""
 struct IntersectionParams{N}
     inside::Bool
     normal::SVector{N, Float64}
     hit_gap::Bool
 end
 
+"""
+    size_scale(geometry::PhysicalGeometry)
+
+Return a characteristic geometry length used to choose simulation step sizes.
+"""
 function size_scale end
+
+"""
+    geometry_mesh(geometry; height=nothing, nsamples=100, bounding_box=nothing)
+
+Return renderable surface data, optionally restricting it to `bounding_box`.
+`height` and `nsamples` control representations of extended or curved surfaces.
+"""
 function geometry_mesh end
+
+"""
+    distance_to_surface(geometry::PhysicalGeometry, position)
+
+Return the distance from `position` to the geometry's nearest surface.
+"""
 function distance_to_surface end
 
 
@@ -142,8 +181,19 @@ previous-hit handling, and cached `inside` state. Repeating and liminal geometri
 require `candidate === nothing`; selection belongs inside their finite children.
 """
 function find_intersection end
+
+"""
+    find_intersection_requires_inside(::Type{<:PhysicalGeometry}) -> Val
+
+Return `Val(true)` when intersection detection needs cached inside-region indices.
+"""
 find_intersection_requires_inside(::Type{<:PhysicalGeometry}) = Val(false)
 
+"""
+    is_liminal(::Type{<:PhysicalGeometry}) -> Bool
+
+Return whether the type represents a liminal geometry with independently placed cells.
+"""
 function is_liminal end
 is_liminal(::Type{<:PhysicalGeometry}) = false
 
@@ -167,9 +217,24 @@ Return the type of the child geometry represented by a physical geometry type.
 """
 function child_type end
 
+"""
+    contains_mesh(::Type{<:PhysicalGeometry}) -> Bool
+
+Return whether a geometry contains a mesh in its child hierarchy.
+"""
+function contains_mesh end
 
 """
-     get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, indices[, isinside]) -> IntersectionParams{N}
+    contains_repeat(::Type{<:PhysicalGeometry}) -> Bool
+
+Return whether a geometry's child hierarchy contains a periodic `Repeat`.
+"""
+function contains_repeat end
+contains_repeat(::Type{<:PhysicalGeometry}) = false
+
+
+"""
+    get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N, Float64}, dest::SVector{N, Float64}, indices, isinside=nothing) -> IntersectionParams{N}
 
 Gets the `inside`, `normal`, and `hit_gap` properties of the intersection after it has been identified by `find_intersection`. When provided, `isinside` contains the cached obstruction indices for the current particle and is converted to child-local indices during recursion.
 
@@ -191,10 +256,15 @@ function get_intersection_params(geometry::PhysicalGeometry{N}, start::SVector{N
     return from_child_coordinates(geometry, result) :: IntersectionParams{N}
 end
 
+"""
+    get_intersection_params_requires_inside(::Type{<:PhysicalGeometry}) -> Val
+
+Return `Val(true)` when computing intersection parameters needs cached inside indices.
+"""
 get_intersection_params_requires_inside(::Type{<:PhysicalGeometry}) = Val(false)
 
 """
-    to_child_coordinates(geometry, position/bounding_box)
+    to_child_coordinates(geometry::PhysicalGeometry, object)
 
 Converts the `position`/`bounding_box` from `geometry` coordinates to the coordinates from the child of `geometry`.
 
@@ -203,7 +273,7 @@ This should be overwritten for transformations. It should not be called for base
 to_child_coordinates(::PhysicalGeometry{N}, object) where {N} = object
 
 """
-    from_child_coordinates(geometry, position/bounding_box)
+    from_child_coordinates(geometry::PhysicalGeometry, object)
 
 Converts the `position`/`bounding_box` from child of `geometry` coordinates to the coordinates from the `geometry`.
 
@@ -211,32 +281,68 @@ This should be overwritten for transformations. It should not be called for base
 """
 from_child_coordinates(::PhysicalGeometry{N}, object) where {N} = object
 
+"""
+    to_child_coordinates_normal(geometry::PhysicalGeometry, normal)
+
+Convert a surface normal from parent coordinates to child coordinates.
+The default leaves the normal unchanged.
+"""
 to_child_coordinates_normal(::PhysicalGeometry{N}, object) where {N} = object
 
-"""Convert intersection parameters from child to parent coordinates."""
+"""
+    from_child_coordinates(geometry::PhysicalGeometry, params::IntersectionParams)
+
+Convert intersection parameters from child to parent coordinates.
+"""
 from_child_coordinates(::PhysicalGeometry, params::IntersectionParams) = params
 
-"""Return whether a geometry has an inside region."""
+"""
+    has_inside(::Type{<:PhysicalGeometry}) -> Bool
+
+Return whether a geometry has an inside region.
+"""
 function has_inside end
 
-"""Returns whether the geometry has a single inside region."""
+"""
+    has_single_inside(::Type{<:PhysicalGeometry}) -> Bool
+
+Return whether the geometry represents a single inside region, identified by `()`.
+"""
 function has_single_inside end
 
 """
     inside_indices_eltype(::Type{<:PhysicalGeometry})
+    inside_indices_eltype(::Type{Union{}})
 
 Return the element type of the array returned by `inside_indices`.
+The empty union maps to itself for geometry hierarchies without inside indices.
 """
 function inside_indices_eltype end
 inside_indices_eltype(::Type{Union{}}) = Union{}
 
-"""Return the index tuple type produced by `find_intersection`."""
+"""
+    intersection_type(::Type{<:PhysicalGeometry})
+    intersection_type(::Type{Union{}})
+
+Return the surface-index tuple type used by `find_intersection`, excluding its
+final incident-side and distance entries.
+The empty union maps to itself for geometry hierarchies without surface indices.
+"""
 function intersection_type end
 intersection_type(::Type{Union{}}) = Union{}
 
-"""Return intersection index types for surfaces with nonzero density."""
+"""
+    bound_intersection_type(geometry::PhysicalGeometry, density)
+
+Return intersection index types for surfaces with nonzero binding density.
+"""
 function bound_intersection_type end
 
+"""
+    _merge_types(types)
+
+Combine an iterable of types into a union, ignoring empty unions and duplicates.
+"""
 function _merge_types(types)
     unique_types = Set{Type}()
     for type in types
@@ -248,19 +354,73 @@ function _merge_types(types)
     Union{unique_types...}
 end
 
-"""Return the obstruction indices containing a position."""
+"""
+    inside_indices(geometry::PhysicalGeometry, position, intersection=nothing; no_deproject=false)
+
+Return the obstruction indices containing `position`, optionally using a known intersection.
+"""
 function inside_indices end
 
-"""Sample volume positions together with their cached inside indices."""
+"""
+    volume_sampling(geometry::PhysicalGeometry, bounding_box, volume_density; no_deproject=false)
+
+Sample positions uniformly throughout `bounding_box`, returning positions and
+their cached inside-region indices at the requested number density.
+"""
 function volume_sampling end
+
+"""
+    inside_sampling(geometry::PhysicalGeometry, density; rng=default_rng(), no_deproject=false, bounding_box=nothing)
+
+Sample positions uniformly within a geometry at the requested number density,
+returning positions and their cached inside-region indices. When supplied,
+`bounding_box` restricts the returned positions.
+"""
 function inside_sampling end
-"""Generate volume-sampling proposals for one obstruction or a geometry group."""
+
+"""
+    inside_sampling_per_obstruction(geometry, density, rng; no_deproject=false, bounding_box=nothing)
+
+Generate inside-volume sampling proposals for one obstruction or a geometry group.
+Proposals are not guaranteed to lie within the optional bounding box; callers
+must filter them when that restriction is required.
+"""
 function inside_sampling_per_obstruction end
+
+"""
+    projected_surface_area(surface_distribution, direction)
+
+Return the surface area projected perpendicular to `direction`.
+"""
 function projected_surface_area end
+
+"""
+    normal_second_moment(geometry_or_surface_distribution, direction)
+
+Return the direction-dependent second moment of the surface-normal distribution.
+"""
 function normal_second_moment end
+
+"""
+    tortuosity_tensor(liminal_geometry, inside)
+
+Return the diffusion tortuosity tensor for the supplied cached inside state for a liminal geometry.
+"""
 function tortuosity_tensor end
+
+"""
+    inverse_mean_free_path(gliminal_eometry::FixedLiminalGeometry, direction)
+
+Return the inverse mean distance between surface encounters along `direction` for a liminal geometry.
+"""
 function inverse_mean_free_path end
 
+"""
+    _volume_inside_indices(geometry::PhysicalGeometry, position; no_deproject=false)
+
+Determine cached inside-region indices for a sampled position, including the
+special cases of geometries with no inside or a single inside region.
+"""
 function _volume_inside_indices(geometry::PhysicalGeometry, position; no_deproject=false)
     has_inside(typeof(geometry)) || return Tuple{}[]
     has_single_inside(typeof(geometry)) &&
@@ -298,7 +458,10 @@ function inside_sampling_per_obstruction(
     ))
 end
 
-"""Sample points uniformly within a geometry, returning positions and inside indices.
+"""
+    inside_sampling(geometry::PhysicalGeometry, density; rng=default_rng(), no_deproject=false, bounding_box=nothing)
+
+Sample points uniformly within a geometry, returning positions and inside indices.
 
 When `bounding_box` is provided, retain only samples within that box. The box is
 also passed to proposal samplers that need it to bound otherwise infinite
@@ -341,7 +504,11 @@ function inside_sampling(
     positions, indices
 end
 
-"""Whether the geometry is within the single inside."""
+"""
+    isinside_single(geometry::PhysicalGeometry, position, previous_intersection=nothing; no_deproject=false)
+
+Return whether `position` lies in the geometry's single inside region.
+"""
 function isinside_single end
 
 """
@@ -360,7 +527,12 @@ function to_property_index(geometry::PhysicalGeometry, indices)
     return (indices[1:nremoved]..., cleaned...)
 end
 
-"""Convert a surface intersection path into an inside-region path."""
+"""
+    to_inside_index(geometry::PhysicalGeometry, indices)
+
+Convert a surface intersection path into an inside-region path, or return
+`nothing` for geometries without an inside region.
+"""
 function to_inside_index(geometry::PhysicalGeometry, indices)
     has_inside(typeof(geometry)) || return nothing
     has_single_inside(typeof(geometry)) && return ()
@@ -371,21 +543,78 @@ function to_inside_index(geometry::PhysicalGeometry, indices)
     (indices[1:n_consumed]..., converted...)
 end
 
-"""Sample surface positions together with initialized collision states."""
+"""
+    random_surface_positions(geometry, density, bounding_box, scale_density; include_gap=false, kwargs...)
+
+Sample surface positions together with initialized collision states, scaling
+surface number densities by `scale_density`.
+"""
 function random_surface_positions end
 
-"""Return the axis-aligned bounding box containing a physical geometry."""
+"""
+    InternalBoundingBox(geometry::PhysicalGeometry; kwargs...)
+
+Return the axis-aligned bounding box containing a physical geometry.
+"""
 function InternalBoundingBox end
 
-"""Return the number of leaf surfaces represented by a physical geometry."""
+"""
+    number_of_leaves(geometry::PhysicalGeometry) -> Int
+
+Return the number of leaf surfaces represented by a physical geometry.
+"""
 function number_of_leaves end
 
-"""Return the subset of a geometry overlapping `bounding_box`, or `nothing`."""
-function filter_bounding_box end
+"""
+    filter_bounding_box(geometry::PhysicalGeometry, box::InternalBoundingBox, preserve_type::Val=Val(false))
 
-filter_bounding_box(geometry::PhysicalGeometry{N}, box::InternalBoundingBox{N}) where {N} =
-    filter_bounding_box(geometry, box, Val(false))
+Return the subset of a geometry overlapping `box`, or `nothing`. With `Val(true)`,
+preserve child structure during materialization to keep vector child types consistent.
+"""
+filter_bounding_box(
+    geometry::PhysicalGeometry{N}, box::InternalBoundingBox{N}, preserve_type::Val=Val(false),
+) where {N} = geometry_from_indices(
+    geometry, filter_bounding_box_indices(geometry, box), preserve_type,
+)
 
+"""
+    filter_bounding_box_indices(geometry, box[, parent_selection])
+
+Select candidates within `box`, optionally refining a parent selection against
+the same source geometry. Selection is independent of materialization policy.
+Selections preserve original geometry indices and may
+contain additional state for inside queries. A selection is always returned;
+use `selection_overlaps` to test whether it retains geometry.
+"""
+function filter_bounding_box_indices end
+
+"""
+    geometry_from_indices(geometry, selection, preserve_type)
+
+Materialize a bounding-box selection against its original source geometry.
+With `Val(true)`, preserve child structure so vector children have consistent types.
+"""
+function geometry_from_indices end
+
+"""
+    selection_overlaps(selection) -> Bool
+
+Whether a bounding-box selection retains any geometry. Grid construction uses
+this predicate to prune empty subtrees without materializing intermediate
+geometries. Selection representations with additional state should specialize
+this function when they can represent an empty selection without returning
+`nothing`.
+"""
+function selection_overlaps end
+
+selection_overlaps(::Any) = true
+selection_overlaps(selection::Bool) = selection
+
+"""
+    _bounding_boxes_overlap(first::InternalBoundingBox, second::InternalBoundingBox) -> Bool
+
+Return whether two axis-aligned boxes overlap, including touching boundaries.
+"""
 function _bounding_boxes_overlap(
     first::InternalBoundingBox{N}, second::InternalBoundingBox{N},
 ) where {N}
@@ -416,8 +645,26 @@ Likewise, query individual cell geometries for liminal geometry.
 """
 function leaf_bounding_boxes end
 
+"""
+    _geometry_mesh(geometry; height=nothing, nsamples=100, bounding_box=nothing)
+
+Implement native surface rendering for `geometry` after public bounding boxes
+have been converted to the internal representation.
+"""
 function _geometry_mesh end
+
+"""
+    _mesh_result(vertices, triangles)
+
+Package vertices and triangle indices in the named-tuple surface representation.
+"""
 _mesh_result(vertices, triangles) = (vertices=vertices, triangles=triangles)
+
+"""
+    _translate_native(value, displacement)
+
+Translate native surface data, recursively handling collections of surfaces.
+"""
 _translate_native(value, displacement) = value isa Real ? value + displacement[1] :
     value isa SVector ? value + displacement :
     value isa NamedTuple ? _mesh_result(value.vertices .+ Ref(displacement), value.triangles) :
@@ -428,6 +675,11 @@ function geometry_mesh(geometry; height=nothing, nsamples=100, bounding_box=noth
     _geometry_mesh(geometry; height, nsamples, bounding_box)
 end
 
+"""
+    show(io::IO, geometry::PhysicalGeometry)
+
+Write a compact representation consisting of the geometry type and an ellipsis.
+"""
 function Base.show(io::IO, geometry::PhysicalGeometry)
     show(io, typeof(geometry))
     show(io, "(...)")
@@ -442,8 +694,9 @@ include("base_obstructions/base_obstructions.jl")
 include("meshes.jl")
 include("grids.jl")
 include("monte_carlo_measures.jl")
-import .MonteCarloMeasures: SurfaceEstimate, contains_repeat, estimate_volume, estimate_surface
 include("liminal_geometries.jl")
+
+import .MonteCarloMeasures: SurfaceEstimate, estimate_volume, estimate_surface
 import .Transparents: Transparent, IgnoreOverlapping
 import .LiminalGeometries: FixedLiminalGeometry
 

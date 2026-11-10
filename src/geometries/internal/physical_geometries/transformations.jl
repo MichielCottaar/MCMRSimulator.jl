@@ -13,6 +13,9 @@ import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: leaf_bounding_boxes
 import ..PhysicalGeometries: filter_bounding_box
 import ..PhysicalGeometries: number_of_leaves
+import ..PhysicalGeometries: contains_mesh
+import ..PhysicalGeometries: contains_repeat
+import ..PhysicalGeometries: filter_bounding_box_indices, geometry_from_indices
 import ..PhysicalGeometries: simplify, rewrap, has_equivalent_wrapper, child_geometry, finalise!
 import ..PhysicalGeometries: IntersectionParams, to_child_coordinates, from_child_coordinates, to_child_coordinates_normal
 import ...Properties: GeometryProperties
@@ -29,34 +32,22 @@ parent coordinate system.
 """
 abstract type Transformation{N, M, P<:PhysicalGeometry{M}} <: PhysicalGeometry{N} end
 
+contains_mesh(::Type{<:Transformation{N, M, P}}) where {N, M, P} = contains_mesh(P)
+contains_repeat(::Type{<:Transformation{N, M, P}}) where {N, M, P} = contains_repeat(P)
+
 child_geometry(transformation::Transformation) = transformation.geometry
+
+filter_bounding_box_indices(wrapper::Transformation, box) =
+    filter_bounding_box_indices(child_geometry(wrapper), to_child_coordinates(wrapper, box))
+filter_bounding_box_indices(wrapper::Transformation, box, selection) =
+    filter_bounding_box_indices(child_geometry(wrapper), to_child_coordinates(wrapper, box), selection)
+function geometry_from_indices(wrapper::Transformation, selection, ::Val{preserve_type}) where {preserve_type}
+    original_child = child_geometry(wrapper)
+    child = geometry_from_indices(original_child, selection, Val(preserve_type))
+    isnothing(child) && !preserve_type && return nothing
+    child === original_child ? wrapper : rewrap(wrapper, child)
+end
 number_of_leaves(transformation::Transformation) = number_of_leaves(child_geometry(transformation))
-
-function filter_bounding_box(
-    transformation::Transformation{N},
-    box::InternalBoundingBoxes.InternalBoundingBox{N},
-    ::Val{false},
-) where {N}
-    child = filter_bounding_box(
-        child_geometry(transformation), to_child_coordinates(transformation, box), Val(false),
-    )
-    isnothing(child) ? nothing : rewrap(transformation, child)
-end
-
-function filter_bounding_box(
-    transformation::Transformation{N},
-    box::InternalBoundingBoxes.InternalBoundingBox{N},
-    ::Val{true},
-) where {N}
-    original_child = child_geometry(transformation)
-    child = filter_bounding_box(
-        original_child, to_child_coordinates(transformation, box), Val(true),
-    )
-    child isa PhysicalGeometry || throw(ArgumentError(
-        "type-preserving filtering returned nothing for a transformation child",
-    ))
-    child === original_child ? transformation : rewrap(transformation, child)
-end
 
 finalise!(transformation::Transformation) = finalise!(child_geometry(transformation))
 
@@ -295,7 +286,7 @@ function InternalBoundingBox(
         abs.(transformation.matrix) * child_half_size + null_half_size,
         eps(Float64),
     )
-    InternalBoundingBoxes.InternalBoundingBox{N}(half_size, center)
+    InternalBoundingBoxes.InternalBoundingBox{N}(; half_size, center)
 end
 
 """Transform a value from parent coordinates to child coordinates."""
@@ -347,10 +338,7 @@ end
 function _scale_box(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N}
     half_size = transformation.scale .* _box_half_size(box)
     center = transformation.scale .* _box_center(box)
-    return InternalBoundingBoxes.InternalBoundingBox{N}(
-        half_size,
-        center,
-    )
+    return InternalBoundingBoxes.InternalBoundingBox{N}(; half_size, center)
 end
 
 to_child_coordinates(transformation::Scale, box::InternalBoundingBoxes.InternalBoundingBox) =
@@ -378,7 +366,7 @@ end
 function _rotate_box(transformation::Rotate{N, M}, box::InternalBoundingBoxes.InternalBoundingBox{N}) where {N, M}
     center = transformation.matrix' * _box_center(box)
     half_size = abs.(transformation.matrix') * _box_half_size(box)
-    return InternalBoundingBoxes.InternalBoundingBox{M}(half_size, center)
+    return InternalBoundingBoxes.InternalBoundingBox{M}(; half_size, center)
 end
 
 to_child_coordinates(transformation::Rotate, box::InternalBoundingBoxes.InternalBoundingBox) =
@@ -390,8 +378,8 @@ function from_child_coordinates(
 ) where {N, M, K}
     N == M && K == M || throw(ArgumentError("from_child_coordinates is not defined for dimension-reducing Rotate transformations"))
     InternalBoundingBoxes.InternalBoundingBox{N}(
-        abs.(transformation.matrix) * _box_half_size(box),
-        transformation.matrix * _box_center(box),
+        ; half_size=abs.(transformation.matrix) * _box_half_size(box),
+        center=transformation.matrix * _box_center(box),
     )
 end
 

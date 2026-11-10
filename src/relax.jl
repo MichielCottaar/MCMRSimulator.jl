@@ -57,8 +57,10 @@ function relax!(spin::Spin{N}, new_pos::NewPosType, simulation::Simulation{N}, p
         R2_att=exp(-props.R2 * (t2 - t1) * parts.duration),
     )
 
-    for index in 1:N
-        relax!(spin.orientations[index], spin.position, new_pos, parts.parts[index], props, parts.duration, t1, t2, off_resonance_unscaled * B0s[index], pre_comp)
+    @assert N == length(spin.orientations) == length(parts.parts) == length(B0s) "inbounds check failed"
+
+    for index in eachindex(spin.orientations)
+        @inbounds relax!(spin.orientations[index], spin.position, new_pos, parts.parts[index], props, parts.duration, t1, t2, off_resonance_unscaled * B0s[index], pre_comp)
     end
 end
 

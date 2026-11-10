@@ -14,10 +14,26 @@ import ..PhysicalGeometries: random_surface_positions, size_scale, distance_to_s
 import ..PhysicalGeometries: inside_sampling_per_obstruction, finalise!
 import ..PhysicalGeometries: filter_bounding_box, _bounding_boxes_overlap
 import ..PhysicalGeometries: number_of_leaves
+import ..PhysicalGeometries: contains_mesh
+import ..PhysicalGeometries: contains_repeat
+import ..PhysicalGeometries: filter_bounding_box_indices, geometry_from_indices
 import Distributions: Poisson
 import Random: rand
 
 abstract type BaseObstruction{N} <: PhysicalGeometry{N} end
+
+contains_mesh(::Type{<:BaseObstruction}) = false
+contains_repeat(::Type{<:BaseObstruction}) = false
+
+filter_bounding_box_indices(geometry::BaseObstruction, box) =
+    _bounding_boxes_overlap(InternalBoundingBox(geometry), box)
+filter_bounding_box_indices(geometry::BaseObstruction, box, parent_selection::Bool) =
+    parent_selection && filter_bounding_box_indices(geometry, box)
+function geometry_from_indices(
+    geometry::BaseObstruction, selection::Bool, ::Val{preserve_type},
+) where {preserve_type}
+    preserve_type || selection === true ? geometry : nothing
+end
 
 number_of_leaves(::BaseObstruction) = 1
 
@@ -31,11 +47,6 @@ function leaf_bounding_boxes(geometry::BaseObstruction{N}; inside=false) where {
     inside && !has_inside(typeof(geometry)) && return InternalBoundingBox{N}[]
     InternalBoundingBox(geometry)
 end
-
-filter_bounding_box(geometry::BaseObstruction{N}, ::InternalBoundingBox{N}, ::Val{true}) where {N} = geometry
-
-filter_bounding_box(geometry::BaseObstruction{N}, box::InternalBoundingBox{N}, ::Val{false}) where {N} =
-    _bounding_boxes_overlap(InternalBoundingBox(geometry), box) ? geometry : nothing
 
 function Base.show(io::IO, ::Type{T}) where {T <: BaseObstruction}
     print(io, nameof(T))

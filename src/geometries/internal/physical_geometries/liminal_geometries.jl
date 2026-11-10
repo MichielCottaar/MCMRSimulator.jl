@@ -10,11 +10,12 @@ import ..PhysicalGeometries: PhysicalGeometry, child_type, has_inside, has_singl
     get_intersection_params_requires_inside, inside_indices_eltype, intersection_type,
     inside_indices, find_intersection, find_intersection_requires_inside, get_child,
     volume_sampling, inside_sampling, random_surface_positions, bound_intersection_type,
-    _merge_types, InternalBoundingBox, estimate_surface, estimate_volume,
-    get_intersection_params, to_inside_index, to_property_index,
+    _merge_types, InternalBoundingBox, get_intersection_params, to_inside_index, to_property_index,
     projected_surface_area, normal_second_moment, inverse_mean_free_path, _geometry_mesh,
-    distance_to_surface, size_scale, SurfaceEstimate, is_liminal
+    distance_to_surface, size_scale, is_liminal
+import ..MonteCarloMeasures: estimate_volume, estimate_surface, SurfaceEstimate
 import ..PhysicalGeometries: leaf_bounding_boxes
+import ..PhysicalGeometries: contains_mesh
 import ..PhysicalGeometries: simplify, rewrap, finalise!
 import ..Groups: GeometryTuple
 import ..Groups: inside_indices_for_any_type, _append_type
@@ -287,7 +288,7 @@ end
 
 """
     FixedLiminalGeometry(geometries, number_fractions, extracellular_fraction;
-        tortuosity_strength=1.)
+        tortuosity_strength=2.)
 
 Construct independently placed cell geometries. Derived volume, surface, and
 tortuosity statistics are computed by `finalise!`.
@@ -312,7 +313,7 @@ struct FixedLiminalGeometry{P <: PhysicalGeometry{3}, I} <: PhysicalGeometry{3}
         geometries::AbstractVector{<:PhysicalGeometry{3}},
         number_fractions::AbstractVector{<:Real},
         extracellular_fraction::Real;
-        tortuosity_strength::Real=1.,
+        tortuosity_strength::Real=2.,
     )
         isfinite(extracellular_fraction) && 0 <= extracellular_fraction <= 1 ||
             throw(ArgumentError("extracellular_fraction must be between 0 and 1"))
@@ -616,6 +617,8 @@ function inside_indices(
 end
 
 child_type(::Type{<:FixedLiminalGeometry{P}}) where {P} = Shift{3, P}
+contains_mesh(::Type{<:FixedLiminalGeometry{P}}) where {P} =
+    P isa Union ? any(contains_mesh, Base.uniontypes(P)) : contains_mesh(P)
 has_single_inside(::Type{<:FixedLiminalGeometry}) = false
 
 _child_types(::Type{P}) where {P} = P isa Union ? Base.uniontypes(P) : (P,)

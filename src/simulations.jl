@@ -11,7 +11,7 @@ import ..Spins: Spin, Snapshot, SpinOrientation, static_vector_type, stuck, spin
 import ..Methods: get_time
 import ..Properties: GlobalProperties, R1, R2, off_resonance
 import ..TimeSteps: TimeStep
-import ..SequenceParts: MultSequencePart, parts
+import ..SequenceParts: SequenceWaveform, MultSequencePart, parts
 
 
 """
@@ -61,7 +61,7 @@ To run a [`Snapshot`](@ref) of spins through the simulations you can use one of 
 """
 struct Simulation{N, NG, G<:FixedGeometry}
     # N sequences, datatype T
-    sequences :: Vector
+    sequences :: Vector{SequenceWaveform}
     diffusivity :: Float64
     properties :: GlobalProperties
     geometry :: G
@@ -69,7 +69,7 @@ struct Simulation{N, NG, G<:FixedGeometry}
     flatten::Bool
     verbose::Bool
     function Simulation(
-        sequences::Vector, 
+        sequences::Vector,
         diffusivity::Float64,
         properties::GlobalProperties,
         geometry::FixedGeometry,
@@ -77,9 +77,10 @@ struct Simulation{N, NG, G<:FixedGeometry}
         flatten::Bool,
         verbose::Bool
     )
-        nseq = length(sequences)
+        sequence_waveforms = SequenceWaveform.(sequences)
+        nseq = length(sequence_waveforms)
         new{nseq, length(geometry), typeof(geometry)}(
-            collect(sequences),
+            sequence_waveforms,
             diffusivity,
             properties,
             geometry,
@@ -139,23 +140,32 @@ function Simulation(
 end
 
 function Base.show(io::IO, sim::Simulation{N}) where {N}
-    function print_geometry()
-        show(io, sim.geometry)
-    end
-    if get(io, :compact, false)
-        seq_text = sim.flatten ? "single sequence" : "$N sequences"
-        print(io, "Simulation($seq_text, ")
-        print_geometry()
-        print(io, ", D=$(sim.diffusivity)um^2/ms, $(sim.properties))")
-    else
-        print(io, "Simulation(")
-        print_geometry()
-        print(io, ", D=$(sim.diffusivity)um^2/ms, $(sim.properties)):\n")
-        print(io, "$N sequences:\n")
-        for seq in sim.sequences
-            print(io, seq)
-        end
-    end
+    seq_text = sim.flatten ? "single sequence" : "$N sequences"
+    print(io, "Simulation($seq_text, ")
+    show(io, sim.geometry)
+    print(io, ", D=$(sim.diffusivity)um^2/ms, ")
+    show(io, sim.properties)
+    print(io, ", $(n_timesteps(sim)) time steps)")
+end
+
+"""
+    n_timesteps(simulation; readout_times=nothing, start_time=0., nTR=nothing, skip_TR=nothing)
+
+Return the number of timesteps in the simulation's readout schedule as an `Int`.
+
+The timestep count is determined using the same sequence, timestep, and readout
+scheduling options as [`readout`](@ref MCMRSimulator.Evolve.readout). `start_time` is the time of the snapshot
+from which the simulation starts and defaults to zero.
+"""
+function n_timesteps(simulation::Simulation; readout_times=nothing, start_time=0., nTR=nothing, skip_TR=nothing)
+    return length(parts(
+        simulation.sequences,
+        start_time,
+        simulation.timestep;
+        readouts=readout_times,
+        nTR=nTR,
+        skip_TR=skip_TR,
+    ))
 end
 
 function _default_bounding_box(simulation::Simulation)

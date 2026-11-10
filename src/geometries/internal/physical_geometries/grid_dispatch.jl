@@ -4,6 +4,8 @@ import StaticArrays: SVector
 import ...InternalBoundingBoxes
 import ...RayGridIntersection: ray_grid_intersections
 import ..PhysicalGeometries: PhysicalGeometry, filter_bounding_box, finalise!
+import ..PhysicalGeometries: filter_bounding_box_indices, geometry_from_indices
+import ..PhysicalGeometries: selection_overlaps
 
 struct IntersectionGrid{N}
     bounding_box::InternalBoundingBoxes.InternalBoundingBox{N}
@@ -84,21 +86,56 @@ function _grid_bounding_box(box::InternalBoundingBoxes.InternalBoundingBox{N}, m
     extent = upper_bound - lower_bound
     grid_extent = max.(extent, minimum_thickness)
     InternalBoundingBoxes.InternalBoundingBox(
-        grid_extent / 2,
-        (lower_bound + upper_bound) / 2,
+        (lower_bound + upper_bound - grid_extent) / 2,
+        (lower_bound + upper_bound + grid_extent) / 2,
+    )
+end
+
+function _range_bounding_box(grid::IntersectionGrid{N}, ranges::NTuple{N, UnitRange{Int}}) where {N}
+    cell_size = inv.(grid.inv_resolution)
+    grid_lower = InternalBoundingBoxes.lower(grid.grid_bounding_box)
+    lower_coordinate = SVector{N, Float64}(ntuple(d -> first(ranges[d]) - 1, N))
+    upper_coordinate = SVector{N, Float64}(ntuple(d -> last(ranges[d]), N))
+    lower = grid_lower + lower_coordinate .* cell_size
+    upper = grid_lower + upper_coordinate .* cell_size
+    padding = 30 * eps(max(1.0, maximum(abs.(lower)), maximum(abs.(upper))))
+    InternalBoundingBoxes.InternalBoundingBox(
+        lower .- padding,
+        upper .+ padding,
     )
 end
 
 function cell_bounding_box(grid::IntersectionGrid{N}, coordinate::CartesianIndex{N}) where {N}
-    cell_size = inv.(grid.inv_resolution)
-    lower = InternalBoundingBoxes.lower(grid.grid_bounding_box) .+
-        (SVector{N, Float64}(Tuple(coordinate)) .- 1) .* cell_size
-    upper = lower + cell_size
-    padding = 30 * eps(max(1.0, maximum(abs.(lower)), maximum(abs.(upper))))
-    InternalBoundingBoxes.InternalBoundingBox(
-        cell_size / 2 .+ padding,
-        lower + cell_size / 2,
-    )
+    _range_bounding_box(grid, ntuple(d -> coordinate[d]:coordinate[d], N))
+end
+
+function _populate_grid_range!(grid::IntersectionGrid{N}, geometry, ranges, selection) where {N}
+    if !selection_overlaps(selection)
+        for coordinate in CartesianIndices(ranges)
+            grid.geometries[coordinate] = nothing
+        end
+        return grid
+    end
+
+    split_dimension = argmax(length.(ranges))
+    if length(ranges[split_dimension]) == 1
+        coordinate = CartesianIndex(ntuple(d -> first(ranges[d]), N))
+        grid.geometries[coordinate] = geometry_from_indices(geometry, selection, Val(false))
+        return grid
+    end
+
+    range = ranges[split_dimension]
+    midpoint = first(range) + fld(length(range) - 1, 2)
+    for child_range in (first(range):midpoint, (midpoint + 1):last(range))
+        child_ranges = ntuple(
+            d -> d == split_dimension ? child_range : ranges[d], N,
+        )
+        child_selection = filter_bounding_box_indices(
+            geometry, _range_bounding_box(grid, child_ranges), selection,
+        )
+        _populate_grid_range!(grid, geometry, child_ranges, child_selection)
+    end
+    grid
 end
 
 """Build an unfinalised grid layout from the full bounds and leaf count."""
@@ -111,7 +148,7 @@ function IntersectionGrid(
     extent = InternalBoundingBoxes.upper(bounding_box) - InternalBoundingBoxes.lower(bounding_box)
     maximum_extent = maximum(extent)
     resolution = isnothing(resolution) ?
-        (iszero(maximum_extent) ? 1.0 : maximum_extent / max(ceil(Int, number_of_leaves^(1 / N)), 1)) : resolution
+        (iszero(maximum_extent) ? 1.0 : maximum_extent / max(ceil(Int, (number_of_leaves / 30)^(1 / N)), 1)) : resolution
     isinf(resolution) || resolution > 0 || throw(ArgumentError("grid resolution must be positive"))
     # Keep single-cell (Inf) grids finite, including fully zero-extent geometry.
     minimum_thickness = isinf(resolution) ? (iszero(maximum_extent) ? 1.0 : maximum_extent) : resolution
@@ -136,12 +173,9 @@ function finalise!(
     grid::IntersectionGrid{N}, geometry::PhysicalGeometry{N},
 ) where {N}
     isassigned(grid.geometries, lastindex(grid.geometries)) && return grid
-    for coordinate in CartesianIndices(grid.geometries)
-        grid.geometries[coordinate] = filter_bounding_box(
-            geometry, cell_bounding_box(grid, coordinate),
-        )
-    end
-    grid
+    ranges = ntuple(d -> 1:grid.dimensions[d], N)
+    selection = filter_bounding_box_indices(geometry, _range_bounding_box(grid, ranges))
+    _populate_grid_range!(grid, geometry, ranges, selection)
 end
 
 end

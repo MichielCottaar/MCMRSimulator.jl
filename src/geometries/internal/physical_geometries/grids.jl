@@ -4,10 +4,11 @@ module Grids
 import StaticArrays: SVector
 import ..PhysicalGeometries: PhysicalGeometry, InternalBoundingBox, number_of_leaves
 import ..PhysicalGeometries: find_intersection, inside_indices, inside_indices_eltype, finalise!
+import ..PhysicalGeometries: inside_sampling_per_obstruction
 import ..PhysicalGeometries: filter_bounding_box, rewrap, has_equivalent_wrapper
 import ..PhysicalGeometries.Groups: inside_indices_for_any_type
 import ..Transparents: Transparent
-import ..GridDispatch: IntersectionGrid, GridIterator
+import ..GridDispatch: IntersectionGrid, GridIterator, cell_bounding_box
 import ...InternalBoundingBoxes
 import .....DebugCounters
 
@@ -82,6 +83,32 @@ has_equivalent_wrapper(first::Grid{N}, second::Grid{N}) where {N} =
 number_of_leaves(grid::Grid) = number_of_leaves(grid.geometry)
 
 InternalBoundingBox(geometry::Grid; kwargs...) = geometry.grid.bounding_box
+
+function inside_sampling_per_obstruction(
+    wrapper::Grid{N}, density::Real, rng;
+    no_deproject=false,
+    bounding_box=nothing,
+) where {N}
+    _require_finalised(wrapper.grid)
+    positions = SVector{N, Float64}[]
+    for coordinate in CartesianIndices(wrapper.grid.geometries)
+        cell_geometry = wrapper.grid.geometries[coordinate]
+        isnothing(cell_geometry) && continue
+        cell_box = cell_bounding_box(wrapper.grid, coordinate)
+        cell_positions = inside_sampling_per_obstruction(
+            cell_geometry,
+            density,
+            rng;
+            no_deproject,
+            bounding_box=cell_box,
+        )
+        append!(positions, filter(
+            position -> InternalBoundingBoxes.isinside(cell_box, position),
+            cell_positions,
+        ))
+    end
+    positions
+end
 
 function _grid_coordinate(grid::IntersectionGrid{N}, position::SVector{N, Float64}) where {N}
     lower_bound = InternalBoundingBoxes.lower(grid.grid_bounding_box)

@@ -10,6 +10,7 @@ For a more user-friendly introduction, click [here](@ref Introduction).
 ```@docs
 Simulation
 readout
+n_timesteps
 evolve
 Subset
 Snapshot

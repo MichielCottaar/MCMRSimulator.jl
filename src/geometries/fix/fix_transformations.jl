@@ -25,12 +25,12 @@ end
 
 function _vector_geometry(group, geometry::Vector{P}) where {N, P<:PhysicalGeometry{N}}
     geometry = _shift_obstructions(group, geometry)
-    GeometryVector(geometry; bounding_box=group.use_boundingbox.value)
+    GeometryVector(geometry)
 end
 
 function _vector_geometry_unshifted(group, geometry::Vector{P}) where {N, P<:PhysicalGeometry{N}}
     isempty(geometry) && return GeometryVector(geometry)
-    GeometryVector(geometry; bounding_box=group.use_boundingbox.value)
+    GeometryVector(geometry)
 end
 
 function _apply_local_transformations(group, geometry::Vector; debug=false)
