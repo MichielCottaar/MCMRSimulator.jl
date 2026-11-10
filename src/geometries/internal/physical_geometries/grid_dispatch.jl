@@ -148,7 +148,7 @@ function IntersectionGrid(
     extent = InternalBoundingBoxes.upper(bounding_box) - InternalBoundingBoxes.lower(bounding_box)
     maximum_extent = maximum(extent)
     resolution = isnothing(resolution) ?
-        (iszero(maximum_extent) ? 1.0 : maximum_extent / max(ceil(Int, number_of_leaves^(1 / N)), 1)) : resolution
+        (iszero(maximum_extent) ? 1.0 : maximum_extent / max(ceil(Int, (number_of_leaves / 30)^(1 / N)), 1)) : resolution
     isinf(resolution) || resolution > 0 || throw(ArgumentError("grid resolution must be positive"))
     # Keep single-cell (Inf) grids finite, including fully zero-extent geometry.
     minimum_thickness = isinf(resolution) ? (iszero(maximum_extent) ? 1.0 : maximum_extent) : resolution
