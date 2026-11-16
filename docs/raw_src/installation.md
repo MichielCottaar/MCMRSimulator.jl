@@ -1,25 +1,33 @@
 # [Installation](@id installation)
 MCMRSimulator is an application written in the [Julia](https://julialang.org) language.
-You can run simulations either directly from the Julia REPL, in a [Jupyter notebook](@ref jupyter_install), or using the command line interface.
-## Installing the simulator for a specific project
+You can run simulations using the command line interface or using a Julia script using Julia REPL a [Jupyter notebook](@ref jupyter_install).
+
+## Installing MCMR simulator within Julia
 1. First install Julia 1.12 or later from the [official website](https://julialang.org/downloads/).
 2. Create a directory for the project for which you are going to use the simulator. We will install MCMRSimulator in isolation just for this project. This ensures that if we install a newer version of the simulator for another project in the future, it will not interfere with the reproducibility of the results of this project. We will refer to this newly created project directory below as "<project_dir>".
 3. Start the julia REPL in a terminal (`$ julia --project=<project_dir>`). The `--project` flag ensures that we create and activate a Julia environemnt just for this project. This will create a "Project.toml" and "Manifest.toml" inside the directory specifying the installed packages (such as the MCMR simulator).
 4. Enter the package manager by pressing "]"
-   - Install MCMRSimulator.jl using `pkg> add https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl.git{install_version}`.
+   - Install MCMRSimulator.jl using `pkg> add https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl.git#{install_version}`.
    - (Optional) Install one of the [Makie backends](https://makie.juliaplots.org/stable/documentation/backends/) for plotting (e.g., `pkg> add CairoMakie`).
    - (Optional) If you want to use a Jupyter notebook for this project, you will also have to install an `IJulia` kernel. You can find instructions to do so [below](@ref jupyter_install).
    - (Optional) If you want to use `MRIBuilder` to generate sequences, install it using `pkg> add https://git.fmrib.ox.ac.uk/ndcn0236/mribuilder.jl.git`.
    - Press "\[backspace\]" to leave the package manager.
-5. (Optional) To install the MCMRSimulator command line interface (CLI), run the following in the Julia package manager:
-   `pkg> app add https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl.git{install_version}`
-   This installs the `mcmr` app. Ensure that `~/.julia/bin` is in your `$PATH`.
 
-## Running MCMRSimulator
 After this installation process, you can run MCMRSimulator in one of the following ways:
 - *Julia REPL*: Start the REPL in a terminal by typing `$ julia --project=<project_dir>`. Afterwards type `using MCMRSimulator` to import the simulator. You can now follow the steps in the [MCMRSimulator tutorial using Julia](@ref tutorial_julia).
 - *Jupyter notebook*: Make sure that you install `IJulia` using the instructions [below](@ref jupyter_install). This will allow you to start a notebook in jupyter running in Julia. Within this notebook, you can follow the steps in the [MCMRSimulator tutorial using Julia](@ref tutorial_julia).
-- *Command line interface*: If you followed the instructions in step 4 above, you can run the MCMRSimulator command line interface simply by typing `mcmr` in the terminal. If it is not working, you might want to redo step 4 above and pay attention to any warning messages. With this alias set up, you can now follow [the command line tutorial](@ref tutorial_cli).
+## Installing the MCMR command line interface
+Installing the command line interface still requires the installation of Julia 1.12 or later from the [official website](https://julialang.org/downloads/).
+To install the MCMRSimulator command line interface (CLI) run:
+```bash
+julia -e 'import Pkg; Pkg.Apps.add(url="https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl#{install_version}")'
+```
+
+This installs the `mcmr` app. Ensure that `~/.julia/bin` is in your `$PATH`.
+
+You can run the MCMRSimulator command line interface simply by typing `mcmr` in the terminal. 
+If it is not working, you might want to rerun the step above and note any warning messages. 
+With this set up, you can now follow [the command line tutorial](@ref tutorial_cli).
 
 ## Updating MCMRSimulator
 First check the [CHANGELOG](https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl/-/blob/main/CHANGELOG.md) to find a list of changes since your current version.
