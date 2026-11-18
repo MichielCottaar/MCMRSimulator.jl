@@ -55,7 +55,7 @@ Please contact Michiel Cottaar before making any substantial changes to the code
   - Keep the zenodo page open
 - Commit changes
 - Add tag `v<version number>`
-- git push
+- git push --tags
 - Create and auto-merge merge request from version branch back into main
   -  Ensure "delete branch after merge" is not selected!
 - Create release on gitlab (https://git.fmrib.ox.ac.uk/ndcn0236/mcmrsimulator.jl/-/releases)
