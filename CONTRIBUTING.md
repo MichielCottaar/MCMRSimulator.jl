@@ -37,7 +37,7 @@ Please contact Michiel Cottaar before making any substantial changes to the code
 ## Release procedure
 - Check out the branch "`v<major>.<minor>`" (might already exist if this is a patch update)
   - Rebase the main branch into the version branch
-- Update the version number in "Project.toml" and "README.md" citation section.
+- Update the version number in "Project.toml".
 - Update the "CHANGELOG.md"
   - Check `[Unreleased]` link for any missing additions to the Changelog
   - Add line with `## [v<version number>]` just below `## [Unreleased]`
