@@ -5,6 +5,7 @@ module ObstructionGroups
 
 import ..ObstructionTypes: ObstructionType, key_value_pairs
 import ..Fields: Field, FieldValue, isglobal, value_as_vector
+import ....Internal: all_geometry_ids
 
 struct ObstructionGroupData{N}
     type::ObstructionType{N}
@@ -35,6 +36,24 @@ _full_group(group::ObstructionGroup) = group.indices == Base.OneTo(group.data.n_
 
 geometry_id(group::ObstructionGroup) = objectid(group.data.field_values)
 geometry_id(obstruction::IndexedObstruction) = (objectid(obstruction.data.field_values), obstruction.index)
+
+const ObstructionGeometryID = Tuple{UInt, Int}
+
+all_geometry_ids(obstruction::IndexedObstruction) = Set{ObstructionGeometryID}((geometry_id(obstruction),))
+all_geometry_ids(group::ObstructionGroup) = Set{ObstructionGeometryID}(
+    geometry_id(group[index]) for index in 1:length(group)
+)
+
+function _union_geometry_ids(geometries)
+    ids = Set{ObstructionGeometryID}()
+    for geometry in geometries
+        union!(ids, all_geometry_ids(geometry))
+    end
+    ids
+end
+
+all_geometry_ids(geometries::AbstractArray) = _union_geometry_ids(geometries)
+all_geometry_ids(geometries::Tuple) = _union_geometry_ids(geometries)
 
 Base.length(group::ObstructionGroup) = length(group.indices)
 Base.getindex(group::ObstructionGroup, ::Colon) = group

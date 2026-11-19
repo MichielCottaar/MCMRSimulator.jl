@@ -41,6 +41,26 @@ struct FixedGeometry{G <: PhysicalGeometry{3}, V, S, O}
     susceptibility::O
 end
 
+"""
+    all_geometry_ids(fixed_geometry, index::Tuple)
+    all_geometry_ids(fixed_geometry, indices::AbstractVector{<:Tuple})
+
+Return the source obstruction IDs associated with one or more property paths.
+
+An index may identify a property-tree subtree, in which case all IDs below that
+path are returned.
+"""
+all_geometry_ids(geometry::FixedGeometry, index::Tuple) =
+    Properties.get_all_values(geometry.surface.geometry_id, index)
+
+function all_geometry_ids(geometry::FixedGeometry, indices::AbstractVector{<:Tuple})
+    ids = Set{Tuple{UInt, Int}}()
+    for index in indices
+        union!(ids, all_geometry_ids(geometry, index))
+    end
+    ids
+end
+
 """Return the source obstruction identity for a property path in a fixed geometry."""
 geometry_id(geometry::FixedGeometry, property_index::Tuple) =
     first(Properties.get_value(geometry.surface.geometry_id, property_index))

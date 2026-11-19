@@ -1,6 +1,7 @@
 module LiminalGeometries
 
 export LiminalGeometry
+import ...Internal: all_geometry_ids
 
 """
     LiminalGeometry(geometries; extracellular_fraction, tortuosity_strength=2.)
@@ -24,6 +25,9 @@ struct LiminalGeometry
     extracellular_fraction::Float64
     tortuosity_strength::Float64
 end
+
+all_geometry_ids(geometry::LiminalGeometry) =
+    all_geometry_ids(Tuple(child for (_, child) in geometry.geometries))
 
 function LiminalGeometry(
     geometries::AbstractVector;

@@ -71,6 +71,17 @@ function get_value(properties::GeometryProperties, index::Tuple)
     value, (child_index, consumed...)
 end
 
+"""Return all property values matching the specific index"""
+function get_all_values(properties::GeometryProperties{S}, index::Tuple) where {S}
+    if isempty(index)
+        return Set{S}(all_property_values(properties))
+    end
+    child_index = index[1]
+    return get_all_values(properties.properties[child_index], index[2:end])
+end
+
+get_all_values(properties::GeometryLeafProperties{S}, ::Tuple) where {S} = Set{S}((properties.value, ))
+
 """Sum each distinct property-tree leaf once, assuming that the `indices` are ordered."""
 function sum_values(properties::GeometryProperties, indices)
     total = zero(eltype(properties))
