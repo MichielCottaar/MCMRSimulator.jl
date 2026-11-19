@@ -239,16 +239,18 @@ end
         ],
         triangles=[[1, 2, 3], [1, 2, 4], [1, 3, 4]],
         R1_inside=2.0,
-        permeability_surface=3.0,
+        permeability_surface=[3.0, 4.0, 5.0],
     )
     fixed_mesh = fix(mesh; dwell_time=4.0, surface_relaxation=5.0, density=6.0)
     @test fixed_mesh.geometry isa mr.Geometries.Internal.PhysicalGeometries.Grids.Grid
     @test first(fixed_mesh.geometry.geometry.geometries) isa Meshes.Mesh
     @test fixed_mesh.volume.R1.value == 2.0
-    @test fixed_mesh.surface.permeability.value == 3.0
-    @test fixed_mesh.surface.dwell_time.value == 4.0
-    @test fixed_mesh.surface.surface_relaxation.value == 5.0
-    @test fixed_mesh.surface.density.value == 6.0
+    @test get_value(fixed_mesh.surface.permeability, (1, 1))[1] == 3.0
+    @test get_value(fixed_mesh.surface.permeability, (1, 2))[1] == 4.0
+    @test get_value(fixed_mesh.surface.permeability, (1, 3))[1] == 5.0
+    @test get_value(fixed_mesh.surface.dwell_time, (1, 2))[1] == 4.0
+    @test get_value(fixed_mesh.surface.surface_relaxation, (1, 2))[1] == 5.0
+    @test get_value(fixed_mesh.surface.density, (1, 2))[1] == 6.0
 
     mesh.size_scale = 0.25
     fixed_mesh_override = fix(mesh)

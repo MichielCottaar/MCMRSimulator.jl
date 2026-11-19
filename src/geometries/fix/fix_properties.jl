@@ -1,6 +1,7 @@
 module FixProperties
 
 import ...User.Obstructions: Walls, Cylinders, Spheres, FiniteCylinders, Annuli, Mesh, isglobal
+import ...User.SplitMesh: components
 import ...Internal.Properties: GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
 
 const _volume_fields = (:R1, :R2, :off_resonance)
@@ -128,7 +129,7 @@ function _zero_surface(
 end
 
 function fix_properties(
-    group::Union{Cylinders, Spheres, Mesh};
+    group::Union{Cylinders, Spheres};
     permeability=0.,
     dwell_time=0.,
     surface_relaxation=0.,
@@ -144,6 +145,39 @@ function fix_properties(
             surface_relaxation,
             density,
         ),
+    )
+end
+
+function fix_properties(
+    group::Mesh;
+    permeability=0.,
+    dwell_time=0.,
+    surface_relaxation=0.,
+    density=0.,
+)
+    triangle_components = components(group)
+    component_surface_properties = [
+        _surface_properties(
+            group,
+            :surface,
+            findall(==(component), triangle_components);
+            permeability,
+            dwell_time,
+            surface_relaxation,
+            density,
+        )
+        for component in unique(triangle_components)
+    ]
+    surface = NamedTuple{_surface_fields}(Tuple(
+        GeometryVectorProperties([
+            getproperty(component_properties, field)
+            for component_properties in component_surface_properties
+        ])
+        for field in _surface_fields
+    ))
+    (
+        volume = _volume_properties(group, :inside),
+        surface,
     )
 end
 
