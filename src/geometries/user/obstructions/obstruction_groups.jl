@@ -14,12 +14,19 @@ struct ObstructionGroupData{N}
     n_obstructions::Int
 end
 
-"""A group or indexed view over shared obstruction data."""
+"""
+A group of obstructions.
+"""
 struct ObstructionGroup{N, I <: AbstractVector{Int}}
     data::ObstructionGroupData{N}
     indices::I
 end
 
+"""
+A singular obstruction.
+
+Internally, this is represented as an index into a ObstructionGroupData with the actual fields.
+"""
 struct IndexedObstruction{N}
     data::ObstructionGroupData{N}
     index::Int
