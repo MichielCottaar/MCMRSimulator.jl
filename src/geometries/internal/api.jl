@@ -41,6 +41,10 @@ struct FixedGeometry{G <: PhysicalGeometry{3}, V, S, O}
     susceptibility::O
 end
 
+"""Return the source obstruction identity for a property path in a fixed geometry."""
+geometry_id(geometry::FixedGeometry, property_index::Tuple) =
+    first(Properties.get_value(geometry.surface.geometry_id, property_index))
+
 """Return the finite public bounding box of a fixed geometry."""
 function BoundingBox(geometry::FixedGeometry)
     box = InternalBoundingBox(geometry.geometry)

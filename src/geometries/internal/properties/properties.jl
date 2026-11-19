@@ -49,6 +49,14 @@ function GeometryTupleProperties(properties::Tuple)
     GeometryTupleProperties{S, typeof(properties)}(properties)
 end
 
+"""Build the property-tree node storing source obstruction IDs."""
+function geometry_id_properties(ids::AbstractVector)
+    isempty(ids) && return GeometryVectorProperties{Tuple{UInt, Int}, GeometryLeafProperties{Tuple{UInt, Int}}}(
+        GeometryLeafProperties{Tuple{UInt, Int}}[],
+    )
+    GeometryVectorProperties([GeometryLeafProperties(id) for id in ids])
+end
+
 """Return the property value and the path consumed before reaching its scalar leaf."""
 function get_value(property, ::Tuple)
     property, ()

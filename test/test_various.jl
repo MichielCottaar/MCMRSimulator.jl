@@ -515,6 +515,19 @@ end
     copied_group = deepcopy(group)
     @test geometry_ids(copied_group) != geometry_ids(group)
     @test geometry_ids(copied_group[1]) == (geometry_ids(copied_group), 1)
+
+    fixed_group = mr.fix(group)
+    fixed_geometry_id = mr.Geometries.Internal.geometry_id
+    @test fixed_geometry_id(fixed_group, (1,)) == geometry_ids(group[1])
+    @test fixed_geometry_id(fixed_group, (2,)) == geometry_ids(group[2])
+
+    fixed_obstruction = mr.fix(group[2])
+    @test fixed_geometry_id(fixed_obstruction, (1,)) == geometry_ids(group[2])
+
+    other_group = mr.Cylinders(radius=1.)
+    fixed_collection = mr.fix([group, other_group])
+    @test fixed_geometry_id(fixed_collection, (1, 2)) == geometry_ids(group[2])
+    @test fixed_geometry_id(fixed_collection, (2, 1)) == geometry_ids(other_group[1])
 end
 
 end

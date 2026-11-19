@@ -7,19 +7,20 @@ include("fix_susceptibility.jl")
 
 import ..User: LiminalGeometry
 import ..User.Obstructions: ObstructionGroup, IndexedObstruction, Walls, Cylinders, Spheres, FiniteCylinders, Annuli, BendyCylinder, Mesh
+import ..User.Obstructions.ObstructionGroups: geometry_id
 import ..Internal.PhysicalGeometries: PhysicalGeometry, simplify
 import ..Internal: SizeScaleOverride
 import ..Internal.PhysicalGeometries.Transparents: IgnoreOverlapping
 import ..Internal.PhysicalGeometries.Groups: GeometryTuple, GeometryVector
 import ..Internal.PhysicalGeometries: FixedLiminalGeometry
-import ..Internal.Properties: GeometryTupleProperties
-import ..Internal.Properties: GeometryVectorProperties
+import ..Internal.Properties: GeometryTupleProperties, GeometryVectorProperties
 import ..Internal: FixedGeometry
 import ..Internal.Susceptibility: LiminalSusceptibility
 import ..Internal: contains_repeat
 import .FixBaseGeometry: fix_base_geometry, annuli_size_scale
 import .FixTransformations: fix_transformations
 import .FixProperties: fix_properties, _zero_volume, _zero_surface
+import ..Internal.Properties: geometry_id_properties
 import .FixSusceptibility: fix_susceptibility
 
 function fix(
@@ -97,11 +98,12 @@ end
 function fix(obstruction::IndexedObstruction; kwargs...)
     group = obstruction.group
     values = (; (key => getproperty(obstruction, key) for key in propertynames(group))...)
-    fix(ObstructionGroup(group.type; number=1, values...); kwargs...)
+    fix(ObstructionGroup(group.type; number=1, values...); _geometry_ids=[geometry_id(obstruction)], kwargs...)
 end
 
 function fix(
     group::ObstructionGroup;
+    _geometry_ids=[geometry_id(group[index]) for index in 1:length(group)],
     permeability=0.,
     dwell_time=0.,
     surface_relaxation=0.,
@@ -129,6 +131,25 @@ function fix(
         surface_relaxation,
         density,
     )
+    geometry_ids = if group isa Annuli
+        GeometryTupleProperties((geometry_id_properties(_geometry_ids), geometry_id_properties(_geometry_ids)))
+    elseif group isa FiniteCylinders
+        use_spherical_endpoint = group.use_spherical_endpoint.value
+        use_spherical_endpoint = use_spherical_endpoint isa Bool ?
+            fill(use_spherical_endpoint, length(group)) : use_spherical_endpoint
+        connected_to = group.connected_to.value
+        connected_to = connected_to isa Int ? fill(connected_to, length(group)) : connected_to
+        endpoint_indices = findall(use_spherical_endpoint)
+        cylinder_indices = findall(connected_to .!= 0)
+        endpoint_ids = _geometry_ids[endpoint_indices]
+        cylinder_ids = _geometry_ids[cylinder_indices]
+        any(use_spherical_endpoint) ?
+            GeometryTupleProperties((geometry_id_properties(endpoint_ids), geometry_id_properties(cylinder_ids))) :
+            geometry_id_properties(cylinder_ids)
+    else
+        geometry_id_properties(_geometry_ids)
+    end
+    properties = merge(properties, (surface=merge(properties.surface, (geometry_id=geometry_ids,)),))
     susceptibility = fix_susceptibility(group)
     FixedGeometry{typeof(physical_geometry), typeof(properties.volume), typeof(properties.surface), typeof(susceptibility)}(
         physical_geometry,
@@ -161,6 +182,7 @@ function fix(
     if isempty(geometries)
         volume = _zero_volume()
         surface = _zero_surface(; permeability, dwell_time, surface_relaxation, density)
+        surface = merge(surface, (geometry_id=geometry_id_properties(Tuple{UInt, Int}[]),))
         return FixedGeometry{typeof(GeometryTuple{3}(())), typeof(volume), typeof(surface), Tuple{}}(
             GeometryTuple{3}(()),
             volume,
