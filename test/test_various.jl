@@ -548,6 +548,22 @@ end
     @test fixed_geometry_ids(fixed_collection, [(1, 1), (2, 1)]) ==
         Set([geometry_ids(group[1]), geometry_ids(other_group[1])])
 
+    mesh = mr.Mesh(
+        vertices=[
+            [0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [0., 0., 1.],
+            [3., 0., 0.], [4., 0., 0.], [3., 1., 0.], [3., 0., 1.],
+        ],
+        triangles=[
+            [1, 2, 3], [1, 2, 4], [1, 3, 4],
+            [5, 6, 7], [5, 6, 8], [5, 7, 8],
+        ],
+        components=[1, 1, 1, 2, 2, 2],
+    )
+    fixed_mesh = mr.fix(mesh)
+    @test fixed_geometry_ids(fixed_mesh, (1,)) == Set(geometry_ids(mesh[index]) for index in 1:3)
+    @test fixed_geometry_ids(fixed_mesh, (2,)) == Set(geometry_ids(mesh[index]) for index in 4:6)
+    @test fixed_geometry_ids(fixed_mesh, (1, 1)) == Set([geometry_ids(mesh[1])])
+
     view_group = mr.Spheres(radius=[1., 2., 3., 4.])
     selected = view_group[2:3]
     @test length(selected) == 2

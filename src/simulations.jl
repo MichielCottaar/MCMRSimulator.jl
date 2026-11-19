@@ -5,9 +5,9 @@ module Simulations
 import StaticArrays: SVector, SizedVector
 import ..Geometries: ObstructionGroup, fix
 import ..Geometries: BoundingBox, BoundingBoxNotSupported
-import ..Geometries.Internal: FixedGeometry, susceptibility_off_resonance, isinside_fixed, inside_cache_type, sorted_property_indices
+import ..Geometries.Internal: FixedGeometry, susceptibility_off_resonance, isinside_fixed, all_geometry_ids, inside_cache_type, sorted_property_indices
 import ..Reflections: previous_hit
-import ..Spins: Spin, Snapshot, SpinOrientation, static_vector_type, stuck, spin_type
+import ..Spins: Spin, Snapshot, SpinOrientation, UserGeometry, isinside, static_vector_type, stuck, spin_type
 import ..Methods: get_time
 import ..Properties: GlobalProperties, R1, R2, off_resonance
 import ..TimeSteps: TimeStep
@@ -94,6 +94,49 @@ end
 function spin_type(simulation::Simulation{N}, nsequences::Integer=N) where {N}
     spin_type(simulation.geometry, nsequences)
 end
+
+function isinside(simulation::Simulation, spin::Spin)
+    inside_property_indices = if !isnothing(spin.property_indices)
+        spin.property_indices
+    elseif !isnothing(spin.isinside)
+        sorted_property_indices(simulation.geometry, spin.isinside)
+    else
+        isinside_fixed(
+            simulation.geometry,
+            spin.position,
+            previous_hit(spin.reflection),
+        ).property_indices
+    end
+    return length(inside_property_indices)
+end
+
+function isinside(simulation::Simulation, geometry::UserGeometry, spin::Spin)
+    inside_property_indices = if !isnothing(spin.property_indices)
+        spin.property_indices
+    elseif !isnothing(spin.isinside)
+        sorted_property_indices(simulation.geometry, spin.isinside)
+    else
+        isinside_fixed(
+            simulation.geometry,
+            spin.position,
+            previous_hit(spin.reflection),
+        ).property_indices
+    end
+    geometry_ids = all_geometry_ids(geometry)
+    sum(
+        !isempty(intersect(geometry_ids, all_geometry_ids(simulation.geometry, property_index)))
+        for property_index in inside_property_indices;
+        init=0,
+    )
+end
+
+isinside(simulation::Simulation, snapshot::Snapshot) = [
+    isinside(simulation, spin) for spin in snapshot
+]
+
+isinside(simulation::Simulation, geometry::UserGeometry, snapshot::Snapshot) = [
+    isinside(simulation, geometry, spin) for spin in snapshot
+]
 
 function Simulation(
     sequences;

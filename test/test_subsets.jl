@@ -102,6 +102,29 @@ end
     @test all(spin -> spin.position[1] in (0., 10.), selected)
 end
 
+@testset "isinside matches simulation obstruction identities" begin
+    geometry = mr.Spheres(
+        position=[[0., 0., 0.], [10., 0., 0.], [20., 0., 0.]],
+        radius=1.,
+    )
+    simulation = mr.Simulation([], geometry=geometry)
+    snapshot = mr.Snapshot([
+        mr.Spin(position=[0., 0., 0.]),
+        mr.Spin(position=[10., 0., 0.]),
+        mr.Spin(position=[20., 0., 0.]),
+    ])
+
+    @test mr.isinside(simulation, snapshot) == [1, 1, 1]
+    @test mr.isinside(simulation, geometry[1:2], snapshot.spins[1]) == 1
+    @test mr.isinside(simulation, geometry[1:2], snapshot.spins[3]) == 0
+    @test mr.isinside(simulation, geometry[3:3], snapshot.spins[3]) == 1
+
+    cached_snapshot = mr.Simulations._constrain_snapshot(snapshot, simulation)
+    @test all(!isnothing(spin.property_indices) for spin in cached_snapshot)
+    @test mr.isinside(simulation, cached_snapshot.spins[2]) == 1
+    @test mr.isinside(simulation, geometry[1:2], cached_snapshot.spins[3]) == 0
+end
+
 @testset "Test multiple geometries" begin
     geometry = [mr.Spheres(position=[0., 0., 0.], radius=1.), mr.Walls(position=[0., 1.2], density=1., dwell_time=1.)]
     sim = mr.Simulation([], geometry=geometry)
