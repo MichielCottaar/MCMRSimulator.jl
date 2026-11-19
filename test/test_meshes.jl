@@ -169,7 +169,7 @@ end
     @testset "Compare inside" begin
         Random.seed!(1)
         for _ in 1:1000
-            position = Random.rand(3) .* 1000.
+            position = SVector{3, Float64}(Random.rand(3) .* 1000.)
             local_position = mod.(position[2:3] .+ 1, 2) .- 1
             abs(norm(local_position) - 1) <= 0.001 && continue
             @test length(mr.Geometries.Internal.isinside_fixed(fmesh, position)) ==
