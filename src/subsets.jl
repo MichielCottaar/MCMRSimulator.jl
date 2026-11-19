@@ -13,9 +13,9 @@ import ..Spins: Snapshot, Spin
 import ..Simulations: Simulation, isinside, stuck
 
 _arguments = """
-- `geometry`: user geometry or view selecting obstruction IDs in the simulation geometry (default: the full simulation geometry). IDs that do not match the simulation geometry do not contribute to the result.
+- `geometry`: user geometry or view that is a subset of the geometry supplied to the simulation (default: the full simulation geometry).
 - `bound`: set to true to return only spins bound to a selected obstruction, to false to return spins not bound to one (default: whether spins are bound is not relevant).
-- `inside`: set to true to return spins with at least one matching inside index, or false to return spins with none (default: whether spins are inside is not relevant). An integer selects spins with exactly that many matching inside indices.
+- `inside`: set to true to return spins inside at least one obstruction in `geometry`, or false to return spins outside all its obstructions (default: whether spins are inside is not relevant). An integer selects spins inside exactly that many obstructions in `geometry`.
 """
 
 """

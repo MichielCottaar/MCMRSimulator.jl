@@ -186,9 +186,10 @@ end
     stuck(simulation, geometry, snapshot)
 
 Returns true if the spin is stuck on the surface.
-When given a simulation and user geometry, also checks whether the surface hit
-belongs to that geometry by comparing obstruction identities. Snapshot overloads
-return a Boolean for each spin.
+When given a simulation and user geometry, the geometry must be a subset of the
+original geometry supplied to the simulation. The result is true if the spin is
+bound to a surface in that geometry. Snapshot overloads return a Boolean for
+each spin.
 This can be used to filter a [`Snapshot`](@ref) using:
 ```julia
 only_stuck = filter(stuck, snapshot)
@@ -338,8 +339,9 @@ each spin.
 
 When a `simulation` is provided, the cached inside state of each spin is used.
 If `geometry` is also provided, it must be a subset of the original geometry
-supplied to the simulation; only inside indices with matching geometry IDs are
-counted. If `geometry` is omitted, the full simulation geometry is considered.
+supplied to the simulation. The result counts the inside regions associated with
+that geometry. If `geometry` is omitted, the full simulation geometry is
+considered.
 Fixed geometries are accepted by internal geometry queries, not by this public
 function.
 """
