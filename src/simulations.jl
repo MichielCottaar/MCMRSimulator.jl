@@ -138,6 +138,26 @@ isinside(simulation::Simulation, geometry::UserGeometry, snapshot::Snapshot) = [
     isinside(simulation, geometry, spin) for spin in snapshot
 ]
 
+stuck(simulation::Simulation, spin::Spin) = stuck(spin)
+
+function stuck(simulation::Simulation, geometry::UserGeometry, spin::Spin)
+    stuck(spin) || return false
+    intersection = previous_hit(spin.reflection)
+    isnothing(intersection) && return false
+    !isempty(intersect(
+        all_geometry_ids(geometry),
+        all_geometry_ids(simulation.geometry, intersection.property_indices),
+    ))
+end
+
+stuck(simulation::Simulation, snapshot::Snapshot) = [
+    stuck(simulation, spin) for spin in snapshot
+]
+
+stuck(simulation::Simulation, geometry::UserGeometry, snapshot::Snapshot) = [
+    stuck(simulation, geometry, spin) for spin in snapshot
+]
+
 function Simulation(
     sequences;
     diffusivity=3.,

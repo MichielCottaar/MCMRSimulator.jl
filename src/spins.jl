@@ -180,8 +180,15 @@ end
 
 """
     stuck(spin)
+    stuck(simulation, spin)
+    stuck(simulation, geometry, spin)
+    stuck(simulation, snapshot)
+    stuck(simulation, geometry, snapshot)
 
 Returns true if the spin is stuck on the surface.
+When given a simulation and user geometry, also checks whether the surface hit
+belongs to that geometry by comparing obstruction identities. Snapshot overloads
+return a Boolean for each spin.
 This can be used to filter a [`Snapshot`](@ref) using:
 ```julia
 only_stuck = filter(stuck, snapshot)

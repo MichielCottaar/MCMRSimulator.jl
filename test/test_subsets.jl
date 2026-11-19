@@ -32,6 +32,11 @@ end
     @test length(mr.get_subset(snapshot, sim, inside=false)) == 100000
     bound_particles = mr.get_subset(snapshot, sim, bound=true)
     @test all(spin->iszero(mod(spin.position[1], 1.)), bound_particles)
+    @test mr.stuck(sim, bound_particles[1])
+    @test mr.stuck(sim, geometry, bound_particles[1])
+    @test mr.stuck(sim, geometry[1], bound_particles[1])
+    @test !mr.stuck(sim, mr.Walls(position=0.5, repeats=1.), bound_particles[1])
+    @test all(mr.stuck(sim, geometry, mr.Snapshot(bound_particles)))
 end
 @testset "Testing inside of single sphere" begin
     geometry = mr.Spheres(position=[0., 0., 0.], radius=1.)
