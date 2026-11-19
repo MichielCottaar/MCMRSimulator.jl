@@ -9,16 +9,13 @@ Functions:
 """
 module Subsets
 import Base: @kwdef
-import ..Spins: Snapshot, Spin, stuck_to
-import ..Reflections: previous_hit
-import ..Simulations: Simulation
-import ..Geometries: fix
-import ..Geometries.Internal: FixedGeometry, distance_to_surface, isinside_fixed
+import ..Spins: Snapshot, Spin
+import ..Simulations: Simulation, isinside, stuck
 
 _arguments = """
-- `geometry`: user geometry to use for inside and bound tests (default: the simulation geometry).
-- `bound`: set to true to return only bound spins, to false to return only free spins (default: whether spins are bound is not relevant).
-- `inside`: set to true to return only spins inside the geometry, to false to return only spins outside of the geometry (default: whether spins are inside or outside is not relevant). It can also be set to a positive integer number. Only spins that are inside that exact number of obstructions will be returned.
+- `geometry`: user geometry or view selecting obstruction IDs in the simulation geometry (default: the full simulation geometry). IDs that do not match the simulation geometry do not contribute to the result.
+- `bound`: set to true to return only spins bound to a selected obstruction, to false to return spins not bound to one (default: whether spins are bound is not relevant).
+- `inside`: set to true to return spins with at least one matching inside index, or false to return spins with none (default: whether spins are inside is not relevant). An integer selects spins with exactly that many matching inside indices.
 """
 
 """
@@ -52,38 +49,25 @@ get_subset(snapshot::Snapshot, simulation::Simulation; kwargs...) =
     get_subset(snapshot, simulation, Subset(; kwargs...))
 
 function get_subset(snapshot::Snapshot, simulation::Simulation, subset::Subset)
-    if isnothing(subset.geometry)
-        return _get_subset(snapshot, simulation.geometry, subset, false)
-    end
-    _get_subset(snapshot, fix(subset.geometry), subset, true)
-end
-
-function _get_subset(snapshot::Snapshot{N}, geometry::FixedGeometry, subset::Subset, explicit_geometry::Bool) where {N}
     if isnothing(subset.bound) && isnothing(subset.inside)
         return snapshot
     end
 
     include = ones(Bool, length(snapshot))
     if !isnothing(subset.bound)
-        function _isbound(spin::Spin)
-            if explicit_geometry
-                return !isempty(stuck_to(spin)) && distance_to_surface(geometry, spin.position) <= sqrt(eps())
-            end
-            return !isempty(stuck_to(spin))
-        end
-        include .&= (_isbound.(snapshot) .== subset.bound)
+        bound = isnothing(subset.geometry) ?
+            stuck(simulation, snapshot) :
+            stuck(simulation, subset.geometry, snapshot)
+        include .&= (bound .== subset.bound)
     end
     if !isnothing(subset.inside)
-        function _number_isinside(spin::Spin)
-            if !explicit_geometry && !isnothing(spin.isinside)
-                return length(spin.isinside)
-            end
-            length(isinside_fixed(geometry, spin.position, previous_hit(spin.reflection)))
-        end
+        number_inside = isnothing(subset.geometry) ?
+            isinside(simulation, snapshot) :
+            isinside(simulation, subset.geometry, snapshot)
         if subset.inside isa Bool
-            include .&= ((_number_isinside.(snapshot) .> 0) .== subset.inside)
+            include .&= ((number_inside .> 0) .== subset.inside)
         else
-            include .&= (_number_isinside.(snapshot) .== subset.inside)
+            include .&= (number_inside .== subset.inside)
         end
     end
     return snapshot[include]

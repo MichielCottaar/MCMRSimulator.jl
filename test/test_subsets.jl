@@ -76,26 +76,30 @@ end
 end
 
 @testset "Testing an explicit user geometry" begin
-    simulation = mr.Simulation([], geometry=[])
+    sphere = mr.Spheres(position=[0.0, 0.0, 0.0], radius=1.0)
+    simulation = mr.Simulation([], geometry=sphere)
     snapshot = mr.Snapshot([
         mr.Spin(position=[0.0, 0.0, 0.0]),
         mr.Spin(position=[1.0, 0.0, 0.0]),
         mr.Spin(position=[2.0, 0.0, 0.0]),
     ])
-    sphere = mr.Spheres(position=[0.0, 0.0, 0.0], radius=1.0)
 
     @test length(mr.get_subset(snapshot, simulation, geometry=sphere, inside=true)) == 1
     @test length(mr.get_subset(snapshot, simulation, geometry=sphere, inside=false)) == 2
     @test length(mr.get_subset(snapshot, simulation, geometry=sphere, bound=true)) == 0
     @test length(mr.get_subset(snapshot, simulation, geometry=sphere, bound=false)) == 3
+
+    duplicate_sphere = mr.Spheres(position=[0.0, 0.0, 0.0], radius=1.0)
+    @test length(mr.get_subset(snapshot, simulation, geometry=duplicate_sphere, inside=true)) == 0
+    @test length(mr.get_subset(snapshot, simulation, geometry=duplicate_sphere, inside=false)) == 3
 end
 
 @testset "Subset geometry can be an obstruction-group view" begin
-    simulation = mr.Simulation([], geometry=[])
     spheres = mr.Spheres(
         position=[[0., 0., 0.], [10., 0., 0.], [20., 0., 0.]],
         radius=1.,
     )
+    simulation = mr.Simulation([], geometry=spheres)
     snapshot = mr.Snapshot([
         mr.Spin(position=[0., 0., 0.]),
         mr.Spin(position=[10., 0., 0.]),
