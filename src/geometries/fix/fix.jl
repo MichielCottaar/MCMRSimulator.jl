@@ -96,15 +96,10 @@ function fix(group::BendyCylinder; kwargs...)
     fix(Mesh(group); kwargs...)
 end
 
-function fix(obstruction::IndexedObstruction; kwargs...)
-    group = obstruction.group
-    values = (; (key => getproperty(obstruction, key) for key in propertynames(group))...)
-    fix(ObstructionGroup(group.type; number=1, values...); _geometry_ids=[geometry_id(obstruction)], kwargs...)
-end
+fix(obstruction::IndexedObstruction; kwargs...) = fix(ObstructionGroup(obstruction.data, obstruction.index:obstruction.index); kwargs...)
 
 function fix(
     group::ObstructionGroup;
-    _geometry_ids=[geometry_id(group[index]) for index in 1:length(group)],
     permeability=0.,
     dwell_time=0.,
     surface_relaxation=0.,
@@ -112,6 +107,7 @@ function fix(
     debug=false,
 )
     debug isa Bool || throw(ArgumentError("debug must be a Bool"))
+    source_geometry_ids = [geometry_id(group[index]) for index in 1:length(group)]
     if group.indices != collect(1:group.data.n_obstructions)
         group = materialize(group)
     end
@@ -139,7 +135,7 @@ function fix(
         density,
     )
     geometry_ids = if group isa Annuli
-        GeometryTupleProperties((geometry_id_properties(_geometry_ids), geometry_id_properties(_geometry_ids)))
+        GeometryTupleProperties((geometry_id_properties(source_geometry_ids), geometry_id_properties(source_geometry_ids)))
     elseif group isa FiniteCylinders
         use_spherical_endpoint = group.use_spherical_endpoint.value
         use_spherical_endpoint = use_spherical_endpoint isa Bool ?
@@ -148,13 +144,13 @@ function fix(
         connected_to = connected_to isa Int ? fill(connected_to, length(group)) : connected_to
         endpoint_indices = findall(use_spherical_endpoint)
         cylinder_indices = findall(connected_to .!= 0)
-        endpoint_ids = _geometry_ids[endpoint_indices]
-        cylinder_ids = _geometry_ids[cylinder_indices]
+        endpoint_ids = source_geometry_ids[endpoint_indices]
+        cylinder_ids = source_geometry_ids[cylinder_indices]
         any(use_spherical_endpoint) ?
             GeometryTupleProperties((geometry_id_properties(endpoint_ids), geometry_id_properties(cylinder_ids))) :
             geometry_id_properties(cylinder_ids)
     else
-        geometry_id_properties(_geometry_ids)
+        geometry_id_properties(source_geometry_ids)
     end
     properties = merge(properties, (surface=merge(properties.surface, (geometry_id=geometry_ids,)),))
     susceptibility = fix_susceptibility(group)
