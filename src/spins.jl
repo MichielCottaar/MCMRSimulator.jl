@@ -328,13 +328,20 @@ end
 """
     isinside(geometry, position)
     isinside(geometry, spin)
+    isinside(geometry, snapshot)
     isinside(simulation, [geometry, ]spin)
+    isinside(simulation, [geometry, ]snapshot)
 
-Returns the number of obstructions in the user-defined `geometry` that contain the position or spin. 
+For a position or spin, returns the number of obstructions in the user-defined
+`geometry` that contain it. For a snapshot, returns a vector with the count for
+each spin.
 
-If the `simulation` is provided the cached version of the inside state of the spin is used.
-`geometry` in this case must be a subset of the original geometry supplied to the simulator.
-If no `geometry` is provided the full original goemetry is considered.
+When a `simulation` is provided, the cached inside state of each spin is used.
+If `geometry` is also provided, it must be a subset of the original geometry
+supplied to the simulation; only inside indices with matching geometry IDs are
+counted. If `geometry` is omitted, the full simulation geometry is considered.
+Fixed geometries are accepted by internal geometry queries, not by this public
+function.
 """
 isinside(geometry::UserGeometry, position::AbstractVector) =
     length(isinside_fixed(_fixed_user_geometry(geometry), SVector{3, Float64}(position)))
