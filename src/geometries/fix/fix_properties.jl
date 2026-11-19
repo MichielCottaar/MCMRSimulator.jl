@@ -36,14 +36,13 @@ function _property_node(values::Vector{Float64})
     GeometryVectorProperties(values)
 end
 
-function _property_node(group, field_name::Symbol, category::Symbol, default::Float64)
-    _property_node(_property_values(group, field_name, category, default))
-end
-
-function _property_node(group, field_name::Symbol, category::Symbol, default::Float64, indices)
+function _property_node(group, field_name::Symbol, category::Symbol, default::Float64, indices=nothing)
     values = _property_values(group, field_name, category, default)
-    values = values isa Float64 ? fill(values, length(group)) : values
-    _property_node(values[indices])
+    if !isnothing(indices)
+        values = values isa Float64 ? fill(values, length(group)) : values
+        values = values[indices]
+    end
+    _property_node(values)
 end
 
 function _volume_properties(group, category::Symbol)
@@ -51,33 +50,6 @@ function _volume_properties(group, category::Symbol)
         _property_node(group, field_name, category, 0.)
     end
     NamedTuple{_volume_fields}(Tuple(values))
-end
-
-function _surface_properties(
-    group,
-    category::Symbol;
-    geometry_ids=_source_geometry_ids(group),
-    permeability=0.,
-    dwell_time=0.,
-    surface_relaxation=0.,
-    density=0.,
-)
-    defaults = (
-        R1 = Float64(0.),
-        R2 = Float64(0.),
-        off_resonance = Float64(0.),
-        permeability = Float64(permeability),
-        dwell_time = Float64(dwell_time),
-        surface_relaxation = Float64(surface_relaxation),
-        density = Float64(density),
-    )
-    values = map(_surface_fields) do field_name
-        _property_node(group, field_name, category, getproperty(defaults, field_name))
-    end
-    merge(
-        NamedTuple{_surface_fields}(Tuple(values)),
-        (geometry_id=geometry_id_properties(geometry_ids),),
-    )
 end
 
 function _volume_properties(group, category::Symbol, indices)
@@ -90,7 +62,7 @@ end
 function _surface_properties(
     group,
     category::Symbol,
-    indices;
+    indices=nothing;
     geometry_ids=_source_geometry_ids(group),
     permeability=0.,
     dwell_time=0.,
@@ -109,9 +81,10 @@ function _surface_properties(
     values = map(_surface_fields) do field_name
         _property_node(group, field_name, category, getproperty(defaults, field_name), indices)
     end
+    selected_ids = isnothing(indices) ? geometry_ids : geometry_ids[indices]
     merge(
         NamedTuple{_surface_fields}(Tuple(values)),
-        (geometry_id=geometry_id_properties(geometry_ids[indices]),),
+        (geometry_id=geometry_id_properties(selected_ids),),
     )
 end
 
