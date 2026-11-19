@@ -33,6 +33,9 @@ struct IndexedObstruction{N}
     index :: Int
 end
 
+geometry_id(group::ObstructionGroup) = objectid(group.field_values)
+geometry_id(obstruction::IndexedObstruction) = (geometry_id(obstruction.group), obstruction.index)
+
 
 Base.propertynames(og::ObstructionGroup) = og.unique_keys
 Base.propertynames(io::IndexedObstruction) = propertynames(io.group)

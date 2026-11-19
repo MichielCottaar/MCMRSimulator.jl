@@ -503,4 +503,18 @@ end
     @test orient_single.phase ≈ orient_many.phase
 end
 
+@testset "Obstruction geometry identities" begin
+    geometry_ids = mr.Geometries.User.Obstructions.ObstructionGroups.geometry_id
+
+    group = mr.Spheres(radius=[1., 2.])
+    @test geometry_ids(group) == objectid(group.field_values)
+    @test geometry_ids(group[1]) == (geometry_ids(group), 1)
+    @test geometry_ids(group[1]) == geometry_ids(group[1])
+    @test geometry_ids(group[1]) != geometry_ids(group[2])
+
+    copied_group = deepcopy(group)
+    @test geometry_ids(copied_group) != geometry_ids(group)
+    @test geometry_ids(copied_group[1]) == (geometry_ids(copied_group), 1)
+end
+
 end
