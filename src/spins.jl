@@ -27,8 +27,10 @@ import ..Reflections: Reflection, has_intersection, has_hit, previous_hit, possi
 import ..Geometries.Internal:
     random_surface_positions, volume_sampling,
     FixedGeometry,
-    isinside, IsInside, inside_cache_type, property_cache_type, sorted_property_indices,
+    isinside_fixed, IsInside, inside_cache_type, property_cache_type, sorted_property_indices,
     R1, R2, off_resonance, susceptibility_off_resonance
+import ..Geometries.User: LiminalGeometry
+import ..Geometries.User.Obstructions: ObstructionGroup, IndexedObstruction
 import ..Methods: get_time, norm_angle
 import ..Properties: GlobalProperties
 import ..Geometries: fix, fix_susceptibility
@@ -304,17 +306,34 @@ Returns the position of the spin particle as a vector of length 3.
 """
 position(s :: Spin) = s.position
 
-"""
-    isinside([geometry, ]spin)
+const UserGeometry = Union{ObstructionGroup, IndexedObstruction, LiminalGeometry, AbstractVector, Tuple}
 
-Returns vector of obstructions that the spin is inside.
-If `geometry` is not provided, will return a vector of indices instead.
-If a non-fixed `geometry` is provided, will return the number of obstructions that the spin is inside.
-"""
-isinside(geometry, position::AbstractVector) = isinside(geometry, Spin(nsequences=0, position=position))
-isinside(geometry, spin::Spin) = length(isinside(fix(geometry), spin))
+_is_user_geometry(::Union{ObstructionGroup, IndexedObstruction, LiminalGeometry}) = true
+_is_user_geometry(geometry::AbstractArray) = all(_is_user_geometry, geometry)
+_is_user_geometry(geometry::Tuple) = all(_is_user_geometry, geometry)
+_is_user_geometry(::Any) = false
 
-isinside(geometry::FixedGeometry, spin::Spin) = isinside(geometry, spin.position, previous_hit(spin.reflection))
+function _fixed_user_geometry(geometry::UserGeometry)
+    _is_user_geometry(geometry) || throw(ArgumentError("isinside only accepts user-defined geometries"))
+    fix(geometry)
+end
+
+"""
+    isinside(geometry, position)
+    isinside(geometry, spin)
+    isinside(simulation, [geometry, ]spin)
+
+Returns the number of obstructions in the user-defined `geometry` that contain the position or spin. 
+
+If the `simulation` is provided the cached version of the inside state of the spin is used.
+`geometry` in this case must be a subset of the original geometry supplied to the simulator.
+If no `geometry` is provided the full original goemetry is considered.
+"""
+isinside(geometry::UserGeometry, position::AbstractVector) =
+    length(isinside_fixed(_fixed_user_geometry(geometry), SVector{3, Float64}(position)))
+
+isinside(geometry::UserGeometry, spin::Spin) =
+    length(isinside_fixed(_fixed_user_geometry(geometry), spin.position, previous_hit(spin.reflection)))
 
 
 """
@@ -388,7 +407,7 @@ function spin_sampling(geometry::FixedGeometry, bounding_box::BoundingBox, volum
         direction = Random.randn(SVector{3, Float64})
         direction ⋅ intersection.normal < 0 && (direction = -direction)
         reflection = Reflection(intersection, -direction, norm(direction), 0., 0.)
-        indices = cache_type(isinside(geometry, position, intersection).inside_of)
+        indices = cache_type(isinside_fixed(geometry, position, intersection).inside_of)
         push!(spins, S(position, orientations, reflection, FixedXoshiro(), indices, :valid,
                        sorted_property_indices(geometry, indices)))
     end
@@ -514,7 +533,7 @@ function off_resonance(spins::AbstractVector{<:Spin}, geometry, global_propertie
     function get_both_offresonance(spin::Spin)
         previous = previous_hit(spin.reflection)
         inside_state = isnothing(spin.isinside) ?
-            isinside(fg, spin.position, previous) :
+            isinside_fixed(fg, spin.position, previous) :
             IsInside(spin.isinside, spin.property_indices)
         susc = susceptibility_off_resonance(
             fg, spin.position, previous, inside_state,
@@ -614,7 +633,9 @@ Snapshot(snap :: Snapshot{1}, nsequences::Integer) = Snapshot([Spin(spin, nseque
 Snapshot(snap :: Snapshot{0}, nsequences::Integer) = Snapshot([Spin(spin, nsequences) for spin in snap.spins], snap.time)
 Snapshot(snap :: AbstractVector{<:Snapshot}, nsequences::Integer) = map(s -> Snapshot(s, nsequences), snap)
 get_sequence(snap::Snapshot, index) = Snapshot(get_sequence.(snap.spins, index), snap.time)
-isinside(geometry::FixedGeometry, snapshot::Snapshot) = [isinside(geometry, spin) for spin in snapshot]
-isinside(something, snapshot::Snapshot) = length.(isinside(fix(something), snapshot))
+isinside(geometry::UserGeometry, snapshot::Snapshot) = begin
+    fixed_geometry = _fixed_user_geometry(geometry)
+    [length(isinside_fixed(fixed_geometry, spin.position, previous_hit(spin.reflection))) for spin in snapshot]
+end
 
 end

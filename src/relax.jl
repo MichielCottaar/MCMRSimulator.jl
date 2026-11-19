@@ -34,7 +34,7 @@ function relax!(spin::Spin{N}, new_pos::NewPosType, simulation::Simulation{N}, p
     mean_pos = new_pos isa SVector ? (spin.position + new_pos) / 2 : spin.position
     previous = previous_hit(spin.reflection)
     inside = isnothing(spin.isinside) ?
-        Internal.isinside(simulation.geometry, mean_pos, previous) :
+        Internal.isinside_fixed(simulation.geometry, mean_pos, previous) :
         Internal.IsInside(spin.isinside, spin.property_indices)
     props = (
         R1 = simulation.properties.R1 + Internal.R1(simulation.geometry, inside, previous),

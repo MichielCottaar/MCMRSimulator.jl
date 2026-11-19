@@ -159,7 +159,7 @@ end
 
     final = mr.evolve(initial, simulation, 100.)
     for spin in final
-        fresh = mr.Geometries.Internal.isinside(
+        fresh = mr.Geometries.Internal.isinside_fixed(
             simulation.geometry,
             spin.position,
             mr.Reflections.previous_hit(spin.reflection),

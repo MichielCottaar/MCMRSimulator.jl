@@ -13,7 +13,7 @@ import ..Spins: Snapshot, Spin, stuck_to
 import ..Reflections: previous_hit
 import ..Simulations: Simulation
 import ..Geometries: fix
-import ..Geometries.Internal: FixedGeometry, distance_to_surface, isinside
+import ..Geometries.Internal: FixedGeometry, distance_to_surface, isinside_fixed
 
 _arguments = """
 - `geometry`: user geometry to use for inside and bound tests (default: the simulation geometry).
@@ -78,7 +78,7 @@ function _get_subset(snapshot::Snapshot{N}, geometry::FixedGeometry, subset::Sub
             if !explicit_geometry && !isnothing(spin.isinside)
                 return length(spin.isinside)
             end
-            length(isinside(geometry, spin.position, previous_hit(spin.reflection)))
+            length(isinside_fixed(geometry, spin.position, previous_hit(spin.reflection)))
         end
         if subset.inside isa Bool
             include .&= ((_number_isinside.(snapshot) .> 0) .== subset.inside)

@@ -16,7 +16,7 @@ import .Susceptibility: susceptibility_off_resonance, off_resonance_gradient
 import .RayGridIntersection: ray_grid_intersections
 
 export FixedGeometry, Intersection, flip, IsInside, collision_normal,
-    isinside, inside_cache_type, IgnoreOverlapping, detect_intersection, random_surface_positions, volume_sampling, inside_sampling, inside_sampling_per_obstruction, projected_surface_area, inverse_mean_free_path, geometry_mesh, distance_to_surface,
+    inside_cache_type, IgnoreOverlapping, detect_intersection, random_surface_positions, volume_sampling, inside_sampling, inside_sampling_per_obstruction, projected_surface_area, inverse_mean_free_path, geometry_mesh, distance_to_surface,
     ray_grid_intersections,
     size_scale, SizeScaleOverride, max_timestep_sticking, max_permeability_non_inf,
     max_surface_relaxation, min_dwell_time,
@@ -262,13 +262,13 @@ Returns the normal of the intersection.
 collision_normal(intersection::Intersection) = intersection.normal
 
 """
-    isinside(geometry, position[, intersection])
+    isinside_fixed(geometry, position[, intersection])
 
 Return the obstruction indices containing `position`. 
 
 An intersection may be provided when the particle is already attached or is currently hitting a surface.
 """
-function isinside(
+function isinside_fixed(
     geometry::FixedGeometry,
     position::SVector{3, Float64},
     intersection=nothing,
@@ -278,8 +278,8 @@ function isinside(
     IsInside(as_vec, sorted_property_indices(geometry, as_vec))
 end
 
-isinside(geometry::FixedGeometry, position::SVector{3, Float64}, intersection::Intersection) =
-    isinside(geometry, position, (intersection.indices..., intersection.inside, intersection.distance))
+isinside_fixed(geometry::FixedGeometry, position::SVector{3, Float64}, intersection::Intersection) =
+    isinside_fixed(geometry, position, (intersection.indices..., intersection.inside, intersection.distance))
 
 
 function _filter_to_box(positions, values, bounding_box)
@@ -498,7 +498,7 @@ for symbol in (:R1, :R2, :off_resonance)
             position::SVector{3, Float64},
             intersection=nothing,
         )
-            $symbol(geometry, isinside(geometry, position, intersection), intersection)
+            $symbol(geometry, isinside_fixed(geometry, position, intersection), intersection)
         end
     end
 end

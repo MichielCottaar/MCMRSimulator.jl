@@ -28,7 +28,7 @@
         @test internal.R1(fixed, inside) ≈ 0.3
         @test internal.R2(fixed, inside) ≈ 0.4
         @test internal.off_resonance(fixed, inside) ≈ 1.1
-        @test internal.isinside(fixed, spin.position).property_indices == spin.property_indices
+        @test internal.isinside_fixed(fixed, spin.position).property_indices == spin.property_indices
 
         for copied in (deepcopy(spin), mr.Spin(spin, 2), mr.get_sequence(spin, 1))
             @test copied.property_indices == spin.property_indices

@@ -2685,7 +2685,7 @@ end
         surface_samples = mr.spin_sampling(surface_cells, sampling_box, 0.2)
         @test all(sample isa mr.Spin for sample in surface_samples)
         @test all(
-            sample.isinside == mr.isinside(surface_cells, sample.position, sample.reflection.intersection).inside_of
+            sample.isinside == GI.isinside_fixed(surface_cells, sample.position, sample.reflection.intersection).inside_of
             for sample in surface_samples if !isnothing(sample.reflection)
         )
 
@@ -2706,7 +2706,7 @@ end
         )
         @test !isempty(inner_samples)
         @test all(
-            sample.isinside == mr.isinside(
+            sample.isinside == GI.isinside_fixed(
                 annulus,
                 sample.position,
                 sample.reflection.intersection,
@@ -3339,8 +3339,8 @@ end
     fixed_sphere = mr.fix(mr.Spheres(radius=2.0))
     fixed_boundary_inside = (1, true, 0.5)
     fixed_boundary_outside = (1, false, 0.5)
-    @test GI.isinside(fixed_sphere, boundary, fixed_boundary_inside).inside_of == [(1,)]
-    @test GI.isinside(fixed_sphere, boundary, fixed_boundary_outside).inside_of == Tuple{Int}[]
+    @test GI.isinside_fixed(fixed_sphere, boundary, fixed_boundary_inside).inside_of == [(1,)]
+    @test GI.isinside_fixed(fixed_sphere, boundary, fixed_boundary_outside).inside_of == Tuple{Int}[]
 
     @test isnothing(GI.PhysicalGeometries.find_intersection(
         sphere,
@@ -3747,7 +3747,7 @@ end
 @testset "Fixed geometry susceptibility state" begin
     empty_geometry = mr.fix(())
     @test GI.detect_intersection(empty_geometry, SVector(0.0, 0.0, 0.0), SVector(1.0, 0.0, 0.0)) === nothing
-    @test length(GI.isinside(empty_geometry, SVector(0.0, 0.0, 0.0))) == 0
+    @test length(GI.isinside_fixed(empty_geometry, SVector(0.0, 0.0, 0.0))) == 0
     @test GI.susceptibility_off_resonance(empty_geometry, SVector(0.0, 0.0, 0.0)) == 0.0
 
     walls = mr.fix(mr.Walls(position=0.0))
