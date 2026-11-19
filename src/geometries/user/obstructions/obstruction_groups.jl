@@ -89,7 +89,6 @@ end
 function Base.getproperty(obstruction::IndexedObstruction, name::Symbol)
     name in (:data, :index) && return getfield(obstruction, name)
     data = getfield(obstruction, :data)
-    name === :group && return ObstructionGroup(data, [getfield(obstruction, :index)])
     if haskey(data.field_values, name)
         return data.field_values[name][getfield(obstruction, :index)]
     end

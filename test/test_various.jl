@@ -511,6 +511,7 @@ end
     @test geometry_ids(group[1]) == (geometry_ids(group), 1)
     @test geometry_ids(group[1]) == geometry_ids(group[1])
     @test geometry_ids(group[1]) != geometry_ids(group[2])
+    @test_throws Exception getproperty(group[1], :group)
 
     copied_group = deepcopy(group)
     @test geometry_ids(copied_group) != geometry_ids(group)
