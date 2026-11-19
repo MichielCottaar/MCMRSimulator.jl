@@ -1,11 +1,15 @@
 module FixProperties
 
 import ...User.Obstructions: Walls, Cylinders, Spheres, FiniteCylinders, Annuli, Mesh, isglobal
+import ...User.Obstructions.ObstructionGroups: geometry_id
 import ...User.SplitMesh: components
-import ...Internal.Properties: GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties
+import ...Internal.Properties: GeometryLeafProperties, GeometryVectorProperties, GeometryTupleProperties, geometry_id_properties
 
 const _volume_fields = (:R1, :R2, :off_resonance)
 const _surface_fields = (:R1, :R2, :off_resonance, :permeability, :dwell_time, :surface_relaxation, :density)
+const _surface_fields_with_geometry_id = (_surface_fields..., :geometry_id)
+
+_source_geometry_ids(group) = [geometry_id(group[index]) for index in 1:length(group)]
 
 function _property_values(group, field_name::Symbol, category::Symbol, default::Float64)
     user_field_name = field_name === :surface_relaxation ? :relaxation : field_name
@@ -52,6 +56,7 @@ end
 function _surface_properties(
     group,
     category::Symbol;
+    geometry_ids=_source_geometry_ids(group),
     permeability=0.,
     dwell_time=0.,
     surface_relaxation=0.,
@@ -69,7 +74,10 @@ function _surface_properties(
     values = map(_surface_fields) do field_name
         _property_node(group, field_name, category, getproperty(defaults, field_name))
     end
-    NamedTuple{_surface_fields}(Tuple(values))
+    merge(
+        NamedTuple{_surface_fields}(Tuple(values)),
+        (geometry_id=geometry_id_properties(geometry_ids),),
+    )
 end
 
 function _volume_properties(group, category::Symbol, indices)
@@ -83,6 +91,7 @@ function _surface_properties(
     group,
     category::Symbol,
     indices;
+    geometry_ids=_source_geometry_ids(group),
     permeability=0.,
     dwell_time=0.,
     surface_relaxation=0.,
@@ -100,7 +109,10 @@ function _surface_properties(
     values = map(_surface_fields) do field_name
         _property_node(group, field_name, category, getproperty(defaults, field_name), indices)
     end
-    NamedTuple{_surface_fields}(Tuple(values))
+    merge(
+        NamedTuple{_surface_fields}(Tuple(values)),
+        (geometry_id=geometry_id_properties(geometry_ids[indices]),),
+    )
 end
 
 function _zero_volume()
@@ -130,6 +142,7 @@ end
 
 function fix_properties(
     group::Union{Cylinders, Spheres};
+    geometry_ids=_source_geometry_ids(group),
     permeability=0.,
     dwell_time=0.,
     surface_relaxation=0.,
@@ -140,6 +153,7 @@ function fix_properties(
         surface = _surface_properties(
             group,
             :surface;
+            geometry_ids,
             permeability,
             dwell_time,
             surface_relaxation,
@@ -150,6 +164,7 @@ end
 
 function fix_properties(
     group::Mesh;
+    geometry_ids=_source_geometry_ids(group),
     permeability=0.,
     dwell_time=0.,
     surface_relaxation=0.,
@@ -161,6 +176,7 @@ function fix_properties(
             group,
             :surface,
             findall(==(component), triangle_components);
+            geometry_ids,
             permeability,
             dwell_time,
             surface_relaxation,
@@ -168,12 +184,12 @@ function fix_properties(
         )
         for component in unique(triangle_components)
     ]
-    surface = NamedTuple{_surface_fields}(Tuple(
+    surface = NamedTuple{_surface_fields_with_geometry_id}(Tuple(
         GeometryVectorProperties([
             getproperty(component_properties, field)
             for component_properties in component_surface_properties
         ])
-        for field in _surface_fields
+        for field in _surface_fields_with_geometry_id
     ))
     (
         volume = _volume_properties(group, :inside),
@@ -183,6 +199,7 @@ end
 
 function fix_properties(
     group::FiniteCylinders;
+    geometry_ids=_source_geometry_ids(group),
     permeability=0.,
     dwell_time=0.,
     surface_relaxation=0.,
@@ -200,10 +217,12 @@ function fix_properties(
     cylinder_volume = _volume_properties(group, :inside, cylinder_indices)
     endpoint_surface = _surface_properties(
         group, :surface, endpoint_indices;
+        geometry_ids,
         permeability, dwell_time, surface_relaxation, density,
     )
     cylinder_surface = _surface_properties(
         group, :surface, cylinder_indices;
+        geometry_ids,
         permeability, dwell_time, surface_relaxation, density,
     )
     volume = NamedTuple{_volume_fields}(Tuple(
@@ -223,6 +242,7 @@ end
 
 function fix_properties(
     group::Walls;
+    geometry_ids=_source_geometry_ids(group),
     permeability=0.,
     dwell_time=0.,
     surface_relaxation=0.,
@@ -233,6 +253,7 @@ function fix_properties(
         surface = _surface_properties(
             group,
             :surface;
+            geometry_ids,
             permeability,
             dwell_time,
             surface_relaxation,
@@ -243,6 +264,7 @@ end
 
 function fix_properties(
     group::Annuli;
+    geometry_ids=_source_geometry_ids(group),
     permeability=0.,
     dwell_time=0.,
     surface_relaxation=0.,
@@ -269,6 +291,7 @@ function fix_properties(
     inner_surface = _surface_properties(
         group,
         :inner_surface;
+        geometry_ids,
         permeability,
         dwell_time,
         surface_relaxation,
@@ -277,6 +300,7 @@ function fix_properties(
     outer_surface = _surface_properties(
         group,
         :outer_surface;
+        geometry_ids,
         permeability,
         dwell_time,
         surface_relaxation,

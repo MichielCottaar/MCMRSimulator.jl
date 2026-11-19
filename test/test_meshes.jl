@@ -172,7 +172,8 @@ end
             position = Random.rand(3) .* 1000.
             local_position = mod.(position[2:3] .+ 1, 2) .- 1
             abs(norm(local_position) - 1) <= 0.001 && continue
-            @test length(mr.isinside(fmesh, position)) == length(mr.isinside(fcylinder, position))
+            @test length(mr.Geometries.Internal.isinside_fixed(fmesh, position)) ==
+                length(mr.Geometries.Internal.isinside_fixed(fcylinder, position))
         end
     end
 end

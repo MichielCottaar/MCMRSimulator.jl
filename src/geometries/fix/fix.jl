@@ -129,30 +129,12 @@ function fix(
     physical_geometry = simplify(physical_geometry)
     properties = fix_properties(
         group;
+        geometry_ids=source_geometry_ids,
         permeability,
         dwell_time,
         surface_relaxation,
         density,
     )
-    geometry_ids = if group isa Annuli
-        GeometryTupleProperties((geometry_id_properties(source_geometry_ids), geometry_id_properties(source_geometry_ids)))
-    elseif group isa FiniteCylinders
-        use_spherical_endpoint = group.use_spherical_endpoint.value
-        use_spherical_endpoint = use_spherical_endpoint isa Bool ?
-            fill(use_spherical_endpoint, length(group)) : use_spherical_endpoint
-        connected_to = group.connected_to.value
-        connected_to = connected_to isa Int ? fill(connected_to, length(group)) : connected_to
-        endpoint_indices = findall(use_spherical_endpoint)
-        cylinder_indices = findall(connected_to .!= 0)
-        endpoint_ids = source_geometry_ids[endpoint_indices]
-        cylinder_ids = source_geometry_ids[cylinder_indices]
-        any(use_spherical_endpoint) ?
-            GeometryTupleProperties((geometry_id_properties(endpoint_ids), geometry_id_properties(cylinder_ids))) :
-            geometry_id_properties(cylinder_ids)
-    else
-        geometry_id_properties(source_geometry_ids)
-    end
-    properties = merge(properties, (surface=merge(properties.surface, (geometry_id=geometry_ids,)),))
     susceptibility = fix_susceptibility(group)
     FixedGeometry{typeof(physical_geometry), typeof(properties.volume), typeof(properties.surface), typeof(susceptibility)}(
         physical_geometry,
