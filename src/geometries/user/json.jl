@@ -8,6 +8,7 @@ Functions:
 module JSON
 import JSON as JSON_pkg
 import ..Obstructions: Obstructions, ObstructionGroup, description
+import ..Obstructions.ObstructionGroups: materialize
 
 """
     write_geometry([io, ]geometry)
@@ -30,6 +31,7 @@ function write_geometry(io::IO, geometry::AbstractVector{<:ObstructionGroup})
 end
 
 function write_geometry(io::IO, group::ObstructionGroup)
+    group = materialize(group)
     print(io, "  {\n")
     print(io, "    \"type\": \"$(group.type.plural)\",\n")
     print(io, "    \"number\": $(group.n_obstructions),\n")

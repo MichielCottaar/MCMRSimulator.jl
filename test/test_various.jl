@@ -528,6 +528,27 @@ end
     fixed_collection = mr.fix([group, other_group])
     @test fixed_geometry_id(fixed_collection, (1, 2)) == geometry_ids(group[2])
     @test fixed_geometry_id(fixed_collection, (2, 1)) == geometry_ids(other_group[1])
+
+    view_group = mr.Spheres(radius=[1., 2., 3., 4.])
+    selected = view_group[2:3]
+    @test length(selected) == 2
+    @test selected.n_obstructions == 2
+    @test geometry_ids(selected[1]) == geometry_ids(view_group[2])
+    selected.radius = [20., 30.]
+    @test view_group.radius.value == [1., 20., 30., 4.]
+    selected.radius.value[1] = 25.
+    @test view_group.radius.value == [1., 25., 30., 4.]
+    selected.radius[2] = 35.
+    @test view_group.radius.value == [1., 25., 35., 4.]
+    selected.radius[1:2] = [26., 36.]
+    @test view_group.radius.value == [1., 26., 36., 4.]
+
+    nested = view_group[[4, 2]][2:2]
+    @test geometry_ids(nested[1]) == geometry_ids(view_group[2])
+    fixed_selected = mr.fix(selected)
+    @test fixed_geometry_id(fixed_selected, (1,)) == geometry_ids(view_group[2])
+    @test fixed_geometry_id(fixed_selected, (2,)) == geometry_ids(view_group[3])
+    @test isempty(mr.fix(view_group[1:0]).geometry)
 end
 
 end

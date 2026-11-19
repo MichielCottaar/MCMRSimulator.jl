@@ -8,6 +8,7 @@ include("fix_susceptibility.jl")
 import ..User: LiminalGeometry
 import ..User.Obstructions: ObstructionGroup, IndexedObstruction, Walls, Cylinders, Spheres, FiniteCylinders, Annuli, BendyCylinder, Mesh
 import ..User.Obstructions.ObstructionGroups: geometry_id
+import ..User.Obstructions.ObstructionGroups: materialize
 import ..Internal.PhysicalGeometries: PhysicalGeometry, simplify
 import ..Internal: SizeScaleOverride
 import ..Internal.PhysicalGeometries.Transparents: IgnoreOverlapping
@@ -111,6 +112,12 @@ function fix(
     debug=false,
 )
     debug isa Bool || throw(ArgumentError("debug must be a Bool"))
+    if group.indices != collect(1:group.data.n_obstructions)
+        group = materialize(group)
+    end
+    if isempty(group)
+        return fix(ObstructionGroup[]; permeability, dwell_time, surface_relaxation, density, debug)
+    end
     base_geometry = fix_base_geometry(group)
     physical_geometry = fix_transformations(group, base_geometry; debug)
     if group isa FiniteCylinders || (group isa Spheres && group.overlapping.value)

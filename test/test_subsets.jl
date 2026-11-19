@@ -85,6 +85,23 @@ end
     @test length(mr.get_subset(snapshot, simulation, geometry=sphere, bound=false)) == 3
 end
 
+@testset "Subset geometry can be an obstruction-group view" begin
+    simulation = mr.Simulation([], geometry=[])
+    spheres = mr.Spheres(
+        position=[[0., 0., 0.], [10., 0., 0.], [20., 0., 0.]],
+        radius=1.,
+    )
+    snapshot = mr.Snapshot([
+        mr.Spin(position=[0., 0., 0.]),
+        mr.Spin(position=[10., 0., 0.]),
+        mr.Spin(position=[20., 0., 0.]),
+    ])
+
+    selected = mr.get_subset(snapshot, simulation; geometry=spheres[1:2], inside=true)
+    @test length(selected) == 2
+    @test all(spin -> spin.position[1] in (0., 10.), selected)
+end
+
 @testset "Test multiple geometries" begin
     geometry = [mr.Spheres(position=[0., 0., 0.], radius=1.), mr.Walls(position=[0., 1.2], density=1., dwell_time=1.)]
     sim = mr.Simulation([], geometry=geometry)
