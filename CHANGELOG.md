@@ -4,6 +4,8 @@ All notable changes to MCMRSimulator.jl will be documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
+### Changed
+- Rather than accepting any geometry, `Subset` is now limited to subsets of the simulated geometry. This ensures accuracy of the returned subsets.
 ## [v1.2.0]
 ### Added
 - 2D plotting support using a `PlotPlane` is added for `BendyCylinder`, meshes and spheres (and any future objects that can be converted into a mesh).
